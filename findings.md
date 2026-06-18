@@ -30,6 +30,7 @@
 | Upload with `gh` after authentication | `gh` is installed, but current token for `omnihola` is invalid. |
 | Add HTML/PNG report export | Experiment review needs portable records with ECG source, HR, contact quality, and PQRST/QRS notes. |
 | Push succeeded via sandbox-external `gh` | Repo is `https://github.com/omnihola/ads1292-studio`, created private and tracking `origin/main`. |
+| Add session metadata JSON | Anonymous subject ID, electrode, montage, operator, and notes need to travel with reports for comparable experiments. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -50,6 +51,7 @@
 - Planning file: `ads1292-studio/task_plan.md`
 - Superpowers plan: `ads1292-studio/docs/superpowers/plans/2026-06-18-ads1292-studio-v1.md`
 - Report export command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --out reports`
+- Metadata template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-meta-template reports/session-template.json`
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

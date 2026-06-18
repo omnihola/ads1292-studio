@@ -28,6 +28,8 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli ports
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli firmware --port /dev/cu.usbmodem11101
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli review ../record/ads1292/2026-06-18-164923-ads1292-live.csv
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --out reports
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-meta-template reports/session-template.json
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --meta reports/session-template.json --out reports
 ```
 
 ## Features in V1
@@ -39,6 +41,8 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record
 - CSV saving with `status_byte` and `lead_off_bits`.
 - Offline CSV review with R-peak detection and conservative PQRST review.
 - HTML/PNG review report export for experiment records.
+- Session metadata JSON for anonymous subject ID, electrode type, montage,
+  operator, and notes; metadata is included in exported reports.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

@@ -16,6 +16,7 @@ from matplotlib.figure import Figure
 
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
+from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
 from ads1292_studio.report import export_review_report
@@ -106,6 +107,12 @@ class App(tk.Tk):
         self.metrics_var = tk.StringVar(value="No session")
         self.quality_var = tk.StringVar(value="Quality: --")
         self.path_var = tk.StringVar(value="CSV: --")
+        self.session_id_var = tk.StringVar(value="untitled-session")
+        self.subject_id_var = tk.StringVar(value="anonymous")
+        self.electrode_var = tk.StringVar(value="commercial Ag/AgCl control")
+        self.montage_var = tk.StringVar(value="RA/LA/RL torso")
+        self.operator_var = tk.StringVar(value="")
+        self.notes_var = tk.StringVar(value="")
         for label, var in (
             ("Session", self.metrics_var),
             ("Quality", self.quality_var),
@@ -115,12 +122,13 @@ class App(tk.Tk):
             ttk.Label(side, textvariable=var, wraplength=230, justify=tk.LEFT).pack(anchor=tk.W)
 
         ttk.Label(side, text="Notes", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
-        ttk.Label(
-            side,
-            text="Research use only. Use battery power for body-contact testing.",
-            wraplength=230,
-            justify=tk.LEFT,
-        ).pack(anchor=tk.W)
+        self._metadata_entry(side, "Session ID", self.session_id_var)
+        self._metadata_entry(side, "Subject", self.subject_id_var)
+        self._metadata_entry(side, "Electrode", self.electrode_var)
+        self._metadata_entry(side, "Montage", self.montage_var)
+        self._metadata_entry(side, "Operator", self.operator_var)
+        self._metadata_entry(side, "Notes", self.notes_var)
+        ttk.Label(side, text="Research use only. Use battery power.", wraplength=230, justify=tk.LEFT).pack(anchor=tk.W)
 
         self.notebook = ttk.Notebook(main)
         self.notebook.pack(fill=tk.BOTH, expand=True)
@@ -138,6 +146,10 @@ class App(tk.Tk):
         self._build_pqrst_plot()
         self.log_text = tk.Text(self.log_tab, height=12)
         self.log_text.pack(fill=tk.BOTH, expand=True)
+
+    def _metadata_entry(self, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:
+        ttk.Label(parent, text=label).pack(anchor=tk.W, pady=(4, 0))
+        ttk.Entry(parent, textvariable=variable).pack(anchor=tk.W, fill=tk.X)
 
     def _build_live_plot(self) -> None:
         fig = Figure(figsize=(10, 7), dpi=100)
@@ -218,6 +230,7 @@ class App(tk.Tk):
             stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
             csv_path = Path("recordings") / f"{stamp}-ads1292-studio.csv"
             self.recording_path = csv_path
+            write_metadata_json(csv_path.with_suffix(".json"), self._metadata())
             self.path_var.set(f"CSV: {csv_path}")
         self.worker.start(port, csv_path)
         self.start_button.configure(state=tk.DISABLED)
@@ -272,6 +285,7 @@ class App(tk.Tk):
                 title="ADS1292 Studio Review",
                 sample_rate_hz=SAMPLE_RATE_HZ,
                 source=self.source_var.get(),
+                metadata=self._metadata(),
             )
             self._log(f"Exported report: {export.html_path}")
             messagebox.showinfo("Report exported", f"Saved report:\n{export.html_path}")
@@ -281,6 +295,16 @@ class App(tk.Tk):
     def _clear_buffers(self) -> None:
         self.sample_index = 0
         self.loaded_samples = tuple()
+
+    def _metadata(self) -> SessionMetadata:
+        return SessionMetadata(
+            session_id=self.session_id_var.get(),
+            subject_id=self.subject_id_var.get(),
+            electrode=self.electrode_var.get(),
+            montage=self.montage_var.get(),
+            operator=self.operator_var.get(),
+            notes=self.notes_var.get(),
+        ).normalized()
         for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
             buffer.clear()
 

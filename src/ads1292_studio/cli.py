@@ -8,6 +8,7 @@ import numpy as np
 
 from ads1292_studio.csv_io import CsvRecorder, read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
+from ads1292_studio.metadata import metadata_template, read_metadata_json, write_metadata_json
 from ads1292_studio.report import export_review_report
 from ads1292_studio.signal_processing import review_channels
 
@@ -79,13 +80,19 @@ def cmd_review(args: argparse.Namespace) -> int:
 
 
 def cmd_report(args: argparse.Namespace) -> int:
+    if args.write_meta_template:
+        write_metadata_json(args.write_meta_template, metadata_template())
+        print(f"metadata_template={args.write_meta_template}")
+        return 0
     recording = read_recording_csv(args.csv)
+    metadata = read_metadata_json(args.meta) if args.meta else None
     export = export_review_report(
         samples=recording.samples,
         out_dir=args.out,
         title=args.title,
         sample_rate_hz=recording.sample_rate_hz,
         source=args.source,
+        metadata=metadata,
     )
     print(f"html={export.html_path}")
     print(f"ecg_png={export.ecg_png_path}")
@@ -112,10 +119,12 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--source", choices=["Auto", "CH1", "CH2"], default="Auto")
     review.set_defaults(func=cmd_review)
     report = sub.add_parser("report")
-    report.add_argument("csv", type=Path)
+    report.add_argument("csv", type=Path, nargs="?")
     report.add_argument("--out", type=Path, default=Path("reports"))
     report.add_argument("--title", default="ADS1292 Studio Review")
     report.add_argument("--source", choices=["Auto", "CH1", "CH2"], default="Auto")
+    report.add_argument("--meta", type=Path)
+    report.add_argument("--write-meta-template", type=Path)
     report.set_defaults(func=cmd_report)
     return parser
 

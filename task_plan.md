@@ -52,6 +52,14 @@ Phase 5
 - [x] Add tests and smoke test against the real saved CSV.
 - **Status:** complete
 
+### Phase 7: Session Metadata & Audit Trail
+- [x] Add session metadata model and JSON read/write.
+- [x] Include metadata in HTML reports.
+- [x] Add CLI metadata template generation and `--meta` report input.
+- [x] Add GUI metadata fields and sidecar JSON save during recording.
+- [x] Add tests and real CSV smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -68,6 +76,7 @@ Phase 5
 | Combine QRS sharpness with valid R-R count for Auto source | Prevents sparse CH1 transients from beating a regular CH2 ECG signal. |
 | Use GitHub CLI for upload when auth is fixed | `gh` is installed, but sandboxed auth checks can be misleading. |
 | Use sandbox-external GitHub commands for upload | External keychain auth was valid and push succeeded. |
+| Add session metadata sidecars | Commercial-style experiment software needs anonymous subject/electrode/montage/operator/notes tied to each recording and report. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

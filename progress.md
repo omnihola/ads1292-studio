@@ -70,6 +70,24 @@
   - `.gitignore`
   - `README.md`
 
+### Phase 7: Session Metadata & Audit Trail
+- **Status:** complete
+- Actions taken:
+  - Added `SessionMetadata` model plus JSON read/write/template helpers.
+  - Added metadata section to HTML reports.
+  - Added CLI `report --write-meta-template` and `report --meta`.
+  - Added GUI metadata fields for session ID, subject ID, electrode, montage, operator, and notes.
+  - Added sidecar JSON save next to CSV recordings.
+  - Added metadata tests and real CSV metadata report smoke test.
+- Files created/modified:
+  - `src/ads1292_studio/metadata.py`
+  - `src/ads1292_studio/report.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_metadata.py`
+  - `tests/test_quality_report.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -86,6 +104,9 @@
 | GitHub auth recheck after user login | `gh auth status` | Authenticated GitHub CLI | Token still invalid for `omnihola` | Blocked |
 | Sandboxed-external GitHub auth check | escalated `gh auth status` | Authenticated GitHub CLI | Logged in as `omnihola` | Pass |
 | GitHub upload | escalated `gh repo create ads1292-studio --private --source=. --remote=origin --push` | Create private repo and push only subfolder repo | Pushed to `https://github.com/omnihola/ads1292-studio` | Pass |
+| Metadata tests | `conda run -n sensor python -m pytest tests/test_metadata.py tests/test_quality_report.py -q` | Metadata/report tests pass | 4 passed | Pass |
+| Full tests after metadata | `conda run -n sensor python -m pytest -q` | All tests pass | 11 passed | Pass |
+| Metadata report smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --meta reports/meta-smoke/session.json --out reports/meta-smoke` | HTML contains Session Metadata and CH2 source | HTML grep found metadata/electrode/source | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -100,8 +121,8 @@
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 6 complete; Phase 5 GitHub push complete. |
+| Where am I? | Phase 7 complete; GitHub push available. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export and verified it. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export and session metadata audit trail. |

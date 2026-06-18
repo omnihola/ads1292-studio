@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 
 from ads1292_studio.models import StreamSample
+from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.report import export_review_report
 
@@ -43,6 +44,13 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
         samples=synthetic_samples(),
         out_dir=tmp_path,
         title="Synthetic ADS1292 Review",
+        metadata=SessionMetadata(
+            session_id="session-42",
+            subject_id="anonymous-A",
+            electrode="commercial Ag/AgCl",
+            montage="RA/LA/RL torso",
+            notes="no movement",
+        ),
     )
 
     assert result.html_path.exists()
@@ -53,3 +61,5 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "ECG source" in html
     assert "CH2" in html
     assert "QRS" in html
+    assert "session-42" in html
+    assert "commercial Ag/AgCl" in html
