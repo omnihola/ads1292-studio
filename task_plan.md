@@ -41,8 +41,8 @@ Phase 5
 - [x] Add `.gitignore`, package metadata, and readme basics.
 - [x] Commit only the `ads1292-studio/` repository.
 - [x] Determine remote/upload path.
-- [ ] Push when remote is available and authenticated.
-- **Status:** blocked by GitHub authentication
+- [x] Push when remote is available and authenticated.
+- **Status:** complete
 
 ### Phase 6: Report Export & Experiment Records
 - [x] Add quality metric model for contact, HR, QRS, P/T, and source selection.
@@ -66,7 +66,8 @@ Phase 5
 | Default ECG source to Auto with CH1/CH2 override | Saved data proves CH2 can contain clearer ECG-like QRS than the first streamed field. |
 | Save both raw channels and derived metadata | Avoids losing evidence and allows later correction of display assumptions. |
 | Combine QRS sharpness with valid R-R count for Auto source | Prevents sparse CH1 transients from beating a regular CH2 ECG signal. |
-| Use GitHub CLI for upload when auth is fixed | `gh` is installed, but the current token for account `omnihola` is invalid. |
+| Use GitHub CLI for upload when auth is fixed | `gh` is installed, but sandboxed auth checks can be misleading. |
+| Use sandbox-external GitHub commands for upload | External keychain auth was valid and push succeeded. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -76,6 +77,7 @@ Phase 5
 | Initial analysis overemphasized CH1 and missed CH2 ECG-like QRS | 1 | Add channel auto-detection and offline review. |
 | GitHub CLI token invalid for `omnihola` | 1 | Local repo committed; external push waits for `gh auth login -h github.com`. |
 | GitHub CLI token still invalid after user browser login | 2 | Browser auth did not refresh `gh`; still need `gh auth login -h github.com` in CLI. |
+| Sandboxed GitHub auth check was misleading | 3 | Ran `gh auth status` outside sandbox; authenticated as `omnihola`, created private repo, and pushed `main`. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

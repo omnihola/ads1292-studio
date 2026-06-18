@@ -29,6 +29,7 @@
 | Combine QRS sharpness with valid R-R count for Auto source | Real data showed CH1 can contain sharper but sparse artifacts while CH2 has regular ECG peaks. |
 | Upload with `gh` after authentication | `gh` is installed, but current token for `omnihola` is invalid. |
 | Add HTML/PNG report export | Experiment review needs portable records with ECG source, HR, contact quality, and PQRST/QRS notes. |
+| Push succeeded via sandbox-external `gh` | Repo is `https://github.com/omnihola/ads1292-studio`, created private and tracking `origin/main`. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -39,6 +40,7 @@
 | Auto source initially selected CH1 on the real saved CSV | Fixed by including valid R-R count in channel selection instead of only derivative sharpness. |
 | GitHub upload cannot continue with current auth | Re-run after `gh auth login -h github.com` refreshes the token. |
 | Browser login did not refresh GitHub CLI | `gh auth status` still reports invalid token for `omnihola`; CLI-specific re-auth is required. |
+| Sandboxed GitHub auth result was misleading | Escalated shell saw valid keychain auth and push succeeded. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`

@@ -84,6 +84,8 @@
 | Full tests after report feature | `conda run -n sensor python -m pytest -q` | All tests pass | 9 passed | Pass |
 | Real CSV report smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --out reports/smoke2` | HTML and PNG files created, CH2 source | `ecg_source=CH2`, `quality=Good ECG/QRS` | Pass |
 | GitHub auth recheck after user login | `gh auth status` | Authenticated GitHub CLI | Token still invalid for `omnihola` | Blocked |
+| Sandboxed-external GitHub auth check | escalated `gh auth status` | Authenticated GitHub CLI | Logged in as `omnihola` | Pass |
+| GitHub upload | escalated `gh repo create ads1292-studio --private --source=. --remote=origin --push` | Create private repo and push only subfolder repo | Pushed to `https://github.com/omnihola/ads1292-studio` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -93,12 +95,13 @@
 | 2026-06-18 | Real saved CSV regression selected CH1 instead of CH2 | 1 | Root cause was sharpness-only score; added valid R-R count into source selection. |
 | 2026-06-18 | GitHub push cannot proceed because `gh auth status` reports invalid token for `omnihola` | 1 | Local repo remains committed; re-authenticate with `gh auth login -h github.com`, then push. |
 | 2026-06-18 | GitHub CLI still reports invalid token after user says GitHub login is done | 2 | Browser login did not update CLI token; use `gh auth login -h github.com`. |
+| 2026-06-18 | Sandboxed `gh auth status` was misleading relative to external keychain auth | 3 | Used escalated shell for GitHub commands; upload succeeded. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 6 complete; Phase 5 push remains blocked by GitHub CLI auth. |
-| Where am I going? | Commit report-export iteration, then push after CLI auth is fixed. |
+| Where am I? | Phase 6 complete; Phase 5 GitHub push complete. |
+| Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, and locally committed V1 app; added report export and verified it; GitHub CLI auth remains invalid. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export and verified it. |
