@@ -18,6 +18,7 @@ from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
+from ads1292_studio.report import export_review_report
 from ads1292_studio.signal_processing import (
     bandpass,
     choose_ecg_channel,
@@ -45,6 +46,7 @@ class App(tk.Tk):
         self.worker = LiveWorker(self.samples, self.logs)
         self.connected_port: str | None = None
         self.recording_path: Path | None = None
+        self.loaded_samples: tuple[StreamSample, ...] = tuple()
 
         self.sample_index = 0
         self.ch1: deque[float] = deque(maxlen=MAX_POINTS)
@@ -73,6 +75,7 @@ class App(tk.Tk):
         self.start_button.pack(side=tk.LEFT, padx=4)
         ttk.Button(toolbar, text="Stop", command=self.stop).pack(side=tk.LEFT)
         ttk.Button(toolbar, text="Load CSV", command=self.load_csv).pack(side=tk.LEFT, padx=(12, 4))
+        ttk.Button(toolbar, text="Export Report", command=self.export_report).pack(side=tk.LEFT, padx=4)
 
         self.save_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(toolbar, text="Save CSV", variable=self.save_var).pack(side=tk.LEFT, padx=8)
@@ -234,14 +237,50 @@ class App(tk.Tk):
             return
         try:
             recording = read_recording_csv(Path(path))
+            self.loaded_samples = recording.samples
             self._show_recording(recording.samples)
             self.path_var.set(f"CSV: {path}")
             self._log(f"Loaded {path}")
         except Exception as exc:
             messagebox.showerror("Load failed", str(exc))
 
+    def export_report(self) -> None:
+        if self.loaded_samples:
+            samples = self.loaded_samples
+        elif self.ch1 and self.ch2:
+            samples = tuple(
+                StreamSample(
+                    timestamp=index / SAMPLE_RATE_HZ,
+                    ch1=int(ch1),
+                    ch2=int(ch2),
+                    board_heart_rate=0,
+                    board_respiration_rate=0,
+                    status_byte=int(status),
+                )
+                for index, (ch1, ch2, status) in enumerate(zip(self.ch1, self.ch2, self.status))
+            )
+        else:
+            messagebox.showerror("No data", "Load a CSV or record data before exporting a report.")
+            return
+        out_dir = filedialog.askdirectory(title="Choose report output folder")
+        if not out_dir:
+            return
+        try:
+            export = export_review_report(
+                samples=samples,
+                out_dir=Path(out_dir),
+                title="ADS1292 Studio Review",
+                sample_rate_hz=SAMPLE_RATE_HZ,
+                source=self.source_var.get(),
+            )
+            self._log(f"Exported report: {export.html_path}")
+            messagebox.showinfo("Report exported", f"Saved report:\n{export.html_path}")
+        except Exception as exc:
+            messagebox.showerror("Export failed", str(exc))
+
     def _clear_buffers(self) -> None:
         self.sample_index = 0
+        self.loaded_samples = tuple()
         for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
             buffer.clear()
 

@@ -27,6 +27,7 @@ CLI checks:
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli ports
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli firmware --port /dev/cu.usbmodem11101
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli review ../record/ads1292/2026-06-18-164923-ads1292-live.csv
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --out reports
 ```
 
 ## Features in V1
@@ -37,6 +38,7 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli review ../record
 - Live ECG, other channel, and lead-off/status display.
 - CSV saving with `status_byte` and `lead_off_bits`.
 - Offline CSV review with R-peak detection and conservative PQRST review.
+- HTML/PNG review report export for experiment records.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

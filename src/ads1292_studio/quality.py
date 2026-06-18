@@ -1,0 +1,66 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+
+from ads1292_studio.models import StreamSample
+from ads1292_studio.signal_processing import review_channels
+
+
+@dataclass(frozen=True)
+class QualityMetrics:
+    sample_count: int
+    duration_seconds: float
+    ecg_source: str
+    contact_ok_percent: float
+    lead_off_bad_samples: int
+    r_peaks: int
+    hr_median_bpm: float
+    hr_min_bpm: float
+    hr_max_bpm: float
+    qrs_clear: bool
+    p_tentative: bool
+    t_tentative: bool
+    score_ch1: float
+    score_ch2: float
+
+    @property
+    def quality_label(self) -> str:
+        if self.contact_ok_percent < 95 or not self.qrs_clear:
+            return "Needs review"
+        if self.r_peaks < 5 or self.hr_median_bpm <= 0:
+            return "Insufficient ECG"
+        if self.contact_ok_percent >= 99 and self.qrs_clear:
+            return "Good ECG/QRS"
+        return "Usable ECG/QRS"
+
+
+def compute_quality_metrics(
+    samples: tuple[StreamSample, ...] | list[StreamSample],
+    sample_rate_hz: float = 500.0,
+    source: str = "Auto",
+) -> QualityMetrics:
+    if not samples:
+        return QualityMetrics(0, 0.0, "CH1", 0.0, 0, 0, 0.0, 0.0, 0.0, False, False, False, 0.0, 0.0)
+    ch1 = np.array([sample.ch1 for sample in samples], dtype=float)
+    ch2 = np.array([sample.ch2 for sample in samples], dtype=float)
+    result = review_channels(ch1, ch2, sample_rate_hz=sample_rate_hz, source=source)
+    lead_bad = sum(1 for sample in samples if sample.lead_off_bits != 0)
+    duration = (len(samples) - 1) / sample_rate_hz if len(samples) > 1 else 0.0
+    return QualityMetrics(
+        sample_count=len(samples),
+        duration_seconds=float(duration),
+        ecg_source=result.source.channel,
+        contact_ok_percent=float(100.0 * (len(samples) - lead_bad) / len(samples)),
+        lead_off_bad_samples=lead_bad,
+        r_peaks=len(result.peaks),
+        hr_median_bpm=result.heart_rate.median_bpm,
+        hr_min_bpm=result.heart_rate.min_bpm,
+        hr_max_bpm=result.heart_rate.max_bpm,
+        qrs_clear=result.pqrst.qrs_clear,
+        p_tentative=result.pqrst.p_tentative,
+        t_tentative=result.pqrst.t_tentative,
+        score_ch1=result.source.score_ch1,
+        score_ch2=result.source.score_ch2,
+    )

@@ -28,6 +28,7 @@
 | Store planning files in `ads1292-studio/` | Keeps work self-contained and GitHub-ready. |
 | Combine QRS sharpness with valid R-R count for Auto source | Real data showed CH1 can contain sharper but sparse artifacts while CH2 has regular ECG peaks. |
 | Upload with `gh` after authentication | `gh` is installed, but current token for `omnihola` is invalid. |
+| Add HTML/PNG report export | Experiment review needs portable records with ECG source, HR, contact quality, and PQRST/QRS notes. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -37,6 +38,7 @@
 | Root folder is not a git repository | Initialize a repository only in the new subfolder. |
 | Auto source initially selected CH1 on the real saved CSV | Fixed by including valid R-R count in channel selection instead of only derivative sharpness. |
 | GitHub upload cannot continue with current auth | Re-run after `gh auth login -h github.com` refreshes the token. |
+| Browser login did not refresh GitHub CLI | `gh auth status` still reports invalid token for `omnihola`; CLI-specific re-auth is required. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -45,6 +47,7 @@
 - Sample data for offline tests: `record/ads1292/2026-06-18-164923-ads1292-live.csv`
 - Planning file: `ads1292-studio/task_plan.md`
 - Superpowers plan: `ads1292-studio/docs/superpowers/plans/2026-06-18-ads1292-studio-v1.md`
+- Report export command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --out reports`
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

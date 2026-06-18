@@ -44,6 +44,14 @@ Phase 5
 - [ ] Push when remote is available and authenticated.
 - **Status:** blocked by GitHub authentication
 
+### Phase 6: Report Export & Experiment Records
+- [x] Add quality metric model for contact, HR, QRS, P/T, and source selection.
+- [x] Add HTML + PNG report export for offline recordings.
+- [x] Add CLI `report` command.
+- [x] Add GUI `Export Report` button.
+- [x] Add tests and smoke test against the real saved CSV.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -67,6 +75,7 @@ Phase 5
 | Initial lead-off interpretation treated status byte `0x10` as disconnected | 1 | Use low nibble as `lead_off_bits`, keep full `status_byte` separately. |
 | Initial analysis overemphasized CH1 and missed CH2 ECG-like QRS | 1 | Add channel auto-detection and offline review. |
 | GitHub CLI token invalid for `omnihola` | 1 | Local repo committed; external push waits for `gh auth login -h github.com`. |
+| GitHub CLI token still invalid after user browser login | 2 | Browser auth did not refresh `gh`; still need `gh auth login -h github.com` in CLI. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

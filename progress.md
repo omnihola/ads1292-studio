@@ -52,6 +52,24 @@
   - `tests/test_device_parser.py`
   - `tests/test_signal_processing.py`
 
+### Phase 6: Report Export & Experiment Records
+- **Status:** complete
+- Actions taken:
+  - Added `QualityMetrics` and `compute_quality_metrics`.
+  - Added report export module that writes HTML, ECG PNG, and PQRST PNG.
+  - Added CLI `report` command.
+  - Added GUI `Export Report` button.
+  - Added tests for quality metrics and report file output.
+  - Added `reports/` to `.gitignore`.
+- Files created/modified:
+  - `src/ads1292_studio/quality.py`
+  - `src/ads1292_studio/report.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_quality_report.py`
+  - `.gitignore`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -62,6 +80,10 @@
 | Offline review | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli review ../record/ads1292/2026-06-18-164923-ads1292-live.csv` | Select CH2, QRS clear | `ecg_source=CH2`, `qrs_clear=True`, HR 93.5 bpm | Pass |
 | Local git commit | `git commit -m "feat: add ads1292 studio v1"` | Commit only subfolder repo | Commit `d28ea54` created | Pass |
 | GitHub auth check | `gh auth status` | Authenticated GitHub account | Token invalid for `omnihola` | Blocked |
+| Report tests | `conda run -n sensor python -m pytest tests/test_quality_report.py -q` | Report tests pass | 2 passed | Pass |
+| Full tests after report feature | `conda run -n sensor python -m pytest -q` | All tests pass | 9 passed | Pass |
+| Real CSV report smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --out reports/smoke2` | HTML and PNG files created, CH2 source | `ecg_source=CH2`, `quality=Good ECG/QRS` | Pass |
+| GitHub auth recheck after user login | `gh auth status` | Authenticated GitHub CLI | Token still invalid for `omnihola` | Blocked |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -70,12 +92,13 @@
 | 2026-06-18 | TDD red test failed with missing package imports | 1 | Expected red state; implemented package modules. |
 | 2026-06-18 | Real saved CSV regression selected CH1 instead of CH2 | 1 | Root cause was sharpness-only score; added valid R-R count into source selection. |
 | 2026-06-18 | GitHub push cannot proceed because `gh auth status` reports invalid token for `omnihola` | 1 | Local repo remains committed; re-authenticate with `gh auth login -h github.com`, then push. |
+| 2026-06-18 | GitHub CLI still reports invalid token after user says GitHub login is done | 2 | Browser login did not update CLI token; use `gh auth login -h github.com`. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 5: GitHub Preparation, local commit complete, external push blocked by GitHub auth. |
-| Where am I going? | Re-authenticate GitHub and push only the `ads1292-studio/` repository. |
+| Where am I? | Phase 6 complete; Phase 5 push remains blocked by GitHub CLI auth. |
+| Where am I going? | Commit report-export iteration, then push after CLI auth is fixed. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, and locally committed V1 app; attempted GitHub auth check and found invalid token. |
+| What have I done? | Built, tested, and locally committed V1 app; added report export and verified it; GitHub CLI auth remains invalid. |
