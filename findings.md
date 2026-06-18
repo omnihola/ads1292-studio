@@ -31,6 +31,7 @@
 | Add HTML/PNG report export | Experiment review needs portable records with ECG source, HR, contact quality, and PQRST/QRS notes. |
 | Push succeeded via sandbox-external `gh` | Repo is `https://github.com/omnihola/ads1292-studio`, created private and tracking `origin/main`. |
 | Add session metadata JSON | Anonymous subject ID, electrode, montage, operator, and notes need to travel with reports for comparable experiments. |
+| Add batch comparison summary | Commercial/MOTAC/formulation comparison needs cohort-level CSV/HTML/PNG summaries instead of one file at a time. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -42,6 +43,7 @@
 | GitHub upload cannot continue with current auth | Re-run after `gh auth login -h github.com` refreshes the token. |
 | Browser login did not refresh GitHub CLI | `gh auth status` still reports invalid token for `omnihola`; CLI-specific re-auth is required. |
 | Sandboxed GitHub auth result was misleading | Escalated shell saw valid keychain auth and push succeeded. |
+| `conda run` heredoc smoke step did not create metadata sidecars | Use `python -c` or a script file for smoke setup when running through `conda run`. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -52,6 +54,7 @@
 - Superpowers plan: `ads1292-studio/docs/superpowers/plans/2026-06-18-ads1292-studio-v1.md`
 - Report export command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --out reports`
 - Metadata template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-meta-template reports/session-template.json`
+- Batch command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch file1.csv file2.csv --out reports/batch`
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

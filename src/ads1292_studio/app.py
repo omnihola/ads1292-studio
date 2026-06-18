@@ -14,6 +14,7 @@ matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
+from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
@@ -77,6 +78,7 @@ class App(tk.Tk):
         ttk.Button(toolbar, text="Stop", command=self.stop).pack(side=tk.LEFT)
         ttk.Button(toolbar, text="Load CSV", command=self.load_csv).pack(side=tk.LEFT, padx=(12, 4))
         ttk.Button(toolbar, text="Export Report", command=self.export_report).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text="Batch Compare", command=self.batch_compare).pack(side=tk.LEFT, padx=4)
 
         self.save_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(toolbar, text="Save CSV", variable=self.save_var).pack(side=tk.LEFT, padx=8)
@@ -291,6 +293,27 @@ class App(tk.Tk):
             messagebox.showinfo("Report exported", f"Saved report:\n{export.html_path}")
         except Exception as exc:
             messagebox.showerror("Export failed", str(exc))
+
+    def batch_compare(self) -> None:
+        paths = filedialog.askopenfilenames(
+            title="Choose ADS1292 CSV files",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+        )
+        if not paths:
+            return
+        out_dir = filedialog.askdirectory(title="Choose batch output folder")
+        if not out_dir:
+            return
+        try:
+            export = export_batch_summary(
+                paths=[Path(path) for path in paths],
+                out_dir=Path(out_dir),
+                title="ADS1292 Batch Summary",
+            )
+            self._log(f"Exported batch summary: {export.html_path}")
+            messagebox.showinfo("Batch summary exported", f"Saved summary:\n{export.html_path}")
+        except Exception as exc:
+            messagebox.showerror("Batch export failed", str(exc))
 
     def _clear_buffers(self) -> None:
         self.sample_index = 0

@@ -6,6 +6,7 @@ import time
 
 import numpy as np
 
+from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.csv_io import CsvRecorder, read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.metadata import metadata_template, read_metadata_json, write_metadata_json
@@ -102,6 +103,15 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_batch(args: argparse.Namespace) -> int:
+    export = export_batch_summary(paths=args.csvs, out_dir=args.out, title=args.title)
+    print(f"csv={export.csv_path}")
+    print(f"html={export.html_path}")
+    print(f"png={export.png_path}")
+    print(f"rows={len(export.rows)}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="ADS1292 Studio CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -126,6 +136,11 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--meta", type=Path)
     report.add_argument("--write-meta-template", type=Path)
     report.set_defaults(func=cmd_report)
+    batch = sub.add_parser("batch")
+    batch.add_argument("csvs", type=Path, nargs="+")
+    batch.add_argument("--out", type=Path, default=Path("reports/batch"))
+    batch.add_argument("--title", default="ADS1292 Batch Summary")
+    batch.set_defaults(func=cmd_batch)
     return parser
 
 

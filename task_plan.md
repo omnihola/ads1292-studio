@@ -60,6 +60,15 @@ Phase 5
 - [x] Add tests and real CSV smoke test.
 - **Status:** complete
 
+### Phase 8: Batch Comparison
+- [x] Add batch aggregation across multiple CSV recordings.
+- [x] Read sidecar metadata for each CSV.
+- [x] Export batch CSV, HTML, and PNG summary.
+- [x] Add CLI `batch` command.
+- [x] Add GUI `Batch Compare` button.
+- [x] Add tests and real CSV smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -77,6 +86,7 @@ Phase 5
 | Use GitHub CLI for upload when auth is fixed | `gh` is installed, but sandboxed auth checks can be misleading. |
 | Use sandbox-external GitHub commands for upload | External keychain auth was valid and push succeeded. |
 | Add session metadata sidecars | Commercial-style experiment software needs anonymous subject/electrode/montage/operator/notes tied to each recording and report. |
+| Add batch comparison exports | Material validation requires comparing commercial Ag/AgCl controls, MOTAC gel, and formulation variants across repeated recordings. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -87,6 +97,7 @@ Phase 5
 | GitHub CLI token invalid for `omnihola` | 1 | Local repo committed; external push waits for `gh auth login -h github.com`. |
 | GitHub CLI token still invalid after user browser login | 2 | Browser auth did not refresh `gh`; still need `gh auth login -h github.com` in CLI. |
 | Sandboxed GitHub auth check was misleading | 3 | Ran `gh auth status` outside sandbox; authenticated as `omnihola`, created private repo, and pushed `main`. |
+| `conda run` with heredoc did not execute smoke-test metadata writer | 1 | Replaced heredoc with `python -c` for sidecar JSON creation in smoke testing. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

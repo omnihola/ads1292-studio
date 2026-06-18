@@ -88,6 +88,23 @@
   - `tests/test_quality_report.py`
   - `README.md`
 
+### Phase 8: Batch Comparison
+- **Status:** complete
+- Actions taken:
+  - Added `batch.py` with aggregation of multiple CSV recordings.
+  - Batch summary reads each CSV sidecar metadata JSON when present.
+  - Added CSV, HTML, and PNG batch summary export.
+  - Added CLI `batch` command.
+  - Added GUI `Batch Compare` button.
+  - Added tests using synthetic commercial/MOTAC recordings.
+  - Ran a real-CSV smoke test using duplicated ADS1292 recording with different metadata sidecars.
+- Files created/modified:
+  - `src/ads1292_studio/batch.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_batch.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -107,6 +124,9 @@
 | Metadata tests | `conda run -n sensor python -m pytest tests/test_metadata.py tests/test_quality_report.py -q` | Metadata/report tests pass | 4 passed | Pass |
 | Full tests after metadata | `conda run -n sensor python -m pytest -q` | All tests pass | 11 passed | Pass |
 | Metadata report smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --meta reports/meta-smoke/session.json --out reports/meta-smoke` | HTML contains Session Metadata and CH2 source | HTML grep found metadata/electrode/source | Pass |
+| Batch tests | `conda run -n sensor python -m pytest tests/test_batch.py -q` | Batch tests pass | 2 passed | Pass |
+| Full tests after batch | `conda run -n sensor python -m pytest -q` | All tests pass | 13 passed | Pass |
+| Batch real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch control.csv motac.csv --out reports/batch-smoke2` | HTML/CSV/PNG generated with commercial and MOTAC metadata | HTML contains both electrode labels and CH2 source | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -117,12 +137,13 @@
 | 2026-06-18 | GitHub push cannot proceed because `gh auth status` reports invalid token for `omnihola` | 1 | Local repo remains committed; re-authenticate with `gh auth login -h github.com`, then push. |
 | 2026-06-18 | GitHub CLI still reports invalid token after user says GitHub login is done | 2 | Browser login did not update CLI token; use `gh auth login -h github.com`. |
 | 2026-06-18 | Sandboxed `gh auth status` was misleading relative to external keychain auth | 3 | Used escalated shell for GitHub commands; upload succeeded. |
+| 2026-06-18 | `conda run` with heredoc did not write smoke-test metadata JSON | 1 | Re-ran metadata sidecar creation with `python -c`, then batch smoke passed. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 7 complete; GitHub push available. |
+| Where am I? | Phase 8 complete; ready to commit and push batch comparison iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export and session metadata audit trail. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, and batch comparison. |
