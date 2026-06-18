@@ -11,4 +11,5 @@ dist/
 *.egg-info/
 recordings/
 reports/
+packages/
 *.log

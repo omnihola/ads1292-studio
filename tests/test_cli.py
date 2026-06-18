@@ -58,3 +58,17 @@ def test_cli_report_uses_calibration_json(tmp_path: Path) -> None:
     html = next(out_dir.glob("*.html")).read_text()
     assert "half-vref-gain-3" in html
     assert "1.210 V" in html
+
+
+def test_cli_package_writes_manifest(tmp_path: Path) -> None:
+    csv_path = tmp_path / "recording.csv"
+    out_dir = tmp_path / "packages"
+    _write_small_csv(csv_path)
+
+    assert main(["package", str(csv_path), "--out", str(out_dir), "--title", "CLI Package"]) == 0
+
+    manifest_paths = list(out_dir.glob("*/manifest.json"))
+    assert len(manifest_paths) == 1
+    manifest = manifest_paths[0].read_text()
+    assert '"raw_csv"' in manifest
+    assert '"report_html"' in manifest

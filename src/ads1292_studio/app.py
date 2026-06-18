@@ -23,6 +23,7 @@ from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
 from ads1292_studio.report import export_review_report
+from ads1292_studio.session_package import export_session_package
 from ads1292_studio.signal_processing import (
     bandpass,
     choose_ecg_channel,
@@ -81,6 +82,7 @@ class App(tk.Tk):
         ttk.Button(toolbar, text="Stop", command=self.stop).pack(side=tk.LEFT)
         ttk.Button(toolbar, text="Load CSV", command=self.load_csv).pack(side=tk.LEFT, padx=(12, 4))
         ttk.Button(toolbar, text="Export Report", command=self.export_report).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text="Export Package", command=self.export_package).pack(side=tk.LEFT, padx=4)
         ttk.Button(toolbar, text="Batch Compare", command=self.batch_compare).pack(side=tk.LEFT, padx=4)
 
         self.save_var = tk.BooleanVar(value=True)
@@ -356,6 +358,26 @@ class App(tk.Tk):
         except Exception as exc:
             messagebox.showerror("Batch export failed", str(exc))
 
+    def export_package(self) -> None:
+        if self.recording_path is None:
+            messagebox.showerror("No CSV", "Load a CSV or record with Save CSV before exporting a package.")
+            return
+        out_dir = filedialog.askdirectory(title="Choose package output folder")
+        if not out_dir:
+            return
+        try:
+            self._write_current_sidecars()
+            export = export_session_package(
+                csv_path=self.recording_path,
+                out_dir=Path(out_dir),
+                title="ADS1292 Session Package",
+                source=self.source_var.get(),
+            )
+            self._log(f"Exported package: {export.manifest_path}")
+            messagebox.showinfo("Package exported", f"Saved package manifest:\n{export.manifest_path}")
+        except Exception as exc:
+            messagebox.showerror("Package export failed", str(exc))
+
     def _clear_buffers(self) -> None:
         self.sample_index = 0
         self.loaded_samples = tuple()
@@ -422,6 +444,13 @@ class App(tk.Tk):
         self.vref_mv_var.set(f"{calibration.vref_mv:g}")
         self.pga_gain_var.set(f"{calibration.pga_gain:g}")
         self._log(f"Loaded calibration: {path}")
+
+    def _write_current_sidecars(self) -> None:
+        if self.recording_path is None:
+            return
+        write_metadata_json(self.recording_path.with_suffix(".json"), self._metadata())
+        write_events_json(self._events_path(self.recording_path), self.event_markers)
+        write_calibration_json(self._calibration_path(self.recording_path), self._calibration())
 
     def _tick(self) -> None:
         latest = None

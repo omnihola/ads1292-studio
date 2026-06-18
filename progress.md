@@ -144,6 +144,25 @@
   - `tests/test_quality_report.py`
   - `README.md`
 
+### Phase 11: Session Package & Audit Manifest
+- **Status:** complete
+- Actions taken:
+  - Added session package export that copies raw CSV and available sidecars.
+  - Added report generation inside each package.
+  - Added `manifest.json` with schema, source path, metrics, byte counts, and SHA256 checksums.
+  - Added CLI `package` command.
+  - Added GUI `Export Package` button.
+  - Added `packages/` to `.gitignore`.
+  - Added session package and CLI tests.
+- Files created/modified:
+  - `src/ads1292_studio/session_package.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_session_package.py`
+  - `tests/test_cli.py`
+  - `.gitignore`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -178,6 +197,11 @@
 | Calibration syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/calibration.py src/ads1292_studio/report.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
 | Full tests after calibration | `conda run -n sensor python -m pytest -q` | All tests pass | 22 passed | Pass |
 | Calibration real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --calibration reports/calibration-smoke/calibration.json --out reports/calibration-smoke` | HTML contains calibration table and CH2 source | `ecg_source=CH2`, `quality=Good ECG/QRS`, HTML contains `2.420 V` and `0.0481 uV/count` | Pass |
+| Session package TDD red check | `conda run -n sensor python -m pytest tests/test_session_package.py tests/test_cli.py -q` before implementation | Missing session package module | `ModuleNotFoundError: ads1292_studio.session_package` | Pass |
+| Session package tests | `conda run -n sensor python -m pytest tests/test_session_package.py tests/test_cli.py -q` | Session package and CLI tests pass | 4 passed | Pass |
+| Full tests after session package | `conda run -n sensor python -m pytest -q` | All tests pass | 24 passed | Pass |
+| Session package syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_package.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| Session package real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package <csv> --out packages/smoke` | Manifest includes schema, CH2, Good ECG/QRS, raw/report SHA256 entries | Manifest grep found all required fields | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -191,12 +215,14 @@
 | 2026-06-18 | `conda run` with heredoc did not write smoke-test metadata JSON | 1 | Re-ran metadata sidecar creation with `python -c`, then batch smoke passed. |
 | 2026-06-18 | GUI buffer clear code was unreachable after a `return` | 1 | Moved deque clearing into `_clear_buffers()` and covered the iteration with syntax/full tests. |
 | 2026-06-18 | CLI tests rejected calibration options | 1 | Added `--calibration` and `--write-calibration-template` to the report subcommand. |
+| 2026-06-18 | Session package module did not exist | 1 | Added `session_package.py`, CLI command, GUI export, and package tests. |
+| 2026-06-18 | `packages/` output was initially unignored | 1 | Added `packages/` to `.gitignore`. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 10 complete; ready to commit and push calibration iteration. |
+| Where am I? | Phase 11 complete; ready to commit and push session package iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, and calibration/uV display. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, and session packages. |

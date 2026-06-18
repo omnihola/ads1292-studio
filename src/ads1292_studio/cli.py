@@ -13,6 +13,7 @@ from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.events import event_template, read_events_json, write_events_json
 from ads1292_studio.metadata import metadata_template, read_metadata_json, write_metadata_json
 from ads1292_studio.report import export_review_report
+from ads1292_studio.session_package import export_session_package
 from ads1292_studio.signal_processing import review_channels
 
 
@@ -128,6 +129,14 @@ def cmd_batch(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_package(args: argparse.Namespace) -> int:
+    export = export_session_package(csv_path=args.csv, out_dir=args.out, title=args.title, source=args.source)
+    print(f"package={export.package_dir}")
+    print(f"manifest={export.manifest_path}")
+    print(f"report_html={export.report_html_path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="ADS1292 Studio CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -161,6 +170,12 @@ def build_parser() -> argparse.ArgumentParser:
     batch.add_argument("--out", type=Path, default=Path("reports/batch"))
     batch.add_argument("--title", default="ADS1292 Batch Summary")
     batch.set_defaults(func=cmd_batch)
+    package = sub.add_parser("package")
+    package.add_argument("csv", type=Path)
+    package.add_argument("--out", type=Path, default=Path("packages"))
+    package.add_argument("--title", default="ADS1292 Session Package")
+    package.add_argument("--source", choices=["Auto", "CH1", "CH2"], default="Auto")
+    package.set_defaults(func=cmd_package)
     return parser
 
 

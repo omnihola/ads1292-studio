@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 10
+Phase 11
 
 ## Phases
 
@@ -88,6 +88,16 @@ Phase 10
 - [x] Add tests and real CSV smoke test.
 - **Status:** complete
 
+### Phase 11: Session Package & Audit Manifest
+- [x] Add session package export that copies raw CSV and available sidecars.
+- [x] Generate report inside the package.
+- [x] Write manifest JSON with schema, metrics, bytes, and SHA256 checksums.
+- [x] Add CLI `package` command.
+- [x] Add GUI `Export Package` button.
+- [x] Ignore generated `packages/` outputs.
+- [x] Add tests and real CSV smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -109,6 +119,7 @@ Phase 10
 | Add event marker sidecars | ECG material tests need time-aligned notes for motion, breathing, electrode touch, posture, or protocol events. |
 | Clear all buffers on Start/Load | Repeated GUI sessions must not mix old samples with current recordings. |
 | Add calibration sidecars | Commercial-style acquisition must audit ADC Vref/gain/bit-depth and display engineering units, not only raw counts. |
+| Add session package manifest | Research/commercial-style records need raw data, sidecars, report artifacts, and hashes tied together for later audit. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -122,6 +133,7 @@ Phase 10
 | `conda run` with heredoc did not execute smoke-test metadata writer | 1 | Replaced heredoc with `python -c` for sidecar JSON creation in smoke testing. |
 | GUI `_clear_buffers()` did not clear deques | 1 | Buffer clearing code was unreachable after `_metadata()` return; moved deque clearing into `_clear_buffers()`. |
 | CLI calibration options were missing after report calibration tests | 1 | Added `--calibration` and `--write-calibration-template`, then verified CLI tests. |
+| `packages/` was not ignored initially | 1 | Added `packages/` to `.gitignore` before committing package smoke output. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.
