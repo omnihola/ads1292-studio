@@ -32,6 +32,8 @@
 | Push succeeded via sandbox-external `gh` | Repo is `https://github.com/omnihola/ads1292-studio`, created private and tracking `origin/main`. |
 | Add session metadata JSON | Anonymous subject ID, electrode, montage, operator, and notes need to travel with reports for comparable experiments. |
 | Add batch comparison summary | Commercial/MOTAC/formulation comparison needs cohort-level CSV/HTML/PNG summaries instead of one file at a time. |
+| Add event marker sidecars | Time-aligned protocol events make motion artifacts, deep-breath tests, electrode touch, or posture changes auditable in reports. |
+| Keep buffer clearing in `_clear_buffers()` | GUI Start/Load cycles must clear previous samples, status, HR/RR, and event markers before a new session. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -44,6 +46,7 @@
 | Browser login did not refresh GitHub CLI | `gh auth status` still reports invalid token for `omnihola`; CLI-specific re-auth is required. |
 | Sandboxed GitHub auth result was misleading | Escalated shell saw valid keychain auth and push succeeded. |
 | `conda run` heredoc smoke step did not create metadata sidecars | Use `python -c` or a script file for smoke setup when running through `conda run`. |
+| GUI buffer clearing was unreachable | The deque clearing loop was after a `return` in `_metadata()`; moved it to `_clear_buffers()`. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -55,6 +58,8 @@
 - Report export command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --out reports`
 - Metadata template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-meta-template reports/session-template.json`
 - Batch command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch file1.csv file2.csv --out reports/batch`
+- Events template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-events-template reports/events-template.json`
+- Event report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --events reports/events-template.json --out reports`
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 
 from ads1292_studio.models import StreamSample
+from ads1292_studio.events import EventMarker
 from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.report import export_review_report
@@ -51,6 +52,7 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
             montage="RA/LA/RL torso",
             notes="no movement",
         ),
+        events=(EventMarker(timestamp_seconds=2.5, label="motion", notes="arm moved"),),
     )
 
     assert result.html_path.exists()
@@ -63,3 +65,6 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "QRS" in html
     assert "session-42" in html
     assert "commercial Ag/AgCl" in html
+    assert "Event Markers" in html
+    assert "motion" in html
+    assert "arm moved" in html

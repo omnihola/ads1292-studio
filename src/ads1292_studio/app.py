@@ -17,6 +17,7 @@ from matplotlib.figure import Figure
 from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
+from ads1292_studio.events import EventMarker, read_events_json, write_events_json
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
@@ -49,6 +50,7 @@ class App(tk.Tk):
         self.connected_port: str | None = None
         self.recording_path: Path | None = None
         self.loaded_samples: tuple[StreamSample, ...] = tuple()
+        self.event_markers: list[EventMarker] = []
 
         self.sample_index = 0
         self.ch1: deque[float] = deque(maxlen=MAX_POINTS)
@@ -115,6 +117,9 @@ class App(tk.Tk):
         self.montage_var = tk.StringVar(value="RA/LA/RL torso")
         self.operator_var = tk.StringVar(value="")
         self.notes_var = tk.StringVar(value="")
+        self.event_label_var = tk.StringVar(value="motion")
+        self.event_notes_var = tk.StringVar(value="")
+        self.event_count_var = tk.StringVar(value="0 events")
         for label, var in (
             ("Session", self.metrics_var),
             ("Quality", self.quality_var),
@@ -130,6 +135,11 @@ class App(tk.Tk):
         self._metadata_entry(side, "Montage", self.montage_var)
         self._metadata_entry(side, "Operator", self.operator_var)
         self._metadata_entry(side, "Notes", self.notes_var)
+        ttk.Label(side, text="Events", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        self._metadata_entry(side, "Event label", self.event_label_var)
+        self._metadata_entry(side, "Event notes", self.event_notes_var)
+        ttk.Button(side, text="Add Event", command=self.add_event).pack(anchor=tk.W, fill=tk.X, pady=(6, 2))
+        ttk.Label(side, textvariable=self.event_count_var, wraplength=230, justify=tk.LEFT).pack(anchor=tk.W)
         ttk.Label(side, text="Research use only. Use battery power.", wraplength=230, justify=tk.LEFT).pack(anchor=tk.W)
 
         self.notebook = ttk.Notebook(main)
@@ -227,12 +237,14 @@ class App(tk.Tk):
             messagebox.showerror("Not connected", "Press Connect before Start.")
             return
         self._clear_buffers()
+        self.recording_path = None
         csv_path = None
         if self.save_var.get():
             stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
             csv_path = Path("recordings") / f"{stamp}-ads1292-studio.csv"
             self.recording_path = csv_path
             write_metadata_json(csv_path.with_suffix(".json"), self._metadata())
+            write_events_json(self._events_path(csv_path), self.event_markers)
             self.path_var.set(f"CSV: {csv_path}")
         self.worker.start(port, csv_path)
         self.start_button.configure(state=tk.DISABLED)
@@ -252,12 +264,25 @@ class App(tk.Tk):
             return
         try:
             recording = read_recording_csv(Path(path))
+            self.recording_path = Path(path)
             self.loaded_samples = recording.samples
             self._show_recording(recording.samples)
+            self._load_event_sidecar(Path(path))
             self.path_var.set(f"CSV: {path}")
             self._log(f"Loaded {path}")
         except Exception as exc:
             messagebox.showerror("Load failed", str(exc))
+
+    def add_event(self) -> None:
+        marker = EventMarker(
+            timestamp_seconds=self._current_event_time(),
+            label=self.event_label_var.get(),
+            notes=self.event_notes_var.get(),
+        ).normalized()
+        self.event_markers = [*self.event_markers, marker]
+        self._set_event_count()
+        self._save_event_sidecar()
+        self._log(f"Event {marker.timestamp_seconds:.2f}s: {marker.label} {marker.notes}".strip())
 
     def export_report(self) -> None:
         if self.loaded_samples:
@@ -288,6 +313,7 @@ class App(tk.Tk):
                 sample_rate_hz=SAMPLE_RATE_HZ,
                 source=self.source_var.get(),
                 metadata=self._metadata(),
+                events=tuple(self.event_markers),
             )
             self._log(f"Exported report: {export.html_path}")
             messagebox.showinfo("Report exported", f"Saved report:\n{export.html_path}")
@@ -318,6 +344,10 @@ class App(tk.Tk):
     def _clear_buffers(self) -> None:
         self.sample_index = 0
         self.loaded_samples = tuple()
+        self.event_markers = []
+        self._set_event_count()
+        for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
+            buffer.clear()
 
     def _metadata(self) -> SessionMetadata:
         return SessionMetadata(
@@ -328,8 +358,34 @@ class App(tk.Tk):
             operator=self.operator_var.get(),
             notes=self.notes_var.get(),
         ).normalized()
-        for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
-            buffer.clear()
+
+    def _current_event_time(self) -> float:
+        if self.sample_index > 0:
+            return self.sample_index / SAMPLE_RATE_HZ
+        if self.loaded_samples:
+            return len(self.loaded_samples) / SAMPLE_RATE_HZ
+        return 0.0
+
+    def _events_path(self, csv_path: Path) -> Path:
+        return csv_path.with_suffix(".events.json")
+
+    def _load_event_sidecar(self, csv_path: Path) -> None:
+        path = self._events_path(csv_path)
+        if not path.exists():
+            self.event_markers = []
+            self._set_event_count()
+            return
+        self.event_markers = list(read_events_json(path))
+        self._set_event_count()
+        self._log(f"Loaded events: {path}")
+
+    def _save_event_sidecar(self) -> None:
+        if self.recording_path is None:
+            return
+        write_events_json(self._events_path(self.recording_path), self.event_markers)
+
+    def _set_event_count(self) -> None:
+        self.event_count_var.set(f"{len(self.event_markers)} events")
 
     def _tick(self) -> None:
         latest = None

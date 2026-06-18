@@ -105,6 +105,25 @@
   - `tests/test_batch.py`
   - `README.md`
 
+### Phase 9: Event Markers & Annotations
+- **Status:** complete
+- Actions taken:
+  - Added `EventMarker` model plus JSON read/write/template helpers.
+  - Added CLI `report --write-events-template` and `report --events`.
+  - Added GUI event label/notes fields and Add Event action.
+  - Added `.events.json` sidecar save/load behavior for recordings and loaded CSVs.
+  - Added event marker table to HTML reports.
+  - Fixed GUI buffer clearing so Start/Load resets old samples correctly.
+  - Added event tests and report integration tests.
+- Files created/modified:
+  - `src/ads1292_studio/events.py`
+  - `src/ads1292_studio/report.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_events.py`
+  - `tests/test_quality_report.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -127,6 +146,11 @@
 | Batch tests | `conda run -n sensor python -m pytest tests/test_batch.py -q` | Batch tests pass | 2 passed | Pass |
 | Full tests after batch | `conda run -n sensor python -m pytest -q` | All tests pass | 13 passed | Pass |
 | Batch real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch control.csv motac.csv --out reports/batch-smoke2` | HTML/CSV/PNG generated with commercial and MOTAC metadata | HTML contains both electrode labels and CH2 source | Pass |
+| Event TDD red check | `conda run -n sensor python -m pytest tests/test_events.py tests/test_quality_report.py -q` before implementation | Missing events module | `ModuleNotFoundError: ads1292_studio.events` | Pass |
+| Event/report tests | `conda run -n sensor python -m pytest tests/test_events.py tests/test_quality_report.py -q` | Event and report tests pass | 5 passed | Pass |
+| Syntax compile after events | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/events.py src/ads1292_studio/report.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| Full tests after events | `conda run -n sensor python -m pytest -q` | All tests pass | 16 passed | Pass |
+| Event real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --events reports/event-smoke/events.json --out reports/event-smoke` | HTML contains event table and CH2 source | `ecg_source=CH2`, `quality=Good ECG/QRS`, HTML contains Event Markers | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -138,6 +162,7 @@
 | 2026-06-18 | GitHub CLI still reports invalid token after user says GitHub login is done | 2 | Browser login did not update CLI token; use `gh auth login -h github.com`. |
 | 2026-06-18 | Sandboxed `gh auth status` was misleading relative to external keychain auth | 3 | Used escalated shell for GitHub commands; upload succeeded. |
 | 2026-06-18 | `conda run` with heredoc did not write smoke-test metadata JSON | 1 | Re-ran metadata sidecar creation with `python -c`, then batch smoke passed. |
+| 2026-06-18 | GUI buffer clear code was unreachable after a `return` | 1 | Moved deque clearing into `_clear_buffers()` and covered the iteration with syntax/full tests. |
 
 ## 5-Question Reboot Check
 | Question | Answer |

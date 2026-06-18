@@ -9,6 +9,7 @@ import numpy as np
 from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.csv_io import CsvRecorder, read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
+from ads1292_studio.events import event_template, read_events_json, write_events_json
 from ads1292_studio.metadata import metadata_template, read_metadata_json, write_metadata_json
 from ads1292_studio.report import export_review_report
 from ads1292_studio.signal_processing import review_channels
@@ -85,8 +86,15 @@ def cmd_report(args: argparse.Namespace) -> int:
         write_metadata_json(args.write_meta_template, metadata_template())
         print(f"metadata_template={args.write_meta_template}")
         return 0
+    if args.write_events_template:
+        write_events_json(args.write_events_template, event_template())
+        print(f"events_template={args.write_events_template}")
+        return 0
+    if args.csv is None:
+        raise SystemExit("CSV path is required unless writing a template")
     recording = read_recording_csv(args.csv)
     metadata = read_metadata_json(args.meta) if args.meta else None
+    events = read_events_json(args.events) if args.events else tuple()
     export = export_review_report(
         samples=recording.samples,
         out_dir=args.out,
@@ -94,6 +102,7 @@ def cmd_report(args: argparse.Namespace) -> int:
         sample_rate_hz=recording.sample_rate_hz,
         source=args.source,
         metadata=metadata,
+        events=events,
     )
     print(f"html={export.html_path}")
     print(f"ecg_png={export.ecg_png_path}")
@@ -134,7 +143,9 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--title", default="ADS1292 Studio Review")
     report.add_argument("--source", choices=["Auto", "CH1", "CH2"], default="Auto")
     report.add_argument("--meta", type=Path)
+    report.add_argument("--events", type=Path)
     report.add_argument("--write-meta-template", type=Path)
+    report.add_argument("--write-events-template", type=Path)
     report.set_defaults(func=cmd_report)
     batch = sub.add_parser("batch")
     batch.add_argument("csvs", type=Path, nargs="+")

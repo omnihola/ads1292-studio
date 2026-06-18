@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 5
+Phase 9
 
 ## Phases
 
@@ -69,6 +69,15 @@ Phase 5
 - [x] Add tests and real CSV smoke test.
 - **Status:** complete
 
+### Phase 9: Event Markers & Annotations
+- [x] Add event marker model and JSON sidecar read/write.
+- [x] Add CLI event template generation and report `--events` input.
+- [x] Add GUI event label/notes fields and Add Event action.
+- [x] Include event marker table in exported HTML reports.
+- [x] Fix buffer clearing so repeated Start/Load cycles do not retain old samples.
+- [x] Add tests and real CSV smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -87,6 +96,8 @@ Phase 5
 | Use sandbox-external GitHub commands for upload | External keychain auth was valid and push succeeded. |
 | Add session metadata sidecars | Commercial-style experiment software needs anonymous subject/electrode/montage/operator/notes tied to each recording and report. |
 | Add batch comparison exports | Material validation requires comparing commercial Ag/AgCl controls, MOTAC gel, and formulation variants across repeated recordings. |
+| Add event marker sidecars | ECG material tests need time-aligned notes for motion, breathing, electrode touch, posture, or protocol events. |
+| Clear all buffers on Start/Load | Repeated GUI sessions must not mix old samples with current recordings. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -98,6 +109,7 @@ Phase 5
 | GitHub CLI token still invalid after user browser login | 2 | Browser auth did not refresh `gh`; still need `gh auth login -h github.com` in CLI. |
 | Sandboxed GitHub auth check was misleading | 3 | Ran `gh auth status` outside sandbox; authenticated as `omnihola`, created private repo, and pushed `main`. |
 | `conda run` with heredoc did not execute smoke-test metadata writer | 1 | Replaced heredoc with `python -c` for sidecar JSON creation in smoke testing. |
+| GUI `_clear_buffers()` did not clear deques | 1 | Buffer clearing code was unreachable after `_metadata()` return; moved deque clearing into `_clear_buffers()`. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.
