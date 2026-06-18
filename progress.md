@@ -163,6 +163,22 @@
   - `.gitignore`
   - `README.md`
 
+### Phase 12: Package Integrity Verification
+- **Status:** complete
+- Actions taken:
+  - Added manifest verification for package files.
+  - Verification checks existence, byte count, and SHA256 for every manifest file entry.
+  - Added CLI `verify-package` command.
+  - Added GUI `Verify Package` button that reports OK or failure details.
+  - Added tests for clean package verification and tamper detection.
+- Files created/modified:
+  - `src/ads1292_studio/session_package.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_session_package.py`
+  - `tests/test_cli.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -202,6 +218,11 @@
 | Full tests after session package | `conda run -n sensor python -m pytest -q` | All tests pass | 24 passed | Pass |
 | Session package syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_package.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
 | Session package real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package <csv> --out packages/smoke` | Manifest includes schema, CH2, Good ECG/QRS, raw/report SHA256 entries | Manifest grep found all required fields | Pass |
+| Package verify TDD red check | `conda run -n sensor python -m pytest tests/test_session_package.py tests/test_cli.py -q` before implementation | Missing verify function | `ImportError: cannot import name 'verify_session_package'` | Pass |
+| Package verify tests | `conda run -n sensor python -m pytest tests/test_session_package.py tests/test_cli.py -q` | Clean package passes, tampered CSV fails, CLI verify returns success | 7 passed | Pass |
+| Full tests after package verify | `conda run -n sensor python -m pytest -q` | All tests pass | 27 passed | Pass |
+| Package verify syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_package.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| Real package verify smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/verify-smoke/.../manifest.json` | Real package verifies cleanly | `checked_files=4`, `ok=True` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -217,12 +238,13 @@
 | 2026-06-18 | CLI tests rejected calibration options | 1 | Added `--calibration` and `--write-calibration-template` to the report subcommand. |
 | 2026-06-18 | Session package module did not exist | 1 | Added `session_package.py`, CLI command, GUI export, and package tests. |
 | 2026-06-18 | `packages/` output was initially unignored | 1 | Added `packages/` to `.gitignore`. |
+| 2026-06-18 | Package verification API did not exist | 1 | Added `verify_session_package`, CLI `verify-package`, GUI Verify Package, and tamper test. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 11 complete; ready to commit and push session package iteration. |
+| Where am I? | Phase 12 complete; ready to commit and push package verification iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, and session packages. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, and package verification. |

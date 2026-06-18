@@ -72,3 +72,13 @@ def test_cli_package_writes_manifest(tmp_path: Path) -> None:
     manifest = manifest_paths[0].read_text()
     assert '"raw_csv"' in manifest
     assert '"report_html"' in manifest
+
+
+def test_cli_verify_package_returns_success(tmp_path: Path) -> None:
+    csv_path = tmp_path / "recording.csv"
+    out_dir = tmp_path / "packages"
+    _write_small_csv(csv_path)
+    assert main(["package", str(csv_path), "--out", str(out_dir), "--title", "CLI Package"]) == 0
+    manifest_path = next(out_dir.glob("*/manifest.json"))
+
+    assert main(["verify-package", str(manifest_path)]) == 0

@@ -36,6 +36,7 @@
 | Keep buffer clearing in `_clear_buffers()` | GUI Start/Load cycles must clear previous samples, status, HR/RR, and event markers before a new session. |
 | Add calibration sidecars | Raw counts alone are not enough for auditable ECG review; Vref, gain, ADC bits, and uV/count must be recorded. |
 | Add session package manifest | A complete experiment record should bundle raw CSV, sidecars, report outputs, metrics, bytes, and SHA256 checksums. |
+| Add package verification | The package manifest should not only record hashes; the app must verify them after transfer or archive. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -51,6 +52,7 @@
 | GUI buffer clearing was unreachable | The deque clearing loop was after a `return` in `_metadata()`; moved it to `_clear_buffers()`. |
 | CLI calibration options were initially absent | TDD caught missing parser options before implementation; added template and report input flags. |
 | Session package output can pollute git | Generated `packages/` artifacts should be ignored like `reports/` and `recordings/`. |
+| Package verify was missing after manifest export | Added a verifier so modified/missing files are detected instead of silently trusted. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -67,6 +69,7 @@
 - Calibration template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-calibration-template reports/calibration-template.json`
 - Calibration report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --calibration reports/calibration-template.json --out reports`
 - Session package command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package <csv> --out packages`
+- Session package verify command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/<session>/manifest.json`
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

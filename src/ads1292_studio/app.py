@@ -23,7 +23,7 @@ from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
 from ads1292_studio.report import export_review_report
-from ads1292_studio.session_package import export_session_package
+from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import (
     bandpass,
     choose_ecg_channel,
@@ -83,6 +83,7 @@ class App(tk.Tk):
         ttk.Button(toolbar, text="Load CSV", command=self.load_csv).pack(side=tk.LEFT, padx=(12, 4))
         ttk.Button(toolbar, text="Export Report", command=self.export_report).pack(side=tk.LEFT, padx=4)
         ttk.Button(toolbar, text="Export Package", command=self.export_package).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text="Verify Package", command=self.verify_package).pack(side=tk.LEFT, padx=4)
         ttk.Button(toolbar, text="Batch Compare", command=self.batch_compare).pack(side=tk.LEFT, padx=4)
 
         self.save_var = tk.BooleanVar(value=True)
@@ -377,6 +378,25 @@ class App(tk.Tk):
             messagebox.showinfo("Package exported", f"Saved package manifest:\n{export.manifest_path}")
         except Exception as exc:
             messagebox.showerror("Package export failed", str(exc))
+
+    def verify_package(self) -> None:
+        path = filedialog.askopenfilename(
+            title="Choose package manifest",
+            filetypes=[("Manifest JSON", "manifest.json"), ("JSON files", "*.json"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            result = verify_session_package(Path(path))
+            if result.ok:
+                self._log(f"Verified package: {result.checked_files} files OK")
+                messagebox.showinfo("Package verified", f"{result.checked_files} files verified.")
+                return
+            failures = "\n".join(result.failures)
+            self._log(f"Package verification failed: {failures}")
+            messagebox.showerror("Package verification failed", failures)
+        except Exception as exc:
+            messagebox.showerror("Package verification failed", str(exc))
 
     def _clear_buffers(self) -> None:
         self.sample_index = 0

@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 11
+Phase 12
 
 ## Phases
 
@@ -98,6 +98,14 @@ Phase 11
 - [x] Add tests and real CSV smoke test.
 - **Status:** complete
 
+### Phase 12: Package Integrity Verification
+- [x] Add package manifest verification with byte and SHA256 checks.
+- [x] Detect missing files and modified files.
+- [x] Add CLI `verify-package` command.
+- [x] Add GUI `Verify Package` button.
+- [x] Add tests and real package smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -120,6 +128,7 @@ Phase 11
 | Clear all buffers on Start/Load | Repeated GUI sessions must not mix old samples with current recordings. |
 | Add calibration sidecars | Commercial-style acquisition must audit ADC Vref/gain/bit-depth and display engineering units, not only raw counts. |
 | Add session package manifest | Research/commercial-style records need raw data, sidecars, report artifacts, and hashes tied together for later audit. |
+| Add package verification | Auditable records must be re-checkable after transfer or Dropbox/GitHub storage. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -134,6 +143,7 @@ Phase 11
 | GUI `_clear_buffers()` did not clear deques | 1 | Buffer clearing code was unreachable after `_metadata()` return; moved deque clearing into `_clear_buffers()`. |
 | CLI calibration options were missing after report calibration tests | 1 | Added `--calibration` and `--write-calibration-template`, then verified CLI tests. |
 | `packages/` was not ignored initially | 1 | Added `packages/` to `.gitignore` before committing package smoke output. |
+| Package verification function was missing | 1 | Added TDD tests, `verify_session_package`, CLI `verify-package`, and GUI Verify Package. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

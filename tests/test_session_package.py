@@ -7,7 +7,7 @@ from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_json
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
-from ads1292_studio.session_package import export_session_package
+from ads1292_studio.session_package import export_session_package, verify_session_package
 
 
 def _write_session_files(path: Path) -> None:
@@ -50,3 +50,28 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     expected_sha = hashlib.sha256(copied_csv.read_bytes()).hexdigest()
     assert raw_entry["sha256"] == expected_sha
     assert raw_entry["bytes"] == copied_csv.stat().st_size
+
+
+def test_verify_session_package_passes_clean_manifest(tmp_path: Path) -> None:
+    csv_path = tmp_path / "pkg-001.csv"
+    _write_session_files(csv_path)
+    export = export_session_package(csv_path=csv_path, out_dir=tmp_path / "packages", title="Package Test")
+
+    result = verify_session_package(export.manifest_path)
+
+    assert result.ok is True
+    assert result.checked_files >= 4
+    assert result.failures == tuple()
+
+
+def test_verify_session_package_fails_after_file_tamper(tmp_path: Path) -> None:
+    csv_path = tmp_path / "pkg-001.csv"
+    _write_session_files(csv_path)
+    export = export_session_package(csv_path=csv_path, out_dir=tmp_path / "packages", title="Package Test")
+    raw_csv = export.package_dir / "pkg-001.csv"
+    raw_csv.write_text(raw_csv.read_text() + "\n# tampered\n")
+
+    result = verify_session_package(export.manifest_path)
+
+    assert result.ok is False
+    assert any("sha256 mismatch" in failure for failure in result.failures)

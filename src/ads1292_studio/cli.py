@@ -13,7 +13,7 @@ from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.events import event_template, read_events_json, write_events_json
 from ads1292_studio.metadata import metadata_template, read_metadata_json, write_metadata_json
 from ads1292_studio.report import export_review_report
-from ads1292_studio.session_package import export_session_package
+from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import review_channels
 
 
@@ -137,6 +137,16 @@ def cmd_package(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_verify_package(args: argparse.Namespace) -> int:
+    result = verify_session_package(args.manifest)
+    print(f"manifest={result.manifest_path}")
+    print(f"checked_files={result.checked_files}")
+    print(f"ok={result.ok}")
+    for failure in result.failures:
+        print(f"failure={failure}")
+    return 0 if result.ok else 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="ADS1292 Studio CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -176,6 +186,9 @@ def build_parser() -> argparse.ArgumentParser:
     package.add_argument("--title", default="ADS1292 Session Package")
     package.add_argument("--source", choices=["Auto", "CH1", "CH2"], default="Auto")
     package.set_defaults(func=cmd_package)
+    verify = sub.add_parser("verify-package")
+    verify.add_argument("manifest", type=Path)
+    verify.set_defaults(func=cmd_verify_package)
     return parser
 
 

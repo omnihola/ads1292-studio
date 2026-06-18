@@ -21,6 +21,14 @@ class SessionPackageExport:
     report_html_path: Path
 
 
+@dataclass(frozen=True)
+class PackageVerification:
+    manifest_path: Path
+    ok: bool
+    checked_files: int
+    failures: tuple[str, ...]
+
+
 def export_session_package(
     csv_path: Path | str,
     out_dir: Path | str,
@@ -94,6 +102,38 @@ def export_session_package(
     }
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     return SessionPackageExport(package_dir=package_dir, manifest_path=manifest_path, report_html_path=report.html_path)
+
+
+def verify_session_package(manifest_path: Path | str) -> PackageVerification:
+    manifest = Path(manifest_path)
+    package_dir = manifest.parent
+    failures: list[str] = []
+    try:
+        data = json.loads(manifest.read_text())
+    except Exception as exc:
+        return PackageVerification(manifest_path=manifest, ok=False, checked_files=0, failures=(f"manifest read failed: {exc}",))
+
+    checked = 0
+    for item in data.get("files", []):
+        role = str(item.get("role", "unknown"))
+        relative = item.get("path")
+        if not isinstance(relative, str):
+            failures.append(f"{role}: missing path")
+            continue
+        path = package_dir / relative
+        if not path.exists():
+            failures.append(f"{role}: missing file {relative}")
+            continue
+        checked += 1
+        actual_bytes = path.stat().st_size
+        expected_bytes = item.get("bytes")
+        if expected_bytes != actual_bytes:
+            failures.append(f"{role}: byte mismatch for {relative}")
+        expected_sha = item.get("sha256")
+        actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        if expected_sha != actual_sha:
+            failures.append(f"{role}: sha256 mismatch for {relative}")
+    return PackageVerification(manifest_path=manifest, ok=not failures, checked_files=checked, failures=tuple(failures))
 
 
 def _package_slug(csv_path: Path) -> str:
