@@ -20,6 +20,7 @@ from ads1292_studio.events import EventMarker
 from ads1292_studio.models import StreamSample
 from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
+from ads1292_studio.quality_gate import QualityGate, QualityGateResult, evaluate_quality_gate
 from ads1292_studio.signal_processing import bandpass, detect_r_peaks, pqrst_review
 
 
@@ -40,6 +41,7 @@ def export_review_report(
     metadata: SessionMetadata | None = None,
     events: tuple[EventMarker, ...] | list[EventMarker] | None = None,
     calibration: Calibration | None = None,
+    quality_gate: QualityGate | None = None,
 ) -> ReportExport:
     output = Path(out_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -50,6 +52,7 @@ def export_review_report(
     pqrst_png = output / f"{stamp}-{slug}-pqrst.png"
     html_path = output / f"{stamp}-{slug}.html"
     normalized_calibration = (calibration or Calibration()).normalized()
+    gate_result = evaluate_quality_gate(metrics, quality_gate)
     _write_ecg_png(tuple(samples), ecg_png, metrics, sample_rate_hz, normalized_calibration)
     _write_pqrst_png(tuple(samples), pqrst_png, metrics, sample_rate_hz, normalized_calibration)
     html_path.write_text(
@@ -61,6 +64,7 @@ def export_review_report(
             metadata,
             tuple(events or ()),
             normalized_calibration,
+            gate_result,
         )
     )
     return ReportExport(html_path, ecg_png, pqrst_png, metrics)
@@ -153,6 +157,7 @@ def _html(
     metadata: SessionMetadata | None,
     events: tuple[EventMarker, ...],
     calibration: Calibration,
+    gate_result: QualityGateResult,
 ) -> str:
     rows = [
         ("Quality", metrics.quality_label),
@@ -213,6 +218,12 @@ def _html(
         f"<tr><th>{escape(key)}</th><td>{escape(value)}</td></tr>" for key, value in calibration_rows
     )
     calibration_html = f"<h2>Calibration</h2><table>{calibration_table}</table>"
+    gate_rows = [
+        ("Status", gate_result.label),
+        ("Failures", "; ".join(gate_result.failures) if gate_result.failures else "None"),
+    ]
+    gate_table = "\n".join(f"<tr><th>{escape(key)}</th><td>{escape(value)}</td></tr>" for key, value in gate_rows)
+    gate_html = f"<h2>Quality Gate</h2><table>{gate_table}</table>"
     return f"""<!doctype html>
 <html lang=\"en\">
 <head>
@@ -234,6 +245,7 @@ def _html(
   {metadata_html}
   {events_html}
   {calibration_html}
+  {gate_html}
   <h2>Signal Quality</h2>
   <table>{table}</table>
   <h2>ECG Review</h2>

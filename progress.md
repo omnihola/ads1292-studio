@@ -179,6 +179,25 @@
   - `tests/test_cli.py`
   - `README.md`
 
+### Phase 13: Quality Gate & Acceptance Criteria
+- **Status:** complete
+- Actions taken:
+  - Added `QualityGate` and `QualityGateResult`.
+  - Added pass/fail evaluation for duration, contact, QRS clarity, R peaks, and HR bounds.
+  - Added Quality Gate table to HTML reports.
+  - Added CLI `qc` command with threshold options and `--allow-unclear-qrs`.
+  - Added GUI quality text that includes Gate Pass/Fail.
+  - Added tests for pass/fail behavior, report integration, and CLI QC.
+- Files created/modified:
+  - `src/ads1292_studio/quality_gate.py`
+  - `src/ads1292_studio/report.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_quality_gate.py`
+  - `tests/test_quality_report.py`
+  - `tests/test_cli.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -223,6 +242,12 @@
 | Full tests after package verify | `conda run -n sensor python -m pytest -q` | All tests pass | 27 passed | Pass |
 | Package verify syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_package.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
 | Real package verify smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/verify-smoke/.../manifest.json` | Real package verifies cleanly | `checked_files=4`, `ok=True` | Pass |
+| Quality gate TDD red check | `conda run -n sensor python -m pytest tests/test_quality_gate.py tests/test_quality_report.py tests/test_cli.py -q` before implementation | Missing quality gate module | `ModuleNotFoundError: ads1292_studio.quality_gate` | Pass |
+| Quality gate tests | `conda run -n sensor python -m pytest tests/test_quality_gate.py tests/test_quality_report.py tests/test_cli.py -q` | Gate/report/CLI tests pass | 9 passed | Pass |
+| Full tests after quality gate | `conda run -n sensor python -m pytest -q` | All tests pass | 30 passed | Pass |
+| Quality gate syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/quality_gate.py src/ads1292_studio/report.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| Quality gate real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv>` | Real ADS1292 CSV passes QC | `quality_gate=Pass`, `ecg_source=CH2`, `quality=Good ECG/QRS` | Pass |
+| Quality gate report smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --out reports/qc-smoke` | HTML contains Quality Gate Pass | grep found `Quality Gate`, `Pass`, `Good ECG/QRS`, `CH2` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -239,12 +264,13 @@
 | 2026-06-18 | Session package module did not exist | 1 | Added `session_package.py`, CLI command, GUI export, and package tests. |
 | 2026-06-18 | `packages/` output was initially unignored | 1 | Added `packages/` to `.gitignore`. |
 | 2026-06-18 | Package verification API did not exist | 1 | Added `verify_session_package`, CLI `verify-package`, GUI Verify Package, and tamper test. |
+| 2026-06-18 | Synthetic QC fixture failed default QRS gate | 1 | Added explicit `--allow-unclear-qrs` option for synthetic/debug records and kept default real-data gate strict. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 12 complete; ready to commit and push package verification iteration. |
+| Where am I? | Phase 13 complete; ready to commit and push quality gate iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, and package verification. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, and quality gates. |

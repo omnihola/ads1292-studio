@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 12
+Phase 13
 
 ## Phases
 
@@ -106,6 +106,15 @@ Phase 12
 - [x] Add tests and real package smoke test.
 - **Status:** complete
 
+### Phase 13: Quality Gate & Acceptance Criteria
+- [x] Add configurable quality gate thresholds.
+- [x] Evaluate pass/fail from computed ECG quality metrics.
+- [x] Include Quality Gate table in HTML reports.
+- [x] Add CLI `qc` command with threshold options.
+- [x] Display Quality Gate status in GUI quality text.
+- [x] Add tests and real CSV smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -129,6 +138,7 @@ Phase 12
 | Add calibration sidecars | Commercial-style acquisition must audit ADC Vref/gain/bit-depth and display engineering units, not only raw counts. |
 | Add session package manifest | Research/commercial-style records need raw data, sidecars, report artifacts, and hashes tied together for later audit. |
 | Add package verification | Auditable records must be re-checkable after transfer or Dropbox/GitHub storage. |
+| Add quality gate | MOTAC vs commercial electrode tests need explicit pass/fail criteria instead of only descriptive metrics. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -144,6 +154,7 @@ Phase 12
 | CLI calibration options were missing after report calibration tests | 1 | Added `--calibration` and `--write-calibration-template`, then verified CLI tests. |
 | `packages/` was not ignored initially | 1 | Added `packages/` to `.gitignore` before committing package smoke output. |
 | Package verification function was missing | 1 | Added TDD tests, `verify_session_package`, CLI `verify-package`, and GUI Verify Package. |
+| Initial quality gate test used short synthetic data | 1 | Made the test threshold explicit and added CLI `--allow-unclear-qrs` for debug/synthetic data. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

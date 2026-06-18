@@ -6,6 +6,7 @@ from ads1292_studio.calibration import Calibration
 from ads1292_studio.models import StreamSample
 from ads1292_studio.events import EventMarker
 from ads1292_studio.metadata import SessionMetadata
+from ads1292_studio.quality_gate import QualityGate
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.report import export_review_report
 
@@ -55,6 +56,7 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
         ),
         events=(EventMarker(timestamp_seconds=2.5, label="motion", notes="arm moved"),),
         calibration=Calibration(vref_mv=2420.0, pga_gain=6.0, adc_bits=24),
+        quality_gate=QualityGate(min_duration_seconds=5.0),
     )
 
     assert result.html_path.exists()
@@ -73,3 +75,5 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "Calibration" in html
     assert "2.420 V" in html
     assert "0.0481 uV/count" in html
+    assert "Quality Gate" in html
+    assert "Pass" in html

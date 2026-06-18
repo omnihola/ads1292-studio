@@ -12,6 +12,8 @@ from ads1292_studio.csv_io import CsvRecorder, read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.events import event_template, read_events_json, write_events_json
 from ads1292_studio.metadata import metadata_template, read_metadata_json, write_metadata_json
+from ads1292_studio.quality import compute_quality_metrics
+from ads1292_studio.quality_gate import QualityGate, evaluate_quality_gate
 from ads1292_studio.report import export_review_report
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import review_channels
@@ -147,6 +149,26 @@ def cmd_verify_package(args: argparse.Namespace) -> int:
     return 0 if result.ok else 2
 
 
+def cmd_qc(args: argparse.Namespace) -> int:
+    recording = read_recording_csv(args.csv)
+    metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz, source=args.source)
+    gate = QualityGate(
+        min_duration_seconds=args.min_duration,
+        min_contact_ok_percent=args.min_contact,
+        min_r_peaks=args.min_r_peaks,
+        min_hr_bpm=args.min_hr,
+        max_hr_bpm=args.max_hr,
+        require_qrs_clear=not args.allow_unclear_qrs,
+    )
+    result = evaluate_quality_gate(metrics, gate)
+    print(f"quality_gate={result.label}")
+    print(f"ecg_source={metrics.ecg_source}")
+    print(f"quality={metrics.quality_label}")
+    for failure in result.failures:
+        print(f"failure={failure}")
+    return 0 if result.passed else 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="ADS1292 Studio CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -189,6 +211,16 @@ def build_parser() -> argparse.ArgumentParser:
     verify = sub.add_parser("verify-package")
     verify.add_argument("manifest", type=Path)
     verify.set_defaults(func=cmd_verify_package)
+    qc = sub.add_parser("qc")
+    qc.add_argument("csv", type=Path)
+    qc.add_argument("--source", choices=["Auto", "CH1", "CH2"], default="Auto")
+    qc.add_argument("--min-duration", type=float, default=8.0)
+    qc.add_argument("--min-contact", type=float, default=95.0)
+    qc.add_argument("--min-r-peaks", type=int, default=5)
+    qc.add_argument("--min-hr", type=float, default=35.0)
+    qc.add_argument("--max-hr", type=float, default=180.0)
+    qc.add_argument("--allow-unclear-qrs", action="store_true")
+    qc.set_defaults(func=cmd_qc)
     return parser
 
 

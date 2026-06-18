@@ -22,6 +22,8 @@ from ads1292_studio.events import EventMarker, read_events_json, write_events_js
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
+from ads1292_studio.quality import compute_quality_metrics
+from ads1292_studio.quality_gate import evaluate_quality_gate
 from ads1292_studio.report import export_review_report
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import (
@@ -541,7 +543,7 @@ class App(tk.Tk):
         self.metrics_var.set(
             f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {source} | HR {hr.median_bpm:.0f} bpm"
         )
-        self.quality_var.set(self._quality_text(source, hr.valid_rr_count))
+        self.quality_var.set(self._quality_text(source, hr.valid_rr_count, tuple(self._current_samples())))
         self.live_canvas.draw_idle()
 
     def _show_recording(self, samples: tuple[StreamSample, ...]) -> None:
@@ -570,7 +572,9 @@ class App(tk.Tk):
         self.metrics_var.set(
             f"samples {len(samples)} | duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | source {source}"
         )
+        gate = evaluate_quality_gate(compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get()))
         self.quality_var.set(
+            f"Gate {gate.label} | "
             f"QRS {'clear' if result.pqrst.qrs_clear else 'unclear'} | "
             f"P {'tentative' if result.pqrst.p_tentative else 'not reliable'} | "
             f"T {'tentative' if result.pqrst.t_tentative else 'not reliable'}"
@@ -594,11 +598,25 @@ class App(tk.Tk):
         self.ax_pqrst.grid(True, alpha=0.25)
         self.pqrst_canvas.draw_idle()
 
-    def _quality_text(self, source: str, valid_rr: int) -> str:
+    def _quality_text(self, source: str, valid_rr: int, samples: tuple[StreamSample, ...]) -> str:
         lead_bad = sum(1 for value in self.status if value != 0)
         contact = "OK" if lead_bad == 0 else f"{lead_bad} bad samples"
         rhythm = "detecting" if valid_rr < 2 else "R peaks detected"
-        return f"Contact {contact} | {rhythm} | source {source}"
+        gate = evaluate_quality_gate(compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get()))
+        return f"Gate {gate.label} | Contact {contact} | {rhythm} | source {source}"
+
+    def _current_samples(self) -> tuple[StreamSample, ...]:
+        return tuple(
+            StreamSample(
+                timestamp=index / SAMPLE_RATE_HZ,
+                ch1=int(ch1),
+                ch2=int(ch2),
+                board_heart_rate=0,
+                board_respiration_rate=0,
+                status_byte=int(status),
+            )
+            for index, (ch1, ch2, status) in enumerate(zip(self.ch1, self.ch2, self.status))
+        )
 
     def _log(self, message: str) -> None:
         stamp = datetime.now().strftime("%H:%M:%S")

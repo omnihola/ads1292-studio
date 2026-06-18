@@ -37,6 +37,7 @@
 | Add calibration sidecars | Raw counts alone are not enough for auditable ECG review; Vref, gain, ADC bits, and uV/count must be recorded. |
 | Add session package manifest | A complete experiment record should bundle raw CSV, sidecars, report outputs, metrics, bytes, and SHA256 checksums. |
 | Add package verification | The package manifest should not only record hashes; the app must verify them after transfer or archive. |
+| Add quality gate | Electrode validation needs explicit pass/fail gates for contact, duration, QRS, R peaks, and HR bounds. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -53,6 +54,7 @@
 | CLI calibration options were initially absent | TDD caught missing parser options before implementation; added template and report input flags. |
 | Session package output can pollute git | Generated `packages/` artifacts should be ignored like `reports/` and `recordings/`. |
 | Package verify was missing after manifest export | Added a verifier so modified/missing files are detected instead of silently trusted. |
+| Synthetic QC data can fail strict QRS checks | Keep default QC strict for real recordings, but allow `--allow-unclear-qrs` for debug fixtures. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -70,6 +72,7 @@
 - Calibration report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --calibration reports/calibration-template.json --out reports`
 - Session package command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package <csv> --out packages`
 - Session package verify command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/<session>/manifest.json`
+- Quality gate command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv>`
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.
