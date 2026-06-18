@@ -32,6 +32,8 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-m
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --meta reports/session-template.json --out reports
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-events-template reports/events-template.json
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --events reports/events-template.json --out reports
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-calibration-template reports/calibration-template.json
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --calibration reports/calibration-template.json --out reports
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch recording-a.csv recording-b.csv --out reports/batch
 ```
 
@@ -51,6 +53,8 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch recording-
 - Event markers for motion, deep breathing, electrode touch, or other protocol
   annotations; events can be saved as `.events.json` sidecars and included in
   exported reports.
+- ADC calibration config for Vref, PGA gain, and bit depth; GUI plots and
+  reports can display ECG in microvolts while raw CSV counts remain preserved.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

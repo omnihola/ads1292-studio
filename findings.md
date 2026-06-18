@@ -34,6 +34,7 @@
 | Add batch comparison summary | Commercial/MOTAC/formulation comparison needs cohort-level CSV/HTML/PNG summaries instead of one file at a time. |
 | Add event marker sidecars | Time-aligned protocol events make motion artifacts, deep-breath tests, electrode touch, or posture changes auditable in reports. |
 | Keep buffer clearing in `_clear_buffers()` | GUI Start/Load cycles must clear previous samples, status, HR/RR, and event markers before a new session. |
+| Add calibration sidecars | Raw counts alone are not enough for auditable ECG review; Vref, gain, ADC bits, and uV/count must be recorded. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -47,6 +48,7 @@
 | Sandboxed GitHub auth result was misleading | Escalated shell saw valid keychain auth and push succeeded. |
 | `conda run` heredoc smoke step did not create metadata sidecars | Use `python -c` or a script file for smoke setup when running through `conda run`. |
 | GUI buffer clearing was unreachable | The deque clearing loop was after a `return` in `_metadata()`; moved it to `_clear_buffers()`. |
+| CLI calibration options were initially absent | TDD caught missing parser options before implementation; added template and report input flags. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -60,6 +62,8 @@
 - Batch command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch file1.csv file2.csv --out reports/batch`
 - Events template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-events-template reports/events-template.json`
 - Event report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --events reports/events-template.json --out reports`
+- Calibration template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-calibration-template reports/calibration-template.json`
+- Calibration report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --calibration reports/calibration-template.json --out reports`
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

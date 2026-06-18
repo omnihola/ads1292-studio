@@ -15,6 +15,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 from ads1292_studio.batch import export_batch_summary
+from ads1292_studio.calibration import Calibration, counts_to_microvolts, read_calibration_json, write_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.events import EventMarker, read_events_json, write_events_json
@@ -120,6 +121,9 @@ class App(tk.Tk):
         self.event_label_var = tk.StringVar(value="motion")
         self.event_notes_var = tk.StringVar(value="")
         self.event_count_var = tk.StringVar(value="0 events")
+        self.calibration_label_var = tk.StringVar(value="ADS1292 default")
+        self.vref_mv_var = tk.StringVar(value="2420")
+        self.pga_gain_var = tk.StringVar(value="6")
         for label, var in (
             ("Session", self.metrics_var),
             ("Quality", self.quality_var),
@@ -140,6 +144,10 @@ class App(tk.Tk):
         self._metadata_entry(side, "Event notes", self.event_notes_var)
         ttk.Button(side, text="Add Event", command=self.add_event).pack(anchor=tk.W, fill=tk.X, pady=(6, 2))
         ttk.Label(side, textvariable=self.event_count_var, wraplength=230, justify=tk.LEFT).pack(anchor=tk.W)
+        ttk.Label(side, text="Calibration", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        self._metadata_entry(side, "Label", self.calibration_label_var)
+        self._metadata_entry(side, "Vref mV", self.vref_mv_var)
+        self._metadata_entry(side, "PGA gain", self.pga_gain_var)
         ttk.Label(side, text="Research use only. Use battery power.", wraplength=230, justify=tk.LEFT).pack(anchor=tk.W)
 
         self.notebook = ttk.Notebook(main)
@@ -168,6 +176,8 @@ class App(tk.Tk):
         self.ax_live_ecg = fig.add_subplot(311)
         self.ax_live_other = fig.add_subplot(312, sharex=self.ax_live_ecg)
         self.ax_live_status = fig.add_subplot(313, sharex=self.ax_live_ecg)
+        self.ax_live_ecg.set_ylabel("uV")
+        self.ax_live_other.set_ylabel("uV")
         self.ax_live_status.set_xlabel("Time (s)")
         self.live_ecg_line, = self.ax_live_ecg.plot([], [], lw=1.0)
         self.live_peak_line, = self.ax_live_ecg.plot([], [], "r.", ms=5)
@@ -181,6 +191,8 @@ class App(tk.Tk):
         self.ax_review_ecg = fig.add_subplot(211)
         self.ax_review_other = fig.add_subplot(212, sharex=self.ax_review_ecg)
         self.ax_review_other.set_xlabel("Samples")
+        self.ax_review_ecg.set_ylabel("uV")
+        self.ax_review_other.set_ylabel("uV")
         self.review_ecg_line, = self.ax_review_ecg.plot([], [], lw=0.9)
         self.review_peak_line, = self.ax_review_ecg.plot([], [], "r.", ms=5)
         self.review_other_line, = self.ax_review_other.plot([], [], lw=0.8)
@@ -245,6 +257,7 @@ class App(tk.Tk):
             self.recording_path = csv_path
             write_metadata_json(csv_path.with_suffix(".json"), self._metadata())
             write_events_json(self._events_path(csv_path), self.event_markers)
+            write_calibration_json(self._calibration_path(csv_path), self._calibration())
             self.path_var.set(f"CSV: {csv_path}")
         self.worker.start(port, csv_path)
         self.start_button.configure(state=tk.DISABLED)
@@ -268,6 +281,7 @@ class App(tk.Tk):
             self.loaded_samples = recording.samples
             self._show_recording(recording.samples)
             self._load_event_sidecar(Path(path))
+            self._load_calibration_sidecar(Path(path))
             self.path_var.set(f"CSV: {path}")
             self._log(f"Loaded {path}")
         except Exception as exc:
@@ -314,6 +328,7 @@ class App(tk.Tk):
                 source=self.source_var.get(),
                 metadata=self._metadata(),
                 events=tuple(self.event_markers),
+                calibration=self._calibration(),
             )
             self._log(f"Exported report: {export.html_path}")
             messagebox.showinfo("Report exported", f"Saved report:\n{export.html_path}")
@@ -369,6 +384,9 @@ class App(tk.Tk):
     def _events_path(self, csv_path: Path) -> Path:
         return csv_path.with_suffix(".events.json")
 
+    def _calibration_path(self, csv_path: Path) -> Path:
+        return csv_path.with_suffix(".calibration.json")
+
     def _load_event_sidecar(self, csv_path: Path) -> None:
         path = self._events_path(csv_path)
         if not path.exists():
@@ -386,6 +404,24 @@ class App(tk.Tk):
 
     def _set_event_count(self) -> None:
         self.event_count_var.set(f"{len(self.event_markers)} events")
+
+    def _calibration(self) -> Calibration:
+        return Calibration(
+            vref_mv=_float_from_var(self.vref_mv_var, 2420.0),
+            pga_gain=_float_from_var(self.pga_gain_var, 6.0),
+            adc_bits=24,
+            label=self.calibration_label_var.get(),
+        ).normalized()
+
+    def _load_calibration_sidecar(self, csv_path: Path) -> None:
+        path = self._calibration_path(csv_path)
+        if not path.exists():
+            return
+        calibration = read_calibration_json(path)
+        self.calibration_label_var.set(calibration.label)
+        self.vref_mv_var.set(f"{calibration.vref_mv:g}")
+        self.pga_gain_var.set(f"{calibration.pga_gain:g}")
+        self._log(f"Loaded calibration: {path}")
 
     def _tick(self) -> None:
         latest = None
@@ -422,9 +458,8 @@ class App(tk.Tk):
         return "CH1", ch1, ch2
 
     def _display_signal(self, values: np.ndarray) -> np.ndarray:
-        if not self.filter_var.get():
-            return values
-        return bandpass(values, SAMPLE_RATE_HZ)
+        display = values if not self.filter_var.get() else bandpass(values, SAMPLE_RATE_HZ)
+        return counts_to_microvolts(display, self._calibration())
 
     def _redraw_live(self) -> None:
         if not self.indices:
@@ -528,6 +563,13 @@ class App(tk.Tk):
 
 def main() -> None:
     App().mainloop()
+
+
+def _float_from_var(variable: tk.StringVar, fallback: float) -> float:
+    try:
+        return float(variable.get())
+    except ValueError:
+        return fallback
 
 
 if __name__ == "__main__":

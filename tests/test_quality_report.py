@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ads1292_studio.calibration import Calibration
 from ads1292_studio.models import StreamSample
 from ads1292_studio.events import EventMarker
 from ads1292_studio.metadata import SessionMetadata
@@ -53,6 +54,7 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
             notes="no movement",
         ),
         events=(EventMarker(timestamp_seconds=2.5, label="motion", notes="arm moved"),),
+        calibration=Calibration(vref_mv=2420.0, pga_gain=6.0, adc_bits=24),
     )
 
     assert result.html_path.exists()
@@ -68,3 +70,6 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "Event Markers" in html
     assert "motion" in html
     assert "arm moved" in html
+    assert "Calibration" in html
+    assert "2.420 V" in html
+    assert "0.0481 uV/count" in html

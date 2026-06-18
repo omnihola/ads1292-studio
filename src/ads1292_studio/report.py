@@ -15,6 +15,7 @@ import numpy as np
 matplotlib.use("Agg")
 from matplotlib.figure import Figure
 
+from ads1292_studio.calibration import Calibration, counts_to_microvolts
 from ads1292_studio.events import EventMarker
 from ads1292_studio.models import StreamSample
 from ads1292_studio.metadata import SessionMetadata
@@ -38,6 +39,7 @@ def export_review_report(
     source: str = "Auto",
     metadata: SessionMetadata | None = None,
     events: tuple[EventMarker, ...] | list[EventMarker] | None = None,
+    calibration: Calibration | None = None,
 ) -> ReportExport:
     output = Path(out_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -47,9 +49,20 @@ def export_review_report(
     ecg_png = output / f"{stamp}-{slug}-ecg.png"
     pqrst_png = output / f"{stamp}-{slug}-pqrst.png"
     html_path = output / f"{stamp}-{slug}.html"
-    _write_ecg_png(tuple(samples), ecg_png, metrics, sample_rate_hz)
-    _write_pqrst_png(tuple(samples), pqrst_png, metrics, sample_rate_hz)
-    html_path.write_text(_html(title, metrics, ecg_png.name, pqrst_png.name, metadata, tuple(events or ())))
+    normalized_calibration = (calibration or Calibration()).normalized()
+    _write_ecg_png(tuple(samples), ecg_png, metrics, sample_rate_hz, normalized_calibration)
+    _write_pqrst_png(tuple(samples), pqrst_png, metrics, sample_rate_hz, normalized_calibration)
+    html_path.write_text(
+        _html(
+            title,
+            metrics,
+            ecg_png.name,
+            pqrst_png.name,
+            metadata,
+            tuple(events or ()),
+            normalized_calibration,
+        )
+    )
     return ReportExport(html_path, ecg_png, pqrst_png, metrics)
 
 
@@ -75,11 +88,12 @@ def _write_ecg_png(
     path: Path,
     metrics: QualityMetrics,
     sample_rate_hz: float,
+    calibration: Calibration,
 ) -> None:
     ecg_raw = _selected_channel(samples, metrics.ecg_source)
     other_raw = _other_channel(samples, metrics.ecg_source)
-    ecg = bandpass(ecg_raw, sample_rate_hz)
-    other = bandpass(other_raw, sample_rate_hz)
+    ecg = counts_to_microvolts(bandpass(ecg_raw, sample_rate_hz), calibration)
+    other = counts_to_microvolts(bandpass(other_raw, sample_rate_hz), calibration)
     peaks = detect_r_peaks(ecg_raw, sample_rate_hz)
     x = np.arange(ecg.size) / sample_rate_hz
     fig = Figure(figsize=(12, 7), dpi=160)
@@ -89,12 +103,12 @@ def _write_ecg_png(
     if peaks:
         ax1.plot(x[list(peaks)], ecg[list(peaks)], "r.", ms=4)
     ax1.set_title(f"ECG source {metrics.ecg_source} | HR {metrics.hr_median_bpm:.1f} bpm | {metrics.quality_label}")
-    ax1.set_ylabel("Filtered counts")
+    ax1.set_ylabel("Filtered uV")
     ax1.grid(True, alpha=0.25)
     ax2.plot(x, other, lw=0.8)
     ax2.set_title("Other channel")
     ax2.set_xlabel("Time (s)")
-    ax2.set_ylabel("Filtered counts")
+    ax2.set_ylabel("Filtered uV")
     ax2.grid(True, alpha=0.25)
     fig.tight_layout()
     fig.savefig(path)
@@ -105,6 +119,7 @@ def _write_pqrst_png(
     path: Path,
     metrics: QualityMetrics,
     sample_rate_hz: float,
+    calibration: Calibration,
 ) -> None:
     ecg_raw = _selected_channel(samples, metrics.ecg_source)
     peaks = detect_r_peaks(ecg_raw, sample_rate_hz)
@@ -112,14 +127,19 @@ def _write_pqrst_png(
     fig = Figure(figsize=(10, 5), dpi=160)
     ax = fig.add_subplot(111)
     if review.average_beat:
-        ax.plot(review.time_ms, review.average_beat, lw=2, label="average beat")
+        ax.plot(
+            review.time_ms,
+            counts_to_microvolts(np.asarray(review.average_beat, dtype=float), calibration),
+            lw=2,
+            label="average beat",
+        )
         ax.axvline(0, color="r", linestyle="--", lw=1, label="R")
         ax.axvspan(-220, -80, color="green", alpha=0.08, label="P search")
         ax.axvspan(120, 380, color="orange", alpha=0.08, label="T search")
         ax.legend(loc="upper right")
     ax.set_title(f"PQRST review | QRS={review.qrs_clear} | P={review.p_tentative} | T={review.t_tentative}")
     ax.set_xlabel("Time relative to R peak (ms)")
-    ax.set_ylabel("Filtered counts")
+    ax.set_ylabel("Filtered uV")
     ax.grid(True, alpha=0.25)
     fig.tight_layout()
     fig.savefig(path)
@@ -132,6 +152,7 @@ def _html(
     pqrst_png: str,
     metadata: SessionMetadata | None,
     events: tuple[EventMarker, ...],
+    calibration: Calibration,
 ) -> str:
     rows = [
         ("Quality", metrics.quality_label),
@@ -180,6 +201,18 @@ def _html(
             "<table><tr><th>Time (s)</th><th>Label</th><th>Notes</th></tr>"
             f"{event_rows}</table>"
         )
+    calibration = calibration.normalized()
+    calibration_rows = [
+        ("Label", calibration.label),
+        ("Reference voltage", f"{calibration.vref_mv / 1000.0:.3f} V"),
+        ("PGA gain", f"{calibration.pga_gain:g}"),
+        ("ADC bits", str(calibration.adc_bits)),
+        ("ECG scale", f"{calibration.microvolts_per_count:.4f} uV/count"),
+    ]
+    calibration_table = "\n".join(
+        f"<tr><th>{escape(key)}</th><td>{escape(value)}</td></tr>" for key, value in calibration_rows
+    )
+    calibration_html = f"<h2>Calibration</h2><table>{calibration_table}</table>"
     return f"""<!doctype html>
 <html lang=\"en\">
 <head>
@@ -200,6 +233,7 @@ def _html(
   <div class=\"sub\">Generated by ADS1292 Studio. Research use only; not diagnostic medical software.</div>
   {metadata_html}
   {events_html}
+  {calibration_html}
   <h2>Signal Quality</h2>
   <table>{table}</table>
   <h2>ECG Review</h2>

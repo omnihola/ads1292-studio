@@ -124,6 +124,26 @@
   - `tests/test_quality_report.py`
   - `README.md`
 
+### Phase 10: Calibration & Engineering Units
+- **Status:** complete
+- Actions taken:
+  - Added `Calibration` model with Vref, PGA gain, ADC bits, and uV/count conversion.
+  - Added calibration JSON template/read/write helpers.
+  - Added report calibration table and converted report ECG/PQRST plots to microvolts.
+  - Added CLI `report --write-calibration-template` and `report --calibration`.
+  - Added GUI calibration fields and `.calibration.json` sidecar save/load.
+  - Changed GUI live/review display from counts to uV while preserving raw CSV counts.
+  - Added calibration and CLI tests.
+- Files created/modified:
+  - `src/ads1292_studio/calibration.py`
+  - `src/ads1292_studio/report.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_calibration.py`
+  - `tests/test_cli.py`
+  - `tests/test_quality_report.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -151,6 +171,13 @@
 | Syntax compile after events | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/events.py src/ads1292_studio/report.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
 | Full tests after events | `conda run -n sensor python -m pytest -q` | All tests pass | 16 passed | Pass |
 | Event real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --events reports/event-smoke/events.json --out reports/event-smoke` | HTML contains event table and CH2 source | `ecg_source=CH2`, `quality=Good ECG/QRS`, HTML contains Event Markers | Pass |
+| Calibration TDD red check | `conda run -n sensor python -m pytest tests/test_calibration.py tests/test_quality_report.py -q` before implementation | Missing calibration module | `ModuleNotFoundError: ads1292_studio.calibration` | Pass |
+| Calibration/report tests | `conda run -n sensor python -m pytest tests/test_calibration.py tests/test_quality_report.py -q` | Calibration and report tests pass | 6 passed | Pass |
+| CLI calibration red check | `conda run -n sensor python -m pytest tests/test_cli.py -q` before CLI implementation | Missing CLI args | `unrecognized arguments: --write-calibration-template`, `--calibration` | Pass |
+| CLI calibration tests | `conda run -n sensor python -m pytest tests/test_cli.py -q` | CLI calibration tests pass | 2 passed | Pass |
+| Calibration syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/calibration.py src/ads1292_studio/report.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| Full tests after calibration | `conda run -n sensor python -m pytest -q` | All tests pass | 22 passed | Pass |
+| Calibration real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --calibration reports/calibration-smoke/calibration.json --out reports/calibration-smoke` | HTML contains calibration table and CH2 source | `ecg_source=CH2`, `quality=Good ECG/QRS`, HTML contains `2.420 V` and `0.0481 uV/count` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -163,12 +190,13 @@
 | 2026-06-18 | Sandboxed `gh auth status` was misleading relative to external keychain auth | 3 | Used escalated shell for GitHub commands; upload succeeded. |
 | 2026-06-18 | `conda run` with heredoc did not write smoke-test metadata JSON | 1 | Re-ran metadata sidecar creation with `python -c`, then batch smoke passed. |
 | 2026-06-18 | GUI buffer clear code was unreachable after a `return` | 1 | Moved deque clearing into `_clear_buffers()` and covered the iteration with syntax/full tests. |
+| 2026-06-18 | CLI tests rejected calibration options | 1 | Added `--calibration` and `--write-calibration-template` to the report subcommand. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 8 complete; ready to commit and push batch comparison iteration. |
+| Where am I? | Phase 10 complete; ready to commit and push calibration iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, and batch comparison. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, and calibration/uV display. |
