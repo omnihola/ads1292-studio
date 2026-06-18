@@ -27,6 +27,7 @@
 | Add QRS-like channel auto-selection | User data showed ECG was visible in CH2 while CH1 was misleading. |
 | Store planning files in `ads1292-studio/` | Keeps work self-contained and GitHub-ready. |
 | Combine QRS sharpness with valid R-R count for Auto source | Real data showed CH1 can contain sharper but sparse artifacts while CH2 has regular ECG peaks. |
+| Upload with `gh` after authentication | `gh` is installed, but current token for `omnihola` is invalid. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -35,6 +36,7 @@
 | Existing GUI was too minimal and visually misleading | New app will expose channel source, quality metrics, offline review, and diagnostics. |
 | Root folder is not a git repository | Initialize a repository only in the new subfolder. |
 | Auto source initially selected CH1 on the real saved CSV | Fixed by including valid R-R count in channel selection instead of only derivative sharpness. |
+| GitHub upload cannot continue with current auth | Re-run after `gh auth login -h github.com` refreshes the token. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`

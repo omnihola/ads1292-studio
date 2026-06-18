@@ -19,7 +19,7 @@ Phase 5
 - [x] Create isolated subfolder `ads1292-studio/`.
 - [x] Create persistent planning files.
 - [x] Create Superpowers implementation plan.
-- [ ] Initialize isolated git repository for this subfolder only.
+- [x] Initialize isolated git repository for this subfolder only.
 - **Status:** complete
 
 ### Phase 3: Implementation V1
@@ -39,10 +39,10 @@ Phase 5
 
 ### Phase 5: GitHub Preparation
 - [x] Add `.gitignore`, package metadata, and readme basics.
-- [ ] Commit only the `ads1292-studio/` repository.
-- [ ] Determine remote/upload path.
+- [x] Commit only the `ads1292-studio/` repository.
+- [x] Determine remote/upload path.
 - [ ] Push when remote is available and authenticated.
-- **Status:** pending
+- **Status:** blocked by GitHub authentication
 
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
@@ -58,6 +58,7 @@ Phase 5
 | Default ECG source to Auto with CH1/CH2 override | Saved data proves CH2 can contain clearer ECG-like QRS than the first streamed field. |
 | Save both raw channels and derived metadata | Avoids losing evidence and allows later correction of display assumptions. |
 | Combine QRS sharpness with valid R-R count for Auto source | Prevents sparse CH1 transients from beating a regular CH2 ECG signal. |
+| Use GitHub CLI for upload when auth is fixed | `gh` is installed, but the current token for account `omnihola` is invalid. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -65,6 +66,7 @@ Phase 5
 | Root project is not a git repository | 1 | Plan to initialize git only inside `ads1292-studio/`. |
 | Initial lead-off interpretation treated status byte `0x10` as disconnected | 1 | Use low nibble as `lead_off_bits`, keep full `status_byte` separately. |
 | Initial analysis overemphasized CH1 and missed CH2 ECG-like QRS | 1 | Add channel auto-detection and offline review. |
+| GitHub CLI token invalid for `omnihola` | 1 | Local repo committed; external push waits for `gh auth login -h github.com`. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.
