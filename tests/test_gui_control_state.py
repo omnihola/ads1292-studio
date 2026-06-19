@@ -13,12 +13,26 @@ from ads1292_studio.app import (
     gui_workflow_hint,
     header_connection_style,
     header_connection_tone,
+    set_string_var_if_changed,
     status_label_spec,
     status_tone_color,
     status_tone_style,
 )
 from ads1292_studio.models import StreamSample
 import numpy as np
+
+
+class _FakeStringVar:
+    def __init__(self, value: str) -> None:
+        self.value = value
+        self.set_calls = 0
+
+    def get(self) -> str:
+        return self.value
+
+    def set(self, value: str) -> None:
+        self.value = value
+        self.set_calls += 1
 
 
 def test_ads1292r_channel_labels_name_ti_board_semantics() -> None:
@@ -74,6 +88,16 @@ def test_compute_live_quality_result_keeps_generation_and_metrics() -> None:
     assert result.error is None
     assert result.metrics is not None
     assert result.metrics.sample_count == len(samples)
+
+
+def test_set_string_var_if_changed_skips_redundant_tk_updates() -> None:
+    var = _FakeStringVar("ready")
+
+    assert set_string_var_if_changed(var, "ready") is False
+    assert var.set_calls == 0
+    assert set_string_var_if_changed(var, "running") is True
+    assert var.value == "running"
+    assert var.set_calls == 1
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:

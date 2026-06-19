@@ -1218,6 +1218,13 @@ def compute_live_quality_result(
     return LiveQualityResult(generation, source, valid_rr, samples, status_values, metrics=metrics)
 
 
+def set_string_var_if_changed(variable: tk.StringVar, value: str) -> bool:
+    if variable.get() == value:
+        return False
+    variable.set(value)
+    return True
+
+
 def _mousewheel_units(event: tk.Event) -> int:
     if getattr(event, "num", None) == 4:
         return -1
@@ -2516,6 +2523,8 @@ class App(tk.Tk):
                 ax.spines[side].set_linewidth(style["spine_linewidth"])
 
     def _set_signal_axis_title(self, ax: object, title: str) -> None:
+        if ax.get_title() == title:
+            return
         style = plot_axis_style()
         ax.set_title(
             title,
@@ -3128,17 +3137,21 @@ class App(tk.Tk):
 
     def _apply_live_quality_result(self, result: LiveQualityResult) -> None:
         if result.error or result.metrics is None:
-            self.quality_var.set(f"Quality: background update failed: {result.error or 'unknown error'}")
+            set_string_var_if_changed(
+                self.quality_var,
+                f"Quality: background update failed: {result.error or 'unknown error'}",
+            )
             self._apply_signal_quality_cards(gui_signal_quality_cards())
             return
-        self.quality_var.set(
+        set_string_var_if_changed(
+            self.quality_var,
             self._quality_text(
                 result.source,
                 result.valid_rr,
                 result.samples,
                 result.status_values,
                 metrics=result.metrics,
-            )
+            ),
         )
         self._apply_signal_quality_cards(
             gui_signal_quality_cards(
@@ -3218,8 +3231,9 @@ class App(tk.Tk):
         )
         self._set_signal_axis_title(self.ax_live_resp, resp_label)
         self._set_signal_axis_title(self.ax_live_status, contact_label)
-        self.metrics_var.set(
-            f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {ecg_label} | HR {hr.median_bpm:.0f} bpm"
+        set_string_var_if_changed(
+            self.metrics_var,
+            f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {ecg_label} | HR {hr.median_bpm:.0f} bpm",
         )
         samples = tuple(self._current_samples())
         self._schedule_live_quality_update(
