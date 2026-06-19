@@ -25,7 +25,7 @@ from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_li
 from ads1292_studio.gui_session_index import build_session_index_message
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
-from ads1292_studio.plots import robust_ylim
+from ads1292_studio.plots import decimate_for_plot, robust_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
@@ -317,12 +317,6 @@ def gui_status_cards(
         data,
         GuiStatusCard("Package", package_value, package_tone),
     )
-
-
-def offline_display_samples(samples: tuple[StreamSample, ...], max_points: int = MAX_POINTS) -> tuple[StreamSample, ...]:
-    if len(samples) <= max_points:
-        return samples
-    return samples[-max_points:]
 
 
 def gui_signal_quality_cards(
@@ -1272,7 +1266,7 @@ class App(tk.Tk):
         )
         samples = tuple(self._current_samples())
         metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
-        self.quality_var.set(self._quality_text(source, hr.valid_rr_count, samples, metrics=metrics))
+        self.quality_var.set(self._quality_text(source, hr.valid_rr_count, samples, tuple(self.status), metrics=metrics))
         self._apply_signal_quality_cards(
             gui_signal_quality_cards(
                 quality_label=metrics.quality_label,
@@ -1289,24 +1283,25 @@ class App(tk.Tk):
         self.live_canvas.draw_idle()
 
     def _show_recording(self, samples: tuple[StreamSample, ...]) -> None:
-        display_samples = offline_display_samples(samples)
         self._clear_signal_buffers()
         self.sample_index = 0
-        for sample in display_samples:
-            self._append_sample(sample)
-        source, ecg_raw, resp_raw = self._ads1292r_display_channels()
-        ecg = self._display_signal(ecg_raw)
-        resp = self._display_signal(resp_raw)
-        raw_ch1 = np.asarray(self.ch1, dtype=float)
-        raw_ch2 = np.asarray(self.ch2, dtype=float)
-        result = review_channels(raw_ch1, raw_ch2, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
-        metrics = compute_quality_metrics(display_samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
+        full_ch1 = np.asarray([sample.ch1 for sample in samples], dtype=float)
+        full_ch2 = np.asarray([sample.ch2 for sample in samples], dtype=float)
+        full_status_ints = tuple(sample.lead_off_bits for sample in samples)
+        source = ADS1292R_ECG_SOURCE
+        ecg = self._display_signal(full_ch2)
+        resp = self._display_signal(full_ch1)
+        result = review_channels(full_ch1, full_ch2, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
+        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
         x = np.arange(ecg.size)
-        status = np.asarray(self.status, dtype=float)
+        status_arr = np.asarray(full_status_ints, dtype=float)
+        plot_x, plot_ecg = decimate_for_plot(x, ecg, MAX_POINTS)
+        _, plot_resp = decimate_for_plot(x, resp, MAX_POINTS)
+        _, plot_status = decimate_for_plot(x, status_arr, MAX_POINTS)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
-        self.review_ecg_line.set_data(x, ecg)
-        self.review_resp_line.set_data(x, resp)
-        self.review_status_line.set_data(x, status)
+        self.review_ecg_line.set_data(plot_x, plot_ecg)
+        self.review_resp_line.set_data(plot_x, plot_resp)
+        self.review_status_line.set_data(plot_x, plot_status)
         self.review_peak_line.set_data(list(result.peaks), ecg[list(result.peaks)] if result.peaks else [])
         self.ax_review_ecg.set_title(
             f"Offline ECG: {ecg_label} | "
@@ -1318,15 +1313,14 @@ class App(tk.Tk):
             ax.set_xlim(0, max(1, x[-1] if x.size else 1))
             ax.set_ylim(*robust_ylim(values))
         self.ax_review_status.set_xlim(0, max(1, x[-1] if x.size else 1))
-        self.ax_review_status.set_ylim(-0.5, max(1.0, max(self.status or [0]) + 0.5))
+        self.ax_review_status.set_ylim(-0.5, max(1.0, float(status_arr.max()) + 0.5 if status_arr.size else 1.0))
         self.review_canvas.draw_idle()
         self._draw_pqrst(ecg, result.peaks)
         self.metrics_var.set(
-            f"samples {len(samples)} | displayed {len(display_samples)} | "
-            f"duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | source {ecg_label}"
+            f"samples {len(samples)} | duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | source {ecg_label}"
         )
         self.quality_var.set(
-            f"{self._quality_text(source, result.heart_rate.valid_rr_count, display_samples, metrics=metrics)} | "
+            f"{self._quality_text(source, result.heart_rate.valid_rr_count, samples, full_status_ints, metrics=metrics)} | "
             f"QRS {'clear' if result.pqrst.qrs_clear else 'unclear'} | "
             f"P {'tentative' if result.pqrst.p_tentative else 'not reliable'} | "
             f"T {'tentative' if result.pqrst.t_tentative else 'not reliable'}"
@@ -1368,6 +1362,7 @@ class App(tk.Tk):
         source: str,
         valid_rr: int,
         samples: tuple[StreamSample, ...],
+        status_values: tuple[int, ...],
         metrics=None,
     ) -> str:
         protocol = self._protocol()
@@ -1378,7 +1373,7 @@ class App(tk.Tk):
         )
         return build_quality_text(
             samples=samples,
-            status_values=tuple(self.status),
+            status_values=status_values,
             source=source,
             selected_source=ADS1292R_ECG_SOURCE,
             valid_rr=valid_rr,

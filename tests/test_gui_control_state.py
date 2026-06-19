@@ -9,7 +9,6 @@ from ads1292_studio.app import (
     gui_workflow_hint,
     status_tone_style,
 )
-from ads1292_studio.models import StreamSample
 
 
 def test_ads1292r_channel_labels_name_ti_board_semantics() -> None:
@@ -354,27 +353,6 @@ def test_gui_state_reports_package_readiness() -> None:
 
     assert unsaved.package_ready is False
     assert saved.package_ready is True
-
-
-def test_offline_display_samples_use_recent_window_without_discarding_loaded_source() -> None:
-    from ads1292_studio.app import offline_display_samples
-
-    samples = tuple(
-        StreamSample(
-            timestamp=float(index),
-            ch1=index,
-            ch2=index + 1,
-            board_heart_rate=0,
-            board_respiration_rate=0,
-            status_byte=0,
-        )
-        for index in range(10)
-    )
-
-    display = offline_display_samples(samples, max_points=4)
-
-    assert [sample.ch1 for sample in display] == [6, 7, 8, 9]
-    assert [sample.ch1 for sample in samples] == list(range(10))
 
 
 def test_gui_signal_quality_cards_expose_real_recording_summary() -> None:
