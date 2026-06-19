@@ -453,6 +453,11 @@ SECTION_HEADING_STYLES = {
     "background": "#F6F8FB",
     "foreground": "#1F4FB2",
 }
+MUTED_LABEL_SPEC = {
+    "style": "Muted.TLabel",
+    "background": "#F6F8FB",
+    "foreground": "#657084",
+}
 SIDEBAR_ACTION_BUTTON_STYLE = "SidebarAction.TButton"
 ACTION_SECTION_STYLES = {
     "frame": "ActionSection.TFrame",
@@ -665,6 +670,10 @@ def sidebar_field_styles() -> dict[str, str]:
 
 def section_heading_styles() -> dict[str, object]:
     return dict(SECTION_HEADING_STYLES)
+
+
+def muted_label_spec() -> dict[str, object]:
+    return dict(MUTED_LABEL_SPEC)
 
 
 def sidebar_action_button_style() -> str:
@@ -1623,7 +1632,12 @@ class App(tk.Tk):
             font=section_heading["font"],
             padding=section_heading["padding"],
         )
-        style.configure("Muted.TLabel", background=tokens["surface"], foreground=tokens["muted"])
+        muted_label = muted_label_spec()
+        style.configure(
+            str(muted_label["style"]),
+            background=muted_label["background"],
+            foreground=muted_label["foreground"],
+        )
         label_chrome = input_chrome["label"]
         style.configure(
             "FieldLabel.TLabel",

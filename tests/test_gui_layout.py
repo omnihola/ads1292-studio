@@ -16,6 +16,7 @@ from ads1292_studio.app import (
     input_chrome_spec,
     log_panel_spec,
     main_tab_labels,
+    muted_label_spec,
     panel_chrome_spec,
     plot_axis_style,
     plot_canvas_widget_style,
@@ -371,6 +372,14 @@ def test_section_heading_styles_make_sidebar_groups_scannable() -> None:
         "font": ("Aptos", 12, "bold"),
         "background": "#F6F8FB",
         "foreground": "#1F4FB2",
+    }
+
+
+def test_muted_label_spec_keeps_secondary_copy_subtle() -> None:
+    assert muted_label_spec() == {
+        "style": "Muted.TLabel",
+        "background": "#F6F8FB",
+        "foreground": "#657084",
     }
 
 
