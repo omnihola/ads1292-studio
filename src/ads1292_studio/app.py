@@ -254,6 +254,12 @@ STATUS_LABEL_SPEC = {
         "warning": "#FFF4E3",
         "neutral": "#EEF3FA",
     },
+    "foregrounds": {
+        "ready": "#1E7A46",
+        "running": "#2F6FED",
+        "warning": "#A76400",
+        "neutral": "#657084",
+    },
 }
 HEADER_CONNECTION_STYLES = {
     "ready": "Ready.Connection.TLabel",
@@ -1875,31 +1881,32 @@ class App(tk.Tk):
         )
         status_label = status_label_spec()
         status_backgrounds = status_label["backgrounds"]
+        status_foregrounds = status_label["foregrounds"]
         style.configure(
             "Ready.Status.TLabel",
             background=status_backgrounds["ready"],
-            foreground=tokens["success"],
+            foreground=status_foregrounds["ready"],
             font=status_label["font"],
             padding=status_label["padding"],
         )
         style.configure(
             "Running.Status.TLabel",
             background=status_backgrounds["running"],
-            foreground=tokens["accent"],
+            foreground=status_foregrounds["running"],
             font=status_label["font"],
             padding=status_label["padding"],
         )
         style.configure(
             "Warning.Status.TLabel",
             background=status_backgrounds["warning"],
-            foreground=tokens["warning"],
+            foreground=status_foregrounds["warning"],
             font=status_label["font"],
             padding=status_label["padding"],
         )
         style.configure(
             "Neutral.Status.TLabel",
             background=status_backgrounds["neutral"],
-            foreground=tokens["muted"],
+            foreground=status_foregrounds["neutral"],
             font=status_label["font"],
             padding=status_label["padding"],
         )

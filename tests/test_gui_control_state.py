@@ -346,6 +346,12 @@ def test_status_label_spec_makes_card_values_easy_to_scan() -> None:
             "warning": "#FFF4E3",
             "neutral": "#EEF3FA",
         },
+        "foregrounds": {
+            "ready": "#1E7A46",
+            "running": "#2F6FED",
+            "warning": "#A76400",
+            "neutral": "#657084",
+        },
     }
 
 
