@@ -618,6 +618,10 @@ def test_seaborn_plot_theme_uses_clean_signal_grid() -> None:
     assert theme["palette"] == "colorblind"
     assert theme["rc"]["axes.facecolor"] == "#FFFFFF"
     assert theme["rc"]["figure.facecolor"] == "#F6F8FB"
+    assert theme["rc"]["lines.antialiased"] is True
+    assert theme["rc"]["path.simplify"] is True
+    assert theme["rc"]["path.simplify_threshold"] == 0.18
+    assert theme["rc"]["agg.path.chunksize"] == 10000
 
 
 def test_export_plot_theme_uses_shared_seaborn_surface() -> None:
