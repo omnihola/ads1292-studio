@@ -433,7 +433,7 @@ def test_action_section_styles_make_sidebar_action_groups_scannable() -> None:
         "padding": (10, 5),
         "font": ("Aptos", 10, "bold"),
         "background": "#EEF3FA",
-        "foreground": "#1F4FB2",
+        "foreground": "#293247",
     }
 
 

@@ -523,7 +523,7 @@ ACTION_SECTION_STYLES = {
     "padding": (10, 5),
     "font": ("Aptos", 10, "bold"),
     "background": "#EEF3FA",
-    "foreground": "#1F4FB2",
+    "foreground": "#293247",
 }
 SIDEBAR_NOTEBOOK_STYLES = {
     "notebook": "Sidebar.TNotebook",
