@@ -10,6 +10,7 @@ from ads1292_studio.app import (
     event_count_styles,
     header_connection_styles,
     header_layout_spec,
+    header_text_styles,
     input_chrome_spec,
     log_panel_spec,
     main_tab_labels,
@@ -291,6 +292,23 @@ def test_header_layout_spec_gives_top_bar_clear_structure() -> None:
         "padding": (20, 14, 20, 12),
         "subtitle_padding": (14, 0),
         "separator_height": 1,
+    }
+
+
+def test_header_text_styles_keep_title_and_context_readable() -> None:
+    assert header_text_styles() == {
+        "title": {
+            "style": "AppTitle.TLabel",
+            "font": ("Aptos", 20, "bold"),
+            "background": "#FFFFFF",
+            "foreground": "#172033",
+        },
+        "subtitle": {
+            "style": "AppSubtitle.TLabel",
+            "font": ("Aptos", 12),
+            "background": "#FFFFFF",
+            "foreground": "#657084",
+        },
     }
 
 

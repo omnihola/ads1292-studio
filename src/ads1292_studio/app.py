@@ -264,6 +264,20 @@ HEADER_LAYOUT_SPEC = {
     "subtitle_padding": (14, 0),
     "separator_height": 1,
 }
+HEADER_TEXT_STYLES = {
+    "title": {
+        "style": "AppTitle.TLabel",
+        "font": ("Aptos", 20, "bold"),
+        "background": "#FFFFFF",
+        "foreground": "#172033",
+    },
+    "subtitle": {
+        "style": "AppSubtitle.TLabel",
+        "font": ("Aptos", 12),
+        "background": "#FFFFFF",
+        "foreground": "#657084",
+    },
+}
 STATUS_TONE_COLORS = {
     "ready": "#1E7A46",
     "running": "#2F6FED",
@@ -542,6 +556,10 @@ def header_connection_styles() -> dict[str, object]:
 
 def header_layout_spec() -> dict[str, object]:
     return dict(HEADER_LAYOUT_SPEC)
+
+
+def header_text_styles() -> dict[str, dict[str, object]]:
+    return {name: dict(values) for name, values in HEADER_TEXT_STYLES.items()}
 
 
 def status_tone_color(tone: str) -> str:
@@ -1076,9 +1094,14 @@ class App(tk.Tk):
         header = ttk.Frame(self, padding=header_spec["padding"], style=str(header_spec["frame"]))
         header.pack(side=tk.TOP, fill=tk.X)
         self.header_frame = header
-        self.header_title_label = ttk.Label(header, text="ADS1292 Studio", style="AppTitle.TLabel")
+        header_text = header_text_styles()
+        self.header_title_label = ttk.Label(header, text="ADS1292 Studio", style=str(header_text["title"]["style"]))
         self.header_title_label.pack(side=tk.LEFT)
-        self.header_subtitle_label = ttk.Label(header, text="MOTAC ECG validation", style="AppSubtitle.TLabel")
+        self.header_subtitle_label = ttk.Label(
+            header,
+            text="MOTAC ECG validation",
+            style=str(header_text["subtitle"]["style"]),
+        )
         self.header_subtitle_label.pack(side=tk.LEFT, padx=header_spec["subtitle_padding"])
         self.connection_label = ttk.Label(
             header,
@@ -1403,8 +1426,13 @@ class App(tk.Tk):
         style.configure("SidebarShell.TFrame", background=tokens["surface"])
         style.configure("Main.TFrame", background=tokens["surface"])
         style.configure("TLabel", background=tokens["surface"], foreground=tokens["ink"])
-        style.configure("AppTitle.TLabel", background=tokens["panel"], foreground=tokens["ink"], font=("Aptos", 20, "bold"))
-        style.configure("AppSubtitle.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12))
+        for text_spec in header_text_styles().values():
+            style.configure(
+                str(text_spec["style"]),
+                background=text_spec["background"],
+                foreground=text_spec["foreground"],
+                font=text_spec["font"],
+            )
         connection_pill = header_connection_styles()
         connection_backgrounds = connection_pill["backgrounds"]
         style.configure(
