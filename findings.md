@@ -124,6 +124,11 @@
 - Remaining open, narrower question: which exact Einthoven lead CH2 represents (Lead I LA-RA vs Lead II LL-RA vs other) — not yet confirmed; user is running a physical electrode-disconnect test to settle this empirically.
 - Hypothesis pending confirmation: firmware `status_byte`'s low nibble (`lead_off_bits = status_byte & 0x0F`) likely mirrors the chip's LOFF_STAT register bits 3:0 directly (bit0=IN1P_OFF, bit1=IN1N_OFF, bit2=IN2P_OFF, bit3=IN2N_OFF) — SLAU384A's own lead-off table description ("status byte in the data-word after each conversion") supports this, but it is not directly confirmed for this custom firmware.
 
+## Issues Encountered (continued)
+| Issue | Resolution |
+|-------|------------|
+| Live/Review plot titles overlapped the shared x-tick labels of the panel above (found via real hardware testing screenshot after the Connect/Start fixes) | Added `label_outer()` to hide redundant tick labels on non-bottom panels and `fig.subplots_adjust(hspace=0.55)` for title clearance in both `_build_live_plot()` and `_build_review_plot()`. |
+
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
 - Existing GUI reference: `tools/ads1292_mac/ads1x9x_gui.py`
