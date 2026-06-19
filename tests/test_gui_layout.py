@@ -8,6 +8,7 @@ from ads1292_studio.app import (
     plot_panel_spec,
     plot_trace_colors,
     primary_toolbar_button_labels,
+    safety_notice_styles,
     secondary_action_button_labels,
     sidebar_action_button_style,
     sidebar_field_styles,
@@ -103,6 +104,14 @@ def test_workflow_hint_styles_make_next_step_prominent() -> None:
         "frame": "WorkflowHint.TFrame",
         "label": "WorkflowHint.TLabel",
         "stripe": "#2F6FED",
+    }
+
+
+def test_safety_notice_styles_make_research_use_boundary_visible() -> None:
+    assert safety_notice_styles() == {
+        "frame": "SafetyNotice.TFrame",
+        "label": "SafetyNotice.TLabel",
+        "stripe": "#A76400",
     }
 
 

@@ -178,6 +178,11 @@ WORKFLOW_HINT_STYLES = {
     "label": "WorkflowHint.TLabel",
     "stripe": "#2F6FED",
 }
+SAFETY_NOTICE_STYLES = {
+    "frame": "SafetyNotice.TFrame",
+    "label": "SafetyNotice.TLabel",
+    "stripe": "#A76400",
+}
 
 
 @dataclass(frozen=True)
@@ -274,6 +279,10 @@ def workspace_notebook_styles() -> dict[str, str]:
 
 def workflow_hint_styles() -> dict[str, str]:
     return dict(WORKFLOW_HINT_STYLES)
+
+
+def safety_notice_styles() -> dict[str, str]:
+    return dict(SAFETY_NOTICE_STYLES)
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -914,13 +923,7 @@ class App(tk.Tk):
         )
         self.session_index_button.pack(anchor=tk.W, fill=tk.X, pady=2)
         ttk.Label(actions_side, text="Safety", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
-        ttk.Label(
-            actions_side,
-            text="Research use only. Use battery power during human-subject measurements.",
-            wraplength=260,
-            justify=tk.LEFT,
-            style="Muted.TLabel",
-        ).pack(anchor=tk.W)
+        self._build_safety_notice(actions_side)
 
         self.notebook = ttk.Notebook(main, style=workspace_notebook_styles()["notebook"])
         self.notebook.pack(fill=tk.BOTH, expand=True)
@@ -1011,6 +1014,13 @@ class App(tk.Tk):
         style.configure("WorkflowHint.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure(
             "WorkflowHint.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["ink"],
+            font=("Aptos", 11, "bold"),
+        )
+        style.configure("SafetyNotice.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        style.configure(
+            "SafetyNotice.TLabel",
             background=tokens["panel"],
             foreground=tokens["ink"],
             font=("Aptos", 11, "bold"),
@@ -1118,6 +1128,27 @@ class App(tk.Tk):
             padding=(10, 8),
         )
         self.workflow_hint_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+    def _build_safety_notice(self, parent: ttk.Frame) -> None:
+        styles = safety_notice_styles()
+        self.safety_notice_frame = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
+        self.safety_notice_frame.pack(anchor=tk.W, fill=tk.X, pady=(0, 4))
+        self.safety_notice_stripe = tk.Frame(
+            self.safety_notice_frame,
+            width=4,
+            bg=styles["stripe"],
+            highlightthickness=0,
+        )
+        self.safety_notice_stripe.pack(side=tk.LEFT, fill=tk.Y)
+        self.safety_notice_label = ttk.Label(
+            self.safety_notice_frame,
+            text="Research use only. Use battery power during human-subject measurements.",
+            wraplength=240,
+            justify=tk.LEFT,
+            style=styles["label"],
+            padding=(10, 8),
+        )
+        self.safety_notice_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
     def _build_status_cards(self, parent: ttk.Frame) -> None:
         for label in STATUS_CARD_LABELS:
