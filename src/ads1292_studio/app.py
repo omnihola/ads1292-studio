@@ -217,6 +217,15 @@ WORKSPACE_LAYOUT_SPEC = {
     "sidebar_weight": 0,
     "main_weight": 1,
 }
+BASE_CHROME_SPEC = {
+    "font": ("Aptos", 12),
+    "background": "#F6F8FB",
+    "foreground": "#172033",
+    "frame": "TFrame",
+    "label": "TLabel",
+    "sidebar": "SidebarShell.TFrame",
+    "main": "Main.TFrame",
+}
 MAIN_TABS = ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
 STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
 SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
@@ -587,6 +596,10 @@ def status_tone_color(tone: str) -> str:
 
 def app_visual_tokens() -> dict[str, str]:
     return dict(APP_VISUAL_TOKENS)
+
+
+def base_chrome_spec() -> dict[str, object]:
+    return dict(BASE_CHROME_SPEC)
 
 
 def app_window_spec() -> dict[str, object]:
@@ -1440,8 +1453,14 @@ class App(tk.Tk):
         except tk.TclError:
             pass
         tokens = APP_VISUAL_TOKENS
-        style.configure(".", font=("Aptos", 12), background=tokens["surface"], foreground=tokens["ink"])
-        style.configure("TFrame", background=tokens["surface"])
+        base_chrome = base_chrome_spec()
+        style.configure(
+            ".",
+            font=base_chrome["font"],
+            background=base_chrome["background"],
+            foreground=base_chrome["foreground"],
+        )
+        style.configure(str(base_chrome["frame"]), background=base_chrome["background"])
         header_frame = header_frame_spec()
         style.configure(
             str(header_frame["frame"]),
@@ -1461,9 +1480,13 @@ class App(tk.Tk):
             relief=toolbar_frame["relief"],
         )
         style.configure(str(toolbar_frame["separator"]), background=toolbar_frame["separator_background"])
-        style.configure("SidebarShell.TFrame", background=tokens["surface"])
-        style.configure("Main.TFrame", background=tokens["surface"])
-        style.configure("TLabel", background=tokens["surface"], foreground=tokens["ink"])
+        style.configure(str(base_chrome["sidebar"]), background=base_chrome["background"])
+        style.configure(str(base_chrome["main"]), background=base_chrome["background"])
+        style.configure(
+            str(base_chrome["label"]),
+            background=base_chrome["background"],
+            foreground=base_chrome["foreground"],
+        )
         for text_spec in header_text_styles().values():
             style.configure(
                 str(text_spec["style"]),

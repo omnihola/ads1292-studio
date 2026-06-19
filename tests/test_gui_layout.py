@@ -3,6 +3,7 @@ from ads1292_studio.app import (
     ads1292r_plot_layout_labels,
     app_visual_tokens,
     app_window_spec,
+    base_chrome_spec,
     button_chrome_spec,
     card_label_spec,
     empty_plot_messages,
@@ -460,6 +461,18 @@ def test_gui_visual_tokens_define_a_complete_light_theme() -> None:
     assert tokens["ink"] == "#172033"
     assert tokens["accent"] == "#2F6FED"
     assert set(tokens) >= {"surface", "panel", "panel_alt", "ink", "muted", "border", "accent", "success", "warning"}
+
+
+def test_base_chrome_spec_keeps_global_window_surfaces_consistent() -> None:
+    assert base_chrome_spec() == {
+        "font": ("Aptos", 12),
+        "background": "#F6F8FB",
+        "foreground": "#172033",
+        "frame": "TFrame",
+        "label": "TLabel",
+        "sidebar": "SidebarShell.TFrame",
+        "main": "Main.TFrame",
+    }
 
 
 def test_plot_trace_colors_distinguish_ecg_respiration_and_contact() -> None:
