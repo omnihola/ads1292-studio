@@ -282,11 +282,15 @@ EMPTY_PLOT_MESSAGES = {
     "pqrst": ("Load or record data to build the averaged PQRST beat",),
 }
 EMPTY_PLOT_STYLE = {
-    "text_color": "#657084",
-    "box_face": "#EEF3FA",
+    "text_color": "#516070",
+    "box_face": "#F8FAFD",
     "box_edge": "#D9E1EC",
     "font_size": 11,
-    "alpha": 0.92,
+    "font_weight": "bold",
+    "alpha": 0.96,
+    "box_pad": 0.55,
+    "rounding": 0.18,
+    "line_width": 0.8,
 }
 LOG_PANEL_SPEC = {
     "shell": "Main.TFrame",
@@ -2034,13 +2038,13 @@ class App(tk.Tk):
                 va="center",
                 color=str(style["text_color"]),
                 fontsize=int(style["font_size"]),
-                fontweight="bold",
+                fontweight=str(style["font_weight"]),
                 alpha=float(style["alpha"]),
                 bbox={
-                    "boxstyle": "round,pad=0.45,rounding_size=0.2",
+                    "boxstyle": f"round,pad={style['box_pad']},rounding_size={style['rounding']}",
                     "facecolor": style["box_face"],
                     "edgecolor": style["box_edge"],
-                    "linewidth": 0.8,
+                    "linewidth": style["line_width"],
                 },
             )
             self.empty_plot_artists.append(artist)

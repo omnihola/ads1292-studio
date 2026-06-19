@@ -409,11 +409,15 @@ def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
 
 def test_empty_plot_style_uses_muted_callouts() -> None:
     assert empty_plot_style() == {
-        "text_color": "#657084",
-        "box_face": "#EEF3FA",
+        "text_color": "#516070",
+        "box_face": "#F8FAFD",
         "box_edge": "#D9E1EC",
         "font_size": 11,
-        "alpha": 0.92,
+        "font_weight": "bold",
+        "alpha": 0.96,
+        "box_pad": 0.55,
+        "rounding": 0.18,
+        "line_width": 0.8,
     }
 
 
