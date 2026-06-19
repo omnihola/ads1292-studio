@@ -69,6 +69,14 @@ from ads1292_studio.gui_state import (
     should_apply_control_state,
     toolbar_display_hint_text,
 )
+from ads1292_studio.gui_workers import (
+    LiveQualityResult,
+    ReviewRenderResult,
+    build_live_quality_samples,
+    compute_live_quality_result,
+    compute_review_render_result,
+    live_quality_worker_available,
+)
 from ads1292_studio.gui_plots import (
     build_live_plot_panel,
     build_log_panel,
@@ -168,7 +176,6 @@ from ads1292_studio.plot_theme import (
 )
 from ads1292_studio.plots import robust_ylim, stable_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
-from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
 from ads1292_studio.report import export_review_report
 from ads1292_studio.review_render import ReviewRenderFrame, build_review_render_frame
@@ -194,25 +201,6 @@ DISPLAY_MIN_RESP_SPAN_COUNTS = 40.0
 
 
 @dataclass(frozen=True)
-class LiveQualityResult:
-    generation: int
-    source: str
-    valid_rr: int
-    samples: tuple[StreamSample, ...]
-    status_values: tuple[int, ...]
-    metrics: QualityMetrics | None = None
-    error: str | None = None
-
-
-@dataclass(frozen=True)
-class ReviewRenderResult:
-    generation: int
-    samples: tuple[StreamSample, ...]
-    frame: ReviewRenderFrame | None = None
-    error: str | None = None
-
-
-@dataclass(frozen=True)
 class CsvLoadResult:
     path: Path
     recording: Recording | None = None
@@ -227,68 +215,6 @@ class ConnectResult:
     port: str
     detail: str | None = None
     error: str | None = None
-
-
-def live_quality_worker_available(future: Future[LiveQualityResult] | None) -> bool:
-    return future is None or future.done()
-def compute_live_quality_result(
-    *,
-    generation: int,
-    source: str,
-    valid_rr: int,
-    ch1_values: tuple[float, ...],
-    ch2_values: tuple[float, ...],
-    status_values: tuple[int, ...],
-) -> LiveQualityResult:
-    try:
-        samples = build_live_quality_samples(ch1_values, ch2_values, status_values)
-        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
-    except Exception as exc:  # pragma: no cover - defensive worker boundary
-        return LiveQualityResult(generation, source, valid_rr, tuple(), status_values, error=str(exc))
-    return LiveQualityResult(generation, source, valid_rr, samples, status_values, metrics=metrics)
-
-
-def compute_review_render_result(
-    *,
-    generation: int,
-    samples: tuple[StreamSample, ...],
-    display_settings: EcgDisplaySettings,
-    filter_settings: SoftwareFilterSettings,
-) -> ReviewRenderResult:
-    try:
-        frame = build_review_render_frame(
-            samples,
-            display_settings=display_settings,
-            filter_settings=filter_settings,
-            source=ADS1292R_ECG_SOURCE,
-            sample_rate_hz=SAMPLE_RATE_HZ,
-            smoothing_window=DISPLAY_SMOOTHING_WINDOW,
-            max_points=MAX_POINTS,
-            ecg_inverted=DEFAULT_ECG_INVERTED,
-            min_ecg_span_counts=DISPLAY_MIN_ECG_SPAN_COUNTS,
-            min_resp_span_counts=DISPLAY_MIN_RESP_SPAN_COUNTS,
-        )
-    except Exception as exc:  # pragma: no cover - defensive worker boundary
-        return ReviewRenderResult(generation=generation, samples=samples, error=str(exc))
-    return ReviewRenderResult(generation=generation, samples=samples, frame=frame)
-
-
-def build_live_quality_samples(
-    ch1_values: tuple[float, ...],
-    ch2_values: tuple[float, ...],
-    status_values: tuple[int, ...],
-) -> tuple[StreamSample, ...]:
-    return tuple(
-        StreamSample(
-            timestamp=index / SAMPLE_RATE_HZ,
-            ch1=int(ch1),
-            ch2=int(ch2),
-            board_heart_rate=0,
-            board_respiration_rate=0,
-            status_byte=int(status),
-        )
-        for index, (ch1, ch2, status) in enumerate(zip(ch1_values, ch2_values, status_values))
-    )
 
 
 class App(tk.Tk):
@@ -1753,6 +1679,8 @@ class App(tk.Tk):
             ch1_values=ch1_values,
             ch2_values=ch2_values,
             status_values=status_values,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+            ecg_source=ADS1292R_ECG_SOURCE,
         )
         future.add_done_callback(self._queue_live_quality_result)
         self.live_quality_future = future
@@ -1789,6 +1717,13 @@ class App(tk.Tk):
             samples=samples,
             display_settings=display_settings,
             filter_settings=filter_settings,
+            source=ADS1292R_ECG_SOURCE,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+            smoothing_window=DISPLAY_SMOOTHING_WINDOW,
+            max_points=MAX_POINTS,
+            ecg_inverted=DEFAULT_ECG_INVERTED,
+            min_ecg_span_counts=DISPLAY_MIN_ECG_SPAN_COUNTS,
+            min_resp_span_counts=DISPLAY_MIN_RESP_SPAN_COUNTS,
         )
         future.add_done_callback(self._queue_review_render_result)
         self.review_render_future = future

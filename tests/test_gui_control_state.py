@@ -159,6 +159,12 @@ def test_compute_live_quality_result_keeps_generation_and_metrics() -> None:
     assert len(result.samples) == len(ch2_values)
 
 
+def test_worker_helpers_live_outside_app_module() -> None:
+    assert compute_live_quality_result.__module__ == "ads1292_studio.gui_workers"
+    assert compute_review_render_result.__module__ == "ads1292_studio.gui_workers"
+    assert build_live_quality_samples.__module__ == "ads1292_studio.gui_workers"
+
+
 def test_compute_review_render_result_prepares_offline_frame() -> None:
     samples = tuple(
         StreamSample(
