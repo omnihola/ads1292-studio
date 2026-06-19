@@ -21,9 +21,11 @@ from ads1292_studio.gui_specs import (
     plot_figure_layouts,
     plot_panel_spec,
     plot_trace_styles,
+    pqrst_plot_style,
     scrollbar_chrome_spec,
     status_axis_spec,
 )
+from ads1292_studio.models import PqrstReview
 from ads1292_studio.plot_theme import APP_VISUAL_TOKENS, PLOT_TRACE_COLORS, apply_seaborn_plot_theme
 
 
@@ -109,6 +111,49 @@ def build_pqrst_plot_panel(app: Any) -> None:
     app.ax_pqrst.set_ylabel("Filtered counts")
     show_empty_plot_state(app.empty_plot_artists, "pqrst", (app.ax_pqrst,))
     app.pqrst_canvas = build_plot_canvas(app, app.pqrst_tab, fig, name="pqrst")
+
+
+def draw_pqrst_review(ax: object, canvas: object, review: PqrstReview) -> None:
+    ax.clear()
+    style_signal_axes((ax,))
+    ax.set_xlabel("Time relative to R peak (ms)")
+    ax.set_ylabel("Filtered counts")
+    if review.average_beat:
+        pqrst_style = pqrst_plot_style()
+        ax.plot(
+            review.time_ms,
+            review.average_beat,
+            color=PLOT_TRACE_COLORS["ecg"],
+            **pqrst_style["average"],
+        )
+        ax.axvline(
+            0,
+            color=PLOT_TRACE_COLORS["peak"],
+            **pqrst_style["r_marker"],
+        )
+        p_search = pqrst_style["p_search"]
+        ax.axvspan(
+            p_search["start_ms"],
+            p_search["end_ms"],
+            color=p_search["color"],
+            alpha=p_search["alpha"],
+            label=p_search["label"],
+        )
+        t_search = pqrst_style["t_search"]
+        ax.axvspan(
+            t_search["start_ms"],
+            t_search["end_ms"],
+            color=t_search["color"],
+            alpha=t_search["alpha"],
+            label=t_search["label"],
+        )
+        ax.legend(**pqrst_style["legend"])
+    set_signal_axis_title(
+        ax,
+        f"PQRST review: QRS={review.qrs_clear}, P tentative={review.p_tentative}, "
+        f"T tentative={review.t_tentative}, beats={review.beats_used}",
+    )
+    canvas.draw_idle()
 
 
 def build_plot_canvas(app: Any, parent: ttk.Frame, fig: Figure, *, name: str) -> FigureCanvasTkAgg:

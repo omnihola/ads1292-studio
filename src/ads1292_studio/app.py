@@ -94,8 +94,8 @@ from ads1292_studio.gui_plots import (
     build_pqrst_plot_panel,
     build_review_plot_panel,
     draw_calibration_pulse,
+    draw_pqrst_review,
     set_signal_axis_title,
-    style_signal_axes,
 )
 from ads1292_studio.gui_layout import (
     build_acquisition_toolbar,
@@ -181,11 +181,8 @@ from ads1292_studio.gui_specs import (
 from ads1292_studio.live_render import build_live_render_frame, display_signal_values
 from ads1292_studio.macos_stderr import install_macos_stderr_filter
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
-from ads1292_studio.models import PqrstReview, Recording, StreamSample, StreamStartResult
-from ads1292_studio.plot_theme import (
-    APP_VISUAL_TOKENS,
-    PLOT_TRACE_COLORS,
-)
+from ads1292_studio.models import Recording, StreamSample, StreamStartResult
+from ads1292_studio.plot_theme import APP_VISUAL_TOKENS
 from ads1292_studio.plots import robust_ylim, stable_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
@@ -193,9 +190,6 @@ from ads1292_studio.report import export_review_report
 from ads1292_studio.review_render import ReviewRenderFrame, build_review_render_frame
 from ads1292_studio.session_index import export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
-from ads1292_studio.signal_processing import (
-    pqrst_review,
-)
 from ads1292_studio.workers import LiveWorker
 
 
@@ -1308,7 +1302,7 @@ class App(tk.Tk):
             self.calibration_pulse_cache,
         )
         self.review_canvas.draw_idle()
-        self._draw_pqrst_review(frame.pqrst)
+        draw_pqrst_review(self.ax_pqrst, self.pqrst_canvas, frame.pqrst)
         set_string_var_if_changed(
             self.metrics_var,
             f"samples {frame.sample_count} | duration {frame.duration_seconds:.1f} s | source {ecg_label}",
@@ -1333,51 +1327,6 @@ class App(tk.Tk):
                 peak_to_peak_counts=frame.metrics.peak_to_peak_counts,
             )
         )
-
-    def _draw_pqrst(self, ecg: np.ndarray, peaks: tuple[int, ...]) -> None:
-        self._draw_pqrst_review(pqrst_review(ecg, peaks, SAMPLE_RATE_HZ))
-
-    def _draw_pqrst_review(self, review: PqrstReview) -> None:
-        self.ax_pqrst.clear()
-        style_signal_axes((self.ax_pqrst,))
-        self.ax_pqrst.set_xlabel("Time relative to R peak (ms)")
-        self.ax_pqrst.set_ylabel("Filtered counts")
-        if review.average_beat:
-            pqrst_style = pqrst_plot_style()
-            self.ax_pqrst.plot(
-                review.time_ms,
-                review.average_beat,
-                color=PLOT_TRACE_COLORS["ecg"],
-                **pqrst_style["average"],
-            )
-            self.ax_pqrst.axvline(
-                0,
-                color=PLOT_TRACE_COLORS["peak"],
-                **pqrst_style["r_marker"],
-            )
-            p_search = pqrst_style["p_search"]
-            self.ax_pqrst.axvspan(
-                p_search["start_ms"],
-                p_search["end_ms"],
-                color=p_search["color"],
-                alpha=p_search["alpha"],
-                label=p_search["label"],
-            )
-            t_search = pqrst_style["t_search"]
-            self.ax_pqrst.axvspan(
-                t_search["start_ms"],
-                t_search["end_ms"],
-                color=t_search["color"],
-                alpha=t_search["alpha"],
-                label=t_search["label"],
-            )
-            self.ax_pqrst.legend(**pqrst_style["legend"])
-        set_signal_axis_title(
-            self.ax_pqrst,
-            f"PQRST review: QRS={review.qrs_clear}, P tentative={review.p_tentative}, "
-            f"T tentative={review.t_tentative}, beats={review.beats_used}",
-        )
-        self.pqrst_canvas.draw_idle()
 
     def _quality_text(
         self,
