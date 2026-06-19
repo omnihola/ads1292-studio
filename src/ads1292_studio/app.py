@@ -501,6 +501,9 @@ SAFETY_NOTICE_STYLES = {
     "frame": "SafetyNotice.TFrame",
     "label": "SafetyNotice.TLabel",
     "stripe": "#A76400",
+    "background": "#FFFFFF",
+    "foreground": "#172033",
+    "font": ("Aptos", 11, "bold"),
 }
 SIDEBAR_TEXT_CARD_SPEC = {
     "stripe_width": 4,
@@ -1745,11 +1748,12 @@ class App(tk.Tk):
             foreground=workflow_hint["foreground"],
             font=workflow_hint["font"],
         )
+        safety_notice = safety_notice_styles()
         style.configure(
-            "SafetyNotice.TLabel",
-            background=tokens["panel"],
-            foreground=tokens["ink"],
-            font=("Aptos", 11, "bold"),
+            safety_notice["label"],
+            background=safety_notice["background"],
+            foreground=safety_notice["foreground"],
+            font=safety_notice["font"],
         )
         style.configure(
             "StatusDetailLabel.TLabel",
