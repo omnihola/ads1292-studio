@@ -137,6 +137,13 @@ TOOLBAR_LABEL_SPEC = {
     "background": "#EEF3FA",
     "foreground": "#172033",
 }
+TOOLBAR_GROUP_LABEL_SPEC = {
+    "style": "ToolbarGroupLabel.TLabel",
+    "font": ("Aptos", 10, "bold"),
+    "background": "#EEF3FA",
+    "foreground": "#657084",
+    "padding": (2, 2),
+}
 TOOLBAR_HINT_STYLES = {
     "frame": "ToolbarHint.TFrame",
     "label": "ToolbarHint.TLabel",
@@ -387,10 +394,10 @@ PLOT_AXIS_STYLE = {
     "tick": "#657084",
     "label": "#293247",
     "title": "#172033",
-    "grid_linewidth": 0.7,
-    "grid_alpha": 0.38,
+    "grid_linewidth": 0.62,
+    "grid_alpha": 0.32,
     "axisbelow": True,
-    "spine_linewidth": 0.7,
+    "spine_linewidth": 0.65,
     "tick_label_size": 9,
     "tick_direction": "out",
     "tick_length": 3.0,
@@ -777,6 +784,10 @@ def toolbar_label_spec() -> dict[str, object]:
     return dict(TOOLBAR_LABEL_SPEC)
 
 
+def toolbar_group_label_spec() -> dict[str, object]:
+    return dict(TOOLBAR_GROUP_LABEL_SPEC)
+
+
 def toolbar_hint_styles() -> dict[str, str]:
     return dict(TOOLBAR_HINT_STYLES)
 
@@ -799,4 +810,3 @@ def sidebar_tab_labels() -> tuple[str, ...]:
 
 def main_tab_labels() -> tuple[str, ...]:
     return MAIN_TABS
-

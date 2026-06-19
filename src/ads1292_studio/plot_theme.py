@@ -22,10 +22,10 @@ APP_VISUAL_TOKENS = {
     "danger": "#B3261E",
 }
 PLOT_TRACE_COLORS = {
-    "ecg": "#0173B2",
-    "respiration": "#CC78BC",
-    "contact": "#949494",
-    "peak": "#D55E00",
+    "ecg": "#0B6FA4",
+    "respiration": "#7A5CDB",
+    "contact": "#64748B",
+    "peak": "#E4572E",
 }
 SEABORN_PLOT_THEME = {
     "style": "whitegrid",
@@ -39,7 +39,7 @@ SEABORN_PLOT_THEME = {
         "axes.titlecolor": "#172033",
         "figure.facecolor": "#F6F8FB",
         "grid.color": "#D9E1EC",
-        "grid.linewidth": 0.7,
+        "grid.linewidth": 0.62,
         "agg.path.chunksize": 10000,
         "lines.antialiased": True,
         "path.simplify": True,
@@ -49,15 +49,22 @@ SEABORN_PLOT_THEME = {
     },
 }
 PLOT_TRACE_STYLES = {
-    "ecg": {"linewidth": 1.45, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
-    "respiration": {"linewidth": 1.05, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
-    "contact": {"linewidth": 1.0, "drawstyle": "steps-post", "antialiased": True},
+    "ecg": {"linewidth": 1.45, "alpha": 0.96, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
+    "respiration": {
+        "linewidth": 1.0,
+        "alpha": 0.86,
+        "antialiased": True,
+        "solid_capstyle": "round",
+        "solid_joinstyle": "round",
+    },
+    "contact": {"linewidth": 1.0, "alpha": 0.88, "drawstyle": "steps-post", "antialiased": True},
     "peak": {
         "linestyle": "None",
         "marker": "o",
-        "markersize": 4.6,
+        "markersize": 4.2,
         "markeredgecolor": "#FFFFFF",
         "markeredgewidth": 0.7,
+        "alpha": 0.95,
     },
 }
 PQRST_PLOT_STYLE = {

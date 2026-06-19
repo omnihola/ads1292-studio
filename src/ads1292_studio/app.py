@@ -118,6 +118,7 @@ from ads1292_studio.gui_specs import (
     toolbar_control_styles,
     toolbar_frame_spec,
     toolbar_group_padding,
+    toolbar_group_label_spec,
     toolbar_hint_styles,
     toolbar_label_spec,
     toolbar_layout_spec,
@@ -927,6 +928,14 @@ class App(tk.Tk):
             background=toolbar_label["background"],
             foreground=toolbar_label["foreground"],
             font=toolbar_label["font"],
+        )
+        toolbar_group_label = toolbar_group_label_spec()
+        style.configure(
+            str(toolbar_group_label["style"]),
+            background=toolbar_group_label["background"],
+            foreground=toolbar_group_label["foreground"],
+            font=toolbar_group_label["font"],
+            padding=toolbar_group_label["padding"],
         )
         toolbar_hint = toolbar_hint_styles()
         style.configure(

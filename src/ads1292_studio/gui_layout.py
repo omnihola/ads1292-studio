@@ -19,6 +19,7 @@ from ads1292_studio.gui_specs import (
     toolbar_button_style,
     toolbar_control_styles,
     toolbar_group_padding,
+    toolbar_group_label_spec,
     toolbar_label_spec,
     toolbar_layout_spec,
     workspace_layout_spec,
@@ -62,6 +63,7 @@ def build_acquisition_toolbar(app: Any) -> None:
     app.toolbar_frame = toolbar
     toolbar_styles = toolbar_control_styles()
 
+    _toolbar_group_label(toolbar, "Input")
     ttk.Label(toolbar, text="Port", style=str(toolbar_label_spec()["style"])).pack(side=tk.LEFT)
     app.port_var = tk.StringVar()
     app.port_combo = ttk.Combobox(
@@ -110,6 +112,7 @@ def build_acquisition_toolbar(app: Any) -> None:
         padx=toolbar_group_padding()["separator"],
     )
 
+    _toolbar_group_label(toolbar, "Record")
     app.save_var = tk.BooleanVar(value=True)
     app.save_check = ttk.Checkbutton(
         toolbar,
@@ -133,6 +136,7 @@ def build_display_toolbar(
     toolbar.pack(side=tk.TOP, fill=tk.X)
     app.display_toolbar_frame = toolbar
 
+    _toolbar_group_label(toolbar, "Display")
     app.autoscale_var = tk.BooleanVar(value=True)
     app.autoscale_check = ttk.Checkbutton(
         toolbar,
@@ -142,6 +146,7 @@ def build_display_toolbar(
         style=toolbar_styles["toggle"],
     )
     app.autoscale_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
+    _toolbar_group_label(toolbar, "Filters")
     app.highpass_filter_var = tk.BooleanVar(value=default_filter_settings.highpass_enabled)
     app.highpass_filter_check = ttk.Checkbutton(
         toolbar,
@@ -185,6 +190,7 @@ def build_display_toolbar(
     )
     app.display_filter_separator.pack(side=tk.LEFT, fill=tk.Y, padx=toolbar_group_padding()["separator"])
 
+    _toolbar_group_label(toolbar, "Scale")
     app.display_window_var = tk.StringVar(value=f"{default_display_settings.time_window_seconds:g} s")
     _build_display_combo(app, toolbar, "Window", app.display_window_var, display_window_labels())
     app.display_gain_var = tk.StringVar(value=f"{default_display_settings.gain:g}x")
@@ -201,6 +207,11 @@ def build_display_toolbar(
     app.source_var = tk.StringVar(value=ADS1292R_ECG_SOURCE)
     app.toolbar_hint_var = tk.StringVar(value=initial_hint_text)
     app._build_toolbar_hint_chip(toolbar, app.toolbar_hint_var)
+
+
+def _toolbar_group_label(toolbar: ttk.Frame, text: str) -> None:
+    spec = toolbar_group_label_spec()
+    ttk.Label(toolbar, text=text, style=str(spec["style"])).pack(side=tk.LEFT, padx=(2, 5))
 
 
 def _build_display_combo(

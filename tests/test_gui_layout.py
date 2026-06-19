@@ -51,6 +51,7 @@ from ads1292_studio.app import (
     toolbar_control_styles,
     toolbar_frame_spec,
     toolbar_group_padding,
+    toolbar_group_label_spec,
     toolbar_hint_styles,
     toolbar_label_spec,
     toolbar_layout_spec,
@@ -160,6 +161,16 @@ def test_toolbar_label_spec_keeps_toolbar_labels_consistent() -> None:
         "font": ("Aptos", 12, "bold"),
         "background": "#EEF3FA",
         "foreground": "#172033",
+    }
+
+
+def test_toolbar_group_label_spec_adds_scanable_control_groups() -> None:
+    assert toolbar_group_label_spec() == {
+        "style": "ToolbarGroupLabel.TLabel",
+        "font": ("Aptos", 10, "bold"),
+        "background": "#EEF3FA",
+        "foreground": "#657084",
+        "padding": (2, 2),
     }
 
 
@@ -605,9 +616,9 @@ def test_plot_trace_colors_distinguish_ecg_respiration_and_contact() -> None:
 
     assert colors["ecg"] != colors["respiration"]
     assert colors["contact"] != colors["ecg"]
-    assert colors["ecg"] == "#0173B2"
-    assert colors["respiration"] == "#CC78BC"
-    assert colors["peak"] == "#D55E00"
+    assert colors["ecg"] == "#0B6FA4"
+    assert colors["respiration"] == "#7A5CDB"
+    assert colors["peak"] == "#E4572E"
 
 
 def test_seaborn_plot_theme_uses_clean_signal_grid() -> None:
@@ -621,6 +632,7 @@ def test_seaborn_plot_theme_uses_clean_signal_grid() -> None:
     assert theme["rc"]["lines.antialiased"] is True
     assert theme["rc"]["path.simplify"] is True
     assert theme["rc"]["path.simplify_threshold"] == 0.18
+    assert theme["rc"]["grid.linewidth"] == 0.62
     assert theme["rc"]["agg.path.chunksize"] == 10000
 
 
@@ -637,15 +649,22 @@ def test_export_plot_theme_uses_shared_seaborn_surface() -> None:
 
 def test_plot_trace_styles_keep_live_and_review_signals_readable() -> None:
     assert plot_trace_styles() == {
-        "ecg": {"linewidth": 1.45, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
-        "respiration": {"linewidth": 1.05, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
-        "contact": {"linewidth": 1.0, "drawstyle": "steps-post", "antialiased": True},
+        "ecg": {"linewidth": 1.45, "alpha": 0.96, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
+        "respiration": {
+            "linewidth": 1.0,
+            "alpha": 0.86,
+            "antialiased": True,
+            "solid_capstyle": "round",
+            "solid_joinstyle": "round",
+        },
+        "contact": {"linewidth": 1.0, "alpha": 0.88, "drawstyle": "steps-post", "antialiased": True},
         "peak": {
             "linestyle": "None",
             "marker": "o",
-            "markersize": 4.6,
+            "markersize": 4.2,
             "markeredgecolor": "#FFFFFF",
             "markeredgewidth": 0.7,
+            "alpha": 0.95,
         },
     }
 
@@ -794,10 +813,10 @@ def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
         "tick": "#657084",
         "label": "#293247",
         "title": "#172033",
-        "grid_linewidth": 0.7,
-        "grid_alpha": 0.38,
+        "grid_linewidth": 0.62,
+        "grid_alpha": 0.32,
         "axisbelow": True,
-        "spine_linewidth": 0.7,
+        "spine_linewidth": 0.65,
         "tick_label_size": 9,
         "tick_direction": "out",
         "tick_length": 3.0,
