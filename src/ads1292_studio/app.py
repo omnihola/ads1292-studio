@@ -113,6 +113,44 @@ BUTTON_CHROME_SPEC = {
         "relief": "flat",
     },
 }
+INPUT_CHROME_SPEC = {
+    "label": {
+        "font": ("Aptos", 10, "bold"),
+        "foreground": "#657084",
+    },
+    "entry": {
+        "padding": (9, 6),
+        "fieldbackground": "#FFFFFF",
+        "foreground": "#172033",
+        "insert": "#2F6FED",
+        "focus_background": "#FFFFFF",
+        "disabled_foreground": "#657084",
+        "disabled_background": "#EEF3FA",
+        "borderwidth": 1,
+        "relief": "flat",
+    },
+    "combobox": {
+        "padding": (8, 5),
+        "fieldbackground": "#FFFFFF",
+        "background": "#FFFFFF",
+        "foreground": "#172033",
+        "selectbackground": "#EEF3FA",
+        "selectforeground": "#172033",
+        "arrowcolor": "#657084",
+        "active_arrowcolor": "#1F4FB2",
+        "disabled_foreground": "#657084",
+        "disabled_background": "#EEF3FA",
+    },
+    "check": {
+        "padding": (3, 5),
+        "font": ("Aptos", 11),
+        "background": "#F6F8FB",
+        "foreground": "#172033",
+        "active_foreground": "#1F4FB2",
+        "disabled_foreground": "#657084",
+        "active_background": "#F6F8FB",
+    },
+}
 TOOLBAR_CONTROL_STYLES = {
     "port": "Port.TCombobox",
     "toggle": "ToolbarToggle.TCheckbutton",
@@ -593,6 +631,10 @@ def toolbar_button_style(label: str) -> str:
 
 def button_chrome_spec() -> dict[str, dict[str, object]]:
     return {name: dict(values) for name, values in BUTTON_CHROME_SPEC.items()}
+
+
+def input_chrome_spec() -> dict[str, dict[str, object]]:
+    return {name: dict(values) for name, values in INPUT_CHROME_SPEC.items()}
 
 
 def toolbar_control_styles() -> dict[str, str]:
@@ -1335,13 +1377,30 @@ class App(tk.Tk):
             foreground=tokens["accent_dark"],
             font=("Aptos", 11, "bold"),
         )
+        input_chrome = input_chrome_spec()
+        combobox_chrome = input_chrome["combobox"]
         style.configure(
             "Port.TCombobox",
-            fieldbackground=tokens["panel"],
-            foreground=tokens["ink"],
-            selectbackground=tokens["panel"],
-            selectforeground=tokens["ink"],
-            padding=(6, 4),
+            fieldbackground=combobox_chrome["fieldbackground"],
+            background=combobox_chrome["background"],
+            foreground=combobox_chrome["foreground"],
+            selectbackground=combobox_chrome["selectbackground"],
+            selectforeground=combobox_chrome["selectforeground"],
+            arrowcolor=combobox_chrome["arrowcolor"],
+            padding=combobox_chrome["padding"],
+        )
+        style.map(
+            "Port.TCombobox",
+            foreground=[("disabled", combobox_chrome["disabled_foreground"])],
+            fieldbackground=[
+                ("disabled", combobox_chrome["disabled_background"]),
+                ("readonly", combobox_chrome["fieldbackground"]),
+            ],
+            background=[
+                ("disabled", combobox_chrome["disabled_background"]),
+                ("readonly", combobox_chrome["background"]),
+            ],
+            arrowcolor=[("active", combobox_chrome["active_arrowcolor"])],
         )
         style.configure(
             "ToolbarToggle.TCheckbutton",
@@ -1363,7 +1422,13 @@ class App(tk.Tk):
             padding=SECTION_HEADING_STYLES["padding"],
         )
         style.configure("Muted.TLabel", background=tokens["surface"], foreground=tokens["muted"])
-        style.configure("FieldLabel.TLabel", background=tokens["surface"], foreground=tokens["muted"], font=("Aptos", 10, "bold"))
+        label_chrome = input_chrome["label"]
+        style.configure(
+            "FieldLabel.TLabel",
+            background=tokens["surface"],
+            foreground=label_chrome["foreground"],
+            font=label_chrome["font"],
+        )
         style.configure("ActionSection.TFrame", background=tokens["panel_alt"], borderwidth=0)
         style.configure(
             "ActionSection.TLabel",
@@ -1372,24 +1437,39 @@ class App(tk.Tk):
             font=("Aptos", 10, "bold"),
             padding=(8, 4),
         )
+        entry_chrome = input_chrome["entry"]
         style.configure(
             "Field.TEntry",
-            fieldbackground=tokens["panel"],
-            foreground=tokens["ink"],
-            insertcolor=tokens["accent"],
-            padding=(8, 5),
+            fieldbackground=entry_chrome["fieldbackground"],
+            foreground=entry_chrome["foreground"],
+            insertcolor=entry_chrome["insert"],
+            padding=entry_chrome["padding"],
+            borderwidth=entry_chrome["borderwidth"],
+            relief=entry_chrome["relief"],
         )
+        style.map(
+            "Field.TEntry",
+            foreground=[("disabled", entry_chrome["disabled_foreground"])],
+            fieldbackground=[
+                ("disabled", entry_chrome["disabled_background"]),
+                ("focus", entry_chrome["focus_background"]),
+            ],
+        )
+        check_chrome = input_chrome["check"]
         style.configure(
             "FieldCheck.TCheckbutton",
-            background=tokens["surface"],
-            foreground=tokens["ink"],
-            padding=(2, 5),
-            font=("Aptos", 11),
+            background=check_chrome["background"],
+            foreground=check_chrome["foreground"],
+            padding=check_chrome["padding"],
+            font=check_chrome["font"],
         )
         style.map(
             "FieldCheck.TCheckbutton",
-            foreground=[("disabled", tokens["muted"]), ("active", tokens["accent_dark"])],
-            background=[("active", tokens["surface"])],
+            foreground=[
+                ("disabled", check_chrome["disabled_foreground"]),
+                ("active", check_chrome["active_foreground"]),
+            ],
+            background=[("active", check_chrome["active_background"])],
         )
         style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("PlotPanel.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)

@@ -10,6 +10,7 @@ from ads1292_studio.app import (
     event_count_styles,
     header_connection_styles,
     header_layout_spec,
+    input_chrome_spec,
     log_panel_spec,
     main_tab_labels,
     plot_axis_style,
@@ -119,6 +120,47 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
     assert toolbar_control_styles() == {
         "port": "Port.TCombobox",
         "toggle": "ToolbarToggle.TCheckbutton",
+    }
+
+
+def test_input_chrome_spec_keeps_forms_readable() -> None:
+    assert input_chrome_spec() == {
+        "label": {
+            "font": ("Aptos", 10, "bold"),
+            "foreground": "#657084",
+        },
+        "entry": {
+            "padding": (9, 6),
+            "fieldbackground": "#FFFFFF",
+            "foreground": "#172033",
+            "insert": "#2F6FED",
+            "focus_background": "#FFFFFF",
+            "disabled_foreground": "#657084",
+            "disabled_background": "#EEF3FA",
+            "borderwidth": 1,
+            "relief": "flat",
+        },
+        "combobox": {
+            "padding": (8, 5),
+            "fieldbackground": "#FFFFFF",
+            "background": "#FFFFFF",
+            "foreground": "#172033",
+            "selectbackground": "#EEF3FA",
+            "selectforeground": "#172033",
+            "arrowcolor": "#657084",
+            "active_arrowcolor": "#1F4FB2",
+            "disabled_foreground": "#657084",
+            "disabled_background": "#EEF3FA",
+        },
+        "check": {
+            "padding": (3, 5),
+            "font": ("Aptos", 11),
+            "background": "#F6F8FB",
+            "foreground": "#172033",
+            "active_foreground": "#1F4FB2",
+            "disabled_foreground": "#657084",
+            "active_background": "#F6F8FB",
+        },
     }
 
 
