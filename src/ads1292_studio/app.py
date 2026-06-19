@@ -169,6 +169,10 @@ SIDEBAR_FIELD_STYLES = {
     "entry": "Field.TEntry",
     "check": "FieldCheck.TCheckbutton",
 }
+SECTION_HEADING_STYLES = {
+    "label": "SectionHeading.TLabel",
+    "padding": (2, 4),
+}
 SIDEBAR_ACTION_BUTTON_STYLE = "SidebarAction.TButton"
 ACTION_SECTION_STYLES = {
     "frame": "ActionSection.TFrame",
@@ -301,6 +305,10 @@ def plot_panel_spec() -> dict[str, object]:
 
 def sidebar_field_styles() -> dict[str, str]:
     return dict(SIDEBAR_FIELD_STYLES)
+
+
+def section_heading_styles() -> dict[str, object]:
+    return dict(SECTION_HEADING_STYLES)
 
 
 def sidebar_action_button_style() -> str:
@@ -1112,7 +1120,13 @@ class App(tk.Tk):
             foreground=[("disabled", tokens["muted"]), ("active", tokens["accent_dark"])],
             background=[("active", tokens["panel_alt"])],
         )
-        style.configure("SectionHeading.TLabel", background=tokens["surface"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
+        style.configure(
+            "SectionHeading.TLabel",
+            background=tokens["surface"],
+            foreground=tokens["accent_dark"],
+            font=("Aptos", 12, "bold"),
+            padding=SECTION_HEADING_STYLES["padding"],
+        )
         style.configure("Muted.TLabel", background=tokens["surface"], foreground=tokens["muted"])
         style.configure("FieldLabel.TLabel", background=tokens["surface"], foreground=tokens["muted"], font=("Aptos", 10, "bold"))
         style.configure("ActionSection.TFrame", background=tokens["panel_alt"], borderwidth=0)

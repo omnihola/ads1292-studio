@@ -14,6 +14,7 @@ from ads1292_studio.app import (
     protocol_note_styles,
     safety_notice_styles,
     secondary_action_button_labels,
+    section_heading_styles,
     sidebar_action_button_style,
     sidebar_field_styles,
     sidebar_notebook_styles,
@@ -118,6 +119,13 @@ def test_sidebar_field_styles_make_forms_consistent() -> None:
         "label": "FieldLabel.TLabel",
         "entry": "Field.TEntry",
         "check": "FieldCheck.TCheckbutton",
+    }
+
+
+def test_section_heading_styles_make_sidebar_groups_scannable() -> None:
+    assert section_heading_styles() == {
+        "label": "SectionHeading.TLabel",
+        "padding": (2, 4),
     }
 
 
