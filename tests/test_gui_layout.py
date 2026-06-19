@@ -6,6 +6,7 @@ from ads1292_studio.app import (
     primary_toolbar_button_labels,
     secondary_action_button_labels,
     sidebar_tab_labels,
+    toolbar_button_style,
 )
 
 
@@ -14,6 +15,14 @@ def test_gui_layout_keeps_primary_toolbar_focused_on_acquisition() -> None:
     assert "Load CSV" not in primary_toolbar_button_labels()
     assert "Export Report" not in primary_toolbar_button_labels()
     assert "Session Index" not in primary_toolbar_button_labels()
+
+
+def test_gui_layout_assigns_toolbar_action_hierarchy() -> None:
+    assert toolbar_button_style("Refresh") == "TButton"
+    assert toolbar_button_style("Connect") == "Primary.TButton"
+    assert toolbar_button_style("Start") == "Primary.TButton"
+    assert toolbar_button_style("Stop") == "Stop.TButton"
+    assert toolbar_button_style("Unknown") == "TButton"
 
 
 def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:

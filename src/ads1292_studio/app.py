@@ -53,6 +53,12 @@ SAMPLE_RATE_HZ = 500.0
 DEFAULT_FILTER_ENABLED = False
 DEFAULT_ECG_INVERTED = False
 PRIMARY_TOOLBAR_BUTTONS = ("Refresh", "Connect", "Start", "Stop")
+TOOLBAR_BUTTON_STYLES = {
+    "Refresh": "TButton",
+    "Connect": "Primary.TButton",
+    "Start": "Primary.TButton",
+    "Stop": "Stop.TButton",
+}
 SECONDARY_ACTION_BUTTONS = (
     "Load CSV",
     "Export Report",
@@ -218,6 +224,10 @@ def _gui_state(
 
 def primary_toolbar_button_labels() -> tuple[str, ...]:
     return PRIMARY_TOOLBAR_BUTTONS
+
+
+def toolbar_button_style(label: str) -> str:
+    return TOOLBAR_BUTTON_STYLES.get(label, "TButton")
 
 
 def secondary_action_button_labels() -> tuple[str, ...]:
@@ -537,13 +547,33 @@ class App(tk.Tk):
         self.port_var = tk.StringVar()
         self.port_combo = ttk.Combobox(toolbar, textvariable=self.port_var, width=34)
         self.port_combo.pack(side=tk.LEFT, padx=6)
-        self.refresh_button = ttk.Button(toolbar, text="Refresh", command=self.refresh_ports)
+        self.refresh_button = ttk.Button(
+            toolbar,
+            text="Refresh",
+            command=self.refresh_ports,
+            style=toolbar_button_style("Refresh"),
+        )
         self.refresh_button.pack(side=tk.LEFT)
-        self.connect_button = ttk.Button(toolbar, text="Connect", command=self.connect)
+        self.connect_button = ttk.Button(
+            toolbar,
+            text="Connect",
+            command=self.connect,
+            style=toolbar_button_style("Connect"),
+        )
         self.connect_button.pack(side=tk.LEFT, padx=(12, 4))
-        self.start_button = ttk.Button(toolbar, text="Start", command=self.start)
+        self.start_button = ttk.Button(
+            toolbar,
+            text="Start",
+            command=self.start,
+            style=toolbar_button_style("Start"),
+        )
         self.start_button.pack(side=tk.LEFT, padx=4)
-        self.stop_button = ttk.Button(toolbar, text="Stop", command=self.stop)
+        self.stop_button = ttk.Button(
+            toolbar,
+            text="Stop",
+            command=self.stop,
+            style=toolbar_button_style("Stop"),
+        )
         self.stop_button.pack(side=tk.LEFT)
 
         self.save_var = tk.BooleanVar(value=True)
@@ -740,6 +770,30 @@ class App(tk.Tk):
         style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
         style.configure("TButton", padding=(10, 6), font=("Aptos", 12))
+        style.configure(
+            "Primary.TButton",
+            padding=(12, 6),
+            font=("Aptos", 12, "bold"),
+            foreground="#FFFFFF",
+            background=tokens["accent"],
+        )
+        style.map(
+            "Primary.TButton",
+            foreground=[("disabled", tokens["muted"]), ("active", "#FFFFFF")],
+            background=[("disabled", tokens["border"]), ("active", tokens["accent_dark"])],
+        )
+        style.configure(
+            "Stop.TButton",
+            padding=(12, 6),
+            font=("Aptos", 12, "bold"),
+            foreground=tokens["danger"],
+            background=tokens["panel"],
+        )
+        style.map(
+            "Stop.TButton",
+            foreground=[("disabled", tokens["muted"]), ("active", "#FFFFFF")],
+            background=[("disabled", tokens["border"]), ("active", tokens["danger"])],
+        )
         style.configure("TCheckbutton", background=tokens["panel_alt"], foreground=tokens["ink"])
         style.configure("TNotebook", background=tokens["surface"], borderwidth=0)
         style.configure("TNotebook.Tab", padding=(14, 7), font=("Aptos", 12, "bold"))
