@@ -10,6 +10,7 @@ from ads1292_studio.app import (
     gui_status_cards,
     gui_status_overview,
     gui_workflow_hint,
+    status_tone_color,
     status_tone_style,
 )
 import numpy as np
@@ -330,6 +331,14 @@ def test_status_tone_style_maps_known_and_unknown_tones() -> None:
     assert status_tone_style("running") == "Running.Status.TLabel"
     assert status_tone_style("warning") == "Warning.Status.TLabel"
     assert status_tone_style("unexpected") == "Neutral.Status.TLabel"
+
+
+def test_status_tone_color_maps_card_stripe_colors() -> None:
+    assert status_tone_color("ready") == "#1E7A46"
+    assert status_tone_color("running") == "#2F6FED"
+    assert status_tone_color("warning") == "#A76400"
+    assert status_tone_color("neutral") == "#A9B4C3"
+    assert status_tone_color("unexpected") == "#A9B4C3"
 
 
 def test_gui_state_snapshot_drives_all_status_helpers() -> None:

@@ -80,6 +80,12 @@ STATUS_TONE_STYLES = {
     "warning": "Warning.Status.TLabel",
     "neutral": "Neutral.Status.TLabel",
 }
+STATUS_TONE_COLORS = {
+    "ready": "#1E7A46",
+    "running": "#2F6FED",
+    "warning": "#A76400",
+    "neutral": "#A9B4C3",
+}
 APP_VISUAL_TOKENS = {
     "surface": "#F6F8FB",
     "panel": "#FFFFFF",
@@ -156,6 +162,10 @@ class ConnectResult:
 
 def status_tone_style(tone: str) -> str:
     return STATUS_TONE_STYLES.get(tone, STATUS_TONE_STYLES["neutral"])
+
+
+def status_tone_color(tone: str) -> str:
+    return STATUS_TONE_COLORS.get(tone, STATUS_TONE_COLORS["neutral"])
 
 
 def app_visual_tokens() -> dict[str, str]:
@@ -565,8 +575,10 @@ class App(tk.Tk):
         self.status_overview_var = tk.StringVar(value="")
         self.status_card_vars = {label: tk.StringVar(value="") for label in STATUS_CARD_LABELS}
         self.status_card_value_labels: dict[str, ttk.Label] = {}
+        self.status_card_tone_stripes: dict[str, tk.Frame] = {}
         self.signal_card_vars = {label: tk.StringVar(value="") for label in SIGNAL_CARD_LABELS}
         self.signal_card_value_labels: dict[str, ttk.Label] = {}
+        self.signal_card_tone_stripes: dict[str, tk.Frame] = {}
         self.session_id_var = tk.StringVar(value="untitled-session")
         self.subject_id_var = tk.StringVar(value="anonymous")
         self.electrode_var = tk.StringVar(value="commercial Ag/AgCl control")
@@ -738,30 +750,40 @@ class App(tk.Tk):
 
     def _build_status_cards(self, parent: ttk.Frame) -> None:
         for label in STATUS_CARD_LABELS:
-            row = ttk.Frame(parent, padding=(10, 8), style="Card.TFrame")
+            row = ttk.Frame(parent, padding=(0, 0), style="Card.TFrame")
             row.pack(anchor=tk.W, fill=tk.X, pady=3)
-            ttk.Label(row, text=label, width=12, style="CardLabel.TLabel").pack(side=tk.LEFT)
+            stripe = tk.Frame(row, width=4, bg=status_tone_color("neutral"), highlightthickness=0)
+            stripe.pack(side=tk.LEFT, fill=tk.Y)
+            content = ttk.Frame(row, padding=(10, 8), style="Card.TFrame")
+            content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            ttk.Label(content, text=label, width=12, style="CardLabel.TLabel").pack(side=tk.LEFT)
             value_label = ttk.Label(
-                row,
+                content,
                 textvariable=self.status_card_vars[label],
                 style=status_tone_style("neutral"),
             )
             value_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            self.status_card_tone_stripes[label] = stripe
             self.status_card_value_labels[label] = value_label
 
     def _build_signal_quality_cards(self, parent: ttk.Frame) -> None:
         for label in SIGNAL_CARD_LABELS:
-            row = ttk.Frame(parent, padding=(10, 8), style="Card.TFrame")
+            row = ttk.Frame(parent, padding=(0, 0), style="Card.TFrame")
             row.pack(anchor=tk.W, fill=tk.X, pady=3)
-            ttk.Label(row, text=label, width=12, style="CardLabel.TLabel").pack(side=tk.LEFT)
+            stripe = tk.Frame(row, width=4, bg=status_tone_color("neutral"), highlightthickness=0)
+            stripe.pack(side=tk.LEFT, fill=tk.Y)
+            content = ttk.Frame(row, padding=(10, 8), style="Card.TFrame")
+            content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            ttk.Label(content, text=label, width=12, style="CardLabel.TLabel").pack(side=tk.LEFT)
             value_label = ttk.Label(
-                row,
+                content,
                 textvariable=self.signal_card_vars[label],
                 style=status_tone_style("neutral"),
                 wraplength=170,
                 justify=tk.LEFT,
             )
             value_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            self.signal_card_tone_stripes[label] = stripe
             self.signal_card_value_labels[label] = value_label
 
     def _build_sidebar(self, parent: ttk.Frame) -> dict[str, ttk.Frame]:
@@ -1227,6 +1249,9 @@ class App(tk.Tk):
             self.status_card_value_labels[card.label].configure(
                 style=status_tone_style(card.tone)
             )
+            self.status_card_tone_stripes[card.label].configure(
+                bg=status_tone_color(card.tone)
+            )
         if not state.has_data:
             self._apply_signal_quality_cards(gui_signal_quality_cards())
         for label, button in self.control_buttons.items():
@@ -1237,6 +1262,9 @@ class App(tk.Tk):
             self.signal_card_vars[card.label].set(card.value)
             self.signal_card_value_labels[card.label].configure(
                 style=status_tone_style(card.tone)
+            )
+            self.signal_card_tone_stripes[card.label].configure(
+                bg=status_tone_color(card.tone)
             )
 
     def _metadata(self) -> SessionMetadata:
