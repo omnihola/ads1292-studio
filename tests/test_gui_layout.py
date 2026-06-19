@@ -159,6 +159,7 @@ def test_input_chrome_spec_keeps_forms_readable() -> None:
     assert input_chrome_spec() == {
         "label": {
             "font": ("Aptos", 10, "bold"),
+            "background": "#F6F8FB",
             "foreground": "#657084",
         },
         "entry": {

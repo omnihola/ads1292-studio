@@ -116,6 +116,7 @@ BUTTON_CHROME_SPEC = {
 INPUT_CHROME_SPEC = {
     "label": {
         "font": ("Aptos", 10, "bold"),
+        "background": "#F6F8FB",
         "foreground": "#657084",
     },
     "entry": {
@@ -1744,7 +1745,7 @@ class App(tk.Tk):
         label_chrome = input_chrome["label"]
         style.configure(
             "FieldLabel.TLabel",
-            background=tokens["surface"],
+            background=label_chrome["background"],
             foreground=label_chrome["foreground"],
             font=label_chrome["font"],
         )
