@@ -715,7 +715,7 @@ def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
         "tick_label_size": 9,
         "tick_direction": "out",
         "tick_length": 3.0,
-        "tick_width": 0.7,
+        "tick_width": 0.65,
         "label_size": 10,
         "label_pad": 7,
         "title_size": 11,
