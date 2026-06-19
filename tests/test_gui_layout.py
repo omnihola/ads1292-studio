@@ -720,7 +720,7 @@ def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
         "label_pad": 6,
         "title_size": 11,
         "title_weight": "bold",
-        "title_pad": 8,
+        "title_pad": 10,
     }
 
 

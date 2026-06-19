@@ -482,7 +482,7 @@ PLOT_AXIS_STYLE = {
     "label_pad": 6,
     "title_size": 11,
     "title_weight": "bold",
-    "title_pad": 8,
+    "title_pad": 10,
 }
 PLOT_FIGURE_LAYOUTS = {
     "three_panel": {
