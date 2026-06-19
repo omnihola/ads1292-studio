@@ -1,4 +1,10 @@
-from ads1292_studio.device import parse_stream_payload
+from ads1292_studio.device import Ads1x9xDevice, parse_stream_payload
+
+
+def test_device_default_timeout_is_short_enough_to_notice_stop_promptly() -> None:
+    device = Ads1x9xDevice("fake-port")
+
+    assert device.timeout == 0.2
 
 
 def test_parse_stream_payload_extracts_status_and_fourteen_sample_pairs() -> None:

@@ -18,18 +18,16 @@ class LiveWorker:
         self.device: Ads1x9xDevice | None = None
 
     def start(self, port: str, csv_path: Path | None) -> None:
-        self.stop()
+        self._stop_and_wait()
         self.stop_event.clear()
         self.thread = threading.Thread(target=self._run, args=(port, csv_path), daemon=True)
         self.thread.start()
 
     def stop(self) -> None:
         self.stop_event.set()
-        if self.device is not None:
-            try:
-                self.device.close()
-            except Exception as exc:
-                self.log_queue.put(f"Close warning: {exc}")
+
+    def _stop_and_wait(self) -> None:
+        self.stop_event.set()
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1.0)
 

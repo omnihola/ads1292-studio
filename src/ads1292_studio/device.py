@@ -82,7 +82,7 @@ class Ads1x9xDevice:
         self,
         port: str,
         baudrate: int = 9600,
-        timeout: float = 1.0,
+        timeout: float = 0.2,
         sample_rate_hz: float = 500.0,
     ) -> None:
         self.port = port
