@@ -879,6 +879,14 @@ def ads1292r_plot_layout_labels() -> tuple[str, str, str]:
     return ADS1292R_PLOT_LAYOUT_LABELS
 
 
+def channel_map_cards() -> tuple[GuiStatusCard, ...]:
+    return (
+        GuiStatusCard("ECG", "CH2 Lead I (LA-RA)", "running"),
+        GuiStatusCard("Respiration", "CH1 raw impedance", "neutral"),
+        GuiStatusCard("Contact", "lead-off bits", "neutral"),
+    )
+
+
 def _gui_state(
     *,
     state: GuiState | None = None,
@@ -1759,6 +1767,9 @@ class App(tk.Tk):
         self.status_card_label_widgets: dict[str, ttk.Label] = {}
         self.status_card_value_labels: dict[str, ttk.Label] = {}
         self.status_card_tone_stripes: dict[str, tk.Frame] = {}
+        self.channel_map_label_widgets: dict[str, ttk.Label] = {}
+        self.channel_map_value_labels: dict[str, ttk.Label] = {}
+        self.channel_map_tone_stripes: dict[str, tk.Frame] = {}
         self.status_detail_value_labels: dict[str, ttk.Label] = {}
         self.signal_card_vars = {label: tk.StringVar(value="") for label in SIGNAL_CARD_LABELS}
         self.signal_card_label_widgets: dict[str, ttk.Label] = {}
@@ -1796,6 +1807,8 @@ class App(tk.Tk):
         self._build_workflow_hint(status_side)
         ttk.Label(status_side, text="Overview", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
         self._build_status_cards(status_side)
+        ttk.Label(status_side, text="Channel Map", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
+        self._build_channel_map_cards(status_side)
         ttk.Label(status_side, text="Signal Quality", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
         self._build_signal_quality_cards(status_side)
         for label, var in (
@@ -2597,6 +2610,39 @@ class App(tk.Tk):
             self.status_card_label_widgets[label] = label_widget
             self.status_card_tone_stripes[label] = stripe
             self.status_card_value_labels[label] = value_label
+
+    def _build_channel_map_cards(self, parent: ttk.Frame) -> None:
+        card_label = card_label_spec()
+        for card in channel_map_cards():
+            row = ttk.Frame(parent, padding=(0, 0), style="Card.TFrame")
+            row.pack(anchor=tk.W, fill=tk.X, pady=card_label["row_padding"])
+            stripe = tk.Frame(
+                row,
+                width=int(card_label["stripe_width"]),
+                bg=status_tone_color(card.tone),
+                highlightthickness=0,
+            )
+            stripe.pack(side=tk.LEFT, fill=tk.Y)
+            content = ttk.Frame(row, padding=card_label["content_padding"], style="Card.TFrame")
+            content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            label_widget = ttk.Label(
+                content,
+                text=card.label,
+                width=int(card_label["width"]),
+                style=str(card_label["style"]),
+            )
+            label_widget.pack(side=tk.LEFT)
+            value_label = ttk.Label(
+                content,
+                text=card.value,
+                style=status_tone_style(card.tone),
+                wraplength=card_label["signal_value_wrap"],
+                justify=tk.LEFT,
+            )
+            value_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=card_label["value_padding"])
+            self.channel_map_label_widgets[card.label] = label_widget
+            self.channel_map_tone_stripes[card.label] = stripe
+            self.channel_map_value_labels[card.label] = value_label
 
     def _build_signal_quality_cards(self, parent: ttk.Frame) -> None:
         card_label = card_label_spec()

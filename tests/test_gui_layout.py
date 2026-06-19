@@ -10,6 +10,7 @@ from ads1292_studio.app import (
     base_notebook_styles,
     button_chrome_spec,
     card_label_spec,
+    channel_map_cards,
     empty_plot_messages,
     empty_plot_style,
     event_count_styles,
@@ -554,6 +555,26 @@ def test_gui_layout_uses_ads1292r_synchronized_three_panel_view() -> None:
         "CH1 Respiration raw",
         "Lead-off / contact status",
     )
+
+
+def test_channel_map_cards_explain_live_dual_channel_mapping() -> None:
+    cards = channel_map_cards()
+
+    assert [(card.label, card.value, card.tone) for card in cards] == [
+        ("ECG", "CH2 Lead I (LA-RA)", "running"),
+        ("Respiration", "CH1 raw impedance", "neutral"),
+        ("Contact", "lead-off bits", "neutral"),
+    ]
+
+
+def test_status_sidebar_includes_channel_map_before_signal_quality() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._build_ui)
+
+    assert "Channel Map" in source
+    assert "self._build_channel_map_cards(status_side)" in source
+    assert source.index("Channel Map") < source.index("Signal Quality")
 
 
 def test_gui_visual_tokens_define_a_complete_light_theme() -> None:
