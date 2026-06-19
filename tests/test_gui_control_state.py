@@ -31,6 +31,7 @@ from ads1292_studio.app import (
     gui_workflow_hint,
     header_connection_style,
     header_connection_tone,
+    live_axis_titles,
     live_ecg_axis_title,
     live_quality_worker_available,
     live_metrics_text,
@@ -360,6 +361,40 @@ def test_live_ecg_axis_title_keeps_dynamic_counts_out_of_plot_title() -> None:
     assert title == "ECG display: CH2 ECG Lead I (LA-RA) | raw | 1x | 8s | 25 mm/s, inverted"
     assert "R peaks" not in title
     assert "samples" not in title
+
+
+def test_live_axis_titles_are_static_until_display_mode_changes() -> None:
+    titles = live_axis_titles(
+        ecg_label="CH2 ECG Lead I (LA-RA)",
+        resp_label="CH1 respiration raw",
+        contact_label="lead-off/contact status",
+        mode="raw | 1x | 8s | 25 mm/s",
+        inverted=False,
+    )
+
+    assert titles == (
+        "ECG display: CH2 ECG Lead I (LA-RA) | raw | 1x | 8s | 25 mm/s",
+        "CH1 respiration raw",
+        "lead-off/contact status",
+    )
+    assert all("samples" not in title and "R peaks" not in title for title in titles)
+
+
+def test_live_redraw_caches_axis_title_updates() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    redraw_source = inspect.getsource(App._redraw_live)
+    apply_source = inspect.getsource(App._apply_live_axis_titles)
+    init_source = inspect.getsource(App.__init__)
+
+    assert "self.last_live_axis_titles: tuple[str, str, str] | None = None" in init_source
+    assert "self._apply_live_axis_titles(display_settings, filter_settings)" in redraw_source
+    assert "set_signal_axis_title(" not in redraw_source
+    assert "if self.last_live_axis_titles == titles:" in apply_source
+    assert "return" in apply_source
+    assert "self.last_live_axis_titles = titles" in apply_source
 
 
 def test_live_metrics_text_carries_dynamic_runtime_counts() -> None:

@@ -375,6 +375,21 @@ def live_ecg_axis_title(ecg_label: str, mode: str, *, inverted: bool) -> str:
     return f"ECG display: {ecg_label} | {mode}{polarity}"
 
 
+def live_axis_titles(
+    *,
+    ecg_label: str,
+    resp_label: str,
+    contact_label: str,
+    mode: str,
+    inverted: bool,
+) -> tuple[str, str, str]:
+    return (
+        live_ecg_axis_title(ecg_label, mode, inverted=inverted),
+        resp_label,
+        contact_label,
+    )
+
+
 def live_metrics_text(
     *,
     sample_index: int,
@@ -831,6 +846,7 @@ class App(tk.Tk):
         self.calibration_pulse_cache: dict[int, str] = {}
         self.last_control_state: GuiState | None = None
         self.last_display_refresh_key: tuple[object, ...] | None = None
+        self.last_live_axis_titles: tuple[str, str, str] | None = None
 
         self._build_ui()
         self.refresh_ports()
@@ -2529,6 +2545,28 @@ class App(tk.Tk):
         artists.extend((line, label))
         self.calibration_pulse_cache[axis_id] = label_text
 
+    def _apply_live_axis_titles(
+        self,
+        display_settings: EcgDisplaySettings,
+        filter_settings: SoftwareFilterSettings,
+    ) -> None:
+        ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
+        mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
+        titles = live_axis_titles(
+            ecg_label=ecg_label,
+            resp_label=resp_label,
+            contact_label=contact_label,
+            mode=mode,
+            inverted=DEFAULT_ECG_INVERTED,
+        )
+        if self.last_live_axis_titles == titles:
+            return
+        self.last_live_axis_titles = titles
+        ecg_title, resp_title, contact_title = titles
+        set_signal_axis_title(self.ax_live_ecg, ecg_title)
+        set_signal_axis_title(self.ax_live_resp, resp_title)
+        set_signal_axis_title(self.ax_live_status, contact_title)
+
     def _redraw_live(self) -> None:
         if not self.indices:
             return
@@ -2566,14 +2604,8 @@ class App(tk.Tk):
             self.ax_live_status.set_ylim(-0.5, max(1.0, status_top))
         self._apply_ecg_paper_grid(self.ax_live_ecg, display_settings)
         self._draw_calibration_pulse(self.ax_live_ecg, self.live_calibration_artists, display_settings)
-        ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
-        mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
-        set_signal_axis_title(
-            self.ax_live_ecg,
-            live_ecg_axis_title(ecg_label, mode, inverted=DEFAULT_ECG_INVERTED),
-        )
-        set_signal_axis_title(self.ax_live_resp, resp_label)
-        set_signal_axis_title(self.ax_live_status, contact_label)
+        ecg_label = ads1292r_plot_layout_labels()[0]
+        self._apply_live_axis_titles(display_settings, filter_settings)
         set_string_var_if_changed(
             self.metrics_var,
             live_metrics_text(
