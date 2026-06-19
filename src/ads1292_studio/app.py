@@ -530,7 +530,7 @@ SIDEBAR_NOTEBOOK_STYLES = {
     "tab": "Sidebar.TNotebook.Tab",
     "background": "#F6F8FB",
     "borderwidth": 0,
-    "tab_padding": (10, 6),
+    "tab_padding": (12, 7),
     "tab_font": ("Aptos", 10, "bold"),
     "tab_background": "#EEF3FA",
     "selected_foreground": "#2F6FED",
