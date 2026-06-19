@@ -418,7 +418,7 @@ LOG_PANEL_SPEC = {
     "shell": "Main.TFrame",
     "panel": "LogPanel.TFrame",
     "padding": (14, 14),
-    "panel_padding": (8, 8),
+    "panel_padding": (10, 10),
     "height": 12,
     "wrap": "word",
     "scrollbar": "vertical",
