@@ -116,6 +116,7 @@ BUTTON_CHROME_SPEC = {
 INPUT_CHROME_SPEC = {
     "label": {
         "font": ("Aptos", 10, "bold"),
+        "padding": (2, 1),
         "background": "#F6F8FB",
         "foreground": "#657084",
     },
@@ -1748,6 +1749,7 @@ class App(tk.Tk):
             background=label_chrome["background"],
             foreground=label_chrome["foreground"],
             font=label_chrome["font"],
+            padding=label_chrome["padding"],
         )
         action_section = action_section_styles()
         style.configure("ActionSection.TFrame", background=action_section["background"], borderwidth=0)
