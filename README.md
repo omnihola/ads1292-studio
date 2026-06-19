@@ -64,6 +64,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Dual raw channel recording.
 - ADS1292R-aware channel labels: CH2 is ECG Lead I (LA-RA), CH1 is respiration raw.
 - Live ECG, respiration raw, and lead-off/status display.
+- Synchronized three-panel ADS1292R view: CH2 ECG Lead I, CH1 respiration raw,
+  and lead-off/contact status on the same time axis.
 - CSV saving with `status_byte` and `lead_off_bits`.
 - Offline CSV review with R-peak detection and conservative PQRST review.
 - HTML/PNG review report export for experiment records.

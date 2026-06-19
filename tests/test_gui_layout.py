@@ -1,4 +1,5 @@
 from ads1292_studio.app import (
+    ads1292r_plot_layout_labels,
     primary_toolbar_button_labels,
     secondary_action_button_labels,
     sidebar_tab_labels,
@@ -25,3 +26,11 @@ def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:
 
 def test_gui_layout_uses_task_based_sidebar_tabs() -> None:
     assert sidebar_tab_labels() == ("Status", "Session", "Validation", "Protocol", "Actions")
+
+
+def test_gui_layout_uses_ads1292r_synchronized_three_panel_view() -> None:
+    assert ads1292r_plot_layout_labels() == (
+        "CH2 ECG Lead I (LA-RA)",
+        "CH1 Respiration raw",
+        "Lead-off / contact status",
+    )

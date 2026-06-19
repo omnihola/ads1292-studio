@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 40
+Phase 41
 
 ## Phases
 
@@ -347,9 +347,18 @@ Phase 40
 - [x] Commit and push.
 - **Status:** complete
 
+### Phase 41: ADS1292R Synchronized Three-Panel GUI
+- [x] Add a testable ADS1292R plot-layout contract: CH2 ECG Lead I, CH1 respiration raw, lead-off/contact status.
+- [x] Remove the misleading ECG source selector from the acquisition toolbar.
+- [x] Fix live display to always show CH2 ECG, CH1 respiration, and lead-off/contact on synchronized axes.
+- [x] Fix offline Review display to use the same three-panel synchronized layout.
+- [x] Fix GUI report/package export source to CH2 for ADS1292R recordings.
+- [x] Verify focused layout/control tests, real-recording smoke, full suite, syntax, and diff.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
-2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
+2. Which channel should be treated as ECG? For ADS1292RECG-FE/ADS1292R, CH2 is ECG Lead I (LA-RA); CH1 is the respiration raw channel and should not be treated as a second ECG lead.
 3. Is this medical diagnostic software? No. It is research/evaluation software for ADS1292RECG-FE and MOTAC gel electrode validation.
 
 ## Decisions Made
@@ -399,6 +408,7 @@ Phase 40
 | Use structured status cards instead of only multiline status text | Commercial-style status panels need semantic labels and tones so the UI can show ready/running/warning/neutral states without parsing display text. |
 | Add a unified GUI state snapshot | Button gating, workflow hints, overview text, and status cards should share a single immutable state object rather than recomputing the same booleans in several places. |
 | Add real-recording signal-quality cards | Actual exported data can be usable while the GUI still hides the conclusion; the Status tab should expose ECG source, contact, HR/R peaks, and drift/noise as separate scan-friendly rows. |
+| Use synchronized ADS1292R plots instead of channel auto-selection in the GUI | For this board, ECG and respiration are different measurement functions: show CH2 ECG, CH1 respiration, and lead-off/contact together on the same time axis rather than switching or combining channels. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

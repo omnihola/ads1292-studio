@@ -33,7 +33,6 @@ from ads1292_studio.session_index import export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import (
     bandpass,
-    choose_ecg_channel,
     detect_r_peaks,
     heart_rate_summary,
     pqrst_review,
@@ -57,10 +56,16 @@ SECONDARY_ACTION_BUTTONS = (
 SIDEBAR_TABS = ("Status", "Session", "Validation", "Protocol", "Actions")
 STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
 SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
+ADS1292R_ECG_SOURCE = "CH2"
 ADS1292R_CHANNEL_LABELS = {
     "CH2": "CH2 ECG Lead I (LA-RA)",
     "CH1": "CH1 Respiration raw",
 }
+ADS1292R_PLOT_LAYOUT_LABELS = (
+    "CH2 ECG Lead I (LA-RA)",
+    "CH1 Respiration raw",
+    "Lead-off / contact status",
+)
 STATUS_TONE_STYLES = {
     "ready": "Ready.Status.TLabel",
     "running": "Running.Status.TLabel",
@@ -98,6 +103,10 @@ def ads1292r_channel_label(channel: str) -> str:
 
 def ads1292r_secondary_channel_label(ecg_source: str) -> str:
     return "CH1 Respiration raw" if ecg_source.upper() == "CH2" else "CH2 ECG Lead I (LA-RA)"
+
+
+def ads1292r_plot_layout_labels() -> tuple[str, str, str]:
+    return ADS1292R_PLOT_LAYOUT_LABELS
 
 
 def _gui_state(
@@ -398,15 +407,8 @@ class App(tk.Tk):
         ttk.Checkbutton(toolbar, text="Auto scale", variable=self.autoscale_var).pack(side=tk.LEFT, padx=4)
         self.filter_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(toolbar, text="Filter", variable=self.filter_var).pack(side=tk.LEFT, padx=4)
-        ttk.Label(toolbar, text="ECG source").pack(side=tk.LEFT, padx=(12, 2))
-        self.source_var = tk.StringVar(value="Auto")
-        ttk.Combobox(
-            toolbar,
-            textvariable=self.source_var,
-            values=["Auto", "CH1", "CH2"],
-            state="readonly",
-            width=7,
-        ).pack(side=tk.LEFT)
+        self.source_var = tk.StringVar(value=ADS1292R_ECG_SOURCE)
+        ttk.Label(toolbar, text="Layout: CH2 ECG / CH1 Resp").pack(side=tk.LEFT, padx=(12, 2))
 
         self.connection_var = tk.StringVar(value="Not connected")
         ttk.Label(toolbar, textvariable=self.connection_var).pack(side=tk.RIGHT)
@@ -616,28 +618,30 @@ class App(tk.Tk):
     def _build_live_plot(self) -> None:
         fig = Figure(figsize=(10, 7), dpi=100)
         self.ax_live_ecg = fig.add_subplot(311)
-        self.ax_live_other = fig.add_subplot(312, sharex=self.ax_live_ecg)
+        self.ax_live_resp = fig.add_subplot(312, sharex=self.ax_live_ecg)
         self.ax_live_status = fig.add_subplot(313, sharex=self.ax_live_ecg)
         self.ax_live_ecg.set_ylabel("uV")
-        self.ax_live_other.set_ylabel("uV")
+        self.ax_live_resp.set_ylabel("uV")
         self.ax_live_status.set_xlabel("Time (s)")
         self.live_ecg_line, = self.ax_live_ecg.plot([], [], lw=1.0)
         self.live_peak_line, = self.ax_live_ecg.plot([], [], "r.", ms=5)
-        self.live_other_line, = self.ax_live_other.plot([], [], lw=0.8)
+        self.live_resp_line, = self.ax_live_resp.plot([], [], lw=0.8)
         self.live_status_line, = self.ax_live_status.plot([], [], lw=0.8, drawstyle="steps-post")
         self.live_canvas = FigureCanvasTkAgg(fig, master=self.live_tab)
         self.live_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def _build_review_plot(self) -> None:
         fig = Figure(figsize=(10, 7), dpi=100)
-        self.ax_review_ecg = fig.add_subplot(211)
-        self.ax_review_other = fig.add_subplot(212, sharex=self.ax_review_ecg)
-        self.ax_review_other.set_xlabel("Samples")
+        self.ax_review_ecg = fig.add_subplot(311)
+        self.ax_review_resp = fig.add_subplot(312, sharex=self.ax_review_ecg)
+        self.ax_review_status = fig.add_subplot(313, sharex=self.ax_review_ecg)
+        self.ax_review_status.set_xlabel("Samples")
         self.ax_review_ecg.set_ylabel("uV")
-        self.ax_review_other.set_ylabel("uV")
+        self.ax_review_resp.set_ylabel("uV")
         self.review_ecg_line, = self.ax_review_ecg.plot([], [], lw=0.9)
         self.review_peak_line, = self.ax_review_ecg.plot([], [], "r.", ms=5)
-        self.review_other_line, = self.ax_review_other.plot([], [], lw=0.8)
+        self.review_resp_line, = self.ax_review_resp.plot([], [], lw=0.8)
+        self.review_status_line, = self.ax_review_status.plot([], [], lw=0.8, drawstyle="steps-post")
         self.review_canvas = FigureCanvasTkAgg(fig, master=self.review_tab)
         self.review_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
@@ -776,7 +780,7 @@ class App(tk.Tk):
                 out_dir=Path(out_dir),
                 title="ADS1292 Studio Review",
                 sample_rate_hz=SAMPLE_RATE_HZ,
-                source=self.source_var.get(),
+                source=ADS1292R_ECG_SOURCE,
                 metadata=self._metadata(),
                 events=tuple(self.event_markers),
                 calibration=self._calibration(),
@@ -840,7 +844,7 @@ class App(tk.Tk):
                 csv_path=self.recording_path,
                 out_dir=Path(out_dir),
                 title="ADS1292 Session Package",
-                source=self.source_var.get(),
+                source=ADS1292R_ECG_SOURCE,
             )
             self._log(f"Exported package: {export.manifest_path}")
             messagebox.showinfo("Package exported", f"Saved package manifest:\n{export.manifest_path}")
@@ -1060,13 +1064,10 @@ class App(tk.Tk):
         self.board_hr.append(sample.board_heart_rate)
         self.board_rr.append(sample.board_respiration_rate)
 
-    def _selected_channels(self) -> tuple[str, np.ndarray, np.ndarray]:
+    def _ads1292r_display_channels(self) -> tuple[str, np.ndarray, np.ndarray]:
         ch1 = np.asarray(self.ch1, dtype=float)
         ch2 = np.asarray(self.ch2, dtype=float)
-        choice = choose_ecg_channel(ch1, ch2, SAMPLE_RATE_HZ, self.source_var.get())
-        if choice.channel == "CH2":
-            return "CH2", ch2, ch1
-        return "CH1", ch1, ch2
+        return ADS1292R_ECG_SOURCE, ch2, ch1
 
     def _display_signal(self, values: np.ndarray) -> np.ndarray:
         display = values if not self.filter_var.get() else bandpass(values, SAMPLE_RATE_HZ)
@@ -1075,9 +1076,9 @@ class App(tk.Tk):
     def _redraw_live(self) -> None:
         if not self.indices:
             return
-        source, ecg_raw, other_raw = self._selected_channels()
+        source, ecg_raw, resp_raw = self._ads1292r_display_channels()
         ecg = self._display_signal(ecg_raw)
-        other = self._display_signal(other_raw)
+        resp = self._display_signal(resp_raw)
         x = np.asarray(self.indices, dtype=float) / SAMPLE_RATE_HZ
         left = max(0.0, x[-1] - VISIBLE_SECONDS)
         right = max(VISIBLE_SECONDS, x[-1])
@@ -1088,25 +1089,24 @@ class App(tk.Tk):
 
         self.live_ecg_line.set_data(x, ecg)
         self.live_peak_line.set_data(peaks_x, peaks_y)
-        self.live_other_line.set_data(x, other)
+        self.live_resp_line.set_data(x, resp)
         self.live_status_line.set_data(x, list(self.status))
-        for ax in (self.ax_live_ecg, self.ax_live_other, self.ax_live_status):
+        for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.set_xlim(left, right)
         if self.autoscale_var.get():
             self.ax_live_ecg.set_ylim(*robust_ylim(ecg[visible]))
-            self.ax_live_other.set_ylim(*robust_ylim(other[visible]))
+            self.ax_live_resp.set_ylim(*robust_ylim(resp[visible]))
             self.ax_live_status.set_ylim(-0.5, max(1.0, max(self.status or [0]) + 0.5))
         hr = heart_rate_summary(peaks, SAMPLE_RATE_HZ)
-        ecg_label = ads1292r_channel_label(source)
-        other_label = ads1292r_secondary_channel_label(source)
+        ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
         self.ax_live_ecg.set_title(f"ECG display: {ecg_label} | R peaks {len(peaks)}")
-        self.ax_live_other.set_title(other_label)
-        self.ax_live_status.set_title("Lead-off bits")
+        self.ax_live_resp.set_title(resp_label)
+        self.ax_live_status.set_title(contact_label)
         self.metrics_var.set(
             f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {ecg_label} | HR {hr.median_bpm:.0f} bpm"
         )
         samples = tuple(self._current_samples())
-        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get())
+        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
         self.quality_var.set(self._quality_text(source, hr.valid_rr_count, samples, metrics=metrics))
         self._apply_signal_quality_cards(
             gui_signal_quality_cards(
@@ -1127,30 +1127,36 @@ class App(tk.Tk):
         self._clear_buffers()
         for sample in samples:
             self._append_sample(sample)
-        source, ecg_raw, other_raw = self._selected_channels()
+        source, ecg_raw, resp_raw = self._ads1292r_display_channels()
         ecg = self._display_signal(ecg_raw)
-        other = self._display_signal(other_raw)
+        resp = self._display_signal(resp_raw)
         raw_ch1 = np.asarray(self.ch1, dtype=float)
         raw_ch2 = np.asarray(self.ch2, dtype=float)
-        result = review_channels(raw_ch1, raw_ch2, SAMPLE_RATE_HZ, self.source_var.get())
-        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get())
+        result = review_channels(raw_ch1, raw_ch2, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
+        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
         x = np.arange(ecg.size)
+        status = np.asarray(self.status, dtype=float)
+        ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
         self.review_ecg_line.set_data(x, ecg)
-        self.review_other_line.set_data(x, other)
+        self.review_resp_line.set_data(x, resp)
+        self.review_status_line.set_data(x, status)
         self.review_peak_line.set_data(list(result.peaks), ecg[list(result.peaks)] if result.peaks else [])
         self.ax_review_ecg.set_title(
-            f"Offline ECG: {ads1292r_channel_label(source)} | "
+            f"Offline ECG: {ecg_label} | "
             f"HR {result.heart_rate.median_bpm:.1f} bpm | peaks {len(result.peaks)}"
         )
-        self.ax_review_other.set_title(ads1292r_secondary_channel_label(source))
-        for ax, values in ((self.ax_review_ecg, ecg), (self.ax_review_other, other)):
+        self.ax_review_resp.set_title(resp_label)
+        self.ax_review_status.set_title(contact_label)
+        for ax, values in ((self.ax_review_ecg, ecg), (self.ax_review_resp, resp)):
             ax.set_xlim(0, max(1, x[-1] if x.size else 1))
             ax.set_ylim(*robust_ylim(values))
+        self.ax_review_status.set_xlim(0, max(1, x[-1] if x.size else 1))
+        self.ax_review_status.set_ylim(-0.5, max(1.0, max(self.status or [0]) + 0.5))
         self.review_canvas.draw_idle()
         self._draw_pqrst(ecg, result.peaks)
         self.metrics_var.set(
             f"samples {len(samples)} | duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | "
-            f"source {ads1292r_channel_label(source)}"
+            f"source {ecg_label}"
         )
         self.quality_var.set(
             f"{self._quality_text(source, result.heart_rate.valid_rr_count, samples, metrics=metrics)} | "
@@ -1207,7 +1213,7 @@ class App(tk.Tk):
             samples=samples,
             status_values=tuple(self.status),
             source=source,
-            selected_source=self.source_var.get(),
+            selected_source=ADS1292R_ECG_SOURCE,
             valid_rr=valid_rr,
             protocol=protocol if should_evaluate_protocol else None,
             sample_rate_hz=SAMPLE_RATE_HZ,
