@@ -477,6 +477,10 @@ PLOT_AXIS_STYLE = {
     "title_size": 11,
     "title_weight": "bold",
     "title_pad": 10,
+    "zero_line_color": "#A9B4C3",
+    "zero_line_alpha": 0.55,
+    "zero_line_width": 0.8,
+    "zero_line_style": "-",
 }
 PLOT_FIGURE_LAYOUTS = {
     "three_panel": {
@@ -2636,6 +2640,7 @@ class App(tk.Tk):
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.label_outer()
         self._style_signal_axes((self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
+        self._add_signal_reference_lines((self.ax_live_ecg, self.ax_live_resp))
         self.ax_live_ecg.set_ylabel("display counts")
         self.ax_live_resp.set_ylabel("counts")
         self.ax_live_status.set_xlabel("Time (s)")
@@ -2672,6 +2677,7 @@ class App(tk.Tk):
         for ax in (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status):
             ax.label_outer()
         self._style_signal_axes((self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
+        self._add_signal_reference_lines((self.ax_review_ecg, self.ax_review_resp))
         self.ax_review_status.set_xlabel("Time (s)")
         self.ax_review_ecg.set_ylabel("display counts")
         self.ax_review_resp.set_ylabel("counts")
@@ -2797,6 +2803,18 @@ class App(tk.Tk):
             fontweight=style["title_weight"],
             pad=style["title_pad"],
         )
+
+    def _add_signal_reference_lines(self, axes: tuple[object, ...]) -> None:
+        style = plot_axis_style()
+        for ax in axes:
+            ax.axhline(
+                0,
+                color=style["zero_line_color"],
+                linewidth=style["zero_line_width"],
+                linestyle=style["zero_line_style"],
+                alpha=style["zero_line_alpha"],
+                zorder=0,
+            )
 
     def _show_empty_plot_state(self, key: str, axes: tuple[object, ...]) -> None:
         style = empty_plot_style()

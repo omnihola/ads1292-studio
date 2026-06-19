@@ -781,7 +781,22 @@ def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
         "title_size": 11,
         "title_weight": "bold",
         "title_pad": 10,
+        "zero_line_color": "#A9B4C3",
+        "zero_line_alpha": 0.55,
+        "zero_line_width": 0.8,
+        "zero_line_style": "-",
     }
+
+
+def test_signal_reference_lines_are_limited_to_ecg_and_respiration_axes() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._build_live_plot) + inspect.getsource(App._build_review_plot)
+
+    assert "self._add_signal_reference_lines((self.ax_live_ecg, self.ax_live_resp))" in source
+    assert "self._add_signal_reference_lines((self.ax_review_ecg, self.ax_review_resp))" in source
+    assert "self.ax_live_status" not in source.split("self._add_signal_reference_lines")[1].split(")")[0]
+    assert "self.ax_review_status" not in source.split("self._add_signal_reference_lines")[2].split(")")[0]
 
 
 def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
