@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 42
+Phase 43
 
 ## Phases
 
@@ -363,6 +363,15 @@ Phase 42
 - [x] Disable conflicting actions (Start, Load CSV, export/package actions) while a CSV load is in flight.
 - [x] Add `offline_display_samples()` to cap the review plot to the most recent window for large recordings.
 - [x] Add tests for the new control-state and windowing helpers.
+- **Status:** complete
+
+### Phase 43: GUI Correctness Fixes
+- [x] Add `connecting`/`starting`/`busy` to `GuiState`; extend control-state, workflow-hint, and status-card helpers.
+- [x] Move `connect()` to a background thread with a `ConnectResult` queue so the GUI no longer freezes on Connect.
+- [x] Remove the cross-thread `device.close()` call and blocking `thread.join()` from `LiveWorker.stop()`; shrink the device read timeout to 0.2s so the worker notices `stop_event` promptly.
+- [x] Add `StreamStartResult` so `start()` only reports "Streaming" once the worker confirms the device actually started, surfacing failures via `messagebox.showerror` instead of a misleading stale state.
+- [x] Rewrite `_show_recording()` to build full-recording arrays directly from loaded samples (not the capped live-display deques) and decimate only the matplotlib line data, so offline review and its quality metrics describe the entire recording instead of only the last 10 seconds.
+- [x] Verify against the real `recordings/2026-06-18-221342-ads1292-studio.csv` (44,884 samples, 89.8s): full-recording compute path completes in ~27ms and reproduces the documented `r_peaks=129`, `hr_median_bpm=86.7` baseline that the CLI `review`/`qc` commands already showed.
 - **Status:** complete
 
 ## Key Questions

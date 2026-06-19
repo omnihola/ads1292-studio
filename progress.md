@@ -459,6 +459,26 @@
   - `src/ads1292_studio/app.py`
   - `tests/test_gui_control_state.py`
 
+### Phase 43: GUI Correctness Fixes
+- **Status:** complete
+- Actions taken:
+  - Added `connecting`/`starting` to `GuiState` plus a `busy` property (`loading_csv or connecting or starting`); `gui_control_states()`, `gui_workflow_hint()`, and `gui_status_cards()` now branch on `busy`/`connecting`/`starting`.
+  - Moved `connect()` off the GUI thread: added `ConnectResult`, `App.connect_results` queue, `_connect_in_background()`, `_drain_connect_results()`, `_finish_connect()`.
+  - Removed the cross-thread `device.close()` call from `LiveWorker.stop()` (it now only sets `stop_event`); added `_stop_and_wait()` for `start()`'s internal defensive cleanup; shrank `Ads1x9xDevice`'s default read timeout from 1.0s to 0.2s.
+  - Added `StreamStartResult` to `models.py`; `LiveWorker._run()` now posts an explicit success/failure result via a `started` flag before/around `device.start_stream()`; `App.start()` no longer flips `is_streaming` until that confirmation arrives, and shows `messagebox.showerror` on failure instead of leaving a stale "Streaming" state.
+  - Added `decimate_for_plot()` to `plots.py`; removed the now-superseded `offline_display_samples()`; rewrote `_show_recording()` to build full-recording numpy arrays directly from loaded samples (bypassing the `maxlen=5000` live-display deques) and decimate only the matplotlib line data, with quality/HR/contact/PQRST metrics always computed on the complete recording.
+  - Gave `_quality_text()` an explicit `status_values` parameter so it no longer implicitly reads the (now offline-review-unused) `self.status` live deque.
+- Files created/modified:
+  - `src/ads1292_studio/app.py`
+  - `src/ads1292_studio/workers.py`
+  - `src/ads1292_studio/device.py`
+  - `src/ads1292_studio/models.py`
+  - `src/ads1292_studio/plots.py`
+  - `tests/test_gui_control_state.py`
+  - `tests/test_workers.py` (new)
+  - `tests/test_device_parser.py`
+  - `tests/test_plots.py` (new)
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -669,6 +689,19 @@
 | ADS1292R synchronized three-panel GUI real CSV smoke | `conda run -n sensor env PYTHONPATH=src python -c "..."` against `recordings/2026-06-18-221342-ads1292-studio.csv` | Layout is CH2 ECG, CH1 respiration, lead-off/contact; fixed source is CH2 with `Good ECG/QRS` | Passed; Matplotlib cache warning only | Pass |
 | ADS1292R synchronized three-panel GUI full verification | `conda run -n sensor python -m pytest -q`; `py_compile`; `git diff --check` | All tests pass after live/review three-panel layout and fixed CH2 GUI export source | 95 passed | Pass |
 | Background CSV loading full verification | `PYTHONPATH=src <sensor-env>/bin/python -m pytest -q`; `py_compile`; `git diff --check` | All tests pass after moving CSV parsing to a background thread | 97 passed | Pass |
+| GuiState busy/connecting/starting TDD red check | `pytest tests/test_gui_control_state.py -v` before implementation | New connecting/starting tests fail | `TypeError: unexpected keyword argument 'connecting'`/`'starting'` | Pass |
+| GuiState busy/connecting/starting tests | `pytest tests/test_gui_control_state.py -v` | All control-state/hint/card tests pass | 31 passed | Pass |
+| Non-blocking Connect TDD red check | `pytest tests/test_workers.py -v` before implementation | Missing `ConnectResult` | `ImportError: cannot import name 'ConnectResult'` | Pass |
+| Non-blocking Connect tests | `pytest tests/test_workers.py -v`; full suite | Connect moved to background thread | 104 passed | Pass |
+| Non-blocking Stop TDD red check | `pytest tests/test_device_parser.py tests/test_workers.py -v` before implementation | Timeout still 1.0s; stop() still closes device from caller thread | 2 failed as expected | Pass |
+| Non-blocking Stop tests | `pytest tests/test_device_parser.py tests/test_workers.py -v`; full suite | `stop()` no longer touches the device; timeout is 0.2s | 106 passed | Pass |
+| Confirmed Start TDD red check | `pytest tests/test_workers.py -v` before implementation | Missing `StreamStartResult`, then `LiveWorker` 2-arg/3-arg mismatch | `ImportError` then `TypeError` as expected | Pass |
+| Confirmed Start tests | `pytest tests/test_workers.py -v` with fake streaming/failing devices via `monkeypatch`; full suite | Worker posts success/failure before `App` flips `is_streaming` | 108 passed | Pass |
+| Full-recording offline review TDD red check | `pytest tests/test_plots.py -v` before implementation | Missing `decimate_for_plot` | `ImportError: cannot import name 'decimate_for_plot'` | Pass |
+| Full-recording offline review tests | `pytest tests/test_plots.py -v`; full suite | Decimation helper correct; `offline_display_samples` and its test removed | 109 passed | Pass |
+| Full-recording offline review real CSV verification | `python -c "..."` exercising `_show_recording`'s exact computation path against `recordings/2026-06-18-221342-ads1292-studio.csv` (44,884 samples, 89.8s) | Full-recording metrics match the CLI `review`/`qc` baseline (`r_peaks=129`, `hr_median_bpm=86.7`) instead of only reflecting the trailing ~10s | Matched exactly; compute time 0.027s | Pass |
+| GUI correctness fixes real CLI smoke test | `python -m ads1292_studio.cli review recordings/2026-06-18-221342-ads1292-studio.csv`; `... qc ...` | Real recording still reviews/QCs correctly after all fixes | `ecg_source=CH2`, `quality_gate=Pass`, `Good ECG/QRS`, matches historical baseline | Pass |
+| GUI correctness fixes real launch smoke test | `python -m ads1292_studio` launched and left running 3s, then terminated | GUI starts without an immediate traceback | Process stayed alive 3s with empty stderr/stdout log | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -731,8 +764,8 @@
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 42 complete; CSV loading runs on a background thread so the GUI no longer freezes while parsing large recordings. Starting a datasheet-driven correctness/bug-fix pass (Connect/Stop GUI-thread blocking, optimistic Start state, offline-review windowing, pending channel-label confirmation). |
+| Where am I? | Phase 43 complete; Connect/Stop/Start no longer block or race the GUI thread, and offline CSV review now analyzes the full recording (decimating only the rendered plot) instead of only the last 10 seconds. Channel-label confirmation (which exact Einthoven lead CH2 represents) is still pending the user's electrode-disconnect hardware test. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
-| What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. The ADS1292R chip datasheet (SBAS502C) confirms respiration demodulation hardware exists only on Channel 1 and TI states Channel 1 cannot do ECG while respiration is enabled on it — this independently corroborates the existing CH1=respiration/CH2=ECG assignment that was originally reached empirically. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, staged sidecar template bundle exports, sidecar plan template-path traceability, executable sidecar apply-script exports, mousewheel-scrollable left-sidebar controls, a task-based GUI sidebar with a focused acquisition toolbar, GUI button state gating, Status-tab workflow hints, a Status-tab state overview, structured Status-tab status cards, a unified immutable GUI state snapshot, real-recording signal-quality cards, safer canonical lead-off CSV import, the synchronized ADS1292R CH2 ECG / CH1 respiration / lead-off GUI, and background-threaded CSV loading. |
+| What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. The ADS1292R chip datasheet (SBAS502C) confirms respiration demodulation hardware exists only on Channel 1 and TI states Channel 1 cannot do ECG while respiration is enabled on it — this independently corroborates the existing CH1=respiration/CH2=ECG assignment that was originally reached empirically. The original GUI bugs were concurrency/state bugs (blocking calls on the GUI thread, a cross-thread close/read race, an optimistic Start state, and an offline-review window capped at the live-display buffer size), not datasheet-correctness bugs. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, staged sidecar template bundle exports, sidecar plan template-path traceability, executable sidecar apply-script exports, mousewheel-scrollable left-sidebar controls, a task-based GUI sidebar with a focused acquisition toolbar, GUI button state gating, Status-tab workflow hints, a Status-tab state overview, structured Status-tab status cards, a unified immutable GUI state snapshot, real-recording signal-quality cards, safer canonical lead-off CSV import, the synchronized ADS1292R CH2 ECG / CH1 respiration / lead-off GUI, background-threaded CSV loading, and non-blocking/non-racing Connect-Start-Stop with full-recording offline review. |
