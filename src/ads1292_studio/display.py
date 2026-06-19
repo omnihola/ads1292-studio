@@ -77,6 +77,20 @@ def ecg_paper_grid_spec(settings: EcgDisplaySettings) -> dict[str, float | str]:
     }
 
 
+def ecg_paper_grid_key(settings: EcgDisplaySettings, y_limits: tuple[float, float]) -> tuple[float, float, float, float]:
+    spec = ecg_paper_grid_spec(settings)
+    y_min, y_max = y_limits
+    span = max(abs(y_max - y_min), 1.0)
+    major_y = max(span / 5.0, 1.0)
+    minor_y = max(major_y / 5.0, 0.2)
+    return (
+        float(spec["major_x_seconds"]),
+        float(spec["minor_x_seconds"]),
+        round(major_y, 6),
+        round(minor_y, 6),
+    )
+
+
 def display_mode_label(settings: EcgDisplaySettings, filters: SoftwareFilterSettings) -> str:
     normalized = settings.normalized()
     active_filters: list[str] = []

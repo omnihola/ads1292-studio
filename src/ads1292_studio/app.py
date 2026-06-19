@@ -33,6 +33,7 @@ from ads1292_studio.display import (
     display_gain_labels,
     display_mode_label,
     display_window_labels,
+    ecg_paper_grid_key,
     ecg_paper_grid_spec,
     parse_display_gain,
     parse_display_window,
@@ -1308,6 +1309,8 @@ class App(tk.Tk):
         self.empty_plot_artists: list[object] = []
         self.live_calibration_artists: list[object] = []
         self.review_calibration_artists: list[object] = []
+        self.ecg_paper_grid_cache: dict[int, tuple[float, float, float, float]] = {}
+        self.calibration_pulse_cache: dict[int, str] = {}
 
         self._build_ui()
         self.refresh_ports()
@@ -3301,12 +3304,14 @@ class App(tk.Tk):
 
     def _apply_ecg_paper_grid(self, ax: object, settings: EcgDisplaySettings) -> None:
         spec = ecg_paper_grid_spec(settings)
+        cache_key = ecg_paper_grid_key(settings, ax.get_ylim())
+        axis_id = id(ax)
+        if self.ecg_paper_grid_cache.get(axis_id) == cache_key:
+            return
+        self.ecg_paper_grid_cache[axis_id] = cache_key
         ax.xaxis.set_major_locator(MultipleLocator(float(spec["major_x_seconds"])))
         ax.xaxis.set_minor_locator(MultipleLocator(float(spec["minor_x_seconds"])))
-        y_min, y_max = ax.get_ylim()
-        span = max(abs(y_max - y_min), 1.0)
-        major_y = max(span / 5.0, 1.0)
-        minor_y = max(major_y / 5.0, 0.2)
+        _, _, major_y, minor_y = cache_key
         ax.yaxis.set_major_locator(MultipleLocator(major_y))
         ax.yaxis.set_minor_locator(MultipleLocator(minor_y))
         ax.grid(
@@ -3330,6 +3335,14 @@ class App(tk.Tk):
         artists: list[object],
         settings: EcgDisplaySettings,
     ) -> None:
+        axis_id = id(ax)
+        label_text = f"1 mV | {settings.gain:g}x"
+        if artists and self.calibration_pulse_cache.get(axis_id) == label_text:
+            return
+        if len(artists) >= 2 and hasattr(artists[1], "set_text"):
+            artists[1].set_text(label_text)
+            self.calibration_pulse_cache[axis_id] = label_text
+            return
         for artist in artists:
             artist.remove()
         artists.clear()
@@ -3345,7 +3358,7 @@ class App(tk.Tk):
         label = ax.text(
             0.115,
             0.30,
-            f"1 mV | {settings.gain:g}x",
+            label_text,
             transform=ax.transAxes,
             color=APP_VISUAL_TOKENS["muted"],
             fontsize=8,
@@ -3354,6 +3367,7 @@ class App(tk.Tk):
             clip_on=False,
         )
         artists.extend((line, label))
+        self.calibration_pulse_cache[axis_id] = label_text
 
     def _redraw_live(self) -> None:
         if not self.indices:

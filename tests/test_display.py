@@ -6,6 +6,7 @@ from ads1292_studio.display import (
     display_gain_labels,
     display_mode_label,
     display_window_labels,
+    ecg_paper_grid_key,
     ecg_paper_grid_spec,
     parse_display_gain,
     parse_display_window,
@@ -35,6 +36,16 @@ def test_ecg_paper_grid_matches_sweep_speed() -> None:
     assert speed_25["minor_x_seconds"] == 0.04
     assert speed_50["major_x_seconds"] == 0.1
     assert speed_50["minor_x_seconds"] == 0.02
+
+
+def test_ecg_paper_grid_key_changes_only_when_spacing_changes() -> None:
+    settings = EcgDisplaySettings(sweep_speed_mm_s=25)
+
+    key = ecg_paper_grid_key(settings, (-10.0, 10.0))
+
+    assert key == ecg_paper_grid_key(EcgDisplaySettings(sweep_speed_mm_s=25), (-10.0, 10.0))
+    assert key != ecg_paper_grid_key(EcgDisplaySettings(sweep_speed_mm_s=50), (-10.0, 10.0))
+    assert key != ecg_paper_grid_key(settings, (-50.0, 50.0))
 
 
 def test_display_mode_label_lists_active_software_filters() -> None:
