@@ -13,12 +13,18 @@ import matplotlib
 import numpy as np
 
 matplotlib.use("Agg")
-from matplotlib.figure import Figure
 
 from ads1292_studio.calibration import Calibration, counts_to_microvolts
 from ads1292_studio.events import EventMarker
 from ads1292_studio.models import StreamSample
 from ads1292_studio.metadata import SessionMetadata
+from ads1292_studio.plot_theme import (
+    PLOT_TRACE_COLORS,
+    new_export_figure,
+    plot_trace_styles,
+    pqrst_plot_style,
+    style_export_axes,
+)
 from ads1292_studio.protocol import TestProtocol
 from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, QualityGateResult, evaluate_quality_gate
@@ -121,20 +127,20 @@ def _write_ecg_png(
     other = counts_to_microvolts(bandpass(other_raw, sample_rate_hz), calibration)
     peaks = detect_r_peaks(ecg_raw, sample_rate_hz)
     x = np.arange(ecg.size) / sample_rate_hz
-    fig = Figure(figsize=(12, 7), dpi=160)
+    trace_styles = plot_trace_styles()
+    fig = new_export_figure(figsize=(12, 7), dpi=160)
     ax1 = fig.add_subplot(211)
     ax2 = fig.add_subplot(212, sharex=ax1)
-    ax1.plot(x, ecg, lw=0.8)
+    ax1.plot(x, ecg, color=PLOT_TRACE_COLORS["ecg"], **trace_styles["ecg"])
     if peaks:
-        ax1.plot(x[list(peaks)], ecg[list(peaks)], "r.", ms=4)
+        ax1.plot(x[list(peaks)], ecg[list(peaks)], color=PLOT_TRACE_COLORS["peak"], **trace_styles["peak"])
     ax1.set_title(f"ECG source {metrics.ecg_source} | HR {metrics.hr_median_bpm:.1f} bpm | {metrics.quality_label}")
     ax1.set_ylabel("Filtered uV")
-    ax1.grid(True, alpha=0.25)
-    ax2.plot(x, other, lw=0.8)
+    ax2.plot(x, other, color=PLOT_TRACE_COLORS["respiration"], **trace_styles["respiration"])
     ax2.set_title("Other channel")
     ax2.set_xlabel("Time (s)")
     ax2.set_ylabel("Filtered uV")
-    ax2.grid(True, alpha=0.25)
+    style_export_axes((ax1, ax2))
     fig.tight_layout()
     fig.savefig(path)
 
@@ -149,23 +155,36 @@ def _write_pqrst_png(
     ecg_raw = _selected_channel(samples, metrics.ecg_source)
     peaks = detect_r_peaks(ecg_raw, sample_rate_hz)
     review = pqrst_review(ecg_raw, peaks, sample_rate_hz)
-    fig = Figure(figsize=(10, 5), dpi=160)
+    fig = new_export_figure(figsize=(10, 5), dpi=160)
     ax = fig.add_subplot(111)
     if review.average_beat:
+        style = pqrst_plot_style()
         ax.plot(
             review.time_ms,
             counts_to_microvolts(np.asarray(review.average_beat, dtype=float), calibration),
-            lw=2,
-            label="average beat",
+            color=PLOT_TRACE_COLORS["ecg"],
+            **style["average"],
         )
-        ax.axvline(0, color="r", linestyle="--", lw=1, label="R")
-        ax.axvspan(-220, -80, color="green", alpha=0.08, label="P search")
-        ax.axvspan(120, 380, color="orange", alpha=0.08, label="T search")
-        ax.legend(loc="upper right")
+        ax.axvline(0, color=PLOT_TRACE_COLORS["peak"], **style["r_marker"])
+        ax.axvspan(
+            style["p_search"]["start_ms"],
+            style["p_search"]["end_ms"],
+            color=style["p_search"]["color"],
+            alpha=style["p_search"]["alpha"],
+            label=style["p_search"]["label"],
+        )
+        ax.axvspan(
+            style["t_search"]["start_ms"],
+            style["t_search"]["end_ms"],
+            color=style["t_search"]["color"],
+            alpha=style["t_search"]["alpha"],
+            label=style["t_search"]["label"],
+        )
+        ax.legend(**style["legend"])
     ax.set_title(f"PQRST review | QRS={review.qrs_clear} | P={review.p_tentative} | T={review.t_tentative}")
     ax.set_xlabel("Time relative to R peak (ms)")
     ax.set_ylabel("Filtered uV")
-    ax.grid(True, alpha=0.25)
+    style_export_axes((ax,))
     fig.tight_layout()
     fig.savefig(path)
 

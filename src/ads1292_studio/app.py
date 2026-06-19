@@ -33,6 +33,17 @@ from ads1292_studio.gui_session_index import build_session_index_message
 from ads1292_studio.macos_stderr import install_macos_stderr_filter
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
+from ads1292_studio.plot_theme import (
+    APP_VISUAL_TOKENS,
+    PLOT_TRACE_COLORS,
+    PLOT_TRACE_STYLES,
+    PQRST_PLOT_STYLE,
+    apply_seaborn_plot_theme,
+    plot_trace_colors as base_plot_trace_colors,
+    plot_trace_styles as base_plot_trace_styles,
+    pqrst_plot_style as base_pqrst_plot_style,
+    seaborn_plot_theme as base_seaborn_plot_theme,
+)
 from ads1292_studio.plots import decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
@@ -351,77 +362,8 @@ STATUS_TONE_COLORS = {
     "warning": "#A76400",
     "neutral": "#A9B4C3",
 }
-APP_VISUAL_TOKENS = {
-    "surface": "#F6F8FB",
-    "panel": "#FFFFFF",
-    "panel_alt": "#EEF3FA",
-    "ink": "#172033",
-    "muted": "#657084",
-    "border": "#D9E1EC",
-    "accent": "#2F6FED",
-    "accent_dark": "#1F4FB2",
-    "success": "#1E7A46",
-    "warning": "#A76400",
-    "danger": "#B3261E",
-}
-PLOT_TRACE_COLORS = {
-    "ecg": "#0173B2",
-    "respiration": "#CC78BC",
-    "contact": "#949494",
-    "peak": "#D55E00",
-}
-SEABORN_PLOT_THEME = {
-    "style": "whitegrid",
-    "context": "notebook",
-    "palette": "colorblind",
-    "rc": {
-        "axes.facecolor": "#FFFFFF",
-        "axes.edgecolor": "#D9E1EC",
-        "axes.grid": True,
-        "axes.labelcolor": "#293247",
-        "axes.titlecolor": "#172033",
-        "figure.facecolor": "#F6F8FB",
-        "grid.color": "#D9E1EC",
-        "grid.linewidth": 0.7,
-        "lines.antialiased": True,
-        "xtick.color": "#657084",
-        "ytick.color": "#657084",
-    },
-}
-PLOT_TRACE_STYLES = {
-    "ecg": {"linewidth": 1.45, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
-    "respiration": {"linewidth": 1.05, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
-    "contact": {"linewidth": 1.0, "drawstyle": "steps-post", "antialiased": True},
-    "peak": {
-        "linestyle": "None",
-        "marker": "o",
-        "markersize": 4.6,
-        "markeredgecolor": "#FFFFFF",
-        "markeredgewidth": 0.7,
-    },
-}
 LIVE_AXIS_SPEC = {
     "x_major_tick_seconds": 1.0,
-}
-PQRST_PLOT_STYLE = {
-    "average": {"linewidth": 2.25, "label": "average beat"},
-    "r_marker": {"linestyle": "--", "linewidth": 1.0, "label": "R"},
-    "p_search": {"start_ms": -220, "end_ms": -80, "color": "#1E7A46", "alpha": 0.075, "label": "P search"},
-    "t_search": {"start_ms": 120, "end_ms": 380, "color": "#A76400", "alpha": 0.075, "label": "T search"},
-    "legend": {
-        "loc": "upper right",
-        "frameon": True,
-        "fontsize": 9,
-        "facecolor": "#FFFFFF",
-        "edgecolor": "#D9E1EC",
-        "framealpha": 0.96,
-        "labelcolor": "#293247",
-        "borderpad": 0.55,
-        "labelspacing": 0.42,
-        "handlelength": 2.0,
-        "handletextpad": 0.7,
-        "borderaxespad": 0.8,
-    },
 }
 EMPTY_PLOT_MESSAGES = {
     "live": (
@@ -769,16 +711,15 @@ def app_window_spec() -> dict[str, object]:
 
 
 def plot_trace_colors() -> dict[str, str]:
-    return dict(PLOT_TRACE_COLORS)
+    return base_plot_trace_colors()
 
 
 def seaborn_plot_theme() -> dict[str, object]:
-    theme = {key: value for key, value in SEABORN_PLOT_THEME.items() if key != "rc"}
-    return {"rc": dict(SEABORN_PLOT_THEME["rc"]), **theme}
+    return base_seaborn_plot_theme()
 
 
 def plot_trace_styles() -> dict[str, dict[str, object]]:
-    return {name: dict(values) for name, values in PLOT_TRACE_STYLES.items()}
+    return base_plot_trace_styles()
 
 
 def live_axis_spec() -> dict[str, float]:
@@ -786,7 +727,7 @@ def live_axis_spec() -> dict[str, float]:
 
 
 def pqrst_plot_style() -> dict[str, dict[str, object]]:
-    return {name: dict(values) for name, values in PQRST_PLOT_STYLE.items()}
+    return base_pqrst_plot_style()
 
 
 def empty_plot_messages() -> dict[str, tuple[str, ...]]:
@@ -2520,13 +2461,7 @@ class App(tk.Tk):
         self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     def _new_plot_figure(self, *, figsize: tuple[float, float]) -> Figure:
-        theme = seaborn_plot_theme()
-        sns.set_theme(
-            style=str(theme["style"]),
-            context=str(theme["context"]),
-            palette=str(theme["palette"]),
-            rc=theme["rc"],
-        )
+        apply_seaborn_plot_theme()
         fig = Figure(figsize=figsize, dpi=100)
         fig.patch.set_facecolor(APP_VISUAL_TOKENS["surface"])
         return fig

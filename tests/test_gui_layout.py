@@ -53,6 +53,7 @@ from ads1292_studio.app import (
     workspace_layout_spec,
     workspace_notebook_styles,
 )
+from ads1292_studio.plot_theme import new_export_figure, style_export_axes
 
 
 def test_gui_layout_keeps_primary_toolbar_focused_on_acquisition() -> None:
@@ -580,6 +581,17 @@ def test_seaborn_plot_theme_uses_clean_signal_grid() -> None:
     assert theme["palette"] == "colorblind"
     assert theme["rc"]["axes.facecolor"] == "#FFFFFF"
     assert theme["rc"]["figure.facecolor"] == "#F6F8FB"
+
+
+def test_export_plot_theme_uses_shared_seaborn_surface() -> None:
+    fig = new_export_figure(figsize=(4, 2), dpi=100)
+    ax = fig.add_subplot(111)
+
+    style_export_axes((ax,))
+
+    assert fig.get_facecolor()[:3] == (246 / 255, 248 / 255, 251 / 255)
+    assert ax.get_facecolor()[:3] == (1.0, 1.0, 1.0)
+    assert any(line.get_visible() for line in ax.get_xgridlines())
 
 
 def test_plot_trace_styles_keep_live_and_review_signals_readable() -> None:

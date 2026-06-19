@@ -13,10 +13,10 @@ os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "ads1292
 import matplotlib
 
 matplotlib.use("Agg")
-from matplotlib.figure import Figure
 
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.metadata import SessionMetadata, read_metadata_json
+from ads1292_studio.plot_theme import PLOT_TRACE_COLORS, new_export_figure, style_export_axes
 from ads1292_studio.quality import compute_quality_metrics
 
 
@@ -192,23 +192,22 @@ def _write_group_csv(path: Path, groups: tuple[BatchGroupSummary, ...]) -> None:
 
 
 def _write_png(path: Path, rows: tuple[BatchRow, ...], title: str) -> None:
-    fig = Figure(figsize=(11, 6), dpi=160)
+    fig = new_export_figure(figsize=(11, 6), dpi=160)
     ax_hr = fig.add_subplot(211)
     ax_contact = fig.add_subplot(212)
     labels = [row.session_id for row in rows]
     x = list(range(len(rows)))
     hr = [row.hr_median_bpm for row in rows]
     contact = [row.contact_ok_percent for row in rows]
-    ax_hr.bar(x, hr, color="#2563eb")
+    ax_hr.bar(x, hr, color=PLOT_TRACE_COLORS["ecg"], alpha=0.9)
     ax_hr.set_ylabel("Median HR (bpm)")
     ax_hr.set_title(title)
     ax_hr.set_xticks(x, labels, rotation=20, ha="right")
-    ax_hr.grid(True, axis="y", alpha=0.25)
-    ax_contact.bar(x, contact, color="#059669")
+    ax_contact.bar(x, contact, color=PLOT_TRACE_COLORS["contact"], alpha=0.9)
     ax_contact.set_ylabel("Contact OK (%)")
     ax_contact.set_ylim(0, 105)
     ax_contact.set_xticks(x, labels, rotation=20, ha="right")
-    ax_contact.grid(True, axis="y", alpha=0.25)
+    style_export_axes((ax_hr, ax_contact))
     fig.tight_layout()
     fig.savefig(path)
 
