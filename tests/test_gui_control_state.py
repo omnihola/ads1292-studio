@@ -28,6 +28,7 @@ from ads1292_studio.app import (
     status_label_spec,
     status_tone_color,
     status_tone_style,
+    toolbar_display_hint_text,
 )
 import numpy as np
 import queue
@@ -260,6 +261,15 @@ def test_display_refresh_key_changes_only_when_visible_display_state_changes() -
         loaded_count=0,
         recording_path=None,
     )
+
+
+def test_toolbar_display_hint_text_summarizes_channel_and_display_mode() -> None:
+    hint = toolbar_display_hint_text(
+        EcgDisplaySettings(time_window_seconds=12.0, gain=2.0, sweep_speed_mm_s=50),
+        SoftwareFilterSettings(highpass_enabled=True, notch_enabled=True),
+    )
+
+    assert hint == "CH2 Lead I | CH1 Resp | Contact | HP+notch | 2x | 12s | 50 mm/s"
 
 
 def test_tick_queue_limits_are_above_normal_streaming_rate() -> None:

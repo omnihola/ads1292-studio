@@ -1,3 +1,5 @@
+import inspect
+
 from ads1292_studio.app import (
     action_section_styles,
     ads1292r_plot_layout_labels,
@@ -222,6 +224,15 @@ def test_gui_layout_frames_toolbar_channel_hint_as_chip() -> None:
         "borderwidth": 0,
         "relief": "flat",
     }
+
+
+def test_toolbar_hint_chip_uses_dynamic_textvariable() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._build_toolbar_hint_chip)
+
+    assert "textvariable=variable" in source
+    assert "text=" not in source
 
 
 def test_gui_layout_spaces_toolbar_groups() -> None:

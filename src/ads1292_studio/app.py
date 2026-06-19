@@ -1092,6 +1092,10 @@ def display_refresh_key(
     )
 
 
+def toolbar_display_hint_text(settings: EcgDisplaySettings, filters: SoftwareFilterSettings) -> str:
+    return f"CH2 Lead I | CH1 Resp | Contact | {display_mode_label(settings, filters)}"
+
+
 def drain_queue_items(item_queue: queue.Queue[_T], max_items: int) -> tuple[_T, ...]:
     items: list[_T] = []
     for _ in range(max(0, max_items)):
@@ -1689,7 +1693,10 @@ class App(tk.Tk):
             padx=toolbar_group_padding()["separator"],
         )
         self.source_var = tk.StringVar(value=ADS1292R_ECG_SOURCE)
-        self._build_toolbar_hint_chip(toolbar, "CH2 ECG / CH1 Resp / Contact")
+        self.toolbar_hint_var = tk.StringVar(
+            value=toolbar_display_hint_text(DEFAULT_DISPLAY_SETTINGS, DEFAULT_FILTER_SETTINGS)
+        )
+        self._build_toolbar_hint_chip(toolbar, self.toolbar_hint_var)
 
         body = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -2458,7 +2465,7 @@ class App(tk.Tk):
         )
         self.safety_notice_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-    def _build_toolbar_hint_chip(self, parent: ttk.Frame, text: str) -> None:
+    def _build_toolbar_hint_chip(self, parent: ttk.Frame, variable: tk.StringVar) -> None:
         styles = toolbar_hint_styles()
         self.toolbar_hint_chip = ttk.Frame(
             parent,
@@ -2466,7 +2473,7 @@ class App(tk.Tk):
             style=styles["frame"],
         )
         self.toolbar_hint_chip.pack(side=tk.LEFT)
-        self.toolbar_hint_label = ttk.Label(self.toolbar_hint_chip, text=text, style=styles["label"])
+        self.toolbar_hint_label = ttk.Label(self.toolbar_hint_chip, textvariable=variable, style=styles["label"])
         self.toolbar_hint_label.pack(side=tk.LEFT)
 
     def _build_action_section_heading(self, parent: ttk.Frame, text: str, *, top_padding: int = 14) -> None:
@@ -3443,6 +3450,7 @@ class App(tk.Tk):
         if self.last_display_refresh_key == key:
             return
         self.last_display_refresh_key = key
+        self._sync_toolbar_hint()
         if self.is_streaming and self.indices:
             self._redraw_live()
             return
@@ -3467,6 +3475,14 @@ class App(tk.Tk):
             sample_index=self.sample_index,
             loaded_count=len(self.loaded_samples),
             recording_path=self.recording_path,
+        )
+
+    def _sync_toolbar_hint(self) -> None:
+        if not hasattr(self, "toolbar_hint_var"):
+            return
+        set_string_var_if_changed(
+            self.toolbar_hint_var,
+            toolbar_display_hint_text(self._display_settings(), self._software_filter_settings()),
         )
 
     def _display_settings(self) -> EcgDisplaySettings:
