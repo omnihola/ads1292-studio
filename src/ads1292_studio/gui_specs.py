@@ -10,8 +10,8 @@ from ads1292_studio.plot_theme import (
 
 
 APP_WINDOW_SPEC = {
-    "geometry": "1320x860",
-    "min_size": (1120, 740),
+    "geometry": "1440x900",
+    "min_size": (1180, 760),
 }
 PRIMARY_TOOLBAR_BUTTONS = ("Refresh", "Connect", "Start", "Stop")
 TOOLBAR_BUTTON_STYLES = {
@@ -131,21 +131,21 @@ TOOLBAR_CONTROL_STYLES = {
 TOOLBAR_FRAME_SPEC = {
     "frame": "Toolbar.TFrame",
     "separator": "ToolbarSeparator.TFrame",
-    "background": "#FFFFFF",
+    "background": "#F8FAFD",
     "separator_background": "#E5EAF2",
-    "borderwidth": 1,
+    "borderwidth": 0,
     "relief": "flat",
 }
 TOOLBAR_LABEL_SPEC = {
     "style": "ToolbarLabel.TLabel",
     "font": ("Aptos", 11, "bold"),
-    "background": "#FFFFFF",
+    "background": "#F8FAFD",
     "foreground": "#172033",
 }
 TOOLBAR_GROUP_LABEL_SPEC = {
     "style": "ToolbarGroupLabel.TLabel",
     "font": ("Aptos", 9, "bold"),
-    "background": "#FFFFFF",
+    "background": "#F8FAFD",
     "foreground": "#657084",
     "padding": (2, 2),
 }
@@ -165,19 +165,19 @@ TOOLBAR_GROUP_PADDING = {
 }
 TOOLBAR_LAYOUT_SPEC = {
     "frame": "Toolbar.TFrame",
-    "padding": (12, 8, 12, 8),
-    "port_width": 36,
-    "port_padding": (6, 6),
-    "refresh_padding": (0, 3),
-    "primary_action_padding": (8, 3),
-    "inline_action_padding": (3, 3),
-    "save_padding": (6, 3),
-    "toggle_padding": (3, 3),
-    "display_label_padding": (4, 3),
-    "display_control_padding": (3, 6),
-    "display_width": 9,
+    "padding": (14, 7, 14, 7),
+    "port_width": 34,
+    "port_padding": (6, 5),
+    "refresh_padding": (0, 2),
+    "primary_action_padding": (8, 2),
+    "inline_action_padding": (3, 2),
+    "save_padding": (6, 2),
+    "toggle_padding": (3, 2),
+    "display_label_padding": (4, 2),
+    "display_control_padding": (3, 5),
+    "display_width": 8,
     "separator_width": 1,
-    "hint_padding": (10, 4),
+    "hint_padding": (10, 3),
 }
 SECONDARY_ACTION_BUTTONS = (
     "Load CSV",
@@ -190,13 +190,13 @@ SECONDARY_ACTION_BUTTONS = (
 SIDEBAR_TABS = ("Status", "Session", "Validation", "Protocol", "Actions")
 SIDEBAR_LAYOUT_SPEC = {
     "shell": "SidebarShell.TFrame",
-    "width": 328,
-    "padding": (10, 10),
-    "scroll_width": 296,
+    "width": 320,
+    "padding": (8, 10),
+    "scroll_width": 292,
 }
 WORKSPACE_LAYOUT_SPEC = {
     "main": "Main.TFrame",
-    "main_padding": (8, 12, 14, 12),
+    "main_padding": (8, 10, 14, 10),
     "sidebar_weight": 0,
     "main_weight": 1,
 }
@@ -391,25 +391,25 @@ SCROLLABLE_FRAME_SPEC = {
 }
 PANEL_CHROME_SPEC = {
     "background": "#FFFFFF",
-    "border": "#D9E1EC",
+    "border": "#E5EAF2",
     "borderwidth": 1,
     "relief": "flat",
 }
 PLOT_PANEL_SPEC = {
     "shell": "Main.TFrame",
     "panel": "PlotPanel.TFrame",
-    "padding": (10, 10),
-    "panel_padding": (10, 10),
+    "padding": (8, 8),
+    "panel_padding": (8, 6),
 }
 PLOT_AXIS_STYLE = {
     "face": "#FFFFFF",
-    "grid": "#D9E1EC",
+    "grid": "#E5EAF2",
     "spine": "#D9E1EC",
     "tick": "#657084",
     "label": "#293247",
     "title": "#172033",
-    "grid_linewidth": 0.62,
-    "grid_alpha": 0.32,
+    "grid_linewidth": 0.56,
+    "grid_alpha": 0.30,
     "axisbelow": True,
     "spine_linewidth": 0.65,
     "tick_label_size": 9,
@@ -417,10 +417,10 @@ PLOT_AXIS_STYLE = {
     "tick_length": 3.0,
     "tick_width": 0.65,
     "label_size": 10,
-    "label_pad": 7,
+    "label_pad": 6,
     "title_size": 11,
     "title_weight": "bold",
-    "title_pad": 10,
+    "title_pad": 8,
     "zero_line_color": "#A9B4C3",
     "zero_line_alpha": 0.55,
     "zero_line_width": 0.8,
@@ -428,17 +428,17 @@ PLOT_AXIS_STYLE = {
 }
 PLOT_FIGURE_LAYOUTS = {
     "three_panel": {
-        "left": 0.068,
-        "right": 0.99,
-        "top": 0.975,
-        "bottom": 0.068,
-        "hspace": 0.28,
+        "left": 0.058,
+        "right": 0.992,
+        "top": 0.982,
+        "bottom": 0.060,
+        "hspace": 0.24,
     },
     "single_panel": {
-        "left": 0.072,
-        "right": 0.99,
-        "top": 0.965,
-        "bottom": 0.118,
+        "left": 0.064,
+        "right": 0.992,
+        "top": 0.972,
+        "bottom": 0.106,
     },
 }
 PLOT_CANVAS_WIDGET_STYLE = {
@@ -493,9 +493,9 @@ WORKSPACE_NOTEBOOK_STYLES = {
     "tab": "Workspace.TNotebook.Tab",
     "background": "#F6F8FB",
     "borderwidth": 0,
-    "tab_padding": (16, 8),
+    "tab_padding": (18, 7),
     "tab_font": ("Aptos", 12, "bold"),
-    "tab_background": "#EEF3FA",
+    "tab_background": "#F6F8FB",
     "selected_foreground": "#2F6FED",
     "inactive_foreground": "#657084",
     "active_foreground": "#172033",

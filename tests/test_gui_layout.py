@@ -72,8 +72,8 @@ def test_gui_layout_keeps_primary_toolbar_focused_on_acquisition() -> None:
 
 def test_app_window_spec_prevents_cramped_signal_views() -> None:
     assert app_window_spec() == {
-        "geometry": "1320x860",
-        "min_size": (1120, 740),
+        "geometry": "1440x900",
+        "min_size": (1180, 760),
     }
 
 
@@ -166,9 +166,9 @@ def test_toolbar_frame_spec_groups_acquisition_controls_as_one_surface() -> None
     assert toolbar_frame_spec() == {
         "frame": "Toolbar.TFrame",
         "separator": "ToolbarSeparator.TFrame",
-        "background": "#FFFFFF",
+        "background": "#F8FAFD",
         "separator_background": "#E5EAF2",
-        "borderwidth": 1,
+        "borderwidth": 0,
         "relief": "flat",
     }
 
@@ -177,7 +177,7 @@ def test_toolbar_label_spec_keeps_toolbar_labels_consistent() -> None:
     assert toolbar_label_spec() == {
         "style": "ToolbarLabel.TLabel",
         "font": ("Aptos", 11, "bold"),
-        "background": "#FFFFFF",
+        "background": "#F8FAFD",
         "foreground": "#172033",
     }
 
@@ -186,7 +186,7 @@ def test_toolbar_group_label_spec_adds_scanable_control_groups() -> None:
     assert toolbar_group_label_spec() == {
         "style": "ToolbarGroupLabel.TLabel",
         "font": ("Aptos", 9, "bold"),
-        "background": "#FFFFFF",
+        "background": "#F8FAFD",
         "foreground": "#657084",
         "padding": (2, 2),
     }
@@ -281,19 +281,19 @@ def test_gui_layout_spaces_toolbar_groups() -> None:
 def test_toolbar_layout_spec_keeps_acquisition_controls_ordered() -> None:
     assert toolbar_layout_spec() == {
         "frame": "Toolbar.TFrame",
-        "padding": (12, 8, 12, 8),
-        "port_width": 36,
-        "port_padding": (6, 6),
-        "refresh_padding": (0, 3),
-        "primary_action_padding": (8, 3),
-        "inline_action_padding": (3, 3),
-        "save_padding": (6, 3),
-        "toggle_padding": (3, 3),
-        "display_label_padding": (4, 3),
-        "display_control_padding": (3, 6),
-        "display_width": 9,
+        "padding": (14, 7, 14, 7),
+        "port_width": 34,
+        "port_padding": (6, 5),
+        "refresh_padding": (0, 2),
+        "primary_action_padding": (8, 2),
+        "inline_action_padding": (3, 2),
+        "save_padding": (6, 2),
+        "toggle_padding": (3, 2),
+        "display_label_padding": (4, 2),
+        "display_control_padding": (3, 5),
+        "display_width": 8,
         "separator_width": 1,
-        "hint_padding": (10, 4),
+        "hint_padding": (10, 3),
     }
 
 
@@ -354,9 +354,9 @@ def test_sidebar_notebook_styles_make_navigation_compact() -> None:
 def test_sidebar_layout_spec_stabilizes_control_column() -> None:
     assert sidebar_layout_spec() == {
         "shell": "SidebarShell.TFrame",
-        "width": 328,
-        "padding": (10, 10),
-        "scroll_width": 296,
+        "width": 320,
+        "padding": (8, 10),
+        "scroll_width": 292,
     }
 
 
@@ -367,7 +367,7 @@ def test_gui_layout_names_main_workspaces_clearly() -> None:
 def test_workspace_layout_spec_balances_sidebar_and_signal_area() -> None:
     assert workspace_layout_spec() == {
         "main": "Main.TFrame",
-        "main_padding": (8, 12, 14, 12),
+        "main_padding": (8, 10, 14, 10),
         "sidebar_weight": 0,
         "main_weight": 1,
     }
@@ -443,9 +443,9 @@ def test_workspace_notebook_styles_make_selected_tabs_visible() -> None:
         "tab": "Workspace.TNotebook.Tab",
         "background": "#F6F8FB",
         "borderwidth": 0,
-        "tab_padding": (16, 8),
+        "tab_padding": (18, 7),
         "tab_font": ("Aptos", 12, "bold"),
-        "tab_background": "#EEF3FA",
+        "tab_background": "#F6F8FB",
         "selected_foreground": "#2F6FED",
         "inactive_foreground": "#657084",
         "active_foreground": "#172033",
@@ -829,7 +829,7 @@ def test_scrollable_frame_spec_prevents_default_tk_canvas_chrome() -> None:
 def test_panel_chrome_spec_softens_repeated_card_borders() -> None:
     assert panel_chrome_spec() == {
         "background": "#FFFFFF",
-        "border": "#D9E1EC",
+        "border": "#E5EAF2",
         "borderwidth": 1,
         "relief": "flat",
     }
@@ -839,21 +839,21 @@ def test_plot_panel_spec_frames_signal_workspaces() -> None:
     assert plot_panel_spec() == {
         "shell": "Main.TFrame",
         "panel": "PlotPanel.TFrame",
-        "padding": (10, 10),
-        "panel_padding": (10, 10),
+        "padding": (8, 8),
+        "panel_padding": (8, 6),
     }
 
 
 def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
     assert plot_axis_style() == {
         "face": "#FFFFFF",
-        "grid": "#D9E1EC",
+        "grid": "#E5EAF2",
         "spine": "#D9E1EC",
         "tick": "#657084",
         "label": "#293247",
         "title": "#172033",
-        "grid_linewidth": 0.62,
-        "grid_alpha": 0.32,
+        "grid_linewidth": 0.56,
+        "grid_alpha": 0.30,
         "axisbelow": True,
         "spine_linewidth": 0.65,
         "tick_label_size": 9,
@@ -861,10 +861,10 @@ def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
         "tick_length": 3.0,
         "tick_width": 0.65,
         "label_size": 10,
-        "label_pad": 7,
+        "label_pad": 6,
         "title_size": 11,
         "title_weight": "bold",
-        "title_pad": 10,
+        "title_pad": 8,
         "zero_line_color": "#A9B4C3",
         "zero_line_alpha": 0.55,
         "zero_line_width": 0.8,
@@ -1004,17 +1004,17 @@ def test_tick_scheduler_uses_current_gui_state_for_adaptive_interval() -> None:
 def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
     assert plot_figure_layouts() == {
         "three_panel": {
-            "left": 0.068,
-            "right": 0.99,
-            "top": 0.975,
-            "bottom": 0.068,
-            "hspace": 0.28,
+            "left": 0.058,
+            "right": 0.992,
+            "top": 0.982,
+            "bottom": 0.060,
+            "hspace": 0.24,
         },
         "single_panel": {
-            "left": 0.072,
-            "right": 0.99,
-            "top": 0.965,
-            "bottom": 0.118,
+            "left": 0.064,
+            "right": 0.992,
+            "top": 0.972,
+            "bottom": 0.106,
         },
     }
 
@@ -1023,7 +1023,7 @@ def test_plot_figure_layouts_returns_nested_copies() -> None:
     layouts = plot_figure_layouts()
     layouts["three_panel"]["hspace"] = 9.0
 
-    assert plot_figure_layouts()["three_panel"]["hspace"] == 0.28
+    assert plot_figure_layouts()["three_panel"]["hspace"] == 0.24
 
 
 def test_plot_canvas_widget_style_removes_embedded_canvas_chrome() -> None:
