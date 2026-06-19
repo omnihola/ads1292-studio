@@ -572,7 +572,13 @@ def test_plot_trace_styles_keep_live_and_review_signals_readable() -> None:
         "ecg": {"linewidth": 1.25},
         "respiration": {"linewidth": 0.95},
         "contact": {"linewidth": 1.0, "drawstyle": "steps-post"},
-        "peak": {"linestyle": "None", "marker": "o", "markersize": 4.2, "markeredgewidth": 0.0},
+        "peak": {
+            "linestyle": "None",
+            "marker": "o",
+            "markersize": 4.6,
+            "markeredgecolor": "#FFFFFF",
+            "markeredgewidth": 0.7,
+        },
     }
 
 
