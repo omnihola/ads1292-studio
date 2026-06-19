@@ -108,6 +108,13 @@ class CsvLoadResult:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class ConnectResult:
+    port: str
+    detail: str | None = None
+    error: str | None = None
+
+
 def status_tone_style(tone: str) -> str:
     return STATUS_TONE_STYLES.get(tone, STATUS_TONE_STYLES["neutral"])
 
@@ -419,6 +426,8 @@ class App(tk.Tk):
         self.samples: queue.Queue[StreamSample] = queue.Queue()
         self.logs: queue.Queue[str] = queue.Queue()
         self.csv_load_results: queue.Queue[CsvLoadResult] = queue.Queue()
+        self.connect_results: queue.Queue[ConnectResult] = queue.Queue()
+        self.is_connecting = False
         self.worker = LiveWorker(self.samples, self.logs)
         self.connected_port: str | None = None
         self.recording_path: Path | None = None
@@ -727,6 +736,19 @@ class App(tk.Tk):
         if not port:
             messagebox.showerror("No port", "Select an ADS1x9x serial port first.")
             return
+        if self.is_connecting:
+            self._log("Connect already in progress")
+            return
+        self.is_connecting = True
+        self.connection_var.set("Connecting...")
+        self._apply_control_states()
+        threading.Thread(
+            target=self._connect_in_background,
+            args=(port,),
+            daemon=True,
+        ).start()
+
+    def _connect_in_background(self, port: str) -> None:
         try:
             with Ads1x9xDevice(port) as device:
                 firmware = device.query_firmware()
@@ -735,15 +757,30 @@ class App(tk.Tk):
                     detail = f"firmware {firmware}, ID 0x{device_id:02X}"
                 except Exception:
                     detail = f"firmware {firmware}"
-            self.connected_port = port
-            self.connection_var.set(f"Connected: {detail}")
-            self._log(f"Connected to {port}: {detail}")
+            self.connect_results.put(ConnectResult(port=port, detail=detail))
         except Exception as exc:
+            self.connect_results.put(ConnectResult(port=port, error=str(exc)))
+
+    def _drain_connect_results(self) -> None:
+        while True:
+            try:
+                result = self.connect_results.get_nowait()
+            except queue.Empty:
+                return
+            self._finish_connect(result)
+
+    def _finish_connect(self, result: ConnectResult) -> None:
+        self.is_connecting = False
+        if result.error:
             self.connected_port = None
             self.connection_var.set("Connection failed")
-            messagebox.showerror("Connection failed", str(exc))
-        finally:
-            self._apply_control_states()
+            self._log(f"Connect failed for {result.port}: {result.error}")
+            messagebox.showerror("Connection failed", result.error)
+        else:
+            self.connected_port = result.port
+            self.connection_var.set(f"Connected: {result.detail}")
+            self._log(f"Connected to {result.port}: {result.detail}")
+        self._apply_control_states()
 
     def start(self) -> None:
         port = self.port_var.get().strip()
@@ -989,6 +1026,7 @@ class App(tk.Tk):
             has_data=bool(self.loaded_samples or (self.ch1 and self.ch2)),
             has_recording_path=self.recording_path is not None,
             loading_csv=self.is_loading_csv,
+            connecting=self.is_connecting,
         )
         states = gui_control_states(state=state)
         self.workflow_hint_var.set(
@@ -1141,6 +1179,7 @@ class App(tk.Tk):
 
     def _tick(self) -> None:
         self._drain_csv_load_results()
+        self._drain_connect_results()
         latest = None
         while True:
             try:
