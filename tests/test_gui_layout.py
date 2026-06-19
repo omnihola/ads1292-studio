@@ -23,6 +23,7 @@ from ads1292_studio.app import (
     plot_figure_layouts,
     plot_panel_spec,
     plot_trace_colors,
+    plot_trace_styles,
     primary_toolbar_button_labels,
     protocol_note_styles,
     safety_notice_styles,
@@ -531,6 +532,22 @@ def test_plot_trace_colors_distinguish_ecg_respiration_and_contact() -> None:
     assert colors["ecg"] != colors["respiration"]
     assert colors["contact"] != colors["ecg"]
     assert colors["peak"] == "#E34A4A"
+
+
+def test_plot_trace_styles_keep_live_and_review_signals_readable() -> None:
+    assert plot_trace_styles() == {
+        "ecg": {"linewidth": 1.15},
+        "respiration": {"linewidth": 0.95},
+        "contact": {"linewidth": 1.0, "drawstyle": "steps-post"},
+        "peak": {"linestyle": "None", "marker": "o", "markersize": 4.2, "markeredgewidth": 0.0},
+    }
+
+
+def test_plot_trace_styles_returns_nested_copies() -> None:
+    styles = plot_trace_styles()
+    styles["ecg"]["linewidth"] = 99
+
+    assert plot_trace_styles()["ecg"]["linewidth"] == 1.15
 
 
 def test_empty_plot_messages_guide_the_first_run_workflow() -> None:

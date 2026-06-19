@@ -348,6 +348,12 @@ PLOT_TRACE_COLORS = {
     "contact": "#516070",
     "peak": "#E34A4A",
 }
+PLOT_TRACE_STYLES = {
+    "ecg": {"linewidth": 1.15},
+    "respiration": {"linewidth": 0.95},
+    "contact": {"linewidth": 1.0, "drawstyle": "steps-post"},
+    "peak": {"linestyle": "None", "marker": "o", "markersize": 4.2, "markeredgewidth": 0.0},
+}
 EMPTY_PLOT_MESSAGES = {
     "live": (
         "Connect an ADS1292 board, then press Start",
@@ -662,6 +668,10 @@ def app_window_spec() -> dict[str, object]:
 
 def plot_trace_colors() -> dict[str, str]:
     return dict(PLOT_TRACE_COLORS)
+
+
+def plot_trace_styles() -> dict[str, dict[str, object]]:
+    return {name: dict(values) for name, values in PLOT_TRACE_STYLES.items()}
 
 
 def empty_plot_messages() -> dict[str, tuple[str, ...]]:
@@ -2183,15 +2193,20 @@ class App(tk.Tk):
         self.ax_live_ecg.set_ylabel("counts")
         self.ax_live_resp.set_ylabel("counts")
         self.ax_live_status.set_xlabel("Time (s)")
-        self.live_ecg_line, = self.ax_live_ecg.plot([], [], lw=1.1, color=PLOT_TRACE_COLORS["ecg"])
-        self.live_peak_line, = self.ax_live_ecg.plot([], [], ".", ms=5, color=PLOT_TRACE_COLORS["peak"])
-        self.live_resp_line, = self.ax_live_resp.plot([], [], lw=0.9, color=PLOT_TRACE_COLORS["respiration"])
+        trace_styles = plot_trace_styles()
+        self.live_ecg_line, = self.ax_live_ecg.plot([], [], color=PLOT_TRACE_COLORS["ecg"], **trace_styles["ecg"])
+        self.live_peak_line, = self.ax_live_ecg.plot([], [], color=PLOT_TRACE_COLORS["peak"], **trace_styles["peak"])
+        self.live_resp_line, = self.ax_live_resp.plot(
+            [],
+            [],
+            color=PLOT_TRACE_COLORS["respiration"],
+            **trace_styles["respiration"],
+        )
         self.live_status_line, = self.ax_live_status.plot(
             [],
             [],
-            lw=0.9,
-            drawstyle="steps-post",
             color=PLOT_TRACE_COLORS["contact"],
+            **trace_styles["contact"],
         )
         self._show_empty_plot_state("live", (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
         self.live_canvas = self._build_plot_canvas(self.live_tab, fig, name="live")
@@ -2208,15 +2223,20 @@ class App(tk.Tk):
         self.ax_review_status.set_xlabel("Samples")
         self.ax_review_ecg.set_ylabel("counts")
         self.ax_review_resp.set_ylabel("counts")
-        self.review_ecg_line, = self.ax_review_ecg.plot([], [], lw=1.0, color=PLOT_TRACE_COLORS["ecg"])
-        self.review_peak_line, = self.ax_review_ecg.plot([], [], ".", ms=5, color=PLOT_TRACE_COLORS["peak"])
-        self.review_resp_line, = self.ax_review_resp.plot([], [], lw=0.9, color=PLOT_TRACE_COLORS["respiration"])
+        trace_styles = plot_trace_styles()
+        self.review_ecg_line, = self.ax_review_ecg.plot([], [], color=PLOT_TRACE_COLORS["ecg"], **trace_styles["ecg"])
+        self.review_peak_line, = self.ax_review_ecg.plot([], [], color=PLOT_TRACE_COLORS["peak"], **trace_styles["peak"])
+        self.review_resp_line, = self.ax_review_resp.plot(
+            [],
+            [],
+            color=PLOT_TRACE_COLORS["respiration"],
+            **trace_styles["respiration"],
+        )
         self.review_status_line, = self.ax_review_status.plot(
             [],
             [],
-            lw=0.9,
-            drawstyle="steps-post",
             color=PLOT_TRACE_COLORS["contact"],
+            **trace_styles["contact"],
         )
         self._show_empty_plot_state("review", (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
         self.review_canvas = self._build_plot_canvas(self.review_tab, fig, name="review")
