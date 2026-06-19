@@ -593,6 +593,9 @@ CARD_LABEL_SPEC = {
     "foreground": "#657084",
     "width": 12,
     "content_padding": (12, 8),
+    "stripe_width": 5,
+    "row_padding": (0, 4),
+    "value_padding": (8, 0),
     "signal_value_wrap": 170,
 }
 EVENT_COUNT_STYLES = {
@@ -2218,8 +2221,13 @@ class App(tk.Tk):
         card_label = card_label_spec()
         for label in STATUS_CARD_LABELS:
             row = ttk.Frame(parent, padding=(0, 0), style="Card.TFrame")
-            row.pack(anchor=tk.W, fill=tk.X, pady=3)
-            stripe = tk.Frame(row, width=4, bg=status_tone_color("neutral"), highlightthickness=0)
+            row.pack(anchor=tk.W, fill=tk.X, pady=card_label["row_padding"])
+            stripe = tk.Frame(
+                row,
+                width=int(card_label["stripe_width"]),
+                bg=status_tone_color("neutral"),
+                highlightthickness=0,
+            )
             stripe.pack(side=tk.LEFT, fill=tk.Y)
             content = ttk.Frame(row, padding=card_label["content_padding"], style="Card.TFrame")
             content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -2230,7 +2238,7 @@ class App(tk.Tk):
                 textvariable=self.status_card_vars[label],
                 style=status_tone_style("neutral"),
             )
-            value_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            value_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=card_label["value_padding"])
             self.status_card_label_widgets[label] = label_widget
             self.status_card_tone_stripes[label] = stripe
             self.status_card_value_labels[label] = value_label
@@ -2239,8 +2247,13 @@ class App(tk.Tk):
         card_label = card_label_spec()
         for label in SIGNAL_CARD_LABELS:
             row = ttk.Frame(parent, padding=(0, 0), style="Card.TFrame")
-            row.pack(anchor=tk.W, fill=tk.X, pady=3)
-            stripe = tk.Frame(row, width=4, bg=status_tone_color("neutral"), highlightthickness=0)
+            row.pack(anchor=tk.W, fill=tk.X, pady=card_label["row_padding"])
+            stripe = tk.Frame(
+                row,
+                width=int(card_label["stripe_width"]),
+                bg=status_tone_color("neutral"),
+                highlightthickness=0,
+            )
             stripe.pack(side=tk.LEFT, fill=tk.Y)
             content = ttk.Frame(row, padding=card_label["content_padding"], style="Card.TFrame")
             content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -2253,7 +2266,7 @@ class App(tk.Tk):
                 wraplength=card_label["signal_value_wrap"],
                 justify=tk.LEFT,
             )
-            value_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            value_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=card_label["value_padding"])
             self.signal_card_label_widgets[label] = label_widget
             self.signal_card_tone_stripes[label] = stripe
             self.signal_card_value_labels[label] = value_label
