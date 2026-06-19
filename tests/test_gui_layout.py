@@ -9,6 +9,7 @@ from ads1292_studio.app import (
     secondary_action_button_labels,
     sidebar_action_button_style,
     sidebar_field_styles,
+    sidebar_notebook_styles,
     sidebar_tab_labels,
     toolbar_button_style,
     toolbar_control_styles,
@@ -59,6 +60,15 @@ def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:
 
 def test_gui_layout_uses_task_based_sidebar_tabs() -> None:
     assert sidebar_tab_labels() == ("Status", "Session", "Validation", "Protocol", "Actions")
+
+
+def test_sidebar_notebook_styles_make_navigation_compact() -> None:
+    assert sidebar_notebook_styles() == {
+        "notebook": "Sidebar.TNotebook",
+        "tab": "Sidebar.TNotebook.Tab",
+        "selected_foreground": "#2F6FED",
+        "inactive_foreground": "#657084",
+    }
 
 
 def test_gui_layout_names_main_workspaces_clearly() -> None:

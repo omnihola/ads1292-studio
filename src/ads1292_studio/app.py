@@ -149,6 +149,12 @@ SIDEBAR_FIELD_STYLES = {
     "entry": "Field.TEntry",
 }
 SIDEBAR_ACTION_BUTTON_STYLE = "SidebarAction.TButton"
+SIDEBAR_NOTEBOOK_STYLES = {
+    "notebook": "Sidebar.TNotebook",
+    "tab": "Sidebar.TNotebook.Tab",
+    "selected_foreground": "#2F6FED",
+    "inactive_foreground": "#657084",
+}
 WORKSPACE_NOTEBOOK_STYLES = {
     "notebook": "Workspace.TNotebook",
     "tab": "Workspace.TNotebook.Tab",
@@ -231,6 +237,10 @@ def sidebar_field_styles() -> dict[str, str]:
 
 def sidebar_action_button_style() -> str:
     return SIDEBAR_ACTION_BUTTON_STYLE
+
+
+def sidebar_notebook_styles() -> dict[str, str]:
+    return dict(SIDEBAR_NOTEBOOK_STYLES)
 
 
 def workspace_notebook_styles() -> dict[str, str]:
@@ -1009,6 +1019,25 @@ class App(tk.Tk):
         style.configure("TCheckbutton", background=tokens["panel_alt"], foreground=tokens["ink"])
         style.configure("TNotebook", background=tokens["surface"], borderwidth=0)
         style.configure("TNotebook.Tab", padding=(14, 7), font=("Aptos", 12, "bold"))
+        style.configure("Sidebar.TNotebook", background=tokens["surface"], borderwidth=0)
+        style.configure(
+            "Sidebar.TNotebook.Tab",
+            padding=(10, 6),
+            font=("Aptos", 10, "bold"),
+            foreground=tokens["muted"],
+            background=tokens["panel_alt"],
+        )
+        style.map(
+            "Sidebar.TNotebook.Tab",
+            foreground=[
+                ("selected", SIDEBAR_NOTEBOOK_STYLES["selected_foreground"]),
+                ("active", tokens["ink"]),
+            ],
+            background=[
+                ("selected", tokens["panel"]),
+                ("active", tokens["panel"]),
+            ],
+        )
         style.configure("Workspace.TNotebook", background=tokens["surface"], borderwidth=0)
         style.configure(
             "Workspace.TNotebook.Tab",
@@ -1072,7 +1101,7 @@ class App(tk.Tk):
             self.signal_card_value_labels[label] = value_label
 
     def _build_sidebar(self, parent: ttk.Frame) -> dict[str, ttk.Frame]:
-        self.sidebar_notebook = ttk.Notebook(parent)
+        self.sidebar_notebook = ttk.Notebook(parent, style=sidebar_notebook_styles()["notebook"])
         self.sidebar_notebook.pack(fill=tk.BOTH, expand=True)
         self.sidebar_scrolls: dict[str, ScrollableFrame] = {}
         sections: dict[str, ttk.Frame] = {}
