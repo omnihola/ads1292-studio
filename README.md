@@ -105,6 +105,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Task-based GUI sidebar separates Status, Session, Validation, Protocol, and
   Actions so acquisition controls stay simple while review/export/library tools
   remain one click away.
+- GUI buttons are state-gated: Start requires a confirmed connection, Stop
+  requires streaming, and report/package export actions require available data
+  instead of relying on error dialogs after invalid clicks.
 - Session index export scans a recordings folder, ignores generated summary
   CSVs, and writes a CSV/HTML experiment library with ECG source, contact,
   R-peak, HR, quality, and usable/review status.

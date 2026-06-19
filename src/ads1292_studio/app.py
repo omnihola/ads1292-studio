@@ -67,6 +67,27 @@ def sidebar_tab_labels() -> tuple[str, ...]:
     return SIDEBAR_TABS
 
 
+def gui_control_states(
+    *,
+    connected: bool,
+    streaming: bool,
+    has_data: bool,
+    has_recording_path: bool,
+) -> dict[str, str]:
+    return {
+        "Refresh": tk.NORMAL,
+        "Connect": tk.NORMAL,
+        "Start": tk.NORMAL if connected and not streaming else tk.DISABLED,
+        "Stop": tk.NORMAL if streaming else tk.DISABLED,
+        "Load CSV": tk.NORMAL,
+        "Export Report": tk.NORMAL if has_data else tk.DISABLED,
+        "Export Package": tk.NORMAL if has_data and has_recording_path else tk.DISABLED,
+        "Verify Package": tk.NORMAL,
+        "Batch Compare": tk.NORMAL,
+        "Session Index": tk.NORMAL,
+    }
+
+
 def _mousewheel_units(event: tk.Event) -> int:
     if getattr(event, "num", None) == 4:
         return -1
@@ -130,6 +151,7 @@ class App(tk.Tk):
         self.recording_path: Path | None = None
         self.loaded_samples: tuple[StreamSample, ...] = tuple()
         self.event_markers: list[EventMarker] = []
+        self.is_streaming = False
 
         self.sample_index = 0
         self.ch1: deque[float] = deque(maxlen=MAX_POINTS)
@@ -152,11 +174,14 @@ class App(tk.Tk):
         self.port_var = tk.StringVar()
         self.port_combo = ttk.Combobox(toolbar, textvariable=self.port_var, width=34)
         self.port_combo.pack(side=tk.LEFT, padx=6)
-        ttk.Button(toolbar, text="Refresh", command=self.refresh_ports).pack(side=tk.LEFT)
-        ttk.Button(toolbar, text="Connect", command=self.connect).pack(side=tk.LEFT, padx=(12, 4))
+        self.refresh_button = ttk.Button(toolbar, text="Refresh", command=self.refresh_ports)
+        self.refresh_button.pack(side=tk.LEFT)
+        self.connect_button = ttk.Button(toolbar, text="Connect", command=self.connect)
+        self.connect_button.pack(side=tk.LEFT, padx=(12, 4))
         self.start_button = ttk.Button(toolbar, text="Start", command=self.start)
         self.start_button.pack(side=tk.LEFT, padx=4)
-        ttk.Button(toolbar, text="Stop", command=self.stop).pack(side=tk.LEFT)
+        self.stop_button = ttk.Button(toolbar, text="Stop", command=self.stop)
+        self.stop_button.pack(side=tk.LEFT)
 
         self.save_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(toolbar, text="Save CSV", variable=self.save_var).pack(side=tk.LEFT, padx=8)
@@ -262,14 +287,20 @@ class App(tk.Tk):
         self._metadata_entry(protocol_side, "Acceptance", self.protocol_acceptance_var)
 
         ttk.Label(actions_side, text="Review", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
-        ttk.Button(actions_side, text="Load CSV", command=self.load_csv).pack(anchor=tk.W, fill=tk.X, pady=2)
-        ttk.Button(actions_side, text="Export Report", command=self.export_report).pack(anchor=tk.W, fill=tk.X, pady=2)
+        self.load_csv_button = ttk.Button(actions_side, text="Load CSV", command=self.load_csv)
+        self.load_csv_button.pack(anchor=tk.W, fill=tk.X, pady=2)
+        self.export_report_button = ttk.Button(actions_side, text="Export Report", command=self.export_report)
+        self.export_report_button.pack(anchor=tk.W, fill=tk.X, pady=2)
         ttk.Label(actions_side, text="Package", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
-        ttk.Button(actions_side, text="Export Package", command=self.export_package).pack(anchor=tk.W, fill=tk.X, pady=2)
-        ttk.Button(actions_side, text="Verify Package", command=self.verify_package).pack(anchor=tk.W, fill=tk.X, pady=2)
+        self.export_package_button = ttk.Button(actions_side, text="Export Package", command=self.export_package)
+        self.export_package_button.pack(anchor=tk.W, fill=tk.X, pady=2)
+        self.verify_package_button = ttk.Button(actions_side, text="Verify Package", command=self.verify_package)
+        self.verify_package_button.pack(anchor=tk.W, fill=tk.X, pady=2)
         ttk.Label(actions_side, text="Library", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
-        ttk.Button(actions_side, text="Batch Compare", command=self.batch_compare).pack(anchor=tk.W, fill=tk.X, pady=2)
-        ttk.Button(actions_side, text="Session Index", command=self.session_index).pack(anchor=tk.W, fill=tk.X, pady=2)
+        self.batch_compare_button = ttk.Button(actions_side, text="Batch Compare", command=self.batch_compare)
+        self.batch_compare_button.pack(anchor=tk.W, fill=tk.X, pady=2)
+        self.session_index_button = ttk.Button(actions_side, text="Session Index", command=self.session_index)
+        self.session_index_button.pack(anchor=tk.W, fill=tk.X, pady=2)
         ttk.Label(actions_side, text="Safety", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
         ttk.Label(
             actions_side,
@@ -294,6 +325,19 @@ class App(tk.Tk):
         self._build_pqrst_plot()
         self.log_text = tk.Text(self.log_tab, height=12)
         self.log_text.pack(fill=tk.BOTH, expand=True)
+        self.control_buttons = {
+            "Refresh": self.refresh_button,
+            "Connect": self.connect_button,
+            "Start": self.start_button,
+            "Stop": self.stop_button,
+            "Load CSV": self.load_csv_button,
+            "Export Report": self.export_report_button,
+            "Export Package": self.export_package_button,
+            "Verify Package": self.verify_package_button,
+            "Batch Compare": self.batch_compare_button,
+            "Session Index": self.session_index_button,
+        }
+        self._apply_control_states()
 
     def _build_sidebar(self, parent: ttk.Frame) -> dict[str, ttk.Frame]:
         self.sidebar_notebook = ttk.Notebook(parent)
@@ -381,6 +425,8 @@ class App(tk.Tk):
             self.connected_port = None
             self.connection_var.set("Connection failed")
             messagebox.showerror("Connection failed", str(exc))
+        finally:
+            self._apply_control_states()
 
     def start(self) -> None:
         port = self.port_var.get().strip()
@@ -404,13 +450,15 @@ class App(tk.Tk):
             write_quality_gate_json(self._quality_gate_path(csv_path), self._quality_gate())
             self.path_var.set(f"CSV: {csv_path}")
         self.worker.start(port, csv_path)
-        self.start_button.configure(state=tk.DISABLED)
+        self.is_streaming = True
         self.connection_var.set("Streaming")
+        self._apply_control_states()
 
     def stop(self) -> None:
         self.worker.stop()
-        self.start_button.configure(state=tk.NORMAL)
+        self.is_streaming = False
         self.connection_var.set(f"Connected: {self.connected_port}" if self.connected_port else "Stopped")
+        self._apply_control_states()
 
     def load_csv(self) -> None:
         path = filedialog.askopenfilename(
@@ -430,6 +478,7 @@ class App(tk.Tk):
             self._show_recording(recording.samples)
             self.path_var.set(f"CSV: {path}")
             self._log(f"Loaded {path}")
+            self._apply_control_states()
         except Exception as exc:
             messagebox.showerror("Load failed", str(exc))
 
@@ -568,6 +617,19 @@ class App(tk.Tk):
         self._set_event_count()
         for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
             buffer.clear()
+        self._apply_control_states()
+
+    def _apply_control_states(self) -> None:
+        if not hasattr(self, "control_buttons"):
+            return
+        states = gui_control_states(
+            connected=self.connected_port is not None,
+            streaming=self.is_streaming,
+            has_data=bool(self.loaded_samples or (self.ch1 and self.ch2)),
+            has_recording_path=self.recording_path is not None,
+        )
+        for label, button in self.control_buttons.items():
+            button.configure(state=states[label])
 
     def _metadata(self) -> SessionMetadata:
         return SessionMetadata(
@@ -704,6 +766,7 @@ class App(tk.Tk):
             self._append_sample(latest)
         if latest is not None:
             self._redraw_live()
+            self._apply_control_states()
         while True:
             try:
                 self._log(self.logs.get_nowait())

@@ -60,6 +60,7 @@
 | Add sidecar apply scripts | After reviewing generated templates, users need a repeatable non-overwriting script to copy staged sidecars into their final locations without manual path mistakes. |
 | Make the left control column scrollable | The accumulated metadata, event, calibration, quality-gate, and protocol controls exceed smaller window heights, so the left column must scroll independently from the plot tabs. |
 | Use task-based GUI groups before adding more features | Acquisition should stay in the top toolbar, while secondary review/export/package/library actions belong in a separate Actions group; metadata, validation, and protocol settings should not compete for attention in one long panel. |
+| Gate impossible GUI actions by state | Commercial-style software should disable Start before connection, Stop before streaming, and export/package actions before data exists, while keeping file/library workflows available. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -96,6 +97,7 @@
 | Left sidebar controls were clipped when the GUI window was not tall enough | Replaced the plain `ttk.Frame` sidebar with a Canvas-backed `ScrollableFrame` with a vertical scrollbar and mouse-wheel scrolling. |
 | Sidebar scrollbar existed but mouse wheel still felt dead | macOS wheel deltas can be smaller than 120 and child widgets can receive the wheel event; fixed by converting any nonzero delta to a scroll unit and using pointer-gated global wheel binding. |
 | The GUI became feature-rich but visually crowded | Reorganized the left panel into Status, Session, Validation, Protocol, and Actions tabs, and removed secondary file/export/library buttons from the acquisition toolbar. |
+| The GUI still relied on error dialogs for impossible actions | Added a pure `gui_control_states()` model and wired buttons to it after connect/start/stop/load/sample updates. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`

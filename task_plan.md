@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 34
+Phase 35
 
 ## Phases
 
@@ -297,6 +297,16 @@ Phase 34
 - [x] Add focused tests, full tests, syntax verification, and GUI layout documentation.
 - **Status:** complete
 
+### Phase 35: GUI Control-State Gating
+- [x] Add failing tests for deterministic GUI button states across disconnected, connected, streaming, live-data, and loaded-record states.
+- [x] Disable Start until a board connection is confirmed.
+- [x] Disable Stop until streaming is active.
+- [x] Disable report/package export actions until usable data or a recording path exists.
+- [x] Keep library actions available because they operate on selected files/folders.
+- [x] Wire control-state updates after connect, start, stop, load CSV, buffer clearing, and live sample arrival.
+- [x] Add focused tests, full tests, syntax verification, and documentation.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -343,6 +353,7 @@ Phase 34
 | Add a sidecar apply script | After template review, users need a repeatable way to copy staged JSON sidecars into place without hand-copy errors or overwriting existing files. |
 | Make the left sidebar scrollable | The GUI has accumulated enough controls that a fixed-height left frame hides fields on smaller windows; the control column must scroll independently of the plot area. |
 | Redesign GUI information architecture before adding more workflow automation | A mature desktop app must keep acquisition controls simple and move secondary review/export/library actions into clear task groups before more features are added. |
+| Add explicit GUI control-state gating | Mature software should prevent impossible actions up front instead of relying on error dialogs after users click disabled workflows. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -382,6 +393,7 @@ Phase 34
 | Real Tk widget pytest aborted under macOS Tk | 1 | Replaced the unstable live-widget test with a source-level layout test and retained syntax/full-test verification. |
 | Mouse wheel still did not scroll the sidebar reliably | 1 | Added nonzero small-delta handling for macOS wheel events and pointer-gated global wheel binding for events over child controls. |
 | GUI controls were technically reachable but still cognitively overloaded | 1 | Split the sidebar into task-based scrollable tabs and moved secondary file/export/library actions out of the acquisition toolbar. |
+| GUI allowed impossible actions until they produced error dialogs | 1 | Added deterministic button-state gating so unavailable workflows are disabled before the user clicks them. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.
