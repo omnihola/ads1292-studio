@@ -139,6 +139,13 @@ EMPTY_PLOT_MESSAGES = {
     ),
     "pqrst": ("Load or record data to build the averaged PQRST beat",),
 }
+EMPTY_PLOT_STYLE = {
+    "text_color": "#657084",
+    "box_face": "#EEF3FA",
+    "box_edge": "#D9E1EC",
+    "font_size": 11,
+    "alpha": 0.92,
+}
 LOG_PANEL_SPEC = {
     "wrap": "word",
     "scrollbar": "vertical",
@@ -235,6 +242,10 @@ def plot_trace_colors() -> dict[str, str]:
 
 def empty_plot_messages() -> dict[str, tuple[str, ...]]:
     return dict(EMPTY_PLOT_MESSAGES)
+
+
+def empty_plot_style() -> dict[str, object]:
+    return dict(EMPTY_PLOT_STYLE)
 
 
 def log_panel_spec() -> dict[str, str]:
@@ -1278,6 +1289,7 @@ class App(tk.Tk):
                 ax.spines[side].set_color(APP_VISUAL_TOKENS["border"])
 
     def _show_empty_plot_state(self, key: str, axes: tuple[object, ...]) -> None:
+        style = empty_plot_style()
         for ax, message in zip(axes, EMPTY_PLOT_MESSAGES[key]):
             artist = ax.text(
                 0.5,
@@ -1286,10 +1298,16 @@ class App(tk.Tk):
                 transform=ax.transAxes,
                 ha="center",
                 va="center",
-                color=APP_VISUAL_TOKENS["muted"],
-                fontsize=11,
+                color=str(style["text_color"]),
+                fontsize=int(style["font_size"]),
                 fontweight="bold",
-                alpha=0.82,
+                alpha=float(style["alpha"]),
+                bbox={
+                    "boxstyle": "round,pad=0.45,rounding_size=0.2",
+                    "facecolor": style["box_face"],
+                    "edgecolor": style["box_edge"],
+                    "linewidth": 0.8,
+                },
             )
             self.empty_plot_artists.append(artist)
 

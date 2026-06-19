@@ -2,6 +2,7 @@ from ads1292_studio.app import (
     ads1292r_plot_layout_labels,
     app_visual_tokens,
     empty_plot_messages,
+    empty_plot_style,
     log_panel_spec,
     main_tab_labels,
     plot_panel_spec,
@@ -141,6 +142,16 @@ def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
     )
     assert messages["review"][0] == "Load a CSV to review recorded ECG"
     assert messages["pqrst"] == ("Load or record data to build the averaged PQRST beat",)
+
+
+def test_empty_plot_style_uses_muted_callouts() -> None:
+    assert empty_plot_style() == {
+        "text_color": "#657084",
+        "box_face": "#EEF3FA",
+        "box_edge": "#D9E1EC",
+        "font_size": 11,
+        "alpha": 0.92,
+    }
 
 
 def test_log_panel_spec_keeps_long_sessions_readable() -> None:
