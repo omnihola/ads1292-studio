@@ -409,7 +409,7 @@ def test_section_heading_styles_make_sidebar_groups_scannable() -> None:
         "padding": (2, 5),
         "font": ("Aptos", 12, "bold"),
         "background": "#F6F8FB",
-        "foreground": "#1F4FB2",
+        "foreground": "#293247",
     }
 
 

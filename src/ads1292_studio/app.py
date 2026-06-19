@@ -508,7 +508,7 @@ SECTION_HEADING_STYLES = {
     "padding": (2, 5),
     "font": ("Aptos", 12, "bold"),
     "background": "#F6F8FB",
-    "foreground": "#1F4FB2",
+    "foreground": "#293247",
 }
 MUTED_LABEL_SPEC = {
     "style": "Muted.TLabel",
