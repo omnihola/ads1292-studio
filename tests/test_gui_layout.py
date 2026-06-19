@@ -170,6 +170,12 @@ def test_gui_layout_frames_toolbar_channel_hint_as_chip() -> None:
     assert toolbar_hint_styles() == {
         "frame": "ToolbarHint.TFrame",
         "label": "ToolbarHint.TLabel",
+        "background": "#EAF1FF",
+        "foreground": "#1F4FB2",
+        "font": ("Aptos", 11, "bold"),
+        "border": "#D9E1EC",
+        "borderwidth": 1,
+        "relief": "solid",
     }
 
 

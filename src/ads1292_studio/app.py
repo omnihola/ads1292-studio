@@ -158,6 +158,12 @@ TOOLBAR_CONTROL_STYLES = {
 TOOLBAR_HINT_STYLES = {
     "frame": "ToolbarHint.TFrame",
     "label": "ToolbarHint.TLabel",
+    "background": "#EAF1FF",
+    "foreground": "#1F4FB2",
+    "font": ("Aptos", 11, "bold"),
+    "border": "#D9E1EC",
+    "borderwidth": 1,
+    "relief": "solid",
 }
 TOOLBAR_GROUP_PADDING = {
     "separator": (12, 8),
@@ -1437,12 +1443,21 @@ class App(tk.Tk):
             relief=connection_pill["relief"],
         )
         style.configure("ToolbarLabel.TLabel", background=tokens["panel_alt"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
-        style.configure("ToolbarHint.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        toolbar_hint = toolbar_hint_styles()
+        style.configure(
+            "ToolbarHint.TFrame",
+            background=toolbar_hint["background"],
+            borderwidth=toolbar_hint["borderwidth"],
+            relief=toolbar_hint["relief"],
+            bordercolor=toolbar_hint["border"],
+            lightcolor=toolbar_hint["border"],
+            darkcolor=toolbar_hint["border"],
+        )
         style.configure(
             "ToolbarHint.TLabel",
-            background=tokens["panel"],
-            foreground=tokens["accent_dark"],
-            font=("Aptos", 11, "bold"),
+            background=toolbar_hint["background"],
+            foreground=toolbar_hint["foreground"],
+            font=toolbar_hint["font"],
         )
         input_chrome = input_chrome_spec()
         combobox_chrome = input_chrome["combobox"]
