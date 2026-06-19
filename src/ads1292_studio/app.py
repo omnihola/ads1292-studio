@@ -186,6 +186,14 @@ class LiveQualityResult:
 
 
 @dataclass(frozen=True)
+class ReviewRenderResult:
+    generation: int
+    samples: tuple[StreamSample, ...]
+    frame: ReviewRenderFrame | None = None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
 class GuiState:
     connected: bool
     streaming: bool
@@ -577,6 +585,31 @@ def compute_live_quality_result(
     return LiveQualityResult(generation, source, valid_rr, samples, status_values, metrics=metrics)
 
 
+def compute_review_render_result(
+    *,
+    generation: int,
+    samples: tuple[StreamSample, ...],
+    display_settings: EcgDisplaySettings,
+    filter_settings: SoftwareFilterSettings,
+) -> ReviewRenderResult:
+    try:
+        frame = build_review_render_frame(
+            samples,
+            display_settings=display_settings,
+            filter_settings=filter_settings,
+            source=ADS1292R_ECG_SOURCE,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+            smoothing_window=DISPLAY_SMOOTHING_WINDOW,
+            max_points=MAX_POINTS,
+            ecg_inverted=DEFAULT_ECG_INVERTED,
+            min_ecg_span_counts=DISPLAY_MIN_ECG_SPAN_COUNTS,
+            min_resp_span_counts=DISPLAY_MIN_RESP_SPAN_COUNTS,
+        )
+    except Exception as exc:  # pragma: no cover - defensive worker boundary
+        return ReviewRenderResult(generation=generation, samples=samples, error=str(exc))
+    return ReviewRenderResult(generation=generation, samples=samples, frame=frame)
+
+
 def build_live_quality_samples(
     ch1_values: tuple[float, ...],
     ch2_values: tuple[float, ...],
@@ -766,6 +799,11 @@ class App(tk.Tk):
         self.live_quality_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ads1292-quality")
         self.live_quality_future: Future[LiveQualityResult] | None = None
         self.live_quality_generation = 0
+        self.review_render_results: queue.Queue[ReviewRenderResult] = queue.Queue()
+        self.review_render_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ads1292-review")
+        self.review_render_future: Future[ReviewRenderResult] | None = None
+        self.review_render_generation = 0
+        self.pending_review_render_samples: tuple[StreamSample, ...] | None = None
         self.is_connecting = False
         self.stream_start_results: queue.Queue[StreamStartResult] = queue.Queue()
         self.worker = LiveWorker(self.samples, self.logs, self.stream_start_results)
@@ -1954,11 +1992,20 @@ class App(tk.Tk):
             buffer.clear()
         self.last_display_refresh_key = None
         self.live_quality_generation += 1
+        self.review_render_generation += 1
+        self.pending_review_render_samples = None
         if self.live_quality_future is not None and not self.live_quality_future.done():
             self.live_quality_future.cancel()
+        if self.review_render_future is not None and not self.review_render_future.done():
+            self.review_render_future.cancel()
         while True:
             try:
                 self.live_quality_results.get_nowait()
+            except queue.Empty:
+                break
+        while True:
+            try:
+                self.review_render_results.get_nowait()
             except queue.Empty:
                 break
 
@@ -2159,6 +2206,7 @@ class App(tk.Tk):
         if self.is_closing:
             return
         self._drain_csv_load_results()
+        self._drain_review_render_results()
         self._drain_connect_results()
         self._drain_stream_start_results()
         self._drain_live_quality_results()
@@ -2172,6 +2220,7 @@ class App(tk.Tk):
         log_messages = drain_queue_items(self.logs, MAX_LOG_MESSAGES_PER_TICK)
         self._append_log_messages(log_messages)
         self._drain_live_quality_results()
+        self._drain_review_render_results()
         self._schedule_tick()
 
     def _schedule_live_quality_update(
@@ -2214,6 +2263,69 @@ class App(tk.Tk):
                 error=str(exc),
             )
         self.live_quality_results.put(result)
+
+    def _schedule_review_render_update(self, samples: tuple[StreamSample, ...]) -> bool:
+        if self.review_render_future is not None and not self.review_render_future.done():
+            self.review_render_generation += 1
+            self.pending_review_render_samples = samples
+            return False
+        self.review_render_generation += 1
+        generation = self.review_render_generation
+        self.pending_review_render_samples = None
+        display_settings = self._display_settings()
+        filter_settings = self._software_filter_settings()
+        future = self.review_render_executor.submit(
+            compute_review_render_result,
+            generation=generation,
+            samples=samples,
+            display_settings=display_settings,
+            filter_settings=filter_settings,
+        )
+        future.add_done_callback(self._queue_review_render_result)
+        self.review_render_future = future
+        return True
+
+    def _queue_review_render_result(self, future: Future[ReviewRenderResult]) -> None:
+        if future.cancelled():
+            return
+        try:
+            result = future.result()
+        except Exception as exc:  # pragma: no cover - defensive worker boundary
+            result = ReviewRenderResult(generation=self.review_render_generation, samples=tuple(), error=str(exc))
+        self.review_render_results.put(result)
+
+    def _drain_review_render_results(self) -> None:
+        latest: ReviewRenderResult | None = None
+        while True:
+            try:
+                result = self.review_render_results.get_nowait()
+            except queue.Empty:
+                break
+            if result.generation == self.review_render_generation:
+                latest = result
+        if latest is None:
+            self._schedule_pending_review_render()
+            return
+        if latest.error or latest.frame is None:
+            set_string_var_if_changed(
+                self.quality_var,
+                f"Quality: review redraw failed: {latest.error or 'unknown error'}",
+            )
+            self._apply_control_states()
+            self._schedule_pending_review_render()
+            return
+        self._show_review_frame(latest.samples, latest.frame)
+        self._apply_control_states()
+        self._schedule_pending_review_render()
+
+    def _schedule_pending_review_render(self) -> None:
+        if self.pending_review_render_samples is None:
+            return
+        if self.review_render_future is not None and not self.review_render_future.done():
+            return
+        samples = self.pending_review_render_samples
+        self.pending_review_render_samples = None
+        self._schedule_review_render_update(samples)
 
     def _drain_live_quality_results(self) -> None:
         latest: LiveQualityResult | None = None
@@ -2279,7 +2391,10 @@ class App(tk.Tk):
             self._redraw_live()
             return
         if self.loaded_samples:
-            self._show_recording(self.loaded_samples)
+            if self._schedule_review_render_update(self.loaded_samples):
+                set_string_var_if_changed(self.metrics_var, "Review redraw queued...")
+            else:
+                set_string_var_if_changed(self.metrics_var, "Review redraw already running...")
             return
         if self.indices:
             self._redraw_live()
@@ -2639,7 +2754,10 @@ class App(tk.Tk):
         self.worker.stop()
         if self.live_quality_future is not None and not self.live_quality_future.done():
             self.live_quality_future.cancel()
+        if self.review_render_future is not None and not self.review_render_future.done():
+            self.review_render_future.cancel()
         self.live_quality_executor.shutdown(wait=False, cancel_futures=True)
+        self.review_render_executor.shutdown(wait=False, cancel_futures=True)
         self.destroy()
 
     def destroy(self) -> None:

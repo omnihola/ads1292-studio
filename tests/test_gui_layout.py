@@ -908,6 +908,31 @@ def test_csv_loader_precomputes_review_render_frame_off_the_tk_thread() -> None:
     assert "self._show_review_frame(result.recording.samples, result.review_frame)" in source
 
 
+def test_loaded_csv_display_refresh_schedules_single_flight_review_render() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._refresh_display_plots) + inspect.getsource(App._schedule_review_render_update)
+
+    assert "if self.loaded_samples:" in source
+    assert "self._schedule_review_render_update(self.loaded_samples)" in source
+    assert "self.review_render_future is not None and not self.review_render_future.done()" in source
+    assert "self.pending_review_render_samples = samples" in source
+    assert "self.review_render_generation += 1" in source
+    assert "self.review_render_executor.submit(" in source
+    assert "_show_recording(self.loaded_samples)" not in inspect.getsource(App._refresh_display_plots)
+
+
+def test_review_render_results_reschedule_pending_latest_settings() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._drain_review_render_results) + inspect.getsource(App._schedule_pending_review_render)
+
+    assert "if latest is None:" in source
+    assert "self._schedule_pending_review_render()" in source
+    assert "samples = self.pending_review_render_samples" in source
+    assert "self._schedule_review_render_update(samples)" in source
+
+
 def test_control_state_updates_skip_redundant_tk_writes() -> None:
     from ads1292_studio.app import App
 

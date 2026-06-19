@@ -18,6 +18,7 @@ from ads1292_studio.app import (
     compact_ecg_source_label,
     configure_widget_option_if_changed,
     compute_live_quality_result,
+    compute_review_render_result,
     display_scale_reference_label,
     display_signal_values,
     display_refresh_key,
@@ -42,6 +43,7 @@ from ads1292_studio.app import (
 )
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
+from ads1292_studio.models import StreamSample
 
 
 class _FakeStringVar:
@@ -139,6 +141,34 @@ def test_compute_live_quality_result_keeps_generation_and_metrics() -> None:
     assert result.metrics is not None
     assert result.metrics.sample_count == len(ch2_values)
     assert len(result.samples) == len(ch2_values)
+
+
+def test_compute_review_render_result_prepares_offline_frame() -> None:
+    samples = tuple(
+        StreamSample(
+            timestamp=index / 500.0,
+            ch1=0,
+            ch2=1000 if index % 250 == 0 else 0,
+            board_heart_rate=0,
+            board_respiration_rate=0,
+            status_byte=0,
+        )
+        for index in range(1000)
+    )
+
+    result = compute_review_render_result(
+        generation=11,
+        samples=samples,
+        display_settings=EcgDisplaySettings(gain=2.0),
+        filter_settings=SoftwareFilterSettings(),
+    )
+
+    assert result.generation == 11
+    assert result.samples == samples
+    assert result.error is None
+    assert result.frame is not None
+    assert result.frame.sample_count == len(samples)
+    assert result.frame.mode == "raw | 2x | 8s | 25 mm/s, display-smoothed"
 
 
 def test_build_live_quality_samples_preserves_channel_and_status_order() -> None:
