@@ -268,14 +268,24 @@ ACTION_SECTION_STYLES = {
 SIDEBAR_NOTEBOOK_STYLES = {
     "notebook": "Sidebar.TNotebook",
     "tab": "Sidebar.TNotebook.Tab",
+    "tab_padding": (10, 6),
+    "tab_font": ("Aptos", 10, "bold"),
+    "tab_background": "#EEF3FA",
     "selected_foreground": "#2F6FED",
     "inactive_foreground": "#657084",
+    "active_foreground": "#172033",
+    "active_background": "#FFFFFF",
 }
 WORKSPACE_NOTEBOOK_STYLES = {
     "notebook": "Workspace.TNotebook",
     "tab": "Workspace.TNotebook.Tab",
+    "tab_padding": (16, 8),
+    "tab_font": ("Aptos", 12, "bold"),
+    "tab_background": "#EEF3FA",
     "selected_foreground": "#2F6FED",
     "inactive_foreground": "#657084",
+    "active_foreground": "#172033",
+    "active_background": "#FFFFFF",
 }
 WORKFLOW_HINT_STYLES = {
     "frame": "WorkflowHint.TFrame",
@@ -443,7 +453,7 @@ def action_section_styles() -> dict[str, str]:
     return dict(ACTION_SECTION_STYLES)
 
 
-def sidebar_notebook_styles() -> dict[str, str]:
+def sidebar_notebook_styles() -> dict[str, object]:
     return dict(SIDEBAR_NOTEBOOK_STYLES)
 
 
@@ -451,7 +461,7 @@ def sidebar_layout_spec() -> dict[str, object]:
     return dict(SIDEBAR_LAYOUT_SPEC)
 
 
-def workspace_notebook_styles() -> dict[str, str]:
+def workspace_notebook_styles() -> dict[str, object]:
     return dict(WORKSPACE_NOTEBOOK_STYLES)
 
 
@@ -1424,42 +1434,44 @@ class App(tk.Tk):
         style.configure("TCheckbutton", background=tokens["panel_alt"], foreground=tokens["ink"])
         style.configure("TNotebook", background=tokens["surface"], borderwidth=0)
         style.configure("TNotebook.Tab", padding=(14, 7), font=("Aptos", 12, "bold"))
+        sidebar_tabs = sidebar_notebook_styles()
         style.configure("Sidebar.TNotebook", background=tokens["surface"], borderwidth=0)
         style.configure(
             "Sidebar.TNotebook.Tab",
-            padding=(10, 6),
-            font=("Aptos", 10, "bold"),
-            foreground=tokens["muted"],
-            background=tokens["panel_alt"],
+            padding=sidebar_tabs["tab_padding"],
+            font=sidebar_tabs["tab_font"],
+            foreground=sidebar_tabs["inactive_foreground"],
+            background=sidebar_tabs["tab_background"],
         )
         style.map(
             "Sidebar.TNotebook.Tab",
             foreground=[
-                ("selected", SIDEBAR_NOTEBOOK_STYLES["selected_foreground"]),
-                ("active", tokens["ink"]),
+                ("selected", sidebar_tabs["selected_foreground"]),
+                ("active", sidebar_tabs["active_foreground"]),
             ],
             background=[
-                ("selected", tokens["panel"]),
-                ("active", tokens["panel"]),
+                ("selected", sidebar_tabs["active_background"]),
+                ("active", sidebar_tabs["active_background"]),
             ],
         )
+        workspace_tabs = workspace_notebook_styles()
         style.configure("Workspace.TNotebook", background=tokens["surface"], borderwidth=0)
         style.configure(
             "Workspace.TNotebook.Tab",
-            padding=(16, 8),
-            font=("Aptos", 12, "bold"),
-            foreground=tokens["muted"],
-            background=tokens["panel_alt"],
+            padding=workspace_tabs["tab_padding"],
+            font=workspace_tabs["tab_font"],
+            foreground=workspace_tabs["inactive_foreground"],
+            background=workspace_tabs["tab_background"],
         )
         style.map(
             "Workspace.TNotebook.Tab",
             foreground=[
-                ("selected", WORKSPACE_NOTEBOOK_STYLES["selected_foreground"]),
-                ("active", tokens["ink"]),
+                ("selected", workspace_tabs["selected_foreground"]),
+                ("active", workspace_tabs["active_foreground"]),
             ],
             background=[
-                ("selected", tokens["panel"]),
-                ("active", tokens["panel"]),
+                ("selected", workspace_tabs["active_background"]),
+                ("active", workspace_tabs["active_background"]),
             ],
         )
         status_label = status_label_spec()
