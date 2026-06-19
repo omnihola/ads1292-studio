@@ -633,7 +633,7 @@ def test_empty_plot_style_uses_muted_callouts() -> None:
         "font_size": 10,
         "font_weight": "normal",
         "alpha": 0.9,
-        "box_pad": 0.55,
+        "box_pad": 0.62,
         "rounding": 0.18,
         "line_width": 0.6,
     }
