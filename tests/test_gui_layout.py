@@ -403,6 +403,9 @@ def test_workflow_hint_styles_make_next_step_prominent() -> None:
         "frame": "WorkflowHint.TFrame",
         "label": "WorkflowHint.TLabel",
         "stripe": "#2F6FED",
+        "background": "#FFFFFF",
+        "foreground": "#172033",
+        "font": ("Aptos", 11, "bold"),
     }
 
 

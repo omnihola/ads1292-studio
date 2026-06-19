@@ -493,6 +493,9 @@ WORKFLOW_HINT_STYLES = {
     "frame": "WorkflowHint.TFrame",
     "label": "WorkflowHint.TLabel",
     "stripe": "#2F6FED",
+    "background": "#FFFFFF",
+    "foreground": "#172033",
+    "font": ("Aptos", 11, "bold"),
 }
 SAFETY_NOTICE_STYLES = {
     "frame": "SafetyNotice.TFrame",
@@ -1735,11 +1738,12 @@ class App(tk.Tk):
             foreground=card_label["foreground"],
             font=card_label["font"],
         )
+        workflow_hint = workflow_hint_styles()
         style.configure(
-            "WorkflowHint.TLabel",
-            background=tokens["panel"],
-            foreground=tokens["ink"],
-            font=("Aptos", 11, "bold"),
+            workflow_hint["label"],
+            background=workflow_hint["background"],
+            foreground=workflow_hint["foreground"],
+            font=workflow_hint["font"],
         )
         style.configure(
             "SafetyNotice.TLabel",
