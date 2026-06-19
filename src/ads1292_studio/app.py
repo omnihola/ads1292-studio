@@ -545,8 +545,8 @@ WORKFLOW_HINT_STYLES = {
     "frame": "WorkflowHint.TFrame",
     "label": "WorkflowHint.TLabel",
     "stripe": "#2F6FED",
-    "background": "#FFFFFF",
-    "foreground": "#172033",
+    "background": "#EAF1FF",
+    "foreground": "#1F4FB2",
     "font": ("Aptos", 11, "bold"),
 }
 SAFETY_NOTICE_STYLES = {
