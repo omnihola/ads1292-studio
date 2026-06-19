@@ -57,7 +57,7 @@ from ads1292_studio.plot_theme import (
     pqrst_plot_style as base_pqrst_plot_style,
     seaborn_plot_theme as base_seaborn_plot_theme,
 )
-from ads1292_studio.plots import decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
+from ads1292_studio.plots import decimate_aligned_for_plot, decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
@@ -75,6 +75,7 @@ from ads1292_studio.workers import LiveWorker
 
 
 MAX_POINTS = 10000
+LIVE_MAX_RENDER_POINTS = 2500
 VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
 DEFAULT_FILTER_ENABLED = False
@@ -3405,11 +3406,18 @@ class App(tk.Tk):
         peaks = detect_r_peaks(ecg[visible], SAMPLE_RATE_HZ)
         peaks_x = visible_x[list(peaks)] if peaks else []
         peaks_y = visible_ecg_plot[list(peaks)] if peaks else []
+        plot_x, plot_ecg, plot_resp, plot_status = decimate_aligned_for_plot(
+            visible_x,
+            visible_ecg_plot,
+            visible_resp_plot,
+            visible_status,
+            max_points=LIVE_MAX_RENDER_POINTS,
+        )
 
-        self.live_ecg_line.set_data(visible_x, visible_ecg_plot)
+        self.live_ecg_line.set_data(plot_x, plot_ecg)
         self.live_peak_line.set_data(peaks_x, peaks_y)
-        self.live_resp_line.set_data(visible_x, visible_resp_plot)
-        self.live_status_line.set_data(visible_x, visible_status)
+        self.live_resp_line.set_data(plot_x, plot_resp)
+        self.live_status_line.set_data(plot_x, plot_status)
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.set_xlim(left, right)
         if self.autoscale_var.get():

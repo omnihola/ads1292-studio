@@ -24,6 +24,15 @@ def decimate_for_plot(x, y, max_points: int) -> tuple[np.ndarray, np.ndarray]:
     return x_arr[::step], y_arr[::step]
 
 
+def decimate_aligned_for_plot(x, *ys, max_points: int) -> tuple[np.ndarray, ...]:
+    x_arr = np.asarray(x)
+    y_arrays = tuple(np.asarray(y) for y in ys)
+    if x_arr.size <= max_points:
+        return (x_arr, *y_arrays)
+    step = int(np.ceil(x_arr.size / max_points))
+    return (x_arr[::step], *(y_arr[::step] for y_arr in y_arrays))
+
+
 def robust_ylim(values, *, min_span: float = 0.0) -> tuple[float, float]:
     arr = np.asarray(values, dtype=float)
     if arr.size == 0:

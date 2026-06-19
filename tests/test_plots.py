@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ads1292_studio.plots import decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
+from ads1292_studio.plots import decimate_aligned_for_plot, decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
 
 
 def test_smooth_for_plot_returns_original_values_when_window_is_too_small() -> None:
@@ -65,3 +65,18 @@ def test_decimate_for_plot_decimates_large_arrays_to_budget() -> None:
     assert 0 < out_x.size <= 100
     assert out_x.size == out_y.size
     assert list(out_x) == [int(value) for value in out_y]
+
+
+def test_decimate_aligned_for_plot_uses_one_stride_for_all_traces() -> None:
+    x = np.arange(1000)
+    ecg = x + 10
+    resp = x + 20
+    status = x % 4
+
+    out_x, out_ecg, out_resp, out_status = decimate_aligned_for_plot(x, ecg, resp, status, max_points=100)
+
+    assert 0 < out_x.size <= 100
+    assert out_x.size == out_ecg.size == out_resp.size == out_status.size
+    np.testing.assert_array_equal(out_ecg, out_x + 10)
+    np.testing.assert_array_equal(out_resp, out_x + 20)
+    np.testing.assert_array_equal(out_status, out_x % 4)
