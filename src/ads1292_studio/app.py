@@ -196,6 +196,12 @@ EVENT_COUNT_STYLES = {
     "value": "EventCountValue.TLabel",
     "stripe": "#7A5CDB",
 }
+PROTOCOL_NOTE_STYLES = {
+    "frame": "ProtocolNote.TFrame",
+    "label": "ProtocolNoteLabel.TLabel",
+    "value": "ProtocolNoteValue.TLabel",
+    "stripe": "#2F6FED",
+}
 
 
 @dataclass(frozen=True)
@@ -304,6 +310,10 @@ def status_detail_styles() -> dict[str, str]:
 
 def event_count_styles() -> dict[str, str]:
     return dict(EVENT_COUNT_STYLES)
+
+
+def protocol_note_styles() -> dict[str, str]:
+    return dict(PROTOCOL_NOTE_STYLES)
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -846,6 +856,7 @@ class App(tk.Tk):
         self.protocol_objective_var = tk.StringVar(value=protocol.objective)
         self.protocol_steps_var = tk.StringVar(value=_format_protocol_steps(protocol.steps))
         self.protocol_acceptance_var = tk.StringVar(value=protocol.acceptance_notes)
+        self.protocol_note_labels: dict[str, ttk.Label] = {}
         ttk.Label(status_side, text="Next Step", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 6))
         self._build_workflow_hint(status_side)
         ttk.Label(status_side, text="Overview", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
@@ -902,8 +913,8 @@ class App(tk.Tk):
         ttk.Label(protocol_side, text="Protocol", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
         self._metadata_entry(protocol_side, "Name", self.protocol_name_var)
         self._metadata_entry(protocol_side, "Objective", self.protocol_objective_var)
-        self._metadata_entry(protocol_side, "Steps", self.protocol_steps_var)
-        self._metadata_entry(protocol_side, "Acceptance", self.protocol_acceptance_var)
+        self._build_protocol_note_card(protocol_side, "Steps", self.protocol_steps_var)
+        self._build_protocol_note_card(protocol_side, "Acceptance", self.protocol_acceptance_var)
 
         ttk.Label(actions_side, text="Review", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
         self.load_csv_button = ttk.Button(
@@ -1091,6 +1102,19 @@ class App(tk.Tk):
             foreground=tokens["ink"],
             font=("Aptos", 11, "bold"),
         )
+        style.configure("ProtocolNote.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        style.configure(
+            "ProtocolNoteLabel.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["muted"],
+            font=("Aptos", 10, "bold"),
+        )
+        style.configure(
+            "ProtocolNoteValue.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["ink"],
+            font=("Aptos", 11),
+        )
         style.configure("TButton", padding=(10, 6), font=("Aptos", 12))
         style.configure(
             "SidebarAction.TButton",
@@ -1252,6 +1276,25 @@ class App(tk.Tk):
             style=styles["value"],
         )
         self.event_count_label.pack(anchor=tk.W, fill=tk.X, pady=(3, 0))
+
+    def _build_protocol_note_card(self, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:
+        styles = protocol_note_styles()
+        row = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
+        row.pack(anchor=tk.W, fill=tk.X, pady=(8, 2))
+        stripe = tk.Frame(row, width=4, bg=styles["stripe"], highlightthickness=0)
+        stripe.pack(side=tk.LEFT, fill=tk.Y)
+        content = ttk.Frame(row, padding=(10, 8), style=styles["frame"])
+        content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        ttk.Label(content, text=label, style=styles["label"]).pack(anchor=tk.W)
+        value_label = ttk.Label(
+            content,
+            textvariable=variable,
+            wraplength=230,
+            justify=tk.LEFT,
+            style=styles["value"],
+        )
+        value_label.pack(anchor=tk.W, fill=tk.X, pady=(3, 0))
+        self.protocol_note_labels[label] = value_label
 
     def _build_status_cards(self, parent: ttk.Frame) -> None:
         for label in STATUS_CARD_LABELS:

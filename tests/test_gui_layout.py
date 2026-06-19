@@ -9,6 +9,7 @@ from ads1292_studio.app import (
     plot_panel_spec,
     plot_trace_colors,
     primary_toolbar_button_labels,
+    protocol_note_styles,
     safety_notice_styles,
     secondary_action_button_labels,
     sidebar_action_button_style,
@@ -133,6 +134,15 @@ def test_event_count_styles_make_session_events_visible() -> None:
         "label": "EventCountLabel.TLabel",
         "value": "EventCountValue.TLabel",
         "stripe": "#7A5CDB",
+    }
+
+
+def test_protocol_note_styles_make_long_protocol_text_readable() -> None:
+    assert protocol_note_styles() == {
+        "frame": "ProtocolNote.TFrame",
+        "label": "ProtocolNoteLabel.TLabel",
+        "value": "ProtocolNoteValue.TLabel",
+        "stripe": "#2F6FED",
     }
 
 
