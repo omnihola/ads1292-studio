@@ -1071,6 +1071,27 @@ def format_log_entries(messages: tuple[str, ...], stamp: str) -> str:
     return "".join(f"[{stamp}] {message}\n" for message in messages)
 
 
+def display_refresh_key(
+    *,
+    mode: str,
+    display_settings: EcgDisplaySettings,
+    filter_settings: SoftwareFilterSettings,
+    autoscale: bool,
+    sample_index: int,
+    loaded_count: int,
+    recording_path: Path | None,
+) -> tuple[object, ...]:
+    return (
+        mode,
+        display_settings,
+        filter_settings,
+        bool(autoscale),
+        int(sample_index),
+        int(loaded_count),
+        str(recording_path) if recording_path else "",
+    )
+
+
 def drain_queue_items(item_queue: queue.Queue[_T], max_items: int) -> tuple[_T, ...]:
     items: list[_T] = []
     for _ in range(max(0, max_items)):
@@ -1452,6 +1473,7 @@ class App(tk.Tk):
         self.ecg_paper_grid_cache: dict[int, tuple[float, float, float, float]] = {}
         self.calibration_pulse_cache: dict[int, str] = {}
         self.last_control_state: GuiState | None = None
+        self.last_display_refresh_key: tuple[object, ...] | None = None
 
         self._build_ui()
         self.refresh_ports()
@@ -3106,6 +3128,7 @@ class App(tk.Tk):
     def _clear_signal_buffers(self) -> None:
         for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
             buffer.clear()
+        self.last_display_refresh_key = None
         self.live_quality_generation += 1
         if self.live_quality_future is not None and not self.live_quality_future.done():
             self.live_quality_future.cancel()
@@ -3416,6 +3439,10 @@ class App(tk.Tk):
         self.board_rr.append(sample.board_respiration_rate)
 
     def _refresh_display_plots(self, _event: tk.Event | None = None) -> None:
+        key = self._display_refresh_key()
+        if self.last_display_refresh_key == key:
+            return
+        self.last_display_refresh_key = key
         if self.is_streaming and self.indices:
             self._redraw_live()
             return
@@ -3424,6 +3451,23 @@ class App(tk.Tk):
             return
         if self.indices:
             self._redraw_live()
+
+    def _display_refresh_key(self) -> tuple[object, ...]:
+        if self.loaded_samples:
+            mode = "review"
+        elif self.indices:
+            mode = "live"
+        else:
+            mode = "empty"
+        return display_refresh_key(
+            mode=mode,
+            display_settings=self._display_settings(),
+            filter_settings=self._software_filter_settings(),
+            autoscale=bool(self.autoscale_var.get()),
+            sample_index=self.sample_index,
+            loaded_count=len(self.loaded_samples),
+            recording_path=self.recording_path,
+        )
 
     def _display_settings(self) -> EcgDisplaySettings:
         return EcgDisplaySettings(

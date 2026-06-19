@@ -11,6 +11,7 @@ from ads1292_studio.app import (
     build_live_quality_samples,
     compute_live_quality_result,
     display_signal_values,
+    display_refresh_key,
     drain_queue_items,
     gui_control_states,
     gui_signal_quality_cards,
@@ -31,7 +32,7 @@ from ads1292_studio.app import (
 import numpy as np
 import queue
 
-from ads1292_studio.display import SoftwareFilterSettings
+from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
 
 
 class _FakeStringVar:
@@ -210,6 +211,55 @@ def test_drain_queue_items_does_not_consume_when_limit_is_zero() -> None:
 
     assert drain_queue_items(values, max_items=0) == tuple()
     assert values.get_nowait() == "pending"
+
+
+def test_display_refresh_key_changes_only_when_visible_display_state_changes() -> None:
+    base = display_refresh_key(
+        mode="live",
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(),
+        autoscale=True,
+        sample_index=100,
+        loaded_count=0,
+        recording_path=None,
+    )
+
+    assert base == display_refresh_key(
+        mode="live",
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(),
+        autoscale=True,
+        sample_index=100,
+        loaded_count=0,
+        recording_path=None,
+    )
+    assert base != display_refresh_key(
+        mode="live",
+        display_settings=EcgDisplaySettings(gain=2.0),
+        filter_settings=SoftwareFilterSettings(),
+        autoscale=True,
+        sample_index=100,
+        loaded_count=0,
+        recording_path=None,
+    )
+    assert base != display_refresh_key(
+        mode="live",
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(notch_enabled=True),
+        autoscale=True,
+        sample_index=100,
+        loaded_count=0,
+        recording_path=None,
+    )
+    assert base != display_refresh_key(
+        mode="live",
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(),
+        autoscale=True,
+        sample_index=101,
+        loaded_count=0,
+        recording_path=None,
+    )
 
 
 def test_tick_queue_limits_are_above_normal_streaming_rate() -> None:
