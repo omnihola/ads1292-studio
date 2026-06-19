@@ -455,7 +455,7 @@ PLOT_PANEL_SPEC = {
     "shell": "Main.TFrame",
     "panel": "PlotPanel.TFrame",
     "padding": (14, 14),
-    "panel_padding": (10, 10),
+    "panel_padding": (12, 12),
 }
 PLOT_AXIS_STYLE = {
     "face": "#FFFFFF",

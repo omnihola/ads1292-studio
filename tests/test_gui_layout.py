@@ -690,7 +690,7 @@ def test_plot_panel_spec_frames_signal_workspaces() -> None:
         "shell": "Main.TFrame",
         "panel": "PlotPanel.TFrame",
         "padding": (14, 14),
-        "panel_padding": (10, 10),
+        "panel_padding": (12, 12),
     }
 
 
