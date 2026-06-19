@@ -3,6 +3,7 @@ from ads1292_studio.app import (
     app_visual_tokens,
     empty_plot_messages,
     empty_plot_style,
+    event_count_styles,
     log_panel_spec,
     main_tab_labels,
     plot_panel_spec,
@@ -123,6 +124,15 @@ def test_status_detail_styles_frame_session_quality_and_storage() -> None:
         "label": "StatusDetailLabel.TLabel",
         "value": "StatusDetailValue.TLabel",
         "stripe": "#D9E1EC",
+    }
+
+
+def test_event_count_styles_make_session_events_visible() -> None:
+    assert event_count_styles() == {
+        "frame": "EventCount.TFrame",
+        "label": "EventCountLabel.TLabel",
+        "value": "EventCountValue.TLabel",
+        "stripe": "#7A5CDB",
     }
 
 

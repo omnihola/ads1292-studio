@@ -190,6 +190,12 @@ STATUS_DETAIL_STYLES = {
     "value": "StatusDetailValue.TLabel",
     "stripe": "#D9E1EC",
 }
+EVENT_COUNT_STYLES = {
+    "frame": "EventCount.TFrame",
+    "label": "EventCountLabel.TLabel",
+    "value": "EventCountValue.TLabel",
+    "stripe": "#7A5CDB",
+}
 
 
 @dataclass(frozen=True)
@@ -294,6 +300,10 @@ def safety_notice_styles() -> dict[str, str]:
 
 def status_detail_styles() -> dict[str, str]:
     return dict(STATUS_DETAIL_STYLES)
+
+
+def event_count_styles() -> dict[str, str]:
+    return dict(EVENT_COUNT_STYLES)
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -818,6 +828,7 @@ class App(tk.Tk):
         self.event_label_var = tk.StringVar(value="motion")
         self.event_notes_var = tk.StringVar(value="")
         self.event_count_var = tk.StringVar(value="0 events")
+        self.event_count_label: ttk.Label | None = None
         self.calibration_label_var = tk.StringVar(value="ADS1292 default")
         self.vref_mv_var = tk.StringVar(value="2420")
         self.pga_gain_var = tk.StringVar(value="6")
@@ -865,7 +876,7 @@ class App(tk.Tk):
             style=sidebar_action_button_style(),
         )
         self.add_event_button.pack(anchor=tk.W, fill=tk.X, pady=(6, 2))
-        ttk.Label(session_side, textvariable=self.event_count_var, wraplength=260, justify=tk.LEFT).pack(anchor=tk.W)
+        self._build_event_count_card(session_side)
 
         ttk.Label(validation_side, text="Calibration", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
         self._metadata_entry(validation_side, "Label", self.calibration_label_var)
@@ -1067,6 +1078,19 @@ class App(tk.Tk):
             foreground=tokens["ink"],
             font=("Aptos", 11),
         )
+        style.configure("EventCount.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        style.configure(
+            "EventCountLabel.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["muted"],
+            font=("Aptos", 10, "bold"),
+        )
+        style.configure(
+            "EventCountValue.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["ink"],
+            font=("Aptos", 11, "bold"),
+        )
         style.configure("TButton", padding=(10, 6), font=("Aptos", 12))
         style.configure(
             "SidebarAction.TButton",
@@ -1210,6 +1234,24 @@ class App(tk.Tk):
         )
         value_label.pack(anchor=tk.W, fill=tk.X, pady=(3, 0))
         self.status_detail_value_labels[label] = value_label
+
+    def _build_event_count_card(self, parent: ttk.Frame) -> None:
+        styles = event_count_styles()
+        row = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
+        row.pack(anchor=tk.W, fill=tk.X, pady=(7, 2))
+        stripe = tk.Frame(row, width=4, bg=styles["stripe"], highlightthickness=0)
+        stripe.pack(side=tk.LEFT, fill=tk.Y)
+        content = ttk.Frame(row, padding=(10, 8), style=styles["frame"])
+        content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        ttk.Label(content, text="Event markers", style=styles["label"]).pack(anchor=tk.W)
+        self.event_count_label = ttk.Label(
+            content,
+            textvariable=self.event_count_var,
+            wraplength=230,
+            justify=tk.LEFT,
+            style=styles["value"],
+        )
+        self.event_count_label.pack(anchor=tk.W, fill=tk.X, pady=(3, 0))
 
     def _build_status_cards(self, parent: ttk.Frame) -> None:
         for label in STATUS_CARD_LABELS:
