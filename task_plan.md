@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 20
+Phase 22
 
 ## Phases
 
@@ -187,6 +187,15 @@ Phase 20
 - [x] Add tests and real CSV package smoke test.
 - **Status:** complete
 
+### Phase 22: Session Index & Recording Library
+- [x] Add directory scanner for raw ADS1292 recording CSV files.
+- [x] Ignore generated session-index/group summary CSVs during scans.
+- [x] Export a CSV/HTML recording library with metadata, ECG source, contact, R peaks, HR, quality, and usable/review status.
+- [x] Add CLI `index` command.
+- [x] Add GUI `Session Index` action.
+- [x] Add tests and real `../record/ads1292` smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -220,6 +229,7 @@ Phase 20
 | Add protocol segment quality gates | Commercial-style validation needs explicit pass/fail calls for each protocol stage, not only descriptive segment metrics. |
 | Show segment gate in GUI quality text | A commercial-style desktop app should surface protocol pass/fail without requiring report export or CLI QC. |
 | Add GUI quality gate sidecars | Pass/fail standards must be saved with the recording so a later report/package uses the same validation thresholds. |
+| Add session index export | A commercial-style app needs an experiment library view, not only one-file report/package actions. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -239,6 +249,7 @@ Phase 20
 | Temporary protocol sidecar was copied outside the subfolder during smoke setup | 1 | Removed the file immediately and reran package smoke using only ignored files inside `ads1292-studio/`. |
 | Quality gate sidecar helpers were missing | 1 | Added normalized `QualityGate` JSON read/write/template helpers and package integration. |
 | GUI quality gate parser was missing | 1 | Added explicit GUI value parsing/formatting helpers for required and optional threshold fields. |
+| Session index module was missing during TDD red check | 1 | Added `session_index.py`, CLI `index`, and GUI Session Index action. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

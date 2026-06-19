@@ -114,6 +114,21 @@ def test_cli_verify_package_returns_success(tmp_path: Path) -> None:
     assert main(["verify-package", str(manifest_path)]) == 0
 
 
+def test_cli_index_writes_session_library(tmp_path: Path) -> None:
+    csv_path = tmp_path / "recording.csv"
+    out_dir = tmp_path / "index"
+    _write_small_csv(csv_path)
+
+    assert main(["index", str(tmp_path), "--out", str(out_dir), "--title", "CLI Session Index"]) == 0
+
+    csv_outputs = list(out_dir.glob("*.csv"))
+    html_outputs = list(out_dir.glob("*.html"))
+    assert len(csv_outputs) == 1
+    assert len(html_outputs) == 1
+    assert "recording.csv" in csv_outputs[0].read_text()
+    assert "CLI Session Index" in html_outputs[0].read_text()
+
+
 def test_cli_qc_returns_success_for_good_recording(tmp_path: Path) -> None:
     csv_path = tmp_path / "recording.csv"
     _write_small_csv(csv_path)

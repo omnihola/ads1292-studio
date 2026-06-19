@@ -17,6 +17,7 @@ from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, evaluate_quality_gate
 from ads1292_studio.report import export_review_report
 from ads1292_studio.segments import analyze_protocol_segments, evaluate_segment_quality_gates
+from ads1292_studio.session_index import export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import review_channels
 
@@ -145,6 +146,14 @@ def cmd_batch(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_index(args: argparse.Namespace) -> int:
+    export = export_session_index(root=args.root, out_dir=args.out, title=args.title)
+    print(f"csv={export.csv_path}")
+    print(f"html={export.html_path}")
+    print(f"rows={len(export.rows)}")
+    return 0
+
+
 def cmd_package(args: argparse.Namespace) -> int:
     export = export_session_package(csv_path=args.csv, out_dir=args.out, title=args.title, source=args.source)
     print(f"package={export.package_dir}")
@@ -241,6 +250,11 @@ def build_parser() -> argparse.ArgumentParser:
     batch.add_argument("--out", type=Path, default=Path("reports/batch"))
     batch.add_argument("--title", default="ADS1292 Batch Summary")
     batch.set_defaults(func=cmd_batch)
+    index = sub.add_parser("index")
+    index.add_argument("root", type=Path)
+    index.add_argument("--out", type=Path, default=Path("reports/session-index"))
+    index.add_argument("--title", default="ADS1292 Session Index")
+    index.set_defaults(func=cmd_index)
     package = sub.add_parser("package")
     package.add_argument("csv", type=Path)
     package.add_argument("--out", type=Path, default=Path("packages"))

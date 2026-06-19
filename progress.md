@@ -346,6 +346,23 @@
   - `tests/test_gui_quality_gate_config.py`
   - `README.md`
 
+### Phase 22: Session Index & Recording Library
+- **Status:** complete
+- Actions taken:
+  - Added `session_index.py` for recursive raw recording CSV discovery.
+  - Filtered generated `session-index` and grouped summary CSV outputs out of scans.
+  - Added CSV/HTML session index export with metadata, source channel, contact, R peaks, HR, quality label, and usable/review status.
+  - Added CLI `index <root> --out <dir>` command.
+  - Added GUI `Session Index` toolbar action for folder-to-library export.
+  - Verified against the real `../record/ads1292` folder; the index found 9 recordings and marked 2 as usable `Good ECG/QRS` CH2 recordings.
+- Files created/modified:
+  - `src/ads1292_studio/session_index.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_session_index.py`
+  - `tests/test_cli.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -446,6 +463,11 @@
 | Quality gate full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 53 passed | Pass |
 | Quality gate syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/app.py src/ads1292_studio/quality_gate.py src/ads1292_studio/session_package.py` | No syntax errors | Passed | Pass |
 | Quality gate real package smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package reports/quality-gate-package-smoke/package-source.csv --out packages/quality-gate-smoke --title ADS1292-Quality-Gate-Package-Smoke` | Manifest and report include quality gate sidecar/settings and real CSV quality | grep found `quality_gate`, `"role": "quality_gate"`, `max_noise_rms_counts`, `Quality Gate`, `Protocol Segment Gate`, `CH2`, and `Good ECG/QRS` | Pass |
+| Session index TDD red check | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library -q` before implementation | Missing session index module | `ModuleNotFoundError: ads1292_studio.session_index` | Pass |
+| Session index focused tests | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library -q` | Session index and CLI tests pass | 3 passed | Pass |
+| Session index real folder smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/ads1292 --out reports/session-index-smoke --title ADS1292-Real-Session-Index` | Real recording folder exports index | `rows=9`; grep found `CH2`, `Good ECG/QRS`, `Usable recordings`, and `2026-06-18-164923` | Pass |
+| Session index full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 56 passed | Pass |
+| Session index syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/app.py src/ads1292_studio/cli.py src/ads1292_studio/session_index.py` | No syntax errors | Passed | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -474,12 +496,14 @@
 | 2026-06-18 | Live GUI could mark future protocol steps as failed before enough data was collected | 1 | Added live protocol readiness gating before showing Segment Gate in the sidebar. |
 | 2026-06-18 | Quality gate JSON helper imports were missing during TDD red check | 1 | Added normalized sidecar template/read/write helpers and package support. |
 | 2026-06-18 | GUI quality gate parser helper was missing during TDD red check | 1 | Added explicit parser/formatter helpers for GUI gate fields. |
+| 2026-06-18 | Session index module was missing during TDD red check | 1 | Added recursive session index export plus CLI and GUI entry points. |
+| 2026-06-18 | Initial session index fixture was too short/sparse to be classified usable | 1 | Reused the established 7-second ECG-like synthetic waveform from batch tests. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 21 complete; ready to commit and push GUI quality gate sidecar iteration. |
+| Where am I? | Phase 22 complete; ready to run full verification, commit, and push session index iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, and GUI quality gate sidecars. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, and session index export. |

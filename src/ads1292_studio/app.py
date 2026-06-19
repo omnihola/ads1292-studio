@@ -26,6 +26,7 @@ from ads1292_studio.plots import robust_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
 from ads1292_studio.report import export_review_report
+from ads1292_studio.session_index import export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import (
     bandpass,
@@ -88,6 +89,7 @@ class App(tk.Tk):
         ttk.Button(toolbar, text="Export Package", command=self.export_package).pack(side=tk.LEFT, padx=4)
         ttk.Button(toolbar, text="Verify Package", command=self.verify_package).pack(side=tk.LEFT, padx=4)
         ttk.Button(toolbar, text="Batch Compare", command=self.batch_compare).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text="Session Index", command=self.session_index).pack(side=tk.LEFT, padx=4)
 
         self.save_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(toolbar, text="Save CSV", variable=self.save_var).pack(side=tk.LEFT, padx=8)
@@ -396,6 +398,24 @@ class App(tk.Tk):
             messagebox.showinfo("Batch summary exported", f"Saved summary:\n{export.html_path}")
         except Exception as exc:
             messagebox.showerror("Batch export failed", str(exc))
+
+    def session_index(self) -> None:
+        root = filedialog.askdirectory(title="Choose recordings folder")
+        if not root:
+            return
+        out_dir = filedialog.askdirectory(title="Choose session index output folder")
+        if not out_dir:
+            return
+        try:
+            export = export_session_index(
+                root=Path(root),
+                out_dir=Path(out_dir),
+                title="ADS1292 Session Index",
+            )
+            self._log(f"Exported session index: {export.html_path}")
+            messagebox.showinfo("Session index exported", f"Indexed {len(export.rows)} recordings:\n{export.html_path}")
+        except Exception as exc:
+            messagebox.showerror("Session index failed", str(exc))
 
     def export_package(self) -> None:
         if self.recording_path is None:

@@ -42,6 +42,7 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ../record/ads
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ../record/ads1292/2026-06-18-164923-ads1292-live.csv --max-baseline-drift 500 --max-noise-rms 1000 --max-peak-to-peak 30000
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ../record/ads1292/2026-06-18-164923-ads1292-live.csv --protocol reports/protocol-template.json --max-baseline-drift 500 --max-noise-rms 1000 --max-peak-to-peak 30000
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch recording-a.csv recording-b.csv --out reports/batch
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/ads1292 --out reports/session-index
 ```
 
 Batch export writes both a per-recording CSV and a `*-groups.csv` summary grouped
@@ -89,6 +90,9 @@ by electrode label.
 - GUI-configurable quality gate thresholds can be saved and loaded as
   `.quality-gate.json` sidecars; live/offline quality text, reports, and
   session packages use the same pass/fail settings.
+- Session index export scans a recordings folder, ignores generated summary
+  CSVs, and writes a CSV/HTML experiment library with ECG source, contact,
+  R-peak, HR, quality, and usable/review status.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety
