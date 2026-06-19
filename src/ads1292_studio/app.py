@@ -103,6 +103,12 @@ SIDEBAR_LAYOUT_SPEC = {
     "padding": (12, 12),
     "scroll_width": 316,
 }
+WORKSPACE_LAYOUT_SPEC = {
+    "main": "Main.TFrame",
+    "main_padding": (8, 12, 14, 12),
+    "sidebar_weight": 0,
+    "main_weight": 1,
+}
 MAIN_TABS = ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
 STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
 SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
@@ -426,6 +432,10 @@ def sidebar_layout_spec() -> dict[str, object]:
 
 def workspace_notebook_styles() -> dict[str, str]:
     return dict(WORKSPACE_NOTEBOOK_STYLES)
+
+
+def workspace_layout_spec() -> dict[str, object]:
+    return dict(WORKSPACE_LAYOUT_SPEC)
 
 
 def workflow_hint_styles() -> dict[str, str]:
@@ -960,6 +970,8 @@ class App(tk.Tk):
 
         body = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.body_pane = body
+        workspace_spec = workspace_layout_spec()
         sidebar_spec = sidebar_layout_spec()
         side_shell = ttk.Frame(
             body,
@@ -968,15 +980,16 @@ class App(tk.Tk):
             style=str(sidebar_spec["shell"]),
         )
         self.sidebar_shell = side_shell
-        body.add(side_shell, weight=0)
+        body.add(side_shell, weight=workspace_spec["sidebar_weight"])
         sidebar = self._build_sidebar(side_shell)
         status_side = sidebar["Status"]
         session_side = sidebar["Session"]
         validation_side = sidebar["Validation"]
         protocol_side = sidebar["Protocol"]
         actions_side = sidebar["Actions"]
-        main = ttk.Frame(body, padding=(8, 10, 12, 10), style="Main.TFrame")
-        body.add(main, weight=1)
+        main = ttk.Frame(body, padding=workspace_spec["main_padding"], style=str(workspace_spec["main"]))
+        self.main_workspace = main
+        body.add(main, weight=workspace_spec["main_weight"])
 
         self.metrics_var = tk.StringVar(value="No session")
         self.quality_var = tk.StringVar(value="Quality: --")

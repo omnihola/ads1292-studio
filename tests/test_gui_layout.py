@@ -32,6 +32,7 @@ from ads1292_studio.app import (
     toolbar_hint_styles,
     toolbar_layout_spec,
     workflow_hint_styles,
+    workspace_layout_spec,
     workspace_notebook_styles,
 )
 
@@ -130,6 +131,15 @@ def test_sidebar_layout_spec_stabilizes_control_column() -> None:
 
 def test_gui_layout_names_main_workspaces_clearly() -> None:
     assert main_tab_labels() == ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
+
+
+def test_workspace_layout_spec_balances_sidebar_and_signal_area() -> None:
+    assert workspace_layout_spec() == {
+        "main": "Main.TFrame",
+        "main_padding": (8, 12, 14, 12),
+        "sidebar_weight": 0,
+        "main_weight": 1,
+    }
 
 
 def test_header_connection_styles_make_status_a_pill() -> None:
