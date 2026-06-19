@@ -33,6 +33,7 @@ from ads1292_studio.display import (
 )
 from ads1292_studio.events import EventMarker, read_events_json, write_events_json
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
+from ads1292_studio.gui_samples import append_live_sample_batch
 from ads1292_studio.gui_scroll import ScrollableFrame, _mousewheel_units
 from ads1292_studio.gui_session_index import build_session_index_message
 from ads1292_studio.gui_state import (
@@ -903,9 +904,16 @@ class App(tk.Tk):
         self._drain_stream_start_results()
         self._drain_live_quality_results()
         sample_batch = drain_queue_items(self.samples, MAX_SAMPLES_PER_TICK)
-        latest = sample_batch[-1] if sample_batch else None
-        for sample in sample_batch:
-            self._append_sample(sample)
+        self.sample_index, latest = append_live_sample_batch(
+            sample_batch,
+            start_index=self.sample_index,
+            indices=self.indices,
+            ch1=self.ch1,
+            ch2=self.ch2,
+            status=self.status,
+            board_hr=self.board_hr,
+            board_rr=self.board_rr,
+        )
         if latest is not None:
             self._redraw_live()
             self._apply_control_states()
@@ -1072,15 +1080,6 @@ class App(tk.Tk):
                 peak_to_peak_counts=result.metrics.peak_to_peak_counts,
             )
         )
-
-    def _append_sample(self, sample: StreamSample) -> None:
-        self.indices.append(self.sample_index)
-        self.sample_index += 1
-        self.ch1.append(sample.ch1)
-        self.ch2.append(sample.ch2)
-        self.status.append(sample.lead_off_bits)
-        self.board_hr.append(sample.board_heart_rate)
-        self.board_rr.append(sample.board_respiration_rate)
 
     def _refresh_display_plots(self, _event: tk.Event | None = None) -> None:
         key = self._display_refresh_key()
