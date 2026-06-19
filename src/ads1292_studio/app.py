@@ -4,6 +4,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import islice
 from pathlib import Path
 import queue
 import threading
@@ -44,6 +45,16 @@ from ads1292_studio.display import (
 from ads1292_studio.events import EventMarker, read_events_json, write_events_json
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_session_index import build_session_index_message
+from ads1292_studio.gui_layout import (
+    build_acquisition_toolbar,
+    build_body_shell,
+    build_display_toolbar,
+    build_header,
+    build_workspace_tabs,
+    initialize_sidebar_state,
+    populate_sidebar,
+    register_control_buttons,
+)
 from ads1292_studio.gui_specs import (
     ADS1292R_CHANNEL_LABELS,
     ADS1292R_ECG_SOURCE,
@@ -517,6 +528,12 @@ def display_signal_values(
     return display * gain
 
 
+def deque_tail_array(values: deque[float] | deque[int], count: int, *, dtype: object = float) -> np.ndarray:
+    visible_count = max(0, min(len(values), int(count)))
+    start = len(values) - visible_count
+    return np.fromiter(islice(values, start, None), dtype=dtype, count=visible_count)
+
+
 def compact_ecg_source_label(source: str | None) -> str:
     if source in {"CH1", "CH2"}:
         return source
@@ -809,421 +826,24 @@ class App(tk.Tk):
         self.connection_var = tk.StringVar(value="Not connected")
         self.configure(bg=APP_VISUAL_TOKENS["surface"])
 
-        header_spec = header_layout_spec()
-        header = ttk.Frame(self, padding=header_spec["padding"], style=str(header_spec["frame"]))
-        header.pack(side=tk.TOP, fill=tk.X)
-        self.header_frame = header
-        header_text = header_text_styles()
-        self.header_title_label = ttk.Label(header, text="ADS1292 Studio", style=str(header_text["title"]["style"]))
-        self.header_title_label.pack(side=tk.LEFT)
-        self.header_subtitle_label = ttk.Label(
-            header,
-            text="MOTAC ECG validation",
-            style=str(header_text["subtitle"]["style"]),
-        )
-        self.header_subtitle_label.pack(side=tk.LEFT, padx=header_spec["subtitle_padding"])
-        self.connection_label = ttk.Label(
-            header,
-            textvariable=self.connection_var,
-            style=header_connection_style("warning"),
-        )
-        self.connection_label.pack(side=tk.RIGHT)
-        self.header_separator = ttk.Frame(
+        build_header(self)
+        build_acquisition_toolbar(self)
+        build_display_toolbar(
             self,
-            height=header_spec["separator_height"],
-            style=str(header_spec["separator"]),
+            default_display_settings=DEFAULT_DISPLAY_SETTINGS,
+            default_filter_settings=DEFAULT_FILTER_SETTINGS,
+            initial_hint_text=toolbar_display_hint_text(DEFAULT_DISPLAY_SETTINGS, DEFAULT_FILTER_SETTINGS),
         )
-        self.header_separator.pack(side=tk.TOP, fill=tk.X)
-
-        toolbar_spec = toolbar_layout_spec()
-        toolbar = ttk.Frame(self, padding=toolbar_spec["padding"], style=str(toolbar_spec["frame"]))
-        toolbar.pack(side=tk.TOP, fill=tk.X)
-        self.toolbar_frame = toolbar
-
-        ttk.Label(toolbar, text="Port", style=str(toolbar_label_spec()["style"])).pack(side=tk.LEFT)
-        self.port_var = tk.StringVar()
-        toolbar_styles = toolbar_control_styles()
-        self.port_combo = ttk.Combobox(
-            toolbar,
-            textvariable=self.port_var,
-            width=int(toolbar_spec["port_width"]),
-            style=toolbar_styles["port"],
-        )
-        self.port_combo.pack(side=tk.LEFT, padx=toolbar_spec["port_padding"])
-        self.refresh_button = ttk.Button(
-            toolbar,
-            text="Refresh",
-            command=self.refresh_ports,
-            style=toolbar_button_style("Refresh"),
-        )
-        self.refresh_button.pack(side=tk.LEFT, padx=toolbar_spec["refresh_padding"])
-        self.connect_button = ttk.Button(
-            toolbar,
-            text="Connect",
-            command=self.connect,
-            style=toolbar_button_style("Connect"),
-        )
-        self.connect_button.pack(side=tk.LEFT, padx=toolbar_spec["primary_action_padding"])
-        self.start_button = ttk.Button(
-            toolbar,
-            text="Start",
-            command=self.start,
-            style=toolbar_button_style("Start"),
-        )
-        self.start_button.pack(side=tk.LEFT, padx=toolbar_spec["inline_action_padding"])
-        self.stop_button = ttk.Button(
-            toolbar,
-            text="Stop",
-            command=self.stop,
-            style=toolbar_button_style("Stop"),
-        )
-        self.stop_button.pack(side=tk.LEFT)
-        self.toolbar_acquisition_separator = ttk.Frame(
-            toolbar,
-            width=toolbar_spec["separator_width"],
-            style="ToolbarSeparator.TFrame",
-        )
-        self.toolbar_acquisition_separator.pack(
-            side=tk.LEFT,
-            fill=tk.Y,
-            padx=toolbar_group_padding()["separator"],
-        )
-
-        self.save_var = tk.BooleanVar(value=True)
-        self.save_check = ttk.Checkbutton(
-            toolbar,
-            text="Save CSV",
-            variable=self.save_var,
-            style=toolbar_styles["toggle"],
-        )
-        self.save_check.pack(side=tk.LEFT, padx=toolbar_spec["save_padding"])
-
-        display_toolbar = ttk.Frame(self, padding=toolbar_spec["padding"], style=str(toolbar_spec["frame"]))
-        display_toolbar.pack(side=tk.TOP, fill=tk.X)
-        self.display_toolbar_frame = display_toolbar
-        toolbar = display_toolbar
-        self.autoscale_var = tk.BooleanVar(value=True)
-        self.autoscale_check = ttk.Checkbutton(
-            toolbar,
-            text="Auto scale",
-            variable=self.autoscale_var,
-            command=self._refresh_display_plots,
-            style=toolbar_styles["toggle"],
-        )
-        self.autoscale_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
-        self.highpass_filter_var = tk.BooleanVar(value=DEFAULT_FILTER_SETTINGS.highpass_enabled)
-        self.highpass_filter_check = ttk.Checkbutton(
-            toolbar,
-            text="HP",
-            variable=self.highpass_filter_var,
-            command=self._refresh_display_plots,
-            style=toolbar_styles["toggle"],
-        )
-        self.highpass_filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
-        self.notch_filter_var = tk.BooleanVar(value=DEFAULT_FILTER_SETTINGS.notch_enabled)
-        self.notch_filter_check = ttk.Checkbutton(
-            toolbar,
-            text="Notch",
-            variable=self.notch_filter_var,
-            command=self._refresh_display_plots,
-            style=toolbar_styles["toggle"],
-        )
-        self.notch_filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
-        self.lowpass_filter_var = tk.BooleanVar(value=DEFAULT_FILTER_SETTINGS.lowpass_enabled)
-        self.lowpass_filter_check = ttk.Checkbutton(
-            toolbar,
-            text="LP",
-            variable=self.lowpass_filter_var,
-            command=self._refresh_display_plots,
-            style=toolbar_styles["toggle"],
-        )
-        self.lowpass_filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
-        self.filter_var = tk.BooleanVar(value=DEFAULT_FILTER_SETTINGS.bandpass_enabled)
-        self.filter_check = ttk.Checkbutton(
-            toolbar,
-            text="Bandpass",
-            variable=self.filter_var,
-            command=self._refresh_display_plots,
-            style=toolbar_styles["toggle"],
-        )
-        self.filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
-        self.display_filter_separator = ttk.Frame(
-            toolbar,
-            width=toolbar_spec["separator_width"],
-            style="ToolbarSeparator.TFrame",
-        )
-        self.display_filter_separator.pack(
-            side=tk.LEFT,
-            fill=tk.Y,
-            padx=toolbar_group_padding()["separator"],
-        )
-        self.display_window_var = tk.StringVar(value=f"{DEFAULT_DISPLAY_SETTINGS.time_window_seconds:g} s")
-        ttk.Label(toolbar, text="Window", style=str(toolbar_label_spec()["style"])).pack(
-            side=tk.LEFT,
-            padx=toolbar_spec["display_label_padding"],
-        )
-        self.display_window_combo = ttk.Combobox(
-            toolbar,
-            textvariable=self.display_window_var,
-            width=int(toolbar_spec["display_width"]),
-            values=display_window_labels(),
-            state="readonly",
-            style=toolbar_styles["port"],
-        )
-        self.display_window_combo.pack(side=tk.LEFT, padx=toolbar_spec["display_control_padding"])
-        self.display_window_combo.bind("<<ComboboxSelected>>", self._refresh_display_plots)
-        self.display_gain_var = tk.StringVar(value=f"{DEFAULT_DISPLAY_SETTINGS.gain:g}x")
-        ttk.Label(toolbar, text="Gain", style=str(toolbar_label_spec()["style"])).pack(
-            side=tk.LEFT,
-            padx=toolbar_spec["display_label_padding"],
-        )
-        self.display_gain_combo = ttk.Combobox(
-            toolbar,
-            textvariable=self.display_gain_var,
-            width=int(toolbar_spec["display_width"]),
-            values=display_gain_labels(),
-            state="readonly",
-            style=toolbar_styles["port"],
-        )
-        self.display_gain_combo.pack(side=tk.LEFT, padx=toolbar_spec["display_control_padding"])
-        self.display_gain_combo.bind("<<ComboboxSelected>>", self._refresh_display_plots)
-        self.sweep_speed_var = tk.StringVar(value=f"{DEFAULT_DISPLAY_SETTINGS.sweep_speed_mm_s} mm/s")
-        ttk.Label(toolbar, text="Speed", style=str(toolbar_label_spec()["style"])).pack(
-            side=tk.LEFT,
-            padx=toolbar_spec["display_label_padding"],
-        )
-        self.sweep_speed_combo = ttk.Combobox(
-            toolbar,
-            textvariable=self.sweep_speed_var,
-            width=int(toolbar_spec["display_width"]),
-            values=sweep_speed_labels(),
-            state="readonly",
-            style=toolbar_styles["port"],
-        )
-        self.sweep_speed_combo.pack(side=tk.LEFT, padx=toolbar_spec["display_control_padding"])
-        self.sweep_speed_combo.bind("<<ComboboxSelected>>", self._refresh_display_plots)
-        self.toolbar_context_separator = ttk.Frame(
-            toolbar,
-            width=toolbar_spec["separator_width"],
-            style="ToolbarSeparator.TFrame",
-        )
-        self.toolbar_context_separator.pack(
-            side=tk.LEFT,
-            fill=tk.Y,
-            padx=toolbar_group_padding()["separator"],
-        )
-        self.source_var = tk.StringVar(value=ADS1292R_ECG_SOURCE)
-        self.toolbar_hint_var = tk.StringVar(
-            value=toolbar_display_hint_text(DEFAULT_DISPLAY_SETTINGS, DEFAULT_FILTER_SETTINGS)
-        )
-        self._build_toolbar_hint_chip(toolbar, self.toolbar_hint_var)
-
-        body = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
-        body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        self.body_pane = body
-        workspace_spec = workspace_layout_spec()
-        sidebar_spec = sidebar_layout_spec()
-        side_shell = ttk.Frame(
-            body,
-            width=sidebar_spec["width"],
-            padding=sidebar_spec["padding"],
-            style=str(sidebar_spec["shell"]),
-        )
-        self.sidebar_shell = side_shell
-        body.add(side_shell, weight=workspace_spec["sidebar_weight"])
-        sidebar = self._build_sidebar(side_shell)
-        status_side = sidebar["Status"]
-        session_side = sidebar["Session"]
-        validation_side = sidebar["Validation"]
-        protocol_side = sidebar["Protocol"]
-        actions_side = sidebar["Actions"]
-        main = ttk.Frame(body, padding=workspace_spec["main_padding"], style=str(workspace_spec["main"]))
-        self.main_workspace = main
-        body.add(main, weight=workspace_spec["main_weight"])
-
-        self.metrics_var = tk.StringVar(value="No session")
-        self.quality_var = tk.StringVar(value="Quality: --")
-        self.path_var = tk.StringVar(value="CSV: --")
-        self.workflow_hint_var = tk.StringVar(value="")
-        self.status_overview_var = tk.StringVar(value="")
-        self.status_card_vars = {label: tk.StringVar(value="") for label in STATUS_CARD_LABELS}
-        self.status_card_label_widgets: dict[str, ttk.Label] = {}
-        self.status_card_value_labels: dict[str, ttk.Label] = {}
-        self.status_card_tone_stripes: dict[str, tk.Frame] = {}
-        self.channel_map_label_widgets: dict[str, ttk.Label] = {}
-        self.channel_map_value_labels: dict[str, ttk.Label] = {}
-        self.channel_map_tone_stripes: dict[str, tk.Frame] = {}
-        self.status_detail_value_labels: dict[str, ttk.Label] = {}
-        self.signal_card_vars = {label: tk.StringVar(value="") for label in SIGNAL_CARD_LABELS}
-        self.signal_card_label_widgets: dict[str, ttk.Label] = {}
-        self.signal_card_value_labels: dict[str, ttk.Label] = {}
-        self.signal_card_tone_stripes: dict[str, tk.Frame] = {}
-        self.session_id_var = tk.StringVar(value="untitled-session")
-        self.subject_id_var = tk.StringVar(value="anonymous")
-        self.electrode_var = tk.StringVar(value="commercial Ag/AgCl control")
-        self.montage_var = tk.StringVar(value="RA/LA/RL torso")
-        self.operator_var = tk.StringVar(value="")
-        self.notes_var = tk.StringVar(value="")
-        self.event_label_var = tk.StringVar(value="motion")
-        self.event_notes_var = tk.StringVar(value="")
-        self.event_count_var = tk.StringVar(value="0 events")
-        self.event_count_label: ttk.Label | None = None
-        self.calibration_label_var = tk.StringVar(value="ADS1292 default")
-        self.vref_mv_var = tk.StringVar(value="2420")
-        self.pga_gain_var = tk.StringVar(value="6")
-        self.gate_min_duration_var = tk.StringVar(value="8")
-        self.gate_min_contact_var = tk.StringVar(value="95")
-        self.gate_min_r_peaks_var = tk.StringVar(value="5")
-        self.gate_min_hr_var = tk.StringVar(value="35")
-        self.gate_max_hr_var = tk.StringVar(value="180")
-        self.gate_require_qrs_var = tk.BooleanVar(value=True)
-        self.gate_max_drift_var = tk.StringVar(value="")
-        self.gate_max_noise_var = tk.StringVar(value="")
-        self.gate_max_ptp_var = tk.StringVar(value="")
-        protocol = protocol_template()
-        self.protocol_name_var = tk.StringVar(value=protocol.name)
-        self.protocol_objective_var = tk.StringVar(value=protocol.objective)
-        self.protocol_steps_var = tk.StringVar(value=_format_protocol_steps(protocol.steps))
-        self.protocol_acceptance_var = tk.StringVar(value=protocol.acceptance_notes)
-        self.protocol_note_labels: dict[str, ttk.Label] = {}
-        ttk.Label(status_side, text="Next Step", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 6))
-        self._build_workflow_hint(status_side)
-        ttk.Label(status_side, text="Overview", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
-        self._build_status_cards(status_side)
-        ttk.Label(status_side, text="Channel Map", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
-        self._build_channel_map_cards(status_side)
-        ttk.Label(status_side, text="Signal Quality", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
-        self._build_signal_quality_cards(status_side)
-        for label, var in (
-            ("Session", self.metrics_var),
-            ("Quality", self.quality_var),
-            ("Storage", self.path_var),
-        ):
-            self._build_status_detail_card(status_side, label, var)
-
-        ttk.Label(session_side, text="Recording Notes", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
-        self._metadata_entry(session_side, "Session ID", self.session_id_var)
-        self._metadata_entry(session_side, "Subject", self.subject_id_var)
-        self._metadata_entry(session_side, "Electrode", self.electrode_var)
-        self._metadata_entry(session_side, "Montage", self.montage_var)
-        self._metadata_entry(session_side, "Operator", self.operator_var)
-        self._metadata_entry(session_side, "Notes", self.notes_var)
-        ttk.Label(session_side, text="Events", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
-        self._metadata_entry(session_side, "Event label", self.event_label_var)
-        self._metadata_entry(session_side, "Event notes", self.event_notes_var)
-        self.add_event_button = ttk.Button(
-            session_side,
-            text="Add Event",
-            command=self.add_event,
-            style=sidebar_action_button_style(),
-        )
-        self.add_event_button.pack(anchor=tk.W, fill=tk.X, pady=(6, 2))
-        self._build_event_count_card(session_side)
-
-        ttk.Label(validation_side, text="Calibration", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
-        self._metadata_entry(validation_side, "Label", self.calibration_label_var)
-        self._metadata_entry(validation_side, "Vref mV", self.vref_mv_var)
-        self._metadata_entry(validation_side, "PGA gain", self.pga_gain_var)
-        ttk.Label(validation_side, text="Quality Gate", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
-        self._metadata_entry(validation_side, "Min duration s", self.gate_min_duration_var)
-        self._metadata_entry(validation_side, "Min contact %", self.gate_min_contact_var)
-        self._metadata_entry(validation_side, "Min R peaks", self.gate_min_r_peaks_var)
-        self._metadata_entry(validation_side, "HR min bpm", self.gate_min_hr_var)
-        self._metadata_entry(validation_side, "HR max bpm", self.gate_max_hr_var)
-        self.gate_require_qrs_check = ttk.Checkbutton(
-            validation_side,
-            text="Require QRS clear",
-            variable=self.gate_require_qrs_var,
-            style=sidebar_field_styles()["check"],
-        )
-        self.gate_require_qrs_check.pack(anchor=tk.W, pady=(5, 2))
-        self._metadata_entry(validation_side, "Max drift counts", self.gate_max_drift_var)
-        self._metadata_entry(validation_side, "Max noise RMS", self.gate_max_noise_var)
-        self._metadata_entry(validation_side, "Max peak-to-peak", self.gate_max_ptp_var)
-
-        ttk.Label(protocol_side, text="Protocol", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
-        self._metadata_entry(protocol_side, "Name", self.protocol_name_var)
-        self._metadata_entry(protocol_side, "Objective", self.protocol_objective_var)
-        self._build_protocol_note_card(protocol_side, "Steps", self.protocol_steps_var)
-        self._build_protocol_note_card(protocol_side, "Acceptance", self.protocol_acceptance_var)
-
-        self.action_section_labels: dict[str, ttk.Label] = {}
-        self._build_action_section_heading(actions_side, "Review", top_padding=8)
-        self.load_csv_button = ttk.Button(
-            actions_side,
-            text="Load CSV",
-            command=self.load_csv,
-            style=sidebar_action_button_style(),
-        )
-        self.load_csv_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        self.export_report_button = ttk.Button(
-            actions_side,
-            text="Export Report",
-            command=self.export_report,
-            style=sidebar_action_button_style(),
-        )
-        self.export_report_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        self._build_action_section_heading(actions_side, "Package")
-        self.export_package_button = ttk.Button(
-            actions_side,
-            text="Export Package",
-            command=self.export_package,
-            style=sidebar_action_button_style(),
-        )
-        self.export_package_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        self.verify_package_button = ttk.Button(
-            actions_side,
-            text="Verify Package",
-            command=self.verify_package,
-            style=sidebar_action_button_style(),
-        )
-        self.verify_package_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        self._build_action_section_heading(actions_side, "Library")
-        self.batch_compare_button = ttk.Button(
-            actions_side,
-            text="Batch Compare",
-            command=self.batch_compare,
-            style=sidebar_action_button_style(),
-        )
-        self.batch_compare_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        self.session_index_button = ttk.Button(
-            actions_side,
-            text="Session Index",
-            command=self.session_index,
-            style=sidebar_action_button_style(),
-        )
-        self.session_index_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        self._build_action_section_heading(actions_side, "Safety")
-        self._build_safety_notice(actions_side)
-
-        self.notebook = ttk.Notebook(main, style=workspace_notebook_styles()["notebook"])
-        self.notebook.pack(fill=tk.BOTH, expand=True)
-        self.live_tab = ttk.Frame(self.notebook)
-        self.review_tab = ttk.Frame(self.notebook)
-        self.pqrst_tab = ttk.Frame(self.notebook)
-        self.log_tab = ttk.Frame(self.notebook)
-        live_label, review_label, pqrst_label, log_label = main_tab_labels()
-        self.notebook.add(self.live_tab, text=live_label)
-        self.notebook.add(self.review_tab, text=review_label)
-        self.notebook.add(self.pqrst_tab, text=pqrst_label)
-        self.notebook.add(self.log_tab, text=log_label)
+        sidebar, main = build_body_shell(self)
+        initialize_sidebar_state(self, protocol_steps_text=_format_protocol_steps(protocol_template().steps))
+        populate_sidebar(self, sidebar)
+        build_workspace_tabs(self, main)
 
         self._build_live_plot()
         self._build_review_plot()
         self._build_pqrst_plot()
         self._build_log_panel()
-        self.control_buttons = {
-            "Refresh": self.refresh_button,
-            "Connect": self.connect_button,
-            "Start": self.start_button,
-            "Stop": self.stop_button,
-            "Load CSV": self.load_csv_button,
-            "Export Report": self.export_report_button,
-            "Export Package": self.export_package_button,
-            "Verify Package": self.verify_package_button,
-            "Batch Compare": self.batch_compare_button,
-            "Session Index": self.session_index_button,
-        }
+        register_control_buttons(self)
         self._apply_control_states()
 
     def _configure_status_styles(self) -> None:
@@ -2984,23 +2604,31 @@ class App(tk.Tk):
         self._clear_empty_plot_state()
         display_settings = self._display_settings()
         filter_settings = self._software_filter_settings()
-        source, ecg_raw, resp_raw = self._ads1292r_display_channels()
-        x = np.asarray(self.indices, dtype=float) / SAMPLE_RATE_HZ
-        left = max(0.0, x[-1] - display_settings.time_window_seconds)
-        right = max(display_settings.time_window_seconds, x[-1])
-        visible = (x >= left) & (x <= right)
-        visible_x = x[visible]
+        visible_count = min(
+            len(self.indices),
+            len(self.ch1),
+            len(self.ch2),
+            len(self.status),
+            int(display_settings.time_window_seconds * SAMPLE_RATE_HZ) + 2,
+        )
+        if visible_count <= 0:
+            return
+        source = ADS1292R_ECG_SOURCE
+        visible_x = deque_tail_array(self.indices, visible_count, dtype=float) / SAMPLE_RATE_HZ
+        left = max(0.0, visible_x[-1] - display_settings.time_window_seconds)
+        right = max(display_settings.time_window_seconds, visible_x[-1])
+        ecg_raw = deque_tail_array(self.ch2, visible_count, dtype=float)
+        resp_raw = deque_tail_array(self.ch1, visible_count, dtype=float)
         visible_ecg = self._display_signal(
-            ecg_raw[visible],
+            ecg_raw,
             filter_settings=filter_settings,
             invert=DEFAULT_ECG_INVERTED,
             gain=display_settings.gain,
         )
-        visible_resp = self._display_signal(resp_raw[visible], filter_settings=filter_settings)
+        visible_resp = self._display_signal(resp_raw, filter_settings=filter_settings)
         visible_ecg_plot = smooth_for_plot(visible_ecg, window=DISPLAY_SMOOTHING_WINDOW)
         visible_resp_plot = smooth_for_plot(visible_resp, window=DISPLAY_SMOOTHING_WINDOW)
-        status_arr = np.asarray(self.status, dtype=float)
-        visible_status = status_arr[visible]
+        visible_status = deque_tail_array(self.status, visible_count, dtype=float)
         peaks = detect_r_peaks(visible_ecg, SAMPLE_RATE_HZ)
         peaks_x = visible_x[list(peaks)] if peaks else []
         peaks_y = visible_ecg_plot[list(peaks)] if peaks else []
@@ -3043,7 +2671,7 @@ class App(tk.Tk):
             self.metrics_var,
             live_metrics_text(
                 sample_index=self.sample_index,
-                duration_seconds=float(x[-1]),
+                duration_seconds=float(visible_x[-1]),
                 ecg_label=ecg_label,
                 heart_rate_bpm=hr.median_bpm,
                 peak_count=len(peaks),

@@ -568,12 +568,12 @@ def test_channel_map_cards_explain_live_dual_channel_mapping() -> None:
 
 
 def test_status_sidebar_includes_channel_map_before_signal_quality() -> None:
-    from ads1292_studio.app import App
+    from ads1292_studio.gui_layout import populate_sidebar
 
-    source = inspect.getsource(App._build_ui)
+    source = inspect.getsource(populate_sidebar)
 
     assert "Channel Map" in source
-    assert "self._build_channel_map_cards(status_side)" in source
+    assert "app._build_channel_map_cards(status_side)" in source
     assert source.index("Channel Map") < source.index("Signal Quality")
 
 
