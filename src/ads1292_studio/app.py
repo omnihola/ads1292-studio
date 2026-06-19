@@ -591,6 +591,7 @@ STATUS_DETAIL_STYLES = {
     "label_font": ("Aptos", 10, "bold"),
     "value_foreground": "#172033",
     "value_font": ("Aptos", 11),
+    "value_wrap": 245,
 }
 CARD_LABEL_SPEC = {
     "style": "CardLabel.TLabel",

@@ -481,6 +481,7 @@ def test_status_detail_styles_frame_session_quality_and_storage() -> None:
         "label_font": ("Aptos", 10, "bold"),
         "value_foreground": "#172033",
         "value_font": ("Aptos", 11),
+        "value_wrap": 245,
     }
 
 
