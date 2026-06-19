@@ -737,7 +737,7 @@ def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
             "left": 0.08,
             "right": 0.985,
             "top": 0.955,
-            "bottom": 0.12,
+            "bottom": 0.13,
         },
     }
 

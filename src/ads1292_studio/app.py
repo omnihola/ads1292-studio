@@ -496,7 +496,7 @@ PLOT_FIGURE_LAYOUTS = {
         "left": 0.08,
         "right": 0.985,
         "top": 0.955,
-        "bottom": 0.12,
+        "bottom": 0.13,
     },
 }
 PLOT_CANVAS_WIDGET_STYLE = {
