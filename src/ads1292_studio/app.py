@@ -170,6 +170,10 @@ SIDEBAR_FIELD_STYLES = {
     "check": "FieldCheck.TCheckbutton",
 }
 SIDEBAR_ACTION_BUTTON_STYLE = "SidebarAction.TButton"
+ACTION_SECTION_STYLES = {
+    "frame": "ActionSection.TFrame",
+    "label": "ActionSection.TLabel",
+}
 SIDEBAR_NOTEBOOK_STYLES = {
     "notebook": "Sidebar.TNotebook",
     "tab": "Sidebar.TNotebook.Tab",
@@ -301,6 +305,10 @@ def sidebar_field_styles() -> dict[str, str]:
 
 def sidebar_action_button_style() -> str:
     return SIDEBAR_ACTION_BUTTON_STYLE
+
+
+def action_section_styles() -> dict[str, str]:
+    return dict(ACTION_SECTION_STYLES)
 
 
 def sidebar_notebook_styles() -> dict[str, str]:
@@ -935,7 +943,8 @@ class App(tk.Tk):
         self._build_protocol_note_card(protocol_side, "Steps", self.protocol_steps_var)
         self._build_protocol_note_card(protocol_side, "Acceptance", self.protocol_acceptance_var)
 
-        ttk.Label(actions_side, text="Review", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
+        self.action_section_labels: dict[str, ttk.Label] = {}
+        self._build_action_section_heading(actions_side, "Review", top_padding=8)
         self.load_csv_button = ttk.Button(
             actions_side,
             text="Load CSV",
@@ -950,7 +959,7 @@ class App(tk.Tk):
             style=sidebar_action_button_style(),
         )
         self.export_report_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        ttk.Label(actions_side, text="Package", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
+        self._build_action_section_heading(actions_side, "Package")
         self.export_package_button = ttk.Button(
             actions_side,
             text="Export Package",
@@ -965,7 +974,7 @@ class App(tk.Tk):
             style=sidebar_action_button_style(),
         )
         self.verify_package_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        ttk.Label(actions_side, text="Library", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
+        self._build_action_section_heading(actions_side, "Library")
         self.batch_compare_button = ttk.Button(
             actions_side,
             text="Batch Compare",
@@ -980,7 +989,7 @@ class App(tk.Tk):
             style=sidebar_action_button_style(),
         )
         self.session_index_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        ttk.Label(actions_side, text="Safety", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
+        self._build_action_section_heading(actions_side, "Safety")
         self._build_safety_notice(actions_side)
 
         self.notebook = ttk.Notebook(main, style=workspace_notebook_styles()["notebook"])
@@ -1106,6 +1115,14 @@ class App(tk.Tk):
         style.configure("SectionHeading.TLabel", background=tokens["surface"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
         style.configure("Muted.TLabel", background=tokens["surface"], foreground=tokens["muted"])
         style.configure("FieldLabel.TLabel", background=tokens["surface"], foreground=tokens["muted"], font=("Aptos", 10, "bold"))
+        style.configure("ActionSection.TFrame", background=tokens["panel_alt"], borderwidth=0)
+        style.configure(
+            "ActionSection.TLabel",
+            background=tokens["panel_alt"],
+            foreground=tokens["accent_dark"],
+            font=("Aptos", 10, "bold"),
+            padding=(8, 4),
+        )
         style.configure(
             "Field.TEntry",
             fieldbackground=tokens["panel"],
@@ -1311,6 +1328,14 @@ class App(tk.Tk):
         self.toolbar_hint_chip.pack(side=tk.LEFT)
         self.toolbar_hint_label = ttk.Label(self.toolbar_hint_chip, text=text, style=styles["label"])
         self.toolbar_hint_label.pack(side=tk.LEFT)
+
+    def _build_action_section_heading(self, parent: ttk.Frame, text: str, *, top_padding: int = 14) -> None:
+        styles = action_section_styles()
+        frame = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
+        frame.pack(anchor=tk.W, fill=tk.X, pady=(top_padding, 4))
+        label = ttk.Label(frame, text=text, style=styles["label"])
+        label.pack(anchor=tk.W)
+        self.action_section_labels[text] = label
 
     def _build_status_detail_card(self, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:
         styles = status_detail_styles()

@@ -1,4 +1,5 @@
 from ads1292_studio.app import (
+    action_section_styles,
     ads1292r_plot_layout_labels,
     app_visual_tokens,
     empty_plot_messages,
@@ -122,6 +123,13 @@ def test_sidebar_field_styles_make_forms_consistent() -> None:
 
 def test_sidebar_action_button_style_keeps_secondary_actions_consistent() -> None:
     assert sidebar_action_button_style() == "SidebarAction.TButton"
+
+
+def test_action_section_styles_make_sidebar_action_groups_scannable() -> None:
+    assert action_section_styles() == {
+        "frame": "ActionSection.TFrame",
+        "label": "ActionSection.TLabel",
+    }
 
 
 def test_workflow_hint_styles_make_next_step_prominent() -> None:
