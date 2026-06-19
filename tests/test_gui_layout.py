@@ -258,6 +258,8 @@ def test_sidebar_notebook_styles_make_navigation_compact() -> None:
     assert sidebar_notebook_styles() == {
         "notebook": "Sidebar.TNotebook",
         "tab": "Sidebar.TNotebook.Tab",
+        "background": "#F6F8FB",
+        "borderwidth": 0,
         "tab_padding": (10, 6),
         "tab_font": ("Aptos", 10, "bold"),
         "tab_background": "#EEF3FA",
@@ -358,6 +360,8 @@ def test_workspace_notebook_styles_make_selected_tabs_visible() -> None:
     assert workspace_notebook_styles() == {
         "notebook": "Workspace.TNotebook",
         "tab": "Workspace.TNotebook.Tab",
+        "background": "#F6F8FB",
+        "borderwidth": 0,
         "tab_padding": (16, 8),
         "tab_font": ("Aptos", 12, "bold"),
         "tab_background": "#EEF3FA",

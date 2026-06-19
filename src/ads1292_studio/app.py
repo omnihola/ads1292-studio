@@ -501,6 +501,8 @@ ACTION_SECTION_STYLES = {
 SIDEBAR_NOTEBOOK_STYLES = {
     "notebook": "Sidebar.TNotebook",
     "tab": "Sidebar.TNotebook.Tab",
+    "background": "#F6F8FB",
+    "borderwidth": 0,
     "tab_padding": (10, 6),
     "tab_font": ("Aptos", 10, "bold"),
     "tab_background": "#EEF3FA",
@@ -512,6 +514,8 @@ SIDEBAR_NOTEBOOK_STYLES = {
 WORKSPACE_NOTEBOOK_STYLES = {
     "notebook": "Workspace.TNotebook",
     "tab": "Workspace.TNotebook.Tab",
+    "background": "#F6F8FB",
+    "borderwidth": 0,
     "tab_padding": (16, 8),
     "tab_font": ("Aptos", 12, "bold"),
     "tab_background": "#EEF3FA",
@@ -1943,7 +1947,11 @@ class App(tk.Tk):
         style.configure("TNotebook", background=tokens["surface"], borderwidth=0)
         style.configure("TNotebook.Tab", padding=(14, 7), font=("Aptos", 12, "bold"))
         sidebar_tabs = sidebar_notebook_styles()
-        style.configure("Sidebar.TNotebook", background=tokens["surface"], borderwidth=0)
+        style.configure(
+            "Sidebar.TNotebook",
+            background=sidebar_tabs["background"],
+            borderwidth=sidebar_tabs["borderwidth"],
+        )
         style.configure(
             "Sidebar.TNotebook.Tab",
             padding=sidebar_tabs["tab_padding"],
@@ -1963,7 +1971,11 @@ class App(tk.Tk):
             ],
         )
         workspace_tabs = workspace_notebook_styles()
-        style.configure("Workspace.TNotebook", background=tokens["surface"], borderwidth=0)
+        style.configure(
+            "Workspace.TNotebook",
+            background=workspace_tabs["background"],
+            borderwidth=workspace_tabs["borderwidth"],
+        )
         style.configure(
             "Workspace.TNotebook.Tab",
             padding=workspace_tabs["tab_padding"],
