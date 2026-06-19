@@ -594,6 +594,11 @@ def test_pqrst_plot_style_keeps_morphology_review_readable() -> None:
             "edgecolor": "#D9E1EC",
             "framealpha": 0.96,
             "labelcolor": "#293247",
+            "borderpad": 0.55,
+            "labelspacing": 0.42,
+            "handlelength": 2.3,
+            "handletextpad": 0.7,
+            "borderaxespad": 0.8,
         },
     }
 

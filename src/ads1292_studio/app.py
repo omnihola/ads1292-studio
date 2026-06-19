@@ -383,6 +383,11 @@ PQRST_PLOT_STYLE = {
         "edgecolor": "#D9E1EC",
         "framealpha": 0.96,
         "labelcolor": "#293247",
+        "borderpad": 0.55,
+        "labelspacing": 0.42,
+        "handlelength": 2.3,
+        "handletextpad": 0.7,
+        "borderaxespad": 0.8,
     },
 }
 EMPTY_PLOT_MESSAGES = {
