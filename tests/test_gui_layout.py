@@ -35,6 +35,7 @@ from ads1292_studio.app import (
     status_detail_styles,
     toolbar_button_style,
     toolbar_control_styles,
+    toolbar_frame_spec,
     toolbar_group_padding,
     toolbar_hint_styles,
     toolbar_label_spec,
@@ -124,6 +125,17 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
     assert toolbar_control_styles() == {
         "port": "Port.TCombobox",
         "toggle": "ToolbarToggle.TCheckbutton",
+    }
+
+
+def test_toolbar_frame_spec_groups_acquisition_controls_as_one_surface() -> None:
+    assert toolbar_frame_spec() == {
+        "frame": "Toolbar.TFrame",
+        "separator": "ToolbarSeparator.TFrame",
+        "background": "#EEF3FA",
+        "separator_background": "#D9E1EC",
+        "borderwidth": 1,
+        "relief": "flat",
     }
 
 

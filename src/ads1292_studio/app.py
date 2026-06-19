@@ -155,6 +155,14 @@ TOOLBAR_CONTROL_STYLES = {
     "port": "Port.TCombobox",
     "toggle": "ToolbarToggle.TCheckbutton",
 }
+TOOLBAR_FRAME_SPEC = {
+    "frame": "Toolbar.TFrame",
+    "separator": "ToolbarSeparator.TFrame",
+    "background": "#EEF3FA",
+    "separator_background": "#D9E1EC",
+    "borderwidth": 1,
+    "relief": "flat",
+}
 TOOLBAR_LABEL_SPEC = {
     "style": "ToolbarLabel.TLabel",
     "font": ("Aptos", 12, "bold"),
@@ -728,6 +736,10 @@ def input_chrome_spec() -> dict[str, dict[str, object]]:
 
 def toolbar_control_styles() -> dict[str, str]:
     return dict(TOOLBAR_CONTROL_STYLES)
+
+
+def toolbar_frame_spec() -> dict[str, object]:
+    return dict(TOOLBAR_FRAME_SPEC)
 
 
 def toolbar_label_spec() -> dict[str, object]:
@@ -1421,8 +1433,14 @@ class App(tk.Tk):
         style.configure("TFrame", background=tokens["surface"])
         style.configure("Header.TFrame", background=tokens["panel"], borderwidth=0)
         style.configure("HeaderSeparator.TFrame", background=tokens["border"], borderwidth=0)
-        style.configure("Toolbar.TFrame", background=tokens["panel_alt"], borderwidth=1, relief=tk.FLAT)
-        style.configure("ToolbarSeparator.TFrame", background=tokens["border"])
+        toolbar_frame = toolbar_frame_spec()
+        style.configure(
+            str(toolbar_frame["frame"]),
+            background=toolbar_frame["background"],
+            borderwidth=toolbar_frame["borderwidth"],
+            relief=toolbar_frame["relief"],
+        )
+        style.configure(str(toolbar_frame["separator"]), background=toolbar_frame["separator_background"])
         style.configure("SidebarShell.TFrame", background=tokens["surface"])
         style.configure("Main.TFrame", background=tokens["surface"])
         style.configure("TLabel", background=tokens["surface"], foreground=tokens["ink"])
