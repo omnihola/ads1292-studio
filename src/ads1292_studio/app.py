@@ -105,6 +105,10 @@ HEADER_CONNECTION_STYLES = {
     "warning": "Warning.Connection.TLabel",
     "neutral": "Neutral.Connection.TLabel",
 }
+HEADER_CONNECTION_PILL = {
+    "styles": HEADER_CONNECTION_STYLES,
+    "padding": (10, 5),
+}
 STATUS_TONE_COLORS = {
     "ready": "#1E7A46",
     "running": "#2F6FED",
@@ -254,6 +258,13 @@ def status_tone_style(tone: str) -> str:
 
 def header_connection_style(tone: str) -> str:
     return HEADER_CONNECTION_STYLES.get(tone, HEADER_CONNECTION_STYLES["neutral"])
+
+
+def header_connection_styles() -> dict[str, object]:
+    return {
+        "styles": dict(HEADER_CONNECTION_STYLES),
+        "padding": HEADER_CONNECTION_PILL["padding"],
+    }
 
 
 def status_tone_color(tone: str) -> str:
@@ -1019,11 +1030,51 @@ class App(tk.Tk):
         style.configure("TLabel", background=tokens["surface"], foreground=tokens["ink"])
         style.configure("AppTitle.TLabel", background=tokens["panel"], foreground=tokens["ink"], font=("Aptos", 20, "bold"))
         style.configure("AppSubtitle.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12))
-        style.configure("Connection.TLabel", background=tokens["panel"], foreground=tokens["accent"], font=("Aptos", 12, "bold"))
-        style.configure("Ready.Connection.TLabel", background=tokens["panel"], foreground=tokens["success"], font=("Aptos", 12, "bold"))
-        style.configure("Running.Connection.TLabel", background=tokens["panel"], foreground=tokens["accent"], font=("Aptos", 12, "bold"))
-        style.configure("Warning.Connection.TLabel", background=tokens["panel"], foreground=tokens["warning"], font=("Aptos", 12, "bold"))
-        style.configure("Neutral.Connection.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12, "bold"))
+        style.configure(
+            "Connection.TLabel",
+            background=tokens["panel_alt"],
+            foreground=tokens["accent"],
+            font=("Aptos", 12, "bold"),
+            padding=HEADER_CONNECTION_PILL["padding"],
+            borderwidth=1,
+            relief=tk.SOLID,
+        )
+        style.configure(
+            "Ready.Connection.TLabel",
+            background=tokens["panel_alt"],
+            foreground=tokens["success"],
+            font=("Aptos", 12, "bold"),
+            padding=HEADER_CONNECTION_PILL["padding"],
+            borderwidth=1,
+            relief=tk.SOLID,
+        )
+        style.configure(
+            "Running.Connection.TLabel",
+            background=tokens["panel_alt"],
+            foreground=tokens["accent"],
+            font=("Aptos", 12, "bold"),
+            padding=HEADER_CONNECTION_PILL["padding"],
+            borderwidth=1,
+            relief=tk.SOLID,
+        )
+        style.configure(
+            "Warning.Connection.TLabel",
+            background=tokens["panel_alt"],
+            foreground=tokens["warning"],
+            font=("Aptos", 12, "bold"),
+            padding=HEADER_CONNECTION_PILL["padding"],
+            borderwidth=1,
+            relief=tk.SOLID,
+        )
+        style.configure(
+            "Neutral.Connection.TLabel",
+            background=tokens["panel_alt"],
+            foreground=tokens["muted"],
+            font=("Aptos", 12, "bold"),
+            padding=HEADER_CONNECTION_PILL["padding"],
+            borderwidth=1,
+            relief=tk.SOLID,
+        )
         style.configure("ToolbarLabel.TLabel", background=tokens["panel_alt"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
         style.configure("ToolbarHint.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure(

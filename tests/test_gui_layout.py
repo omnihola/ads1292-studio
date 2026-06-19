@@ -4,6 +4,7 @@ from ads1292_studio.app import (
     empty_plot_messages,
     empty_plot_style,
     event_count_styles,
+    header_connection_styles,
     log_panel_spec,
     main_tab_labels,
     plot_panel_spec,
@@ -88,6 +89,18 @@ def test_sidebar_notebook_styles_make_navigation_compact() -> None:
 
 def test_gui_layout_names_main_workspaces_clearly() -> None:
     assert main_tab_labels() == ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
+
+
+def test_header_connection_styles_make_status_a_pill() -> None:
+    assert header_connection_styles() == {
+        "styles": {
+            "ready": "Ready.Connection.TLabel",
+            "running": "Running.Connection.TLabel",
+            "warning": "Warning.Connection.TLabel",
+            "neutral": "Neutral.Connection.TLabel",
+        },
+        "padding": (10, 5),
+    }
 
 
 def test_workspace_notebook_styles_make_selected_tabs_visible() -> None:
