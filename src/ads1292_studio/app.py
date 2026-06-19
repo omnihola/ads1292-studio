@@ -129,6 +129,10 @@ LOG_PANEL_SPEC = {
     "scrollbar": "vertical",
     "font": "Aptos 12",
 }
+SIDEBAR_FIELD_STYLES = {
+    "label": "FieldLabel.TLabel",
+    "entry": "Field.TEntry",
+}
 
 
 @dataclass(frozen=True)
@@ -193,6 +197,10 @@ def empty_plot_messages() -> dict[str, tuple[str, ...]]:
 
 def log_panel_spec() -> dict[str, str]:
     return dict(LOG_PANEL_SPEC)
+
+
+def sidebar_field_styles() -> dict[str, str]:
+    return dict(SIDEBAR_FIELD_STYLES)
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -766,6 +774,14 @@ class App(tk.Tk):
         style.configure("ToolbarHint.TLabel", background=tokens["panel_alt"], foreground=tokens["muted"])
         style.configure("SectionHeading.TLabel", background=tokens["surface"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
         style.configure("Muted.TLabel", background=tokens["surface"], foreground=tokens["muted"])
+        style.configure("FieldLabel.TLabel", background=tokens["surface"], foreground=tokens["muted"], font=("Aptos", 10, "bold"))
+        style.configure(
+            "Field.TEntry",
+            fieldbackground=tokens["panel"],
+            foreground=tokens["ink"],
+            insertcolor=tokens["accent"],
+            padding=(8, 5),
+        )
         style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
         style.configure("TButton", padding=(10, 6), font=("Aptos", 12))
@@ -854,8 +870,9 @@ class App(tk.Tk):
         return sections
 
     def _metadata_entry(self, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:
-        ttk.Label(parent, text=label, style="Muted.TLabel").pack(anchor=tk.W, pady=(6, 0))
-        ttk.Entry(parent, textvariable=variable).pack(anchor=tk.W, fill=tk.X)
+        styles = sidebar_field_styles()
+        ttk.Label(parent, text=label, style=styles["label"]).pack(anchor=tk.W, pady=(8, 2))
+        ttk.Entry(parent, textvariable=variable, style=styles["entry"]).pack(anchor=tk.W, fill=tk.X)
 
     def _build_live_plot(self) -> None:
         fig = self._new_plot_figure(figsize=(10, 7))

@@ -6,6 +6,7 @@ from ads1292_studio.app import (
     plot_trace_colors,
     primary_toolbar_button_labels,
     secondary_action_button_labels,
+    sidebar_field_styles,
     sidebar_tab_labels,
     toolbar_button_style,
 )
@@ -39,6 +40,13 @@ def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:
 
 def test_gui_layout_uses_task_based_sidebar_tabs() -> None:
     assert sidebar_tab_labels() == ("Status", "Session", "Validation", "Protocol", "Actions")
+
+
+def test_sidebar_field_styles_make_forms_consistent() -> None:
+    assert sidebar_field_styles() == {
+        "label": "FieldLabel.TLabel",
+        "entry": "Field.TEntry",
+    }
 
 
 def test_gui_layout_uses_ads1292r_synchronized_three_panel_view() -> None:
