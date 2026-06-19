@@ -343,11 +343,11 @@ EMPTY_PLOT_STYLE = {
     "text_color": "#657084",
     "box_face": "#FFFFFF",
     "box_edge": "#EAF1FF",
-    "font_size": 10,
+    "font_size": 9,
     "font_weight": "bold",
-    "alpha": 0.92,
-    "box_pad": 0.58,
-    "rounding": 0.18,
+    "alpha": 0.88,
+    "box_pad": 0.48,
+    "rounding": 0.12,
     "line_width": 0.8,
 }
 LOG_PANEL_SPEC = {
@@ -391,8 +391,8 @@ PANEL_CHROME_SPEC = {
 PLOT_PANEL_SPEC = {
     "shell": "Main.TFrame",
     "panel": "PlotPanel.TFrame",
-    "padding": (14, 14),
-    "panel_padding": (12, 12),
+    "padding": (10, 10),
+    "panel_padding": (10, 10),
 }
 PLOT_AXIS_STYLE = {
     "face": "#FFFFFF",
@@ -421,17 +421,17 @@ PLOT_AXIS_STYLE = {
 }
 PLOT_FIGURE_LAYOUTS = {
     "three_panel": {
-        "left": 0.075,
-        "right": 0.985,
-        "top": 0.965,
-        "bottom": 0.075,
-        "hspace": 0.36,
+        "left": 0.068,
+        "right": 0.99,
+        "top": 0.975,
+        "bottom": 0.068,
+        "hspace": 0.28,
     },
     "single_panel": {
-        "left": 0.08,
-        "right": 0.985,
-        "top": 0.955,
-        "bottom": 0.13,
+        "left": 0.072,
+        "right": 0.99,
+        "top": 0.965,
+        "bottom": 0.118,
     },
 }
 PLOT_CANVAS_WIDGET_STYLE = {

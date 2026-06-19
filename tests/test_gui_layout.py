@@ -744,11 +744,11 @@ def test_empty_plot_style_uses_muted_callouts() -> None:
         "text_color": "#657084",
         "box_face": "#FFFFFF",
         "box_edge": "#EAF1FF",
-        "font_size": 10,
+        "font_size": 9,
         "font_weight": "bold",
-        "alpha": 0.92,
-        "box_pad": 0.58,
-        "rounding": 0.18,
+        "alpha": 0.88,
+        "box_pad": 0.48,
+        "rounding": 0.12,
         "line_width": 0.8,
     }
 
@@ -811,8 +811,8 @@ def test_plot_panel_spec_frames_signal_workspaces() -> None:
     assert plot_panel_spec() == {
         "shell": "Main.TFrame",
         "panel": "PlotPanel.TFrame",
-        "padding": (14, 14),
-        "panel_padding": (12, 12),
+        "padding": (10, 10),
+        "panel_padding": (10, 10),
     }
 
 
@@ -957,17 +957,17 @@ def test_tick_scheduler_uses_current_gui_state_for_adaptive_interval() -> None:
 def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
     assert plot_figure_layouts() == {
         "three_panel": {
-            "left": 0.075,
-            "right": 0.985,
-            "top": 0.965,
-            "bottom": 0.075,
-            "hspace": 0.36,
+            "left": 0.068,
+            "right": 0.99,
+            "top": 0.975,
+            "bottom": 0.068,
+            "hspace": 0.28,
         },
         "single_panel": {
-            "left": 0.08,
-            "right": 0.985,
-            "top": 0.955,
-            "bottom": 0.13,
+            "left": 0.072,
+            "right": 0.99,
+            "top": 0.965,
+            "bottom": 0.118,
         },
     }
 
@@ -976,7 +976,7 @@ def test_plot_figure_layouts_returns_nested_copies() -> None:
     layouts = plot_figure_layouts()
     layouts["three_panel"]["hspace"] = 9.0
 
-    assert plot_figure_layouts()["three_panel"]["hspace"] == 0.36
+    assert plot_figure_layouts()["three_panel"]["hspace"] == 0.28
 
 
 def test_plot_canvas_widget_style_removes_embedded_canvas_chrome() -> None:
