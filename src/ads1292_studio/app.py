@@ -150,6 +150,15 @@ INPUT_CHROME_SPEC = {
         "disabled_foreground": "#657084",
         "active_background": "#F6F8FB",
     },
+    "toolbar_toggle": {
+        "padding": (5, 4),
+        "font": ("Aptos", 11, "bold"),
+        "background": "#EEF3FA",
+        "foreground": "#293247",
+        "active_foreground": "#1F4FB2",
+        "disabled_foreground": "#657084",
+        "active_background": "#EAF1FF",
+    },
 }
 TOOLBAR_CONTROL_STYLES = {
     "port": "Port.TCombobox",
@@ -1638,17 +1647,22 @@ class App(tk.Tk):
             ],
             arrowcolor=[("active", combobox_chrome["active_arrowcolor"])],
         )
+        toolbar_toggle = input_chrome["toolbar_toggle"]
+        toolbar_toggle_style = toolbar_control_styles()["toggle"]
         style.configure(
-            "ToolbarToggle.TCheckbutton",
-            background=tokens["panel_alt"],
-            foreground=tokens["ink"],
-            font=("Aptos", 11),
-            padding=(4, 2),
+            toolbar_toggle_style,
+            background=toolbar_toggle["background"],
+            foreground=toolbar_toggle["foreground"],
+            font=toolbar_toggle["font"],
+            padding=toolbar_toggle["padding"],
         )
         style.map(
-            "ToolbarToggle.TCheckbutton",
-            foreground=[("disabled", tokens["muted"]), ("active", tokens["accent_dark"])],
-            background=[("active", tokens["panel_alt"])],
+            toolbar_toggle_style,
+            foreground=[
+                ("disabled", toolbar_toggle["disabled_foreground"]),
+                ("active", toolbar_toggle["active_foreground"]),
+            ],
+            background=[("active", toolbar_toggle["active_background"])],
         )
         section_heading = section_heading_styles()
         style.configure(

@@ -189,6 +189,15 @@ def test_input_chrome_spec_keeps_forms_readable() -> None:
             "disabled_foreground": "#657084",
             "active_background": "#F6F8FB",
         },
+        "toolbar_toggle": {
+            "padding": (5, 4),
+            "font": ("Aptos", 11, "bold"),
+            "background": "#EEF3FA",
+            "foreground": "#293247",
+            "active_foreground": "#1F4FB2",
+            "disabled_foreground": "#657084",
+            "active_background": "#EAF1FF",
+        },
     }
 
 
