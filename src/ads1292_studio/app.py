@@ -1280,6 +1280,10 @@ def _mousewheel_units(event: tk.Event) -> int:
 
 
 class ScrollableFrame:
+    _instances: list["ScrollableFrame"] = []
+    _active_frame: "ScrollableFrame | None" = None
+    _global_mousewheel_bound = False
+
     def __init__(self, parent: tk.Widget, width: int = 280) -> None:
         scrollbar_spec = scrollbar_chrome_spec()
         self.frame = ttk.Frame(parent)
@@ -1297,9 +1301,20 @@ class ScrollableFrame:
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.content.bind("<Configure>", self._update_scroll_region)
         self.canvas.bind("<Configure>", self._fit_content_width)
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-        self.canvas.bind_all("<Button-4>", self._on_mousewheel)
-        self.canvas.bind_all("<Button-5>", self._on_mousewheel)
+        self.canvas.bind("<Enter>", self._activate_mousewheel)
+        self.content.bind("<Enter>", self._activate_mousewheel)
+        self.canvas.bind("<Leave>", self._deactivate_mousewheel)
+        self.frame.bind("<Destroy>", self._forget_instance, add="+")
+        ScrollableFrame._instances.append(self)
+        self._bind_global_mousewheel()
+
+    def _bind_global_mousewheel(self) -> None:
+        if ScrollableFrame._global_mousewheel_bound:
+            return
+        self.canvas.bind_all("<MouseWheel>", self._dispatch_mousewheel)
+        self.canvas.bind_all("<Button-4>", self._dispatch_mousewheel)
+        self.canvas.bind_all("<Button-5>", self._dispatch_mousewheel)
+        ScrollableFrame._global_mousewheel_bound = True
 
     def _update_scroll_region(self, _event: tk.Event) -> None:
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -1307,9 +1322,33 @@ class ScrollableFrame:
     def _fit_content_width(self, event: tk.Event) -> None:
         self.canvas.itemconfigure(self._content_window, width=event.width)
 
-    def _on_mousewheel(self, event: tk.Event) -> None:
-        if not self._contains_pointer(event):
+    def _activate_mousewheel(self, _event: tk.Event) -> None:
+        ScrollableFrame._active_frame = self
+
+    def _deactivate_mousewheel(self, event: tk.Event) -> None:
+        if ScrollableFrame._active_frame is self and not self._contains_pointer(event):
+            ScrollableFrame._active_frame = None
+
+    def _forget_instance(self, event: tk.Event) -> None:
+        if event.widget is not self.frame:
             return
+        ScrollableFrame._instances = [instance for instance in ScrollableFrame._instances if instance is not self]
+        if ScrollableFrame._active_frame is self:
+            ScrollableFrame._active_frame = None
+
+    def _dispatch_mousewheel(self, event: tk.Event) -> None:
+        target = self._mousewheel_target(event)
+        if target is None:
+            return
+        target._scroll_mousewheel(event)
+
+    def _mousewheel_target(self, event: tk.Event) -> "ScrollableFrame | None":
+        active = ScrollableFrame._active_frame
+        if active is not None and active._contains_pointer(event):
+            return active
+        return next((instance for instance in ScrollableFrame._instances if instance._contains_pointer(event)), None)
+
+    def _scroll_mousewheel(self, event: tk.Event) -> None:
         units = _mousewheel_units(event)
         if units:
             self.canvas.yview_scroll(units, "units")
