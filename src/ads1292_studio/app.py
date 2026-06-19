@@ -190,6 +190,10 @@ PLOT_AXIS_STYLE = {
     "grid_alpha": 0.45,
     "spine_linewidth": 0.8,
     "tick_label_size": 9,
+    "label_size": 10,
+    "title_size": 11,
+    "title_weight": "bold",
+    "title_pad": 8,
 }
 PLOT_FIGURE_LAYOUTS = {
     "three_panel": {
@@ -1647,14 +1651,26 @@ class App(tk.Tk):
             ax.set_facecolor(style["face"])
             ax.grid(True, color=style["grid"], linewidth=style["grid_linewidth"], alpha=style["grid_alpha"])
             ax.tick_params(colors=style["tick"], labelsize=style["tick_label_size"])
+            ax.xaxis.label.set_size(style["label_size"])
+            ax.yaxis.label.set_size(style["label_size"])
             ax.xaxis.label.set_color(style["label"])
             ax.yaxis.label.set_color(style["label"])
-            ax.title.set_color(style["label"])
+            self._set_signal_axis_title(ax, ax.get_title())
             for side in ("top", "right"):
                 ax.spines[side].set_visible(False)
             for side in ("left", "bottom"):
                 ax.spines[side].set_color(style["spine"])
                 ax.spines[side].set_linewidth(style["spine_linewidth"])
+
+    def _set_signal_axis_title(self, ax: object, title: str) -> None:
+        style = plot_axis_style()
+        ax.set_title(
+            title,
+            color=style["label"],
+            fontsize=style["title_size"],
+            fontweight=style["title_weight"],
+            pad=style["title_pad"],
+        )
 
     def _show_empty_plot_state(self, key: str, axes: tuple[object, ...]) -> None:
         style = empty_plot_style()
@@ -2246,9 +2262,12 @@ class App(tk.Tk):
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
         mode = "filtered" if self.filter_var.get() else "raw"
         polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
-        self.ax_live_ecg.set_title(f"ECG display: {ecg_label} | {mode}{polarity} | R peaks {len(peaks)}")
-        self.ax_live_resp.set_title(resp_label)
-        self.ax_live_status.set_title(contact_label)
+        self._set_signal_axis_title(
+            self.ax_live_ecg,
+            f"ECG display: {ecg_label} | {mode}{polarity} | R peaks {len(peaks)}",
+        )
+        self._set_signal_axis_title(self.ax_live_resp, resp_label)
+        self._set_signal_axis_title(self.ax_live_status, contact_label)
         self.metrics_var.set(
             f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {ecg_label} | HR {hr.median_bpm:.0f} bpm"
         )
@@ -2293,12 +2312,13 @@ class App(tk.Tk):
         self.review_status_line.set_data(plot_x, plot_status)
         self.review_peak_line.set_data(list(result.peaks), ecg[list(result.peaks)] if result.peaks else [])
         polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
-        self.ax_review_ecg.set_title(
+        self._set_signal_axis_title(
+            self.ax_review_ecg,
             f"Offline ECG: {ecg_label} | {'filtered' if self.filter_var.get() else 'raw'}{polarity} | "
-            f"HR {result.heart_rate.median_bpm:.1f} bpm | peaks {len(result.peaks)}"
+            f"HR {result.heart_rate.median_bpm:.1f} bpm | peaks {len(result.peaks)}",
         )
-        self.ax_review_resp.set_title(resp_label)
-        self.ax_review_status.set_title(contact_label)
+        self._set_signal_axis_title(self.ax_review_resp, resp_label)
+        self._set_signal_axis_title(self.ax_review_status, contact_label)
         for ax, values in ((self.ax_review_ecg, ecg), (self.ax_review_resp, resp)):
             ax.set_xlim(0, max(1, x[-1] if x.size else 1))
             ax.set_ylim(*robust_ylim(values))
@@ -2347,9 +2367,10 @@ class App(tk.Tk):
             self.ax_pqrst.axvspan(-220, -80, color=APP_VISUAL_TOKENS["success"], alpha=0.08, label="P search")
             self.ax_pqrst.axvspan(120, 380, color=APP_VISUAL_TOKENS["warning"], alpha=0.08, label="T search")
             self.ax_pqrst.legend(loc="upper right")
-        self.ax_pqrst.set_title(
+        self._set_signal_axis_title(
+            self.ax_pqrst,
             f"PQRST review: QRS={review.qrs_clear}, P tentative={review.p_tentative}, "
-            f"T tentative={review.t_tentative}, beats={review.beats_used}"
+            f"T tentative={review.t_tentative}, beats={review.beats_used}",
         )
         self.pqrst_canvas.draw_idle()
 

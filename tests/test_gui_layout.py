@@ -281,6 +281,10 @@ def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
         "grid_alpha": 0.45,
         "spine_linewidth": 0.8,
         "tick_label_size": 9,
+        "label_size": 10,
+        "title_size": 11,
+        "title_weight": "bold",
+        "title_pad": 8,
     }
 
 
