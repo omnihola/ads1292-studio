@@ -731,7 +731,7 @@ def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
             "right": 0.985,
             "top": 0.965,
             "bottom": 0.075,
-            "hspace": 0.34,
+            "hspace": 0.36,
         },
         "single_panel": {
             "left": 0.08,
@@ -746,7 +746,7 @@ def test_plot_figure_layouts_returns_nested_copies() -> None:
     layouts = plot_figure_layouts()
     layouts["three_panel"]["hspace"] = 9.0
 
-    assert plot_figure_layouts()["three_panel"]["hspace"] == 0.34
+    assert plot_figure_layouts()["three_panel"]["hspace"] == 0.36
 
 
 def test_plot_canvas_widget_style_removes_embedded_canvas_chrome() -> None:

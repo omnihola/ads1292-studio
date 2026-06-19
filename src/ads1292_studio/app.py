@@ -490,7 +490,7 @@ PLOT_FIGURE_LAYOUTS = {
         "right": 0.985,
         "top": 0.965,
         "bottom": 0.075,
-        "hspace": 0.34,
+        "hspace": 0.36,
     },
     "single_panel": {
         "left": 0.08,
