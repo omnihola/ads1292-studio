@@ -385,7 +385,7 @@ def test_workspace_notebook_styles_make_selected_tabs_visible() -> None:
         "tab": "Workspace.TNotebook.Tab",
         "background": "#F6F8FB",
         "borderwidth": 0,
-        "tab_padding": (16, 8),
+        "tab_padding": (18, 9),
         "tab_font": ("Aptos", 12, "bold"),
         "tab_background": "#EEF3FA",
         "selected_foreground": "#2F6FED",
