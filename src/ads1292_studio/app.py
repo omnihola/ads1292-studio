@@ -165,8 +165,9 @@ LOG_PANEL_SPEC = {
 }
 PLOT_PANEL_SPEC = {
     "shell": "Main.TFrame",
-    "panel": "Card.TFrame",
-    "padding": (12, 12),
+    "panel": "PlotPanel.TFrame",
+    "padding": (14, 14),
+    "panel_padding": (8, 8),
 }
 PLOT_AXIS_STYLE = {
     "face": "#FFFFFF",
@@ -1191,6 +1192,7 @@ class App(tk.Tk):
             background=[("active", tokens["surface"])],
         )
         style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        style.configure("PlotPanel.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
         style.configure("WorkflowHint.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure(
@@ -1561,7 +1563,7 @@ class App(tk.Tk):
         spec = plot_panel_spec()
         shell = ttk.Frame(parent, padding=spec["padding"], style=str(spec["shell"]))
         shell.pack(fill=tk.BOTH, expand=True)
-        panel = ttk.Frame(shell, padding=(0, 0), style=str(spec["panel"]))
+        panel = ttk.Frame(shell, padding=spec["panel_padding"], style=str(spec["panel"]))
         panel.pack(fill=tk.BOTH, expand=True)
         setattr(self, f"{name}_plot_shell", shell)
         setattr(self, f"{name}_plot_panel", panel)

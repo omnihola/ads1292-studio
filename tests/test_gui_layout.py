@@ -252,8 +252,9 @@ def test_log_panel_spec_keeps_long_sessions_readable() -> None:
 def test_plot_panel_spec_frames_signal_workspaces() -> None:
     assert plot_panel_spec() == {
         "shell": "Main.TFrame",
-        "panel": "Card.TFrame",
-        "padding": (12, 12),
+        "panel": "PlotPanel.TFrame",
+        "padding": (14, 14),
+        "panel_padding": (8, 8),
     }
 
 
