@@ -2,9 +2,13 @@ from pathlib import Path
 
 import numpy as np
 
+from ads1292_studio.calibration import Calibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
+from ads1292_studio.events import EventMarker, write_events_json
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
+from ads1292_studio.protocol import ProtocolStep, TestProtocol, write_protocol_json
+from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
 from ads1292_studio.session_index import export_session_index, scan_recording_directory
 
 
@@ -44,6 +48,19 @@ def _write_recording(root: Path, relative: str, electrode: str) -> Path:
     return path
 
 
+def _write_complete_sidecars(path: Path) -> None:
+    write_events_json(path.with_suffix(".events.json"), (EventMarker(0.5, "baseline", "quiet"),))
+    write_calibration_json(path.with_suffix(".calibration.json"), Calibration(label="bench-cal"))
+    write_protocol_json(
+        path.with_suffix(".protocol.json"),
+        TestProtocol(
+            name="session-index-protocol",
+            steps=(ProtocolStep(start_seconds=0.0, duration_seconds=1.0, label="baseline", instruction="sit still"),),
+        ),
+    )
+    write_quality_gate_json(path.with_suffix(".quality-gate.json"), QualityGate(min_duration_seconds=1.0))
+
+
 def test_scan_recording_directory_discovers_recordings_and_ignores_exports(tmp_path: Path) -> None:
     _write_recording(tmp_path, "baseline/control.csv", "commercial Ag/AgCl")
     _write_recording(tmp_path, "motac.csv", "MOTAC gel + Ag/AgCl")
@@ -57,9 +74,23 @@ def test_scan_recording_directory_discovers_recordings_and_ignores_exports(tmp_p
     assert all(row.status == "usable" for row in rows)
 
 
+def test_scan_recording_directory_reports_sidecar_completeness(tmp_path: Path) -> None:
+    partial = _write_recording(tmp_path, "partial.csv", "commercial Ag/AgCl")
+    complete = _write_recording(tmp_path, "complete.csv", "MOTAC gel + Ag/AgCl")
+    _write_complete_sidecars(complete)
+
+    rows = {row.session_id: row for row in scan_recording_directory(tmp_path)}
+
+    assert rows["complete"].sidecar_status == "complete"
+    assert rows["complete"].missing_sidecars == ""
+    assert rows["partial"].sidecar_status == "missing"
+    assert rows["partial"].missing_sidecars == "events;calibration;protocol;quality_gate"
+
+
 def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     _write_recording(tmp_path, "control.csv", "commercial Ag/AgCl")
-    _write_recording(tmp_path, "motac.csv", "MOTAC gel + Ag/AgCl")
+    motac = _write_recording(tmp_path, "motac.csv", "MOTAC gel + Ag/AgCl")
+    _write_complete_sidecars(motac)
     out_dir = tmp_path / "index"
 
     export = export_session_index(tmp_path, out_dir=out_dir, title="MOTAC Session Library")
@@ -71,5 +102,8 @@ def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     html = export.html_path.read_text()
     assert "relative_path,session_id,subject_id,electrode" in csv_text
     assert "commercial Ag/AgCl" in csv_text
+    assert "sidecar_status,missing_sidecars" in csv_text
+    assert "complete," in csv_text
     assert "MOTAC Session Library" in html
     assert "Usable recordings" in html
+    assert "Sidecars" in html

@@ -29,6 +29,8 @@ class SessionIndexRow:
     qrs_clear: bool
     quality_label: str
     status: str
+    sidecar_status: str
+    missing_sidecars: str
 
 
 @dataclass(frozen=True)
@@ -88,6 +90,7 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
         return None
     metadata = _metadata_for(path)
     metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz)
+    sidecar_status, missing_sidecars = _sidecar_status(path)
     return SessionIndexRow(
         path=path,
         relative_path=path.relative_to(root).as_posix(),
@@ -105,6 +108,8 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
         qrs_clear=metrics.qrs_clear,
         quality_label=metrics.quality_label,
         status=_status_for_quality(metrics.quality_label),
+        sidecar_status=sidecar_status,
+        missing_sidecars=missing_sidecars,
     )
 
 
@@ -119,6 +124,18 @@ def _status_for_quality(quality_label: str) -> str:
     if quality_label in {"Good ECG/QRS", "Usable ECG/QRS"}:
         return "usable"
     return "review"
+
+
+def _sidecar_status(csv_path: Path) -> tuple[str, str]:
+    expected = {
+        "metadata": csv_path.with_suffix(".json"),
+        "events": csv_path.with_suffix(".events.json"),
+        "calibration": csv_path.with_suffix(".calibration.json"),
+        "protocol": csv_path.with_suffix(".protocol.json"),
+        "quality_gate": csv_path.with_suffix(".quality-gate.json"),
+    }
+    missing = tuple(name for name, path in expected.items() if not path.exists())
+    return ("complete", "") if not missing else ("missing", ";".join(missing))
 
 
 def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
@@ -138,6 +155,8 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
         "qrs_clear",
         "quality_label",
         "status",
+        "sidecar_status",
+        "missing_sidecars",
     ]
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
@@ -159,6 +178,8 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...]) -> str:
         "HR median",
         "Quality",
         "Status",
+        "Sidecars",
+        "Missing Sidecars",
     ]
     body = []
     for row in rows:
@@ -173,6 +194,8 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...]) -> str:
             f"{row.hr_median_bpm:.1f}",
             row.quality_label,
             row.status,
+            row.sidecar_status,
+            row.missing_sidecars,
         ]
         body.append("<tr>" + "".join(f"<td>{escape(value)}</td>" for value in values) + "</tr>")
     return f"""<!doctype html>

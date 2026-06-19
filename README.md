@@ -93,6 +93,9 @@ by electrode label.
 - Session index export scans a recordings folder, ignores generated summary
   CSVs, and writes a CSV/HTML experiment library with ECG source, contact,
   R-peak, HR, quality, and usable/review status.
+- Session index also audits sidecar completeness for metadata, events,
+  calibration, protocol, and quality-gate files so incomplete experiment
+  records are visible before reporting or packaging.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

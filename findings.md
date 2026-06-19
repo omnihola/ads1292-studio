@@ -48,6 +48,7 @@
 | Show segment gate in GUI quality text | Users reviewing a loaded protocol CSV need the same segment gate status in the app sidebar, not only in exported artifacts. |
 | Add quality gate sidecars | GUI-selected validation thresholds must travel with recordings so live review, exported reports, and packages use the same pass/fail standard. |
 | Add session index export | Commercial-style experiment software needs a browsable library of recordings with quality/status fields, not only single-file actions. |
+| Add sidecar completeness audit | A usable ECG waveform can still be incomplete as an experiment record when metadata, events, calibration, protocol, or quality-gate sidecars are missing. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -70,6 +71,7 @@
 | Loaded CSV rendered before protocol/calibration sidecars were loaded | Load sidecars before `_show_recording()` so GUI review uses the recording's saved protocol and calibration state. |
 | GUI quality gate settings were not persisted | Added `.quality-gate.json` sidecars, GUI save/load wiring, report export wiring, and package manifest metrics. |
 | Recording folders were not indexable as a library | Added recursive raw CSV discovery, CSV/HTML session index export, CLI command, and GUI action. |
+| Session index did not show whether records were auditable | Added sidecar status and missing sidecar columns for metadata, events, calibration, protocol, and quality gate files. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -100,6 +102,7 @@
 - Quality gate package smoke command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package reports/quality-gate-package-smoke/package-source.csv --out packages/quality-gate-smoke --title ADS1292-Quality-Gate-Package-Smoke`
 - Session index command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index <recordings-folder> --out reports/session-index`
 - Real session index smoke found 9 rows in `../record/ads1292`, with two usable `Good ECG/QRS` CH2 recordings including `2026-06-18-164923-ads1292-live.csv`.
+- Session index sidecar audit marks records as `complete` only when `.json`, `.events.json`, `.calibration.json`, `.protocol.json`, and `.quality-gate.json` files are all present.
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

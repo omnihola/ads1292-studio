@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 22
+Phase 23
 
 ## Phases
 
@@ -196,6 +196,14 @@ Phase 22
 - [x] Add tests and real `../record/ads1292` smoke test.
 - **Status:** complete
 
+### Phase 23: Session Index Sidecar Completeness Audit
+- [x] Add sidecar completeness fields to session index rows.
+- [x] Check metadata, events, calibration, protocol, and quality-gate sidecars for each recording.
+- [x] Export sidecar status and missing sidecars in CSV and HTML index outputs.
+- [x] Add tests for complete and partial recording sidecar sets.
+- [x] Verify against the real `../record/ads1292` folder.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -230,6 +238,7 @@ Phase 22
 | Show segment gate in GUI quality text | A commercial-style desktop app should surface protocol pass/fail without requiring report export or CLI QC. |
 | Add GUI quality gate sidecars | Pass/fail standards must be saved with the recording so a later report/package uses the same validation thresholds. |
 | Add session index export | A commercial-style app needs an experiment library view, not only one-file report/package actions. |
+| Add sidecar completeness audit | Good waveform data is not a complete experiment record unless metadata, event, calibration, protocol, and quality-gate context are present. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -250,6 +259,7 @@ Phase 22
 | Quality gate sidecar helpers were missing | 1 | Added normalized `QualityGate` JSON read/write/template helpers and package integration. |
 | GUI quality gate parser was missing | 1 | Added explicit GUI value parsing/formatting helpers for required and optional threshold fields. |
 | Session index module was missing during TDD red check | 1 | Added `session_index.py`, CLI `index`, and GUI Session Index action. |
+| Session index sidecar fields were missing during TDD red check | 1 | Added sidecar status and missing sidecar columns to rows, CSV, and HTML. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.
