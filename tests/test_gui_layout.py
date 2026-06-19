@@ -605,7 +605,7 @@ def test_pqrst_plot_style_keeps_morphology_review_readable() -> None:
             "labelcolor": "#293247",
             "borderpad": 0.55,
             "labelspacing": 0.42,
-            "handlelength": 2.3,
+            "handlelength": 2.0,
             "handletextpad": 0.7,
             "borderaxespad": 0.8,
         },
