@@ -4,6 +4,7 @@ from ads1292_studio.app import (
     GuiState,
     ads1292r_channel_label,
     ads1292r_secondary_channel_label,
+    compute_live_quality_result,
     display_signal_values,
     gui_control_states,
     gui_signal_quality_cards,
@@ -16,6 +17,7 @@ from ads1292_studio.app import (
     status_tone_color,
     status_tone_style,
 )
+from ads1292_studio.models import StreamSample
 import numpy as np
 
 
@@ -43,6 +45,35 @@ def test_default_display_is_raw_without_ecg_inversion() -> None:
         display_signal_values(values, filter_enabled=DEFAULT_FILTER_ENABLED, invert=True),
         np.array([-10.0, 20.0, -30.0]),
     )
+
+
+def test_compute_live_quality_result_keeps_generation_and_metrics() -> None:
+    samples = tuple(
+        StreamSample(
+            timestamp=index / 500.0,
+            ch1=0,
+            ch2=1000 if index % 250 == 0 else 0,
+            board_heart_rate=0,
+            board_respiration_rate=0,
+            status_byte=0,
+        )
+        for index in range(1000)
+    )
+
+    result = compute_live_quality_result(
+        generation=7,
+        source="CH2",
+        valid_rr=3,
+        samples=samples,
+        status_values=tuple(sample.lead_off_bits for sample in samples),
+    )
+
+    assert result.generation == 7
+    assert result.source == "CH2"
+    assert result.valid_rr == 3
+    assert result.error is None
+    assert result.metrics is not None
+    assert result.metrics.sample_count == len(samples)
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import Future, ThreadPoolExecutor
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
@@ -33,7 +34,7 @@ from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.plots import decimate_for_plot, robust_ylim, smooth_for_plot
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
-from ads1292_studio.quality import compute_quality_metrics
+from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
 from ads1292_studio.report import export_review_report
 from ads1292_studio.session_index import export_session_index
@@ -660,6 +661,17 @@ class GuiStatusCard:
 
 
 @dataclass(frozen=True)
+class LiveQualityResult:
+    generation: int
+    source: str
+    valid_rr: int
+    samples: tuple[StreamSample, ...]
+    status_values: tuple[int, ...]
+    metrics: QualityMetrics | None = None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
 class GuiState:
     connected: bool
     streaming: bool
@@ -1191,6 +1203,21 @@ def gui_signal_quality_cards(
     )
 
 
+def compute_live_quality_result(
+    *,
+    generation: int,
+    source: str,
+    valid_rr: int,
+    samples: tuple[StreamSample, ...],
+    status_values: tuple[int, ...],
+) -> LiveQualityResult:
+    try:
+        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
+    except Exception as exc:  # pragma: no cover - defensive worker boundary
+        return LiveQualityResult(generation, source, valid_rr, samples, status_values, error=str(exc))
+    return LiveQualityResult(generation, source, valid_rr, samples, status_values, metrics=metrics)
+
+
 def _mousewheel_units(event: tk.Event) -> int:
     if getattr(event, "num", None) == 4:
         return -1
@@ -1259,6 +1286,10 @@ class App(tk.Tk):
         self.logs: queue.Queue[str] = queue.Queue()
         self.csv_load_results: queue.Queue[CsvLoadResult] = queue.Queue()
         self.connect_results: queue.Queue[ConnectResult] = queue.Queue()
+        self.live_quality_results: queue.Queue[LiveQualityResult] = queue.Queue()
+        self.live_quality_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ads1292-quality")
+        self.live_quality_future: Future[LiveQualityResult] | None = None
+        self.live_quality_generation = 0
         self.is_connecting = False
         self.stream_start_results: queue.Queue[StreamStartResult] = queue.Queue()
         self.worker = LiveWorker(self.samples, self.logs, self.stream_start_results)
@@ -2841,6 +2872,14 @@ class App(tk.Tk):
     def _clear_signal_buffers(self) -> None:
         for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
             buffer.clear()
+        self.live_quality_generation += 1
+        if self.live_quality_future is not None and not self.live_quality_future.done():
+            self.live_quality_future.cancel()
+        while True:
+            try:
+                self.live_quality_results.get_nowait()
+            except queue.Empty:
+                break
 
     def _apply_control_states(self) -> None:
         if not hasattr(self, "control_buttons"):
@@ -3016,6 +3055,7 @@ class App(tk.Tk):
         self._drain_csv_load_results()
         self._drain_connect_results()
         self._drain_stream_start_results()
+        self._drain_live_quality_results()
         latest = None
         while True:
             try:
@@ -3031,7 +3071,88 @@ class App(tk.Tk):
                 self._log(self.logs.get_nowait())
             except queue.Empty:
                 break
+        self._drain_live_quality_results()
         self.after(50, self._tick)
+
+    def _schedule_live_quality_update(
+        self,
+        *,
+        source: str,
+        valid_rr: int,
+        samples: tuple[StreamSample, ...],
+        status_values: tuple[int, ...],
+    ) -> None:
+        self.live_quality_generation += 1
+        generation = self.live_quality_generation
+        if self.live_quality_future is not None and not self.live_quality_future.done():
+            self.live_quality_future.cancel()
+        future = self.live_quality_executor.submit(
+            compute_live_quality_result,
+            generation=generation,
+            source=source,
+            valid_rr=valid_rr,
+            samples=samples,
+            status_values=status_values,
+        )
+        future.add_done_callback(self._queue_live_quality_result)
+        self.live_quality_future = future
+
+    def _queue_live_quality_result(self, future: Future[LiveQualityResult]) -> None:
+        if future.cancelled():
+            return
+        try:
+            result = future.result()
+        except Exception as exc:  # pragma: no cover - defensive worker boundary
+            result = LiveQualityResult(
+                generation=self.live_quality_generation,
+                source=ADS1292R_ECG_SOURCE,
+                valid_rr=0,
+                samples=tuple(),
+                status_values=tuple(),
+                error=str(exc),
+            )
+        self.live_quality_results.put(result)
+
+    def _drain_live_quality_results(self) -> None:
+        latest: LiveQualityResult | None = None
+        while True:
+            try:
+                result = self.live_quality_results.get_nowait()
+            except queue.Empty:
+                break
+            if result.generation == self.live_quality_generation:
+                latest = result
+        if latest is None:
+            return
+        self._apply_live_quality_result(latest)
+
+    def _apply_live_quality_result(self, result: LiveQualityResult) -> None:
+        if result.error or result.metrics is None:
+            self.quality_var.set(f"Quality: background update failed: {result.error or 'unknown error'}")
+            self._apply_signal_quality_cards(gui_signal_quality_cards())
+            return
+        self.quality_var.set(
+            self._quality_text(
+                result.source,
+                result.valid_rr,
+                result.samples,
+                result.status_values,
+                metrics=result.metrics,
+            )
+        )
+        self._apply_signal_quality_cards(
+            gui_signal_quality_cards(
+                quality_label=result.metrics.quality_label,
+                ecg_source=result.metrics.ecg_source,
+                contact_ok_percent=result.metrics.contact_ok_percent,
+                lead_off_bad_samples=result.metrics.lead_off_bad_samples,
+                r_peaks=result.metrics.r_peaks,
+                hr_median_bpm=result.metrics.hr_median_bpm,
+                baseline_drift_counts=result.metrics.baseline_drift_counts,
+                noise_rms_counts=result.metrics.noise_rms_counts,
+                peak_to_peak_counts=result.metrics.peak_to_peak_counts,
+            )
+        )
 
     def _append_sample(self, sample: StreamSample) -> None:
         self.indices.append(self.sample_index)
@@ -3101,20 +3222,11 @@ class App(tk.Tk):
             f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {ecg_label} | HR {hr.median_bpm:.0f} bpm"
         )
         samples = tuple(self._current_samples())
-        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
-        self.quality_var.set(self._quality_text(source, hr.valid_rr_count, samples, tuple(self.status), metrics=metrics))
-        self._apply_signal_quality_cards(
-            gui_signal_quality_cards(
-                quality_label=metrics.quality_label,
-                ecg_source=metrics.ecg_source,
-                contact_ok_percent=metrics.contact_ok_percent,
-                lead_off_bad_samples=metrics.lead_off_bad_samples,
-                r_peaks=metrics.r_peaks,
-                hr_median_bpm=metrics.hr_median_bpm,
-                baseline_drift_counts=metrics.baseline_drift_counts,
-                noise_rms_counts=metrics.noise_rms_counts,
-                peak_to_peak_counts=metrics.peak_to_peak_counts,
-            )
+        self._schedule_live_quality_update(
+            source=source,
+            valid_rr=hr.valid_rr_count,
+            samples=samples,
+            status_values=tuple(self.status),
         )
         self.live_canvas.draw_idle()
 
@@ -3273,6 +3385,9 @@ class App(tk.Tk):
 
     def _close(self) -> None:
         self.stop()
+        if self.live_quality_future is not None and not self.live_quality_future.done():
+            self.live_quality_future.cancel()
+        self.live_quality_executor.shutdown(wait=False, cancel_futures=True)
         self.destroy()
 
 
