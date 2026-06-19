@@ -234,6 +234,7 @@ BASE_CHROME_SPEC = {
     "label": "TLabel",
     "sidebar": "SidebarShell.TFrame",
     "main": "Main.TFrame",
+    "borderwidth": 0,
 }
 BASE_NOTEBOOK_STYLES = {
     "notebook": "TNotebook",
@@ -1572,7 +1573,11 @@ class App(tk.Tk):
             background=base_chrome["background"],
             foreground=base_chrome["foreground"],
         )
-        style.configure(str(base_chrome["frame"]), background=base_chrome["background"])
+        style.configure(
+            str(base_chrome["frame"]),
+            background=base_chrome["background"],
+            borderwidth=base_chrome["borderwidth"],
+        )
         header_frame = header_frame_spec()
         style.configure(
             str(header_frame["frame"]),
@@ -1598,6 +1603,7 @@ class App(tk.Tk):
             str(base_chrome["label"]),
             background=base_chrome["background"],
             foreground=base_chrome["foreground"],
+            borderwidth=base_chrome["borderwidth"],
         )
         for text_spec in header_text_styles().values():
             style.configure(

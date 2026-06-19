@@ -549,6 +549,7 @@ def test_base_chrome_spec_keeps_global_window_surfaces_consistent() -> None:
         "label": "TLabel",
         "sidebar": "SidebarShell.TFrame",
         "main": "Main.TFrame",
+        "borderwidth": 0,
     }
 
 
