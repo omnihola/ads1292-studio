@@ -3,6 +3,7 @@ from ads1292_studio.app import (
     app_visual_tokens,
     empty_plot_messages,
     log_panel_spec,
+    main_tab_labels,
     plot_trace_colors,
     primary_toolbar_button_labels,
     secondary_action_button_labels,
@@ -40,6 +41,10 @@ def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:
 
 def test_gui_layout_uses_task_based_sidebar_tabs() -> None:
     assert sidebar_tab_labels() == ("Status", "Session", "Validation", "Protocol", "Actions")
+
+
+def test_gui_layout_names_main_workspaces_clearly() -> None:
+    assert main_tab_labels() == ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
 
 
 def test_sidebar_field_styles_make_forms_consistent() -> None:

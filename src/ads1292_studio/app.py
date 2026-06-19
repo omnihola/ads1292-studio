@@ -68,6 +68,7 @@ SECONDARY_ACTION_BUTTONS = (
     "Session Index",
 )
 SIDEBAR_TABS = ("Status", "Session", "Validation", "Protocol", "Actions")
+MAIN_TABS = ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
 STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
 SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
 ADS1292R_ECG_SOURCE = "CH2"
@@ -253,6 +254,10 @@ def secondary_action_button_labels() -> tuple[str, ...]:
 
 def sidebar_tab_labels() -> tuple[str, ...]:
     return SIDEBAR_TABS
+
+
+def main_tab_labels() -> tuple[str, ...]:
+    return MAIN_TABS
 
 
 def gui_control_states(
@@ -730,10 +735,11 @@ class App(tk.Tk):
         self.review_tab = ttk.Frame(self.notebook)
         self.pqrst_tab = ttk.Frame(self.notebook)
         self.log_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.live_tab, text="Live")
-        self.notebook.add(self.review_tab, text="Review")
-        self.notebook.add(self.pqrst_tab, text="PQRST")
-        self.notebook.add(self.log_tab, text="Log")
+        live_label, review_label, pqrst_label, log_label = main_tab_labels()
+        self.notebook.add(self.live_tab, text=live_label)
+        self.notebook.add(self.review_tab, text=review_label)
+        self.notebook.add(self.pqrst_tab, text=pqrst_label)
+        self.notebook.add(self.log_tab, text=log_label)
 
         self._build_live_plot()
         self._build_review_plot()
