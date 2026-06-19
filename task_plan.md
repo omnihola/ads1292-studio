@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 33
+Phase 34
 
 ## Phases
 
@@ -288,6 +288,15 @@ Phase 33
 - [x] Add tests and syntax verification.
 - **Status:** complete
 
+### Phase 34: Mature GUI Information Architecture
+- [x] Add failing tests that require the GUI to define a task-based sidebar structure.
+- [x] Move secondary file/report/package/library actions out of the top acquisition toolbar.
+- [x] Keep the top toolbar focused on port selection, connection, start/stop, save, display, and status.
+- [x] Organize the left control area into readable task groups for session status, metadata/events, validation settings, protocol, actions, and safety.
+- [x] Keep all task groups scrollable and keyboard/mouse reachable on smaller windows.
+- [x] Add focused tests, full tests, syntax verification, and GUI layout documentation.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -333,6 +342,7 @@ Phase 33
 | Add template path traceability to sidecar plans | A cleanup checklist should show both the staged template file to review and the final target path beside the raw recording. |
 | Add a sidecar apply script | After template review, users need a repeatable way to copy staged JSON sidecars into place without hand-copy errors or overwriting existing files. |
 | Make the left sidebar scrollable | The GUI has accumulated enough controls that a fixed-height left frame hides fields on smaller windows; the control column must scroll independently of the plot area. |
+| Redesign GUI information architecture before adding more workflow automation | A mature desktop app must keep acquisition controls simple and move secondary review/export/library actions into clear task groups before more features are added. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -371,6 +381,7 @@ Phase 33
 | Left sidebar controls were clipped in smaller windows | 1 | Replaced the plain sidebar frame with `ScrollableFrame` using Canvas plus a vertical scrollbar. |
 | Real Tk widget pytest aborted under macOS Tk | 1 | Replaced the unstable live-widget test with a source-level layout test and retained syntax/full-test verification. |
 | Mouse wheel still did not scroll the sidebar reliably | 1 | Added nonzero small-delta handling for macOS wheel events and pointer-gated global wheel binding for events over child controls. |
+| GUI controls were technically reachable but still cognitively overloaded | 1 | Split the sidebar into task-based scrollable tabs and moved secondary file/export/library actions out of the acquisition toolbar. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

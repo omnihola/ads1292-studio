@@ -102,6 +102,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   session packages use the same pass/fail settings.
 - Scrollable left control sidebar keeps metadata, event, calibration,
   quality-gate, protocol, and safety controls reachable on smaller windows.
+- Task-based GUI sidebar separates Status, Session, Validation, Protocol, and
+  Actions so acquisition controls stay simple while review/export/library tools
+  remain one click away.
 - Session index export scans a recordings folder, ignores generated summary
   CSVs, and writes a CSV/HTML experiment library with ECG source, contact,
   R-peak, HR, quality, and usable/review status.

@@ -43,6 +43,28 @@ from ads1292_studio.workers import LiveWorker
 MAX_POINTS = 5000
 VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
+PRIMARY_TOOLBAR_BUTTONS = ("Refresh", "Connect", "Start", "Stop")
+SECONDARY_ACTION_BUTTONS = (
+    "Load CSV",
+    "Export Report",
+    "Export Package",
+    "Verify Package",
+    "Batch Compare",
+    "Session Index",
+)
+SIDEBAR_TABS = ("Status", "Session", "Validation", "Protocol", "Actions")
+
+
+def primary_toolbar_button_labels() -> tuple[str, ...]:
+    return PRIMARY_TOOLBAR_BUTTONS
+
+
+def secondary_action_button_labels() -> tuple[str, ...]:
+    return SECONDARY_ACTION_BUTTONS
+
+
+def sidebar_tab_labels() -> tuple[str, ...]:
+    return SIDEBAR_TABS
 
 
 def _mousewheel_units(event: tk.Event) -> int:
@@ -135,12 +157,6 @@ class App(tk.Tk):
         self.start_button = ttk.Button(toolbar, text="Start", command=self.start)
         self.start_button.pack(side=tk.LEFT, padx=4)
         ttk.Button(toolbar, text="Stop", command=self.stop).pack(side=tk.LEFT)
-        ttk.Button(toolbar, text="Load CSV", command=self.load_csv).pack(side=tk.LEFT, padx=(12, 4))
-        ttk.Button(toolbar, text="Export Report", command=self.export_report).pack(side=tk.LEFT, padx=4)
-        ttk.Button(toolbar, text="Export Package", command=self.export_package).pack(side=tk.LEFT, padx=4)
-        ttk.Button(toolbar, text="Verify Package", command=self.verify_package).pack(side=tk.LEFT, padx=4)
-        ttk.Button(toolbar, text="Batch Compare", command=self.batch_compare).pack(side=tk.LEFT, padx=4)
-        ttk.Button(toolbar, text="Session Index", command=self.session_index).pack(side=tk.LEFT, padx=4)
 
         self.save_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(toolbar, text="Save CSV", variable=self.save_var).pack(side=tk.LEFT, padx=8)
@@ -163,11 +179,14 @@ class App(tk.Tk):
 
         body = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        side_shell = ttk.Frame(body, width=300)
+        side_shell = ttk.Frame(body, width=340)
         body.add(side_shell, weight=0)
-        self.sidebar = ScrollableFrame(side_shell, width=280)
-        self.sidebar.frame.pack(fill=tk.BOTH, expand=True)
-        side = self.sidebar.content
+        sidebar = self._build_sidebar(side_shell)
+        status_side = sidebar["Status"]
+        session_side = sidebar["Session"]
+        validation_side = sidebar["Validation"]
+        protocol_side = sidebar["Protocol"]
+        actions_side = sidebar["Actions"]
         main = ttk.Frame(body)
         body.add(main, weight=1)
 
@@ -205,41 +224,59 @@ class App(tk.Tk):
             ("Quality", self.quality_var),
             ("Storage", self.path_var),
         ):
-            ttk.Label(side, text=label, font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
-            ttk.Label(side, textvariable=var, wraplength=230, justify=tk.LEFT).pack(anchor=tk.W)
+            ttk.Label(status_side, text=label, font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
+            ttk.Label(status_side, textvariable=var, wraplength=260, justify=tk.LEFT).pack(anchor=tk.W)
 
-        ttk.Label(side, text="Notes", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
-        self._metadata_entry(side, "Session ID", self.session_id_var)
-        self._metadata_entry(side, "Subject", self.subject_id_var)
-        self._metadata_entry(side, "Electrode", self.electrode_var)
-        self._metadata_entry(side, "Montage", self.montage_var)
-        self._metadata_entry(side, "Operator", self.operator_var)
-        self._metadata_entry(side, "Notes", self.notes_var)
-        ttk.Label(side, text="Events", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
-        self._metadata_entry(side, "Event label", self.event_label_var)
-        self._metadata_entry(side, "Event notes", self.event_notes_var)
-        ttk.Button(side, text="Add Event", command=self.add_event).pack(anchor=tk.W, fill=tk.X, pady=(6, 2))
-        ttk.Label(side, textvariable=self.event_count_var, wraplength=230, justify=tk.LEFT).pack(anchor=tk.W)
-        ttk.Label(side, text="Calibration", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
-        self._metadata_entry(side, "Label", self.calibration_label_var)
-        self._metadata_entry(side, "Vref mV", self.vref_mv_var)
-        self._metadata_entry(side, "PGA gain", self.pga_gain_var)
-        ttk.Label(side, text="Quality Gate", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
-        self._metadata_entry(side, "Min duration s", self.gate_min_duration_var)
-        self._metadata_entry(side, "Min contact %", self.gate_min_contact_var)
-        self._metadata_entry(side, "Min R peaks", self.gate_min_r_peaks_var)
-        self._metadata_entry(side, "HR min bpm", self.gate_min_hr_var)
-        self._metadata_entry(side, "HR max bpm", self.gate_max_hr_var)
-        ttk.Checkbutton(side, text="Require QRS clear", variable=self.gate_require_qrs_var).pack(anchor=tk.W)
-        self._metadata_entry(side, "Max drift counts", self.gate_max_drift_var)
-        self._metadata_entry(side, "Max noise RMS", self.gate_max_noise_var)
-        self._metadata_entry(side, "Max peak-to-peak", self.gate_max_ptp_var)
-        ttk.Label(side, text="Protocol", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
-        self._metadata_entry(side, "Name", self.protocol_name_var)
-        self._metadata_entry(side, "Objective", self.protocol_objective_var)
-        self._metadata_entry(side, "Steps", self.protocol_steps_var)
-        self._metadata_entry(side, "Acceptance", self.protocol_acceptance_var)
-        ttk.Label(side, text="Research use only. Use battery power.", wraplength=230, justify=tk.LEFT).pack(anchor=tk.W)
+        ttk.Label(session_side, text="Recording Notes", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
+        self._metadata_entry(session_side, "Session ID", self.session_id_var)
+        self._metadata_entry(session_side, "Subject", self.subject_id_var)
+        self._metadata_entry(session_side, "Electrode", self.electrode_var)
+        self._metadata_entry(session_side, "Montage", self.montage_var)
+        self._metadata_entry(session_side, "Operator", self.operator_var)
+        self._metadata_entry(session_side, "Notes", self.notes_var)
+        ttk.Label(session_side, text="Events", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        self._metadata_entry(session_side, "Event label", self.event_label_var)
+        self._metadata_entry(session_side, "Event notes", self.event_notes_var)
+        ttk.Button(session_side, text="Add Event", command=self.add_event).pack(anchor=tk.W, fill=tk.X, pady=(6, 2))
+        ttk.Label(session_side, textvariable=self.event_count_var, wraplength=260, justify=tk.LEFT).pack(anchor=tk.W)
+
+        ttk.Label(validation_side, text="Calibration", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
+        self._metadata_entry(validation_side, "Label", self.calibration_label_var)
+        self._metadata_entry(validation_side, "Vref mV", self.vref_mv_var)
+        self._metadata_entry(validation_side, "PGA gain", self.pga_gain_var)
+        ttk.Label(validation_side, text="Quality Gate", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        self._metadata_entry(validation_side, "Min duration s", self.gate_min_duration_var)
+        self._metadata_entry(validation_side, "Min contact %", self.gate_min_contact_var)
+        self._metadata_entry(validation_side, "Min R peaks", self.gate_min_r_peaks_var)
+        self._metadata_entry(validation_side, "HR min bpm", self.gate_min_hr_var)
+        self._metadata_entry(validation_side, "HR max bpm", self.gate_max_hr_var)
+        ttk.Checkbutton(validation_side, text="Require QRS clear", variable=self.gate_require_qrs_var).pack(anchor=tk.W)
+        self._metadata_entry(validation_side, "Max drift counts", self.gate_max_drift_var)
+        self._metadata_entry(validation_side, "Max noise RMS", self.gate_max_noise_var)
+        self._metadata_entry(validation_side, "Max peak-to-peak", self.gate_max_ptp_var)
+
+        ttk.Label(protocol_side, text="Protocol", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
+        self._metadata_entry(protocol_side, "Name", self.protocol_name_var)
+        self._metadata_entry(protocol_side, "Objective", self.protocol_objective_var)
+        self._metadata_entry(protocol_side, "Steps", self.protocol_steps_var)
+        self._metadata_entry(protocol_side, "Acceptance", self.protocol_acceptance_var)
+
+        ttk.Label(actions_side, text="Review", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
+        ttk.Button(actions_side, text="Load CSV", command=self.load_csv).pack(anchor=tk.W, fill=tk.X, pady=2)
+        ttk.Button(actions_side, text="Export Report", command=self.export_report).pack(anchor=tk.W, fill=tk.X, pady=2)
+        ttk.Label(actions_side, text="Package", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        ttk.Button(actions_side, text="Export Package", command=self.export_package).pack(anchor=tk.W, fill=tk.X, pady=2)
+        ttk.Button(actions_side, text="Verify Package", command=self.verify_package).pack(anchor=tk.W, fill=tk.X, pady=2)
+        ttk.Label(actions_side, text="Library", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        ttk.Button(actions_side, text="Batch Compare", command=self.batch_compare).pack(anchor=tk.W, fill=tk.X, pady=2)
+        ttk.Button(actions_side, text="Session Index", command=self.session_index).pack(anchor=tk.W, fill=tk.X, pady=2)
+        ttk.Label(actions_side, text="Safety", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        ttk.Label(
+            actions_side,
+            text="Research use only. Use battery power during human-subject measurements.",
+            wraplength=260,
+            justify=tk.LEFT,
+        ).pack(anchor=tk.W)
 
         self.notebook = ttk.Notebook(main)
         self.notebook.pack(fill=tk.BOTH, expand=True)
@@ -257,6 +294,20 @@ class App(tk.Tk):
         self._build_pqrst_plot()
         self.log_text = tk.Text(self.log_tab, height=12)
         self.log_text.pack(fill=tk.BOTH, expand=True)
+
+    def _build_sidebar(self, parent: ttk.Frame) -> dict[str, ttk.Frame]:
+        self.sidebar_notebook = ttk.Notebook(parent)
+        self.sidebar_notebook.pack(fill=tk.BOTH, expand=True)
+        self.sidebar_scrolls: dict[str, ScrollableFrame] = {}
+        sections: dict[str, ttk.Frame] = {}
+        for label in SIDEBAR_TABS:
+            tab = ttk.Frame(self.sidebar_notebook)
+            scroll = ScrollableFrame(tab, width=310)
+            scroll.frame.pack(fill=tk.BOTH, expand=True)
+            self.sidebar_notebook.add(tab, text=label)
+            self.sidebar_scrolls[label] = scroll
+            sections[label] = scroll.content
+        return sections
 
     def _metadata_entry(self, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:
         ttk.Label(parent, text=label).pack(anchor=tk.W, pady=(4, 0))
