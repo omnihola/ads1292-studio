@@ -16,6 +16,7 @@ from ads1292_studio.protocol import protocol_template, read_protocol_json, write
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, evaluate_quality_gate
 from ads1292_studio.report import export_review_report
+from ads1292_studio.segments import analyze_protocol_segments, evaluate_segment_quality_gates
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import review_channels
 
@@ -177,6 +178,17 @@ def cmd_qc(args: argparse.Namespace) -> int:
         max_peak_to_peak_counts=args.max_peak_to_peak,
     )
     result = evaluate_quality_gate(metrics, gate)
+    segment_result = None
+    if args.protocol:
+        protocol = read_protocol_json(args.protocol)
+        segment_source = metrics.ecg_source if args.source == "Auto" else args.source
+        segments = analyze_protocol_segments(
+            recording.samples,
+            protocol,
+            sample_rate_hz=recording.sample_rate_hz,
+            source=segment_source,
+        )
+        segment_result = evaluate_segment_quality_gates(segments, gate)
     print(f"quality_gate={result.label}")
     print(f"ecg_source={metrics.ecg_source}")
     print(f"quality={metrics.quality_label}")
@@ -185,7 +197,13 @@ def cmd_qc(args: argparse.Namespace) -> int:
     print(f"peak_to_peak_counts={metrics.peak_to_peak_counts:.1f}")
     for failure in result.failures:
         print(f"failure={failure}")
-    return 0 if result.passed else 2
+    if segment_result is not None:
+        print(f"protocol_segment_gate={segment_result.label}")
+        for segment in segment_result.segment_results:
+            print(f"segment={segment.label}\tstatus={segment.status}")
+        for failure in segment_result.failures:
+            print(f"segment_failure={failure}")
+    return 0 if result.passed and (segment_result is None or segment_result.passed) else 2
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -243,6 +261,7 @@ def build_parser() -> argparse.ArgumentParser:
     qc.add_argument("--max-baseline-drift", type=float)
     qc.add_argument("--max-noise-rms", type=float)
     qc.add_argument("--max-peak-to-peak", type=float)
+    qc.add_argument("--protocol", type=Path)
     qc.add_argument("--allow-unclear-qrs", action="store_true")
     qc.set_defaults(func=cmd_qc)
     return parser

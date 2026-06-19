@@ -68,6 +68,8 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert "peak_to_peak_counts" in manifest["metrics"]
     assert manifest["metrics"]["segment_metrics"][0]["label"] == "baseline"
     assert manifest["metrics"]["segment_metrics"][0]["sample_count"] > 0
+    assert manifest["metrics"]["segment_gate"]["label"] in {"Pass", "Fail"}
+    assert manifest["metrics"]["segment_gate"]["segment_results"][0]["label"] == "baseline"
     raw_entry = next(file_info for file_info in manifest["files"] if file_info["role"] == "raw_csv")
     copied_csv = export.package_dir / raw_entry["path"]
     expected_sha = hashlib.sha256(copied_csv.read_bytes()).hexdigest()

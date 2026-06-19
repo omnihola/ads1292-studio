@@ -40,6 +40,7 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package ../recor
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/<session>/manifest.json
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ../record/ads1292/2026-06-18-164923-ads1292-live.csv
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ../record/ads1292/2026-06-18-164923-ads1292-live.csv --max-baseline-drift 500 --max-noise-rms 1000 --max-peak-to-peak 30000
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ../record/ads1292/2026-06-18-164923-ads1292-live.csv --protocol reports/protocol-template.json --max-baseline-drift 500 --max-noise-rms 1000 --max-peak-to-peak 30000
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch recording-a.csv recording-b.csv --out reports/batch
 ```
 
@@ -79,6 +80,9 @@ by electrode label.
 - Protocol segment metrics in reports and package manifests, including
   per-step contact, R peaks, HR, baseline drift, noise RMS, and peak-to-peak
   values for baseline/motion/recovery validation.
+- Protocol segment quality gates in reports, session package manifests, and
+  CLI `qc --protocol` output, so baseline/motion/recovery failures are named
+  explicitly.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

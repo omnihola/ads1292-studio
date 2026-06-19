@@ -22,7 +22,12 @@ from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.protocol import TestProtocol
 from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, QualityGateResult, evaluate_quality_gate
-from ads1292_studio.segments import SegmentMetrics, analyze_protocol_segments
+from ads1292_studio.segments import (
+    SegmentMetrics,
+    SegmentQualityGateResult,
+    analyze_protocol_segments,
+    evaluate_segment_quality_gates,
+)
 from ads1292_studio.signal_processing import bandpass, detect_r_peaks, pqrst_review
 
 
@@ -33,6 +38,7 @@ class ReportExport:
     pqrst_png_path: Path
     metrics: QualityMetrics
     segment_metrics: tuple[SegmentMetrics, ...] = tuple()
+    segment_gate_result: SegmentQualityGateResult | None = None
 
 
 def export_review_report(
@@ -64,6 +70,7 @@ def export_review_report(
         if protocol is not None
         else tuple()
     )
+    segment_gate_result = evaluate_segment_quality_gates(segment_metrics, quality_gate) if segment_metrics else None
     _write_ecg_png(sample_tuple, ecg_png, metrics, sample_rate_hz, normalized_calibration)
     _write_pqrst_png(sample_tuple, pqrst_png, metrics, sample_rate_hz, normalized_calibration)
     html_path.write_text(
@@ -78,9 +85,10 @@ def export_review_report(
             gate_result,
             protocol,
             segment_metrics,
+            segment_gate_result,
         )
     )
-    return ReportExport(html_path, ecg_png, pqrst_png, metrics, segment_metrics)
+    return ReportExport(html_path, ecg_png, pqrst_png, metrics, segment_metrics, segment_gate_result)
 
 
 def _slugify(text: str) -> str:
@@ -173,6 +181,7 @@ def _html(
     gate_result: QualityGateResult,
     protocol: TestProtocol | None,
     segment_metrics: tuple[SegmentMetrics, ...],
+    segment_gate_result: SegmentQualityGateResult | None,
 ) -> str:
     rows = [
         ("Quality", metrics.quality_label),
@@ -275,6 +284,25 @@ def _html(
             "</tr>"
             f"{segment_rows}</table>"
         )
+    segment_gate_html = ""
+    if segment_gate_result is not None:
+        gate_rows = "\n".join(
+            "<tr>"
+            f"<td>{escape(result.label)}</td>"
+            f"<td>{escape(result.status)}</td>"
+            f"<td>{escape('; '.join(result.failures) if result.failures else 'None')}</td>"
+            "</tr>"
+            for result in segment_gate_result.segment_results
+        )
+        segment_gate_html = (
+            "<h2>Protocol Segment Gate</h2>"
+            "<table>"
+            f"<tr><th>Status</th><td>{escape(segment_gate_result.label)}</td></tr>"
+            f"<tr><th>Failures</th><td>{escape('; '.join(segment_gate_result.failures) if segment_gate_result.failures else 'None')}</td></tr>"
+            "</table>"
+            "<table><tr><th>Segment</th><th>Status</th><th>Failures</th></tr>"
+            f"{gate_rows}</table>"
+        )
     calibration = calibration.normalized()
     calibration_rows = [
         ("Label", calibration.label),
@@ -314,6 +342,7 @@ def _html(
   {metadata_html}
   {protocol_html}
   {segment_html}
+  {segment_gate_html}
   {events_html}
   {calibration_html}
   {gate_html}

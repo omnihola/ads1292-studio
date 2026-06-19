@@ -145,6 +145,39 @@ def test_cli_qc_returns_failure_for_artifact_threshold(tmp_path: Path, capsys) -
     assert "failure=peak-to-peak" in output
 
 
+def test_cli_qc_with_protocol_reports_segment_failures(tmp_path: Path, capsys) -> None:
+    csv_path = tmp_path / "recording.csv"
+    protocol_path = tmp_path / "protocol.json"
+    _write_small_csv(csv_path)
+    write_protocol_json(
+        protocol_path,
+        TestProtocol(
+            name="late protocol",
+            steps=(ProtocolStep(start_seconds=10.0, duration_seconds=1.0, label="late", instruction="No data."),),
+        ),
+    )
+
+    result = main(
+        [
+            "qc",
+            str(csv_path),
+            "--protocol",
+            str(protocol_path),
+            "--min-duration",
+            "0.5",
+            "--min-r-peaks",
+            "1",
+            "--allow-unclear-qrs",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert result == 2
+    assert "quality_gate=Pass" in output
+    assert "protocol_segment_gate=Fail" in output
+    assert "segment_failure=late: no data" in output
+
+
 def test_cli_review_prints_artifact_metrics(tmp_path: Path, capsys) -> None:
     csv_path = tmp_path / "recording.csv"
     _write_small_csv(csv_path)

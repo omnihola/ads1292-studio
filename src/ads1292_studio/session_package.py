@@ -107,6 +107,7 @@ def export_session_package(
             "noise_rms_counts": report.metrics.noise_rms_counts,
             "peak_to_peak_counts": report.metrics.peak_to_peak_counts,
             "segment_metrics": tuple(asdict(segment) for segment in report.segment_metrics),
+            "segment_gate": _segment_gate_entry(report.segment_gate_result),
         },
         "files": files,
     }
@@ -149,6 +150,25 @@ def verify_session_package(manifest_path: Path | str) -> PackageVerification:
 def _package_slug(csv_path: Path) -> str:
     stem = "".join(char.lower() if char.isalnum() else "-" for char in csv_path.stem)
     return "-".join(part for part in stem.split("-") if part)[:64] or "ads1292-session"
+
+
+def _segment_gate_entry(result) -> dict | None:
+    if result is None:
+        return None
+    return {
+        "label": result.label,
+        "passed": result.passed,
+        "failures": result.failures,
+        "segment_results": tuple(
+            {
+                "label": segment.label,
+                "status": segment.status,
+                "passed": segment.passed,
+                "failures": segment.failures,
+            }
+            for segment in result.segment_results
+        ),
+    }
 
 
 def _file_entry(role: str, path: Path, package_dir: Path) -> dict[str, str | int]:

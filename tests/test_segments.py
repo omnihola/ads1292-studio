@@ -2,7 +2,8 @@ import numpy as np
 
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol
-from ads1292_studio.segments import analyze_protocol_segments
+from ads1292_studio.quality_gate import QualityGate
+from ads1292_studio.segments import analyze_protocol_segments, evaluate_segment_quality_gates
 
 
 def _protocol_samples(sample_rate_hz: float = 500.0) -> tuple[StreamSample, ...]:
@@ -61,3 +62,38 @@ def test_analyze_protocol_segments_marks_out_of_range_step_empty() -> None:
     assert segments[0].label == "late"
     assert segments[0].sample_count == 0
     assert segments[0].quality_label == "No data"
+
+
+def test_evaluate_segment_quality_gates_marks_motion_failures() -> None:
+    protocol = TestProtocol(
+        name="motion challenge",
+        steps=(
+            ProtocolStep(0.0, 3.0, "baseline", "Sit still."),
+            ProtocolStep(3.0, 3.0, "motion", "Move arm."),
+        ),
+    )
+    segments = analyze_protocol_segments(_protocol_samples(), protocol, sample_rate_hz=500.0, source="CH2")
+    noise_limit = (segments[0].noise_rms_counts + segments[1].noise_rms_counts) / 2.0
+
+    result = evaluate_segment_quality_gates(
+        segments,
+        QualityGate(min_contact_ok_percent=95.0, min_r_peaks=3, max_noise_rms_counts=noise_limit),
+    )
+
+    assert result.passed is False
+    assert result.label == "Fail"
+    assert result.segment_results[0].label == "baseline"
+    assert result.segment_results[0].passed is True
+    assert result.segment_results[1].label == "motion"
+    assert result.segment_results[1].passed is False
+    assert any("motion: noise RMS" in failure for failure in result.failures)
+
+
+def test_evaluate_segment_quality_gates_fails_empty_segments() -> None:
+    protocol = TestProtocol(name="missing", steps=(ProtocolStep(20.0, 5.0, "late", "No data."),))
+    segments = analyze_protocol_segments(_protocol_samples(), protocol, sample_rate_hz=500.0, source="CH2")
+
+    result = evaluate_segment_quality_gates(segments, QualityGate())
+
+    assert result.passed is False
+    assert result.segment_results[0].failures == ("late: no data",)

@@ -118,6 +118,7 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "Gel comparison protocol" in html
     assert "baseline" in html
     assert "Protocol Segment Metrics" in html
+    assert "Protocol Segment Gate" in html
     assert "motion" in html
     assert "Baseline drift" in html
     assert "Noise RMS" in html

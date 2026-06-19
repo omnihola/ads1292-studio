@@ -44,6 +44,7 @@
 | Add artifact threshold gates | Drift/noise metrics need configurable pass/fail limits for repeatable material validation. |
 | Add protocol segment metrics | Baseline, motion, and recovery stages need separate contact, R-peak, HR, drift, noise, and peak-to-peak evidence. |
 | Keep report segment metrics on the whole-record ECG source | A report must not compare baseline CH2 against motion CH1 just because per-segment Auto changed channels. |
+| Add protocol segment quality gates | Reports, manifests, and CLI QC should name the failed protocol stage so motion/recovery problems are not hidden inside whole-record averages. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -87,6 +88,7 @@
 - Protocol template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-protocol-template reports/protocol-template.json`
 - Protocol report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --protocol reports/protocol-template.json --out reports`
 - Protocol segment metrics are generated automatically when `--protocol` is supplied to `report` or when a `.protocol.json` sidecar is included in a session package.
+- Protocol segment gate command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv> --protocol reports/protocol-template.json`
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.
