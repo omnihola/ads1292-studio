@@ -12,6 +12,12 @@ class AdsPort:
 
 
 @dataclass(frozen=True)
+class StreamStartResult:
+    ok: bool
+    error: str | None = None
+
+
+@dataclass(frozen=True)
 class StreamSample:
     timestamp: float
     ch1: int

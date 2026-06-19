@@ -6,13 +6,19 @@ import threading
 
 from ads1292_studio.csv_io import CsvRecorder
 from ads1292_studio.device import Ads1x9xDevice
-from ads1292_studio.models import StreamSample
+from ads1292_studio.models import StreamSample, StreamStartResult
 
 
 class LiveWorker:
-    def __init__(self, sample_queue: queue.Queue[StreamSample], log_queue: queue.Queue[str]) -> None:
+    def __init__(
+        self,
+        sample_queue: queue.Queue[StreamSample],
+        log_queue: queue.Queue[str],
+        start_result_queue: queue.Queue[StreamStartResult],
+    ) -> None:
         self.sample_queue = sample_queue
         self.log_queue = log_queue
+        self.start_result_queue = start_result_queue
         self.stop_event = threading.Event()
         self.thread: threading.Thread | None = None
         self.device: Ads1x9xDevice | None = None
@@ -34,6 +40,7 @@ class LiveWorker:
     def _run(self, port: str, csv_path: Path | None) -> None:
         recorder_cm = CsvRecorder(csv_path) if csv_path else None
         recorder = None
+        started = False
         try:
             if recorder_cm:
                 recorder = recorder_cm.__enter__()
@@ -45,6 +52,8 @@ class LiveWorker:
                 except Exception as exc:
                     self.log_queue.put(f"Firmware query failed: {exc}")
                 device.start_stream()
+                started = True
+                self.start_result_queue.put(StreamStartResult(ok=True))
                 self.log_queue.put("Streaming started")
                 for sample in device.iter_stream_samples():
                     if self.stop_event.is_set():
@@ -57,6 +66,8 @@ class LiveWorker:
                 except Exception as exc:
                     self.log_queue.put(f"Stop stream warning: {exc}")
         except Exception as exc:
+            if not started:
+                self.start_result_queue.put(StreamStartResult(ok=False, error=str(exc)))
             self.log_queue.put(f"ERROR: {exc}")
         finally:
             if recorder_cm:

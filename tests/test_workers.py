@@ -3,11 +3,28 @@ from __future__ import annotations
 import queue
 
 from ads1292_studio.app import ConnectResult
+from ads1292_studio.models import StreamSample, StreamStartResult
 from ads1292_studio.workers import LiveWorker
+import ads1292_studio.workers as workers
+
+
+def test_connect_result_holds_success_detail() -> None:
+    result = ConnectResult(port="/dev/fake", detail="firmware 1.0, ID 0x23")
+
+    assert result.port == "/dev/fake"
+    assert result.detail == "firmware 1.0, ID 0x23"
+    assert result.error is None
+
+
+def test_connect_result_holds_error() -> None:
+    result = ConnectResult(port="/dev/fake", error="timed out")
+
+    assert result.error == "timed out"
+    assert result.detail is None
 
 
 def test_live_worker_stop_only_sets_event_without_closing_device() -> None:
-    worker = LiveWorker(queue.Queue(), queue.Queue())
+    worker = LiveWorker(queue.Queue(), queue.Queue(), queue.Queue())
 
     class FakeDevice:
         def __init__(self) -> None:
@@ -25,16 +42,78 @@ def test_live_worker_stop_only_sets_event_without_closing_device() -> None:
     assert fake_device.close_calls == 0
 
 
-def test_connect_result_holds_success_detail() -> None:
-    result = ConnectResult(port="/dev/fake", detail="firmware 1.0, ID 0x23")
+class _FakeStreamingDevice:
+    def __init__(self, port: str) -> None:
+        self.port = port
 
-    assert result.port == "/dev/fake"
-    assert result.detail == "firmware 1.0, ID 0x23"
-    assert result.error is None
+    def __enter__(self) -> "_FakeStreamingDevice":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def query_firmware(self) -> str:
+        return "1.0"
+
+    def start_stream(self) -> None:
+        return None
+
+    def stop_stream(self) -> None:
+        return None
+
+    def iter_stream_samples(self):
+        for index in range(3):
+            yield StreamSample(
+                timestamp=float(index),
+                ch1=index,
+                ch2=index,
+                board_heart_rate=0,
+                board_respiration_rate=0,
+                status_byte=0,
+            )
 
 
-def test_connect_result_holds_error() -> None:
-    result = ConnectResult(port="/dev/fake", error="timed out")
+class _FakeFailingDevice:
+    def __init__(self, port: str) -> None:
+        self.port = port
 
-    assert result.error == "timed out"
-    assert result.detail is None
+    def __enter__(self) -> "_FakeFailingDevice":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def query_firmware(self) -> str:
+        return "1.0"
+
+    def start_stream(self) -> None:
+        raise RuntimeError("device not responding")
+
+
+def test_live_worker_posts_success_result_when_stream_starts(monkeypatch) -> None:
+    monkeypatch.setattr(workers, "Ads1x9xDevice", _FakeStreamingDevice)
+    sample_queue: queue.Queue = queue.Queue()
+    start_queue: queue.Queue = queue.Queue()
+    worker = LiveWorker(sample_queue, queue.Queue(), start_queue)
+
+    worker.start("fake-port", None)
+    result = start_queue.get(timeout=2.0)
+    worker.stop()
+    if worker.thread:
+        worker.thread.join(timeout=2.0)
+
+    assert result == StreamStartResult(ok=True)
+
+
+def test_live_worker_posts_failure_result_when_start_stream_raises(monkeypatch) -> None:
+    monkeypatch.setattr(workers, "Ads1x9xDevice", _FakeFailingDevice)
+    start_queue: queue.Queue = queue.Queue()
+    worker = LiveWorker(queue.Queue(), queue.Queue(), start_queue)
+
+    worker.start("fake-port", None)
+    result = start_queue.get(timeout=2.0)
+    if worker.thread:
+        worker.thread.join(timeout=2.0)
+
+    assert result.ok is False
+    assert "device not responding" in (result.error or "")

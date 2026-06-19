@@ -24,7 +24,7 @@ from ads1292_studio.events import EventMarker, read_events_json, write_events_js
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_session_index import build_session_index_message
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
-from ads1292_studio.models import Recording, StreamSample
+from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.plots import robust_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
@@ -428,13 +428,15 @@ class App(tk.Tk):
         self.csv_load_results: queue.Queue[CsvLoadResult] = queue.Queue()
         self.connect_results: queue.Queue[ConnectResult] = queue.Queue()
         self.is_connecting = False
-        self.worker = LiveWorker(self.samples, self.logs)
+        self.stream_start_results: queue.Queue[StreamStartResult] = queue.Queue()
+        self.worker = LiveWorker(self.samples, self.logs, self.stream_start_results)
         self.connected_port: str | None = None
         self.recording_path: Path | None = None
         self.loaded_samples: tuple[StreamSample, ...] = tuple()
         self.event_markers: list[EventMarker] = []
         self.is_streaming = False
         self.is_loading_csv = False
+        self.is_starting = False
 
         self.sample_index = 0
         self.ch1: deque[float] = deque(maxlen=MAX_POINTS)
@@ -803,15 +805,34 @@ class App(tk.Tk):
             write_protocol_json(self._protocol_path(csv_path), self._protocol())
             write_quality_gate_json(self._quality_gate_path(csv_path), self._quality_gate())
             self.path_var.set(f"CSV: {csv_path}")
+        self.is_starting = True
+        self.connection_var.set("Starting stream...")
         self.worker.start(port, csv_path)
-        self.is_streaming = True
-        self.connection_var.set("Streaming")
         self._apply_control_states()
 
     def stop(self) -> None:
         self.worker.stop()
         self.is_streaming = False
         self.connection_var.set(f"Connected: {self.connected_port}" if self.connected_port else "Stopped")
+        self._apply_control_states()
+
+    def _drain_stream_start_results(self) -> None:
+        while True:
+            try:
+                result = self.stream_start_results.get_nowait()
+            except queue.Empty:
+                return
+            self._finish_stream_start(result)
+
+    def _finish_stream_start(self, result: StreamStartResult) -> None:
+        self.is_starting = False
+        if result.ok:
+            self.is_streaming = True
+            self.connection_var.set("Streaming")
+        else:
+            self.is_streaming = False
+            self.connection_var.set(f"Connected: {self.connected_port}" if self.connected_port else "Stopped")
+            messagebox.showerror("Start failed", result.error or "Unknown error starting stream")
         self._apply_control_states()
 
     def load_csv(self) -> None:
@@ -1027,6 +1048,7 @@ class App(tk.Tk):
             has_recording_path=self.recording_path is not None,
             loading_csv=self.is_loading_csv,
             connecting=self.is_connecting,
+            starting=self.is_starting,
         )
         states = gui_control_states(state=state)
         self.workflow_hint_var.set(
@@ -1180,6 +1202,7 @@ class App(tk.Tk):
     def _tick(self) -> None:
         self._drain_csv_load_results()
         self._drain_connect_results()
+        self._drain_stream_start_results()
         latest = None
         while True:
             try:
