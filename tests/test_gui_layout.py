@@ -93,6 +93,7 @@ def test_sidebar_field_styles_make_forms_consistent() -> None:
     assert sidebar_field_styles() == {
         "label": "FieldLabel.TLabel",
         "entry": "Field.TEntry",
+        "check": "FieldCheck.TCheckbutton",
     }
 
 

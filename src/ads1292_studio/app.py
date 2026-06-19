@@ -159,6 +159,7 @@ PLOT_PANEL_SPEC = {
 SIDEBAR_FIELD_STYLES = {
     "label": "FieldLabel.TLabel",
     "entry": "Field.TEntry",
+    "check": "FieldCheck.TCheckbutton",
 }
 SIDEBAR_ACTION_BUTTON_STYLE = "SidebarAction.TButton"
 SIDEBAR_NOTEBOOK_STYLES = {
@@ -876,7 +877,13 @@ class App(tk.Tk):
         self._metadata_entry(validation_side, "Min R peaks", self.gate_min_r_peaks_var)
         self._metadata_entry(validation_side, "HR min bpm", self.gate_min_hr_var)
         self._metadata_entry(validation_side, "HR max bpm", self.gate_max_hr_var)
-        ttk.Checkbutton(validation_side, text="Require QRS clear", variable=self.gate_require_qrs_var).pack(anchor=tk.W)
+        self.gate_require_qrs_check = ttk.Checkbutton(
+            validation_side,
+            text="Require QRS clear",
+            variable=self.gate_require_qrs_var,
+            style=sidebar_field_styles()["check"],
+        )
+        self.gate_require_qrs_check.pack(anchor=tk.W, pady=(5, 2))
         self._metadata_entry(validation_side, "Max drift counts", self.gate_max_drift_var)
         self._metadata_entry(validation_side, "Max noise RMS", self.gate_max_noise_var)
         self._metadata_entry(validation_side, "Max peak-to-peak", self.gate_max_ptp_var)
@@ -1018,6 +1025,18 @@ class App(tk.Tk):
             foreground=tokens["ink"],
             insertcolor=tokens["accent"],
             padding=(8, 5),
+        )
+        style.configure(
+            "FieldCheck.TCheckbutton",
+            background=tokens["surface"],
+            foreground=tokens["ink"],
+            padding=(2, 5),
+            font=("Aptos", 11),
+        )
+        style.map(
+            "FieldCheck.TCheckbutton",
+            foreground=[("disabled", tokens["muted"]), ("active", tokens["accent_dark"])],
+            background=[("active", tokens["surface"])],
         )
         style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
