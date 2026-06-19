@@ -365,7 +365,7 @@ PLOT_TRACE_COLORS = {
     "peak": "#E34A4A",
 }
 PLOT_TRACE_STYLES = {
-    "ecg": {"linewidth": 1.15},
+    "ecg": {"linewidth": 1.25},
     "respiration": {"linewidth": 0.95},
     "contact": {"linewidth": 1.0, "drawstyle": "steps-post"},
     "peak": {"linestyle": "None", "marker": "o", "markersize": 4.2, "markeredgewidth": 0.0},
