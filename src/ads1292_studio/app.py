@@ -20,10 +20,7 @@ import matplotlib
 import numpy as np
 
 matplotlib.use("TkAgg")
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
 from matplotlib.ticker import MultipleLocator
-import seaborn as sns
 
 from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.calibration import Calibration, read_calibration_json, write_calibration_json
@@ -32,19 +29,24 @@ from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.display import (
     EcgDisplaySettings,
     SoftwareFilterSettings,
-    display_gain_labels,
     display_mode_label,
-    display_window_labels,
     ecg_paper_grid_key,
     ecg_paper_grid_spec,
     parse_display_gain,
     parse_display_window,
     parse_sweep_speed,
-    sweep_speed_labels,
 )
 from ads1292_studio.events import EventMarker, read_events_json, write_events_json
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_session_index import build_session_index_message
+from ads1292_studio.gui_plots import (
+    build_live_plot_panel,
+    build_log_panel,
+    build_pqrst_plot_panel,
+    build_review_plot_panel,
+    set_signal_axis_title,
+    style_signal_axes,
+)
 from ads1292_studio.gui_layout import (
     build_acquisition_toolbar,
     build_body_shell,
@@ -130,9 +132,6 @@ from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.plot_theme import (
     APP_VISUAL_TOKENS,
     PLOT_TRACE_COLORS,
-    PLOT_TRACE_STYLES,
-    PQRST_PLOT_STYLE,
-    apply_seaborn_plot_theme,
 )
 from ads1292_studio.plots import decimate_extrema_for_plot, decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
@@ -839,10 +838,10 @@ class App(tk.Tk):
         populate_sidebar(self, sidebar)
         build_workspace_tabs(self, main)
 
-        self._build_live_plot()
-        self._build_review_plot()
-        self._build_pqrst_plot()
-        self._build_log_panel()
+        build_live_plot_panel(self)
+        build_review_plot_panel(self)
+        build_pqrst_plot_panel(self)
+        build_log_panel(self)
         register_control_buttons(self)
         self._apply_control_states()
 
@@ -1594,223 +1593,6 @@ class App(tk.Tk):
         styles = sidebar_field_styles()
         ttk.Label(parent, text=label, style=styles["label"]).pack(anchor=tk.W, pady=(8, 2))
         ttk.Entry(parent, textvariable=variable, style=styles["entry"]).pack(anchor=tk.W, fill=tk.X)
-
-    def _build_live_plot(self) -> None:
-        fig = self._new_plot_figure(figsize=(10, 7))
-        fig.subplots_adjust(**plot_figure_layouts()["three_panel"])
-        self.ax_live_ecg = fig.add_subplot(311)
-        self.ax_live_resp = fig.add_subplot(312, sharex=self.ax_live_ecg)
-        self.ax_live_status = fig.add_subplot(313, sharex=self.ax_live_ecg)
-        for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
-            ax.label_outer()
-        self._style_signal_axes((self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
-        self._configure_status_axes((self.ax_live_status,))
-        self._add_signal_reference_lines((self.ax_live_ecg, self.ax_live_resp))
-        self.ax_live_ecg.set_ylabel("display counts")
-        self.ax_live_resp.set_ylabel("counts")
-        self.ax_live_status.set_xlabel("Time (s)")
-        self._configure_live_time_axis()
-        trace_styles = plot_trace_styles()
-        self.live_ecg_line, = self.ax_live_ecg.plot([], [], color=PLOT_TRACE_COLORS["ecg"], **trace_styles["ecg"])
-        self.live_peak_line, = self.ax_live_ecg.plot([], [], color=PLOT_TRACE_COLORS["peak"], **trace_styles["peak"])
-        self.live_resp_line, = self.ax_live_resp.plot(
-            [],
-            [],
-            color=PLOT_TRACE_COLORS["respiration"],
-            **trace_styles["respiration"],
-        )
-        self.live_status_line, = self.ax_live_status.plot(
-            [],
-            [],
-            color=PLOT_TRACE_COLORS["contact"],
-            **trace_styles["contact"],
-        )
-        self._show_empty_plot_state("live", (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
-        self.live_canvas = self._build_plot_canvas(self.live_tab, fig, name="live")
-
-    def _configure_live_time_axis(self) -> None:
-        spec = live_axis_spec()
-        for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
-            ax.xaxis.set_major_locator(MultipleLocator(float(spec["x_major_tick_seconds"])))
-
-    def _configure_status_axes(self, axes: tuple[object, ...]) -> None:
-        spec = status_axis_spec()
-        for ax in axes:
-            ax.yaxis.set_major_locator(MultipleLocator(float(spec["y_major_tick_bits"])))
-            ax.set_ylabel(str(spec["ylabel"]))
-
-    def _build_review_plot(self) -> None:
-        fig = self._new_plot_figure(figsize=(10, 7))
-        fig.subplots_adjust(**plot_figure_layouts()["three_panel"])
-        self.ax_review_ecg = fig.add_subplot(311)
-        self.ax_review_resp = fig.add_subplot(312, sharex=self.ax_review_ecg)
-        self.ax_review_status = fig.add_subplot(313, sharex=self.ax_review_ecg)
-        for ax in (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status):
-            ax.label_outer()
-        self._style_signal_axes((self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
-        self._configure_status_axes((self.ax_review_status,))
-        self._add_signal_reference_lines((self.ax_review_ecg, self.ax_review_resp))
-        self.ax_review_status.set_xlabel("Time (s)")
-        self.ax_review_ecg.set_ylabel("display counts")
-        self.ax_review_resp.set_ylabel("counts")
-        trace_styles = plot_trace_styles()
-        self.review_ecg_line, = self.ax_review_ecg.plot([], [], color=PLOT_TRACE_COLORS["ecg"], **trace_styles["ecg"])
-        self.review_peak_line, = self.ax_review_ecg.plot([], [], color=PLOT_TRACE_COLORS["peak"], **trace_styles["peak"])
-        self.review_resp_line, = self.ax_review_resp.plot(
-            [],
-            [],
-            color=PLOT_TRACE_COLORS["respiration"],
-            **trace_styles["respiration"],
-        )
-        self.review_status_line, = self.ax_review_status.plot(
-            [],
-            [],
-            color=PLOT_TRACE_COLORS["contact"],
-            **trace_styles["contact"],
-        )
-        self._show_empty_plot_state("review", (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
-        self.review_canvas = self._build_plot_canvas(self.review_tab, fig, name="review")
-
-    def _build_pqrst_plot(self) -> None:
-        fig = self._new_plot_figure(figsize=(10, 6))
-        fig.subplots_adjust(**plot_figure_layouts()["single_panel"])
-        self.ax_pqrst = fig.add_subplot(111)
-        self._style_signal_axes((self.ax_pqrst,))
-        self.ax_pqrst.set_xlabel("Time relative to R peak (ms)")
-        self.ax_pqrst.set_ylabel("Filtered counts")
-        self._show_empty_plot_state("pqrst", (self.ax_pqrst,))
-        self.pqrst_canvas = self._build_plot_canvas(self.pqrst_tab, fig, name="pqrst")
-
-    def _build_plot_canvas(self, parent: ttk.Frame, fig: Figure, *, name: str) -> FigureCanvasTkAgg:
-        spec = plot_panel_spec()
-        shell = ttk.Frame(parent, padding=spec["padding"], style=str(spec["shell"]))
-        shell.pack(fill=tk.BOTH, expand=True)
-        panel = ttk.Frame(shell, padding=spec["panel_padding"], style=str(spec["panel"]))
-        panel.pack(fill=tk.BOTH, expand=True)
-        setattr(self, f"{name}_plot_shell", shell)
-        setattr(self, f"{name}_plot_panel", panel)
-        canvas = FigureCanvasTkAgg(fig, master=panel)
-        canvas_widget = canvas.get_tk_widget()
-        canvas_widget.configure(**plot_canvas_widget_style())
-        canvas_widget.pack(fill=tk.BOTH, expand=True)
-        return canvas
-
-    def _build_log_panel(self) -> None:
-        spec = log_panel_spec()
-        shell = ttk.Frame(self.log_tab, padding=spec["padding"], style=str(spec["shell"]))
-        shell.pack(fill=tk.BOTH, expand=True)
-        panel = ttk.Frame(shell, padding=spec["panel_padding"], style=str(spec["panel"]))
-        panel.pack(fill=tk.BOTH, expand=True)
-        self.log_shell = shell
-        self.log_panel = panel
-        scrollbar_spec = scrollbar_chrome_spec()
-        self.log_scrollbar = ttk.Scrollbar(
-            panel,
-            orient=str(spec["scrollbar"]),
-            style=str(scrollbar_spec["vertical"]),
-        )
-        text_padding = spec["text_padding"]
-        self.log_text = tk.Text(
-            panel,
-            height=int(spec["height"]),
-            bg=str(spec["background"]),
-            fg=str(spec["foreground"]),
-            insertbackground=str(spec["insert"]),
-            selectbackground=str(spec["select_background"]),
-            selectforeground=str(spec["select_foreground"]),
-            borderwidth=int(spec["borderwidth"]),
-            highlightthickness=int(spec["highlightthickness"]),
-            relief=str(spec["relief"]),
-            padx=text_padding[0],
-            pady=text_padding[1],
-            spacing1=spec["spacing"][0],
-            spacing3=spec["spacing"][1],
-            wrap=str(spec["wrap"]),
-            font=spec["font"],
-            yscrollcommand=self.log_scrollbar.set,
-        )
-        self.log_scrollbar.configure(command=self.log_text.yview)
-        self.log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    def _new_plot_figure(self, *, figsize: tuple[float, float]) -> Figure:
-        apply_seaborn_plot_theme()
-        fig = Figure(figsize=figsize, dpi=100)
-        fig.patch.set_facecolor(APP_VISUAL_TOKENS["surface"])
-        return fig
-
-    def _style_signal_axes(self, axes: tuple[object, ...]) -> None:
-        style = plot_axis_style()
-        for ax in axes:
-            ax.set_facecolor(style["face"])
-            ax.set_axisbelow(style["axisbelow"])
-            ax.grid(True, color=style["grid"], linewidth=style["grid_linewidth"], alpha=style["grid_alpha"])
-            ax.tick_params(
-                colors=style["tick"],
-                direction=style["tick_direction"],
-                labelsize=style["tick_label_size"],
-                length=style["tick_length"],
-                width=style["tick_width"],
-            )
-            ax.xaxis.label.set_size(style["label_size"])
-            ax.yaxis.label.set_size(style["label_size"])
-            ax.xaxis.labelpad = style["label_pad"]
-            ax.yaxis.labelpad = style["label_pad"]
-            ax.xaxis.label.set_color(style["label"])
-            ax.yaxis.label.set_color(style["label"])
-            self._set_signal_axis_title(ax, ax.get_title())
-            sns.despine(ax=ax, top=True, right=True, left=False, bottom=False)
-            for side in ("left", "bottom"):
-                ax.spines[side].set_color(style["spine"])
-                ax.spines[side].set_linewidth(style["spine_linewidth"])
-
-    def _set_signal_axis_title(self, ax: object, title: str) -> None:
-        if ax.get_title() == title:
-            return
-        style = plot_axis_style()
-        ax.set_title(
-            title,
-            color=style["title"],
-            fontsize=style["title_size"],
-            fontweight=style["title_weight"],
-            pad=style["title_pad"],
-        )
-
-    def _add_signal_reference_lines(self, axes: tuple[object, ...]) -> None:
-        style = plot_axis_style()
-        for ax in axes:
-            ax.axhline(
-                0,
-                color=style["zero_line_color"],
-                linewidth=style["zero_line_width"],
-                linestyle=style["zero_line_style"],
-                alpha=style["zero_line_alpha"],
-                zorder=0,
-            )
-
-    def _show_empty_plot_state(self, key: str, axes: tuple[object, ...]) -> None:
-        style = empty_plot_style()
-        messages = empty_plot_messages()
-        for ax, message in zip(axes, messages[key]):
-            artist = ax.text(
-                0.5,
-                0.5,
-                message,
-                transform=ax.transAxes,
-                ha="center",
-                va="center",
-                color=str(style["text_color"]),
-                fontsize=int(style["font_size"]),
-                fontweight=str(style["font_weight"]),
-                alpha=float(style["alpha"]),
-                bbox={
-                    "boxstyle": f"round,pad={style['box_pad']},rounding_size={style['rounding']}",
-                    "facecolor": style["box_face"],
-                    "edgecolor": style["box_edge"],
-                    "linewidth": style["line_width"],
-                },
-            )
-            self.empty_plot_artists.append(artist)
 
     def _clear_empty_plot_state(self) -> None:
         while self.empty_plot_artists:
@@ -2661,12 +2443,12 @@ class App(tk.Tk):
         hr = heart_rate_summary(peaks, SAMPLE_RATE_HZ)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
         mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
-        self._set_signal_axis_title(
+        set_signal_axis_title(
             self.ax_live_ecg,
             live_ecg_axis_title(ecg_label, mode, inverted=DEFAULT_ECG_INVERTED),
         )
-        self._set_signal_axis_title(self.ax_live_resp, resp_label)
-        self._set_signal_axis_title(self.ax_live_status, contact_label)
+        set_signal_axis_title(self.ax_live_resp, resp_label)
+        set_signal_axis_title(self.ax_live_status, contact_label)
         set_string_var_if_changed(
             self.metrics_var,
             live_metrics_text(
@@ -2717,13 +2499,13 @@ class App(tk.Tk):
         self.review_peak_line.set_data(peak_x, ecg[list(result.peaks)] if result.peaks else [])
         mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
         polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
-        self._set_signal_axis_title(
+        set_signal_axis_title(
             self.ax_review_ecg,
             f"Offline ECG: {ecg_label} | {mode}{polarity} | "
             f"HR {result.heart_rate.median_bpm:.1f} bpm | peaks {len(result.peaks)}",
         )
-        self._set_signal_axis_title(self.ax_review_resp, resp_label)
-        self._set_signal_axis_title(self.ax_review_status, contact_label)
+        set_signal_axis_title(self.ax_review_resp, resp_label)
+        set_signal_axis_title(self.ax_review_status, contact_label)
         for ax, values, min_span in (
             (self.ax_review_ecg, display_ecg, DISPLAY_MIN_ECG_SPAN_COUNTS * display_settings.gain),
             (self.ax_review_resp, display_resp, DISPLAY_MIN_RESP_SPAN_COUNTS),
@@ -2763,7 +2545,7 @@ class App(tk.Tk):
     def _draw_pqrst(self, ecg: np.ndarray, peaks: tuple[int, ...]) -> None:
         review = pqrst_review(ecg, peaks, SAMPLE_RATE_HZ)
         self.ax_pqrst.clear()
-        self._style_signal_axes((self.ax_pqrst,))
+        style_signal_axes((self.ax_pqrst,))
         self.ax_pqrst.set_xlabel("Time relative to R peak (ms)")
         self.ax_pqrst.set_ylabel("Filtered counts")
         if review.average_beat:
@@ -2796,7 +2578,7 @@ class App(tk.Tk):
                 label=t_search["label"],
             )
             self.ax_pqrst.legend(**pqrst_style["legend"])
-        self._set_signal_axis_title(
+        set_signal_axis_title(
             self.ax_pqrst,
             f"PQRST review: QRS={review.qrs_clear}, P tentative={review.p_tentative}, "
             f"T tentative={review.t_tentative}, beats={review.beats_used}",
