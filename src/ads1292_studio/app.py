@@ -75,6 +75,19 @@ TOOLBAR_GROUP_PADDING = {
     "separator": (12, 8),
     "tight": (4, 4),
 }
+TOOLBAR_LAYOUT_SPEC = {
+    "frame": "Toolbar.TFrame",
+    "padding": (16, 10, 16, 10),
+    "port_width": 36,
+    "port_padding": (8, 8),
+    "refresh_padding": (0, 4),
+    "primary_action_padding": (12, 4),
+    "inline_action_padding": (4, 4),
+    "save_padding": (8, 4),
+    "toggle_padding": (4, 4),
+    "separator_width": 1,
+    "hint_padding": (10, 5),
+}
 SECONDARY_ACTION_BUTTONS = (
     "Load CSV",
     "Export Report",
@@ -481,6 +494,10 @@ def toolbar_group_padding() -> dict[str, tuple[int, int]]:
     return dict(TOOLBAR_GROUP_PADDING)
 
 
+def toolbar_layout_spec() -> dict[str, object]:
+    return dict(TOOLBAR_LAYOUT_SPEC)
+
+
 def secondary_action_button_labels() -> tuple[str, ...]:
     return SECONDARY_ACTION_BUTTONS
 
@@ -840,8 +857,10 @@ class App(tk.Tk):
         )
         self.header_separator.pack(side=tk.TOP, fill=tk.X)
 
-        toolbar = ttk.Frame(self, padding=(14, 10), style="Toolbar.TFrame")
+        toolbar_spec = toolbar_layout_spec()
+        toolbar = ttk.Frame(self, padding=toolbar_spec["padding"], style=str(toolbar_spec["frame"]))
         toolbar.pack(side=tk.TOP, fill=tk.X)
+        self.toolbar_frame = toolbar
 
         ttk.Label(toolbar, text="Port", style="ToolbarLabel.TLabel").pack(side=tk.LEFT)
         self.port_var = tk.StringVar()
@@ -849,31 +868,31 @@ class App(tk.Tk):
         self.port_combo = ttk.Combobox(
             toolbar,
             textvariable=self.port_var,
-            width=34,
+            width=int(toolbar_spec["port_width"]),
             style=toolbar_styles["port"],
         )
-        self.port_combo.pack(side=tk.LEFT, padx=6)
+        self.port_combo.pack(side=tk.LEFT, padx=toolbar_spec["port_padding"])
         self.refresh_button = ttk.Button(
             toolbar,
             text="Refresh",
             command=self.refresh_ports,
             style=toolbar_button_style("Refresh"),
         )
-        self.refresh_button.pack(side=tk.LEFT)
+        self.refresh_button.pack(side=tk.LEFT, padx=toolbar_spec["refresh_padding"])
         self.connect_button = ttk.Button(
             toolbar,
             text="Connect",
             command=self.connect,
             style=toolbar_button_style("Connect"),
         )
-        self.connect_button.pack(side=tk.LEFT, padx=(12, 4))
+        self.connect_button.pack(side=tk.LEFT, padx=toolbar_spec["primary_action_padding"])
         self.start_button = ttk.Button(
             toolbar,
             text="Start",
             command=self.start,
             style=toolbar_button_style("Start"),
         )
-        self.start_button.pack(side=tk.LEFT, padx=4)
+        self.start_button.pack(side=tk.LEFT, padx=toolbar_spec["inline_action_padding"])
         self.stop_button = ttk.Button(
             toolbar,
             text="Stop",
@@ -883,7 +902,7 @@ class App(tk.Tk):
         self.stop_button.pack(side=tk.LEFT)
         self.toolbar_acquisition_separator = ttk.Frame(
             toolbar,
-            width=1,
+            width=toolbar_spec["separator_width"],
             style="ToolbarSeparator.TFrame",
         )
         self.toolbar_acquisition_separator.pack(
@@ -899,7 +918,7 @@ class App(tk.Tk):
             variable=self.save_var,
             style=toolbar_styles["toggle"],
         )
-        self.save_check.pack(side=tk.LEFT, padx=8)
+        self.save_check.pack(side=tk.LEFT, padx=toolbar_spec["save_padding"])
         self.autoscale_var = tk.BooleanVar(value=True)
         self.autoscale_check = ttk.Checkbutton(
             toolbar,
@@ -907,7 +926,7 @@ class App(tk.Tk):
             variable=self.autoscale_var,
             style=toolbar_styles["toggle"],
         )
-        self.autoscale_check.pack(side=tk.LEFT, padx=4)
+        self.autoscale_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
         self.filter_var = tk.BooleanVar(value=DEFAULT_FILTER_ENABLED)
         self.filter_check = ttk.Checkbutton(
             toolbar,
@@ -915,10 +934,10 @@ class App(tk.Tk):
             variable=self.filter_var,
             style=toolbar_styles["toggle"],
         )
-        self.filter_check.pack(side=tk.LEFT, padx=4)
+        self.filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
         self.toolbar_context_separator = ttk.Frame(
             toolbar,
-            width=1,
+            width=toolbar_spec["separator_width"],
             style="ToolbarSeparator.TFrame",
         )
         self.toolbar_context_separator.pack(
@@ -1431,7 +1450,11 @@ class App(tk.Tk):
 
     def _build_toolbar_hint_chip(self, parent: ttk.Frame, text: str) -> None:
         styles = toolbar_hint_styles()
-        self.toolbar_hint_chip = ttk.Frame(parent, padding=(10, 5), style=styles["frame"])
+        self.toolbar_hint_chip = ttk.Frame(
+            parent,
+            padding=toolbar_layout_spec()["hint_padding"],
+            style=styles["frame"],
+        )
         self.toolbar_hint_chip.pack(side=tk.LEFT)
         self.toolbar_hint_label = ttk.Label(self.toolbar_hint_chip, text=text, style=styles["label"])
         self.toolbar_hint_label.pack(side=tk.LEFT)

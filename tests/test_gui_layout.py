@@ -29,6 +29,7 @@ from ads1292_studio.app import (
     toolbar_control_styles,
     toolbar_group_padding,
     toolbar_hint_styles,
+    toolbar_layout_spec,
     workflow_hint_styles,
     workspace_notebook_styles,
 )
@@ -74,6 +75,22 @@ def test_gui_layout_spaces_toolbar_groups() -> None:
     assert toolbar_group_padding() == {
         "separator": (12, 8),
         "tight": (4, 4),
+    }
+
+
+def test_toolbar_layout_spec_keeps_acquisition_controls_ordered() -> None:
+    assert toolbar_layout_spec() == {
+        "frame": "Toolbar.TFrame",
+        "padding": (16, 10, 16, 10),
+        "port_width": 36,
+        "port_padding": (8, 8),
+        "refresh_padding": (0, 4),
+        "primary_action_padding": (12, 4),
+        "inline_action_padding": (4, 4),
+        "save_padding": (8, 4),
+        "toggle_padding": (4, 4),
+        "separator_width": 1,
+        "hint_padding": (10, 5),
     }
 
 
