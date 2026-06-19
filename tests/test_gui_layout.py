@@ -13,6 +13,7 @@ from ads1292_studio.app import (
     input_chrome_spec,
     log_panel_spec,
     main_tab_labels,
+    panel_chrome_spec,
     plot_axis_style,
     plot_canvas_widget_style,
     plot_figure_layouts,
@@ -456,6 +457,15 @@ def test_scrollbar_chrome_spec_keeps_scroll_surfaces_subtle() -> None:
         "arrow": "#657084",
         "relief": "flat",
         "borderwidth": 0,
+    }
+
+
+def test_panel_chrome_spec_softens_repeated_card_borders() -> None:
+    assert panel_chrome_spec() == {
+        "background": "#FFFFFF",
+        "border": "#D9E1EC",
+        "borderwidth": 1,
+        "relief": "solid",
     }
 
 

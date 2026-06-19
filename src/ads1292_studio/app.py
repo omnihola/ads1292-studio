@@ -323,6 +323,12 @@ SCROLLBAR_CHROME_SPEC = {
     "relief": "flat",
     "borderwidth": 0,
 }
+PANEL_CHROME_SPEC = {
+    "background": "#FFFFFF",
+    "border": "#D9E1EC",
+    "borderwidth": 1,
+    "relief": "solid",
+}
 PLOT_PANEL_SPEC = {
     "shell": "Main.TFrame",
     "panel": "PlotPanel.TFrame",
@@ -536,6 +542,10 @@ def log_panel_spec() -> dict[str, object]:
 
 def scrollbar_chrome_spec() -> dict[str, object]:
     return dict(SCROLLBAR_CHROME_SPEC)
+
+
+def panel_chrome_spec() -> dict[str, object]:
+    return dict(PANEL_CHROME_SPEC)
 
 
 def plot_panel_spec() -> dict[str, object]:
@@ -1506,9 +1516,26 @@ class App(tk.Tk):
             ],
             background=[("active", check_chrome["active_background"])],
         )
-        style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
-        style.configure("PlotPanel.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
-        style.configure("LogPanel.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        panel_chrome = panel_chrome_spec()
+        for panel_style in (
+            "Card.TFrame",
+            "PlotPanel.TFrame",
+            "LogPanel.TFrame",
+            "WorkflowHint.TFrame",
+            "SafetyNotice.TFrame",
+            "StatusDetail.TFrame",
+            "EventCount.TFrame",
+            "ProtocolNote.TFrame",
+        ):
+            style.configure(
+                panel_style,
+                background=panel_chrome["background"],
+                borderwidth=panel_chrome["borderwidth"],
+                relief=panel_chrome["relief"],
+                bordercolor=panel_chrome["border"],
+                lightcolor=panel_chrome["border"],
+                darkcolor=panel_chrome["border"],
+            )
         scrollbar_spec = scrollbar_chrome_spec()
         style.configure(
             str(scrollbar_spec["vertical"]),
@@ -1526,21 +1553,18 @@ class App(tk.Tk):
             arrowcolor=[("active", scrollbar_spec["active_background"])],
         )
         style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
-        style.configure("WorkflowHint.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure(
             "WorkflowHint.TLabel",
             background=tokens["panel"],
             foreground=tokens["ink"],
             font=("Aptos", 11, "bold"),
         )
-        style.configure("SafetyNotice.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure(
             "SafetyNotice.TLabel",
             background=tokens["panel"],
             foreground=tokens["ink"],
             font=("Aptos", 11, "bold"),
         )
-        style.configure("StatusDetail.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure(
             "StatusDetailLabel.TLabel",
             background=tokens["panel"],
@@ -1553,7 +1577,6 @@ class App(tk.Tk):
             foreground=tokens["ink"],
             font=("Aptos", 11),
         )
-        style.configure("EventCount.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure(
             "EventCountLabel.TLabel",
             background=tokens["panel"],
@@ -1566,7 +1589,6 @@ class App(tk.Tk):
             foreground=tokens["ink"],
             font=("Aptos", 11, "bold"),
         )
-        style.configure("ProtocolNote.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure(
             "ProtocolNoteLabel.TLabel",
             background=tokens["panel"],
