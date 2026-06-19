@@ -21,6 +21,7 @@ from ads1292_studio.app import (
     primary_toolbar_button_labels,
     protocol_note_styles,
     safety_notice_styles,
+    scrollbar_chrome_spec,
     secondary_action_button_labels,
     section_heading_styles,
     sidebar_action_button_style,
@@ -441,6 +442,20 @@ def test_log_panel_spec_keeps_long_sessions_readable() -> None:
         "borderwidth": 0,
         "highlightthickness": 0,
         "relief": "flat",
+    }
+
+
+def test_scrollbar_chrome_spec_keeps_scroll_surfaces_subtle() -> None:
+    assert scrollbar_chrome_spec() == {
+        "vertical": "App.Vertical.TScrollbar",
+        "width": 12,
+        "background": "#A9B4C3",
+        "active_background": "#657084",
+        "trough": "#EEF3FA",
+        "border": "#EEF3FA",
+        "arrow": "#657084",
+        "relief": "flat",
+        "borderwidth": 0,
     }
 
 

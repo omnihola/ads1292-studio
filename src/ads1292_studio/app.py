@@ -312,6 +312,17 @@ LOG_PANEL_SPEC = {
     "highlightthickness": 0,
     "relief": "flat",
 }
+SCROLLBAR_CHROME_SPEC = {
+    "vertical": "App.Vertical.TScrollbar",
+    "width": 12,
+    "background": "#A9B4C3",
+    "active_background": "#657084",
+    "trough": "#EEF3FA",
+    "border": "#EEF3FA",
+    "arrow": "#657084",
+    "relief": "flat",
+    "borderwidth": 0,
+}
 PLOT_PANEL_SPEC = {
     "shell": "Main.TFrame",
     "panel": "PlotPanel.TFrame",
@@ -521,6 +532,10 @@ def empty_plot_style() -> dict[str, object]:
 
 def log_panel_spec() -> dict[str, object]:
     return dict(LOG_PANEL_SPEC)
+
+
+def scrollbar_chrome_spec() -> dict[str, object]:
+    return dict(SCROLLBAR_CHROME_SPEC)
 
 
 def plot_panel_spec() -> dict[str, object]:
@@ -926,9 +941,15 @@ def _mousewheel_units(event: tk.Event) -> int:
 
 class ScrollableFrame:
     def __init__(self, parent: tk.Widget, width: int = 280) -> None:
+        scrollbar_spec = scrollbar_chrome_spec()
         self.frame = ttk.Frame(parent)
         self.canvas = tk.Canvas(self.frame, width=width, highlightthickness=0)
-        self.scrollbar = ttk.Scrollbar(self.frame, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.scrollbar = ttk.Scrollbar(
+            self.frame,
+            orient=tk.VERTICAL,
+            command=self.canvas.yview,
+            style=str(scrollbar_spec["vertical"]),
+        )
         self.content = ttk.Frame(self.canvas, padding=10)
         self._content_window = self.canvas.create_window((0, 0), window=self.content, anchor=tk.NW)
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
@@ -1488,6 +1509,22 @@ class App(tk.Tk):
         style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("PlotPanel.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("LogPanel.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        scrollbar_spec = scrollbar_chrome_spec()
+        style.configure(
+            str(scrollbar_spec["vertical"]),
+            width=scrollbar_spec["width"],
+            background=scrollbar_spec["background"],
+            troughcolor=scrollbar_spec["trough"],
+            bordercolor=scrollbar_spec["border"],
+            arrowcolor=scrollbar_spec["arrow"],
+            relief=scrollbar_spec["relief"],
+            borderwidth=scrollbar_spec["borderwidth"],
+        )
+        style.map(
+            str(scrollbar_spec["vertical"]),
+            background=[("active", scrollbar_spec["active_background"])],
+            arrowcolor=[("active", scrollbar_spec["active_background"])],
+        )
         style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
         style.configure("WorkflowHint.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure(
@@ -1969,7 +2006,12 @@ class App(tk.Tk):
         panel.pack(fill=tk.BOTH, expand=True)
         self.log_shell = shell
         self.log_panel = panel
-        self.log_scrollbar = ttk.Scrollbar(panel, orient=str(spec["scrollbar"]))
+        scrollbar_spec = scrollbar_chrome_spec()
+        self.log_scrollbar = ttk.Scrollbar(
+            panel,
+            orient=str(spec["scrollbar"]),
+            style=str(scrollbar_spec["vertical"]),
+        )
         text_padding = spec["text_padding"]
         self.log_text = tk.Text(
             panel,
