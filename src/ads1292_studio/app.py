@@ -159,9 +159,20 @@ EMPTY_PLOT_STYLE = {
     "alpha": 0.92,
 }
 LOG_PANEL_SPEC = {
+    "shell": "Main.TFrame",
+    "panel": "LogPanel.TFrame",
+    "padding": (14, 14),
+    "panel_padding": (8, 8),
+    "height": 12,
     "wrap": "word",
     "scrollbar": "vertical",
-    "font": "Aptos 12",
+    "font": ("Aptos", 12),
+    "background": "#FFFFFF",
+    "foreground": "#172033",
+    "insert": "#2F6FED",
+    "select_background": "#2F6FED",
+    "select_foreground": "#FFFFFF",
+    "text_padding": (12, 10),
 }
 PLOT_PANEL_SPEC = {
     "shell": "Main.TFrame",
@@ -335,7 +346,7 @@ def empty_plot_style() -> dict[str, object]:
     return dict(EMPTY_PLOT_STYLE)
 
 
-def log_panel_spec() -> dict[str, str]:
+def log_panel_spec() -> dict[str, object]:
     return dict(LOG_PANEL_SPEC)
 
 
@@ -1212,6 +1223,7 @@ class App(tk.Tk):
         )
         style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("PlotPanel.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        style.configure("LogPanel.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
         style.configure("WorkflowHint.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure(
@@ -1594,22 +1606,30 @@ class App(tk.Tk):
         return canvas
 
     def _build_log_panel(self) -> None:
-        shell = ttk.Frame(self.log_tab, padding=(12, 12), style="Main.TFrame")
+        spec = log_panel_spec()
+        shell = ttk.Frame(self.log_tab, padding=spec["padding"], style=str(spec["shell"]))
         shell.pack(fill=tk.BOTH, expand=True)
-        panel = ttk.Frame(shell, padding=(0, 0), style="Card.TFrame")
+        panel = ttk.Frame(shell, padding=spec["panel_padding"], style=str(spec["panel"]))
         panel.pack(fill=tk.BOTH, expand=True)
-        self.log_scrollbar = ttk.Scrollbar(panel, orient=tk.VERTICAL)
+        self.log_shell = shell
+        self.log_panel = panel
+        self.log_scrollbar = ttk.Scrollbar(panel, orient=str(spec["scrollbar"]))
+        text_padding = spec["text_padding"]
         self.log_text = tk.Text(
             panel,
-            height=12,
-            bg=APP_VISUAL_TOKENS["panel"],
-            fg=APP_VISUAL_TOKENS["ink"],
-            insertbackground=APP_VISUAL_TOKENS["accent"],
+            height=int(spec["height"]),
+            bg=str(spec["background"]),
+            fg=str(spec["foreground"]),
+            insertbackground=str(spec["insert"]),
+            selectbackground=str(spec["select_background"]),
+            selectforeground=str(spec["select_foreground"]),
+            borderwidth=0,
+            highlightthickness=0,
             relief=tk.FLAT,
-            padx=12,
-            pady=10,
-            wrap=tk.WORD,
-            font=("Aptos", 12),
+            padx=text_padding[0],
+            pady=text_padding[1],
+            wrap=str(spec["wrap"]),
+            font=spec["font"],
             yscrollcommand=self.log_scrollbar.set,
         )
         self.log_scrollbar.configure(command=self.log_text.yview)

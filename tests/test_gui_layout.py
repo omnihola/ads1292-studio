@@ -243,11 +243,22 @@ def test_empty_plot_style_uses_muted_callouts() -> None:
 
 
 def test_log_panel_spec_keeps_long_sessions_readable() -> None:
-    spec = log_panel_spec()
-
-    assert spec["wrap"] == "word"
-    assert spec["scrollbar"] == "vertical"
-    assert spec["font"] == "Aptos 12"
+    assert log_panel_spec() == {
+        "shell": "Main.TFrame",
+        "panel": "LogPanel.TFrame",
+        "padding": (14, 14),
+        "panel_padding": (8, 8),
+        "height": 12,
+        "wrap": "word",
+        "scrollbar": "vertical",
+        "font": ("Aptos", 12),
+        "background": "#FFFFFF",
+        "foreground": "#172033",
+        "insert": "#2F6FED",
+        "select_background": "#2F6FED",
+        "select_foreground": "#FFFFFF",
+        "text_padding": (12, 10),
+    }
 
 
 def test_plot_panel_spec_frames_signal_workspaces() -> None:
