@@ -3533,11 +3533,19 @@ class App(tk.Tk):
         ch2 = np.asarray(self.ch2, dtype=float)
         return ADS1292R_ECG_SOURCE, ch2, ch1
 
-    def _display_signal(self, values: np.ndarray, *, invert: bool = False, gain: float = 1.0) -> np.ndarray:
+    def _display_signal(
+        self,
+        values: np.ndarray,
+        *,
+        filter_settings: SoftwareFilterSettings | None = None,
+        invert: bool = False,
+        gain: float = 1.0,
+    ) -> np.ndarray:
+        settings = filter_settings or self._software_filter_settings()
         return display_signal_values(
             values,
-            filter_enabled=bool(self.filter_var.get()),
-            filter_settings=self._software_filter_settings(),
+            filter_enabled=bool(settings.bandpass_enabled),
+            filter_settings=settings,
             invert=invert,
             gain=gain,
             sample_rate_hz=SAMPLE_RATE_HZ,
@@ -3622,8 +3630,13 @@ class App(tk.Tk):
         right = max(display_settings.time_window_seconds, x[-1])
         visible = (x >= left) & (x <= right)
         visible_x = x[visible]
-        visible_ecg = self._display_signal(ecg_raw[visible], invert=DEFAULT_ECG_INVERTED, gain=display_settings.gain)
-        visible_resp = self._display_signal(resp_raw[visible])
+        visible_ecg = self._display_signal(
+            ecg_raw[visible],
+            filter_settings=filter_settings,
+            invert=DEFAULT_ECG_INVERTED,
+            gain=display_settings.gain,
+        )
+        visible_resp = self._display_signal(resp_raw[visible], filter_settings=filter_settings)
         visible_ecg_plot = smooth_for_plot(visible_ecg, window=DISPLAY_SMOOTHING_WINDOW)
         visible_resp_plot = smooth_for_plot(visible_resp, window=DISPLAY_SMOOTHING_WINDOW)
         status_arr = np.asarray(self.status, dtype=float)
@@ -3692,8 +3705,13 @@ class App(tk.Tk):
         full_ch2 = np.asarray([sample.ch2 for sample in samples], dtype=float)
         full_status_ints = tuple(sample.lead_off_bits for sample in samples)
         source = ADS1292R_ECG_SOURCE
-        ecg = self._display_signal(full_ch2, invert=DEFAULT_ECG_INVERTED, gain=display_settings.gain)
-        resp = self._display_signal(full_ch1)
+        ecg = self._display_signal(
+            full_ch2,
+            filter_settings=filter_settings,
+            invert=DEFAULT_ECG_INVERTED,
+            gain=display_settings.gain,
+        )
+        resp = self._display_signal(full_ch1, filter_settings=filter_settings)
         result = review_channels(full_ch1, full_ch2, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
         metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
         x = np.arange(ecg.size) / SAMPLE_RATE_HZ

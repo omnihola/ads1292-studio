@@ -799,6 +799,15 @@ def test_signal_reference_lines_are_limited_to_ecg_and_respiration_axes() -> Non
     assert "self.ax_review_status" not in source.split("self._add_signal_reference_lines")[2].split(")")[0]
 
 
+def test_live_and_review_display_reuse_filter_settings_snapshot() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._redraw_live) + inspect.getsource(App._show_recording)
+
+    assert "filter_settings = self._software_filter_settings()" in source
+    assert source.count("filter_settings=filter_settings") == 4
+
+
 def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
     assert plot_figure_layouts() == {
         "three_panel": {
