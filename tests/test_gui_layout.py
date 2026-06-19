@@ -44,6 +44,7 @@ from ads1292_studio.app import (
     sidebar_notebook_styles,
     sidebar_tab_labels,
     sidebar_text_card_spec,
+    status_axis_spec,
     status_detail_styles,
     toolbar_button_style,
     toolbar_control_styles,
@@ -797,6 +798,25 @@ def test_signal_reference_lines_are_limited_to_ecg_and_respiration_axes() -> Non
     assert "self._add_signal_reference_lines((self.ax_review_ecg, self.ax_review_resp))" in source
     assert "self.ax_live_status" not in source.split("self._add_signal_reference_lines")[1].split(")")[0]
     assert "self.ax_review_status" not in source.split("self._add_signal_reference_lines")[2].split(")")[0]
+
+
+def test_status_axis_uses_integer_lead_off_bit_scale() -> None:
+    assert status_axis_spec() == {
+        "y_major_tick_bits": 1.0,
+        "ylabel": "lead-off bits",
+    }
+
+
+def test_live_and_review_status_axes_are_configured_as_status_tracks() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._build_live_plot) + inspect.getsource(App._build_review_plot)
+    configure_source = inspect.getsource(App._configure_status_axes)
+
+    assert "self._configure_status_axes((self.ax_live_status,))" in source
+    assert "self._configure_status_axes((self.ax_review_status,))" in source
+    assert "set_ylabel(str(spec[\"ylabel\"]))" in configure_source
+    assert "MultipleLocator(float(spec[\"y_major_tick_bits\"]))" in configure_source
 
 
 def test_live_and_review_display_reuse_filter_settings_snapshot() -> None:

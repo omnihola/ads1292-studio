@@ -389,6 +389,10 @@ STATUS_TONE_COLORS = {
 LIVE_AXIS_SPEC = {
     "x_major_tick_seconds": 1.0,
 }
+STATUS_AXIS_SPEC = {
+    "y_major_tick_bits": 1.0,
+    "ylabel": "lead-off bits",
+}
 EMPTY_PLOT_MESSAGES = {
     "live": (
         "CH2 ECG Lead I appears here",
@@ -753,6 +757,10 @@ def plot_trace_styles() -> dict[str, dict[str, object]]:
 
 def live_axis_spec() -> dict[str, float]:
     return dict(LIVE_AXIS_SPEC)
+
+
+def status_axis_spec() -> dict[str, object]:
+    return dict(STATUS_AXIS_SPEC)
 
 
 def pqrst_plot_style() -> dict[str, dict[str, object]]:
@@ -2647,6 +2655,7 @@ class App(tk.Tk):
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.label_outer()
         self._style_signal_axes((self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
+        self._configure_status_axes((self.ax_live_status,))
         self._add_signal_reference_lines((self.ax_live_ecg, self.ax_live_resp))
         self.ax_live_ecg.set_ylabel("display counts")
         self.ax_live_resp.set_ylabel("counts")
@@ -2675,6 +2684,12 @@ class App(tk.Tk):
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.xaxis.set_major_locator(MultipleLocator(float(spec["x_major_tick_seconds"])))
 
+    def _configure_status_axes(self, axes: tuple[object, ...]) -> None:
+        spec = status_axis_spec()
+        for ax in axes:
+            ax.yaxis.set_major_locator(MultipleLocator(float(spec["y_major_tick_bits"])))
+            ax.set_ylabel(str(spec["ylabel"]))
+
     def _build_review_plot(self) -> None:
         fig = self._new_plot_figure(figsize=(10, 7))
         fig.subplots_adjust(**plot_figure_layouts()["three_panel"])
@@ -2684,6 +2699,7 @@ class App(tk.Tk):
         for ax in (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status):
             ax.label_outer()
         self._style_signal_axes((self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
+        self._configure_status_axes((self.ax_review_status,))
         self._add_signal_reference_lines((self.ax_review_ecg, self.ax_review_resp))
         self.ax_review_status.set_xlabel("Time (s)")
         self.ax_review_ecg.set_ylabel("display counts")
