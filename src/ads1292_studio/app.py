@@ -549,6 +549,12 @@ PROTOCOL_NOTE_STYLES = {
     "label": "ProtocolNoteLabel.TLabel",
     "value": "ProtocolNoteValue.TLabel",
     "stripe": "#2F6FED",
+    "background": "#FFFFFF",
+    "label_foreground": "#1F4FB2",
+    "label_font": ("Aptos", 10, "bold"),
+    "value_foreground": "#293247",
+    "value_font": ("Aptos", 11),
+    "value_wrap": 245,
 }
 
 
@@ -744,7 +750,7 @@ def event_count_styles() -> dict[str, str]:
     return dict(EVENT_COUNT_STYLES)
 
 
-def protocol_note_styles() -> dict[str, str]:
+def protocol_note_styles() -> dict[str, object]:
     return dict(PROTOCOL_NOTE_STYLES)
 
 
@@ -1791,17 +1797,18 @@ class App(tk.Tk):
             foreground=event_count["value_foreground"],
             font=event_count["value_font"],
         )
+        protocol_note = protocol_note_styles()
         style.configure(
-            "ProtocolNoteLabel.TLabel",
-            background=tokens["panel"],
-            foreground=tokens["muted"],
-            font=("Aptos", 10, "bold"),
+            protocol_note["label"],
+            background=protocol_note["background"],
+            foreground=protocol_note["label_foreground"],
+            font=protocol_note["label_font"],
         )
         style.configure(
-            "ProtocolNoteValue.TLabel",
-            background=tokens["panel"],
-            foreground=tokens["ink"],
-            font=("Aptos", 11),
+            protocol_note["value"],
+            background=protocol_note["background"],
+            foreground=protocol_note["value_foreground"],
+            font=protocol_note["value_font"],
         )
         button_chrome = button_chrome_spec()
         default_button = button_chrome["default"]
@@ -2039,7 +2046,7 @@ class App(tk.Tk):
         value_label = ttk.Label(
             content,
             textvariable=variable,
-            wraplength=spec["detail_wrap"],
+            wraplength=styles["value_wrap"],
             justify=tk.LEFT,
             style=styles["value"],
         )

@@ -477,6 +477,12 @@ def test_protocol_note_styles_make_long_protocol_text_readable() -> None:
         "label": "ProtocolNoteLabel.TLabel",
         "value": "ProtocolNoteValue.TLabel",
         "stripe": "#2F6FED",
+        "background": "#FFFFFF",
+        "label_foreground": "#1F4FB2",
+        "label_font": ("Aptos", 10, "bold"),
+        "value_foreground": "#293247",
+        "value_font": ("Aptos", 11),
+        "value_wrap": 245,
     }
 
 
