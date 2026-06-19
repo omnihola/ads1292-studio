@@ -557,7 +557,15 @@ def test_pqrst_plot_style_keeps_morphology_review_readable() -> None:
         "r_marker": {"linestyle": "--", "linewidth": 1.0, "label": "R"},
         "p_search": {"start_ms": -220, "end_ms": -80, "alpha": 0.09, "label": "P search"},
         "t_search": {"start_ms": 120, "end_ms": 380, "alpha": 0.09, "label": "T search"},
-        "legend": {"loc": "upper right", "frameon": True, "fontsize": 9},
+        "legend": {
+            "loc": "upper right",
+            "frameon": True,
+            "fontsize": 9,
+            "facecolor": "#FFFFFF",
+            "edgecolor": "#D9E1EC",
+            "framealpha": 0.96,
+            "labelcolor": "#293247",
+        },
     }
 
 
