@@ -4,6 +4,7 @@ from ads1292_studio.app import (
     empty_plot_messages,
     log_panel_spec,
     main_tab_labels,
+    plot_panel_spec,
     plot_trace_colors,
     primary_toolbar_button_labels,
     secondary_action_button_labels,
@@ -148,3 +149,11 @@ def test_log_panel_spec_keeps_long_sessions_readable() -> None:
     assert spec["wrap"] == "word"
     assert spec["scrollbar"] == "vertical"
     assert spec["font"] == "Aptos 12"
+
+
+def test_plot_panel_spec_frames_signal_workspaces() -> None:
+    assert plot_panel_spec() == {
+        "shell": "Main.TFrame",
+        "panel": "Card.TFrame",
+        "padding": (12, 12),
+    }

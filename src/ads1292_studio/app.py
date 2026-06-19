@@ -144,6 +144,11 @@ LOG_PANEL_SPEC = {
     "scrollbar": "vertical",
     "font": "Aptos 12",
 }
+PLOT_PANEL_SPEC = {
+    "shell": "Main.TFrame",
+    "panel": "Card.TFrame",
+    "padding": (12, 12),
+}
 SIDEBAR_FIELD_STYLES = {
     "label": "FieldLabel.TLabel",
     "entry": "Field.TEntry",
@@ -234,6 +239,10 @@ def empty_plot_messages() -> dict[str, tuple[str, ...]]:
 
 def log_panel_spec() -> dict[str, str]:
     return dict(LOG_PANEL_SPEC)
+
+
+def plot_panel_spec() -> dict[str, object]:
+    return dict(PLOT_PANEL_SPEC)
 
 
 def sidebar_field_styles() -> dict[str, str]:
@@ -1179,8 +1188,7 @@ class App(tk.Tk):
             color=PLOT_TRACE_COLORS["contact"],
         )
         self._show_empty_plot_state("live", (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
-        self.live_canvas = FigureCanvasTkAgg(fig, master=self.live_tab)
-        self.live_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self.live_canvas = self._build_plot_canvas(self.live_tab, fig, name="live")
 
     def _build_review_plot(self) -> None:
         fig = self._new_plot_figure(figsize=(10, 7))
@@ -1205,8 +1213,7 @@ class App(tk.Tk):
             color=PLOT_TRACE_COLORS["contact"],
         )
         self._show_empty_plot_state("review", (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
-        self.review_canvas = FigureCanvasTkAgg(fig, master=self.review_tab)
-        self.review_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self.review_canvas = self._build_plot_canvas(self.review_tab, fig, name="review")
 
     def _build_pqrst_plot(self) -> None:
         fig = self._new_plot_figure(figsize=(10, 6))
@@ -1215,8 +1222,19 @@ class App(tk.Tk):
         self.ax_pqrst.set_xlabel("Time relative to R peak (ms)")
         self.ax_pqrst.set_ylabel("Filtered counts")
         self._show_empty_plot_state("pqrst", (self.ax_pqrst,))
-        self.pqrst_canvas = FigureCanvasTkAgg(fig, master=self.pqrst_tab)
-        self.pqrst_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self.pqrst_canvas = self._build_plot_canvas(self.pqrst_tab, fig, name="pqrst")
+
+    def _build_plot_canvas(self, parent: ttk.Frame, fig: Figure, *, name: str) -> FigureCanvasTkAgg:
+        spec = plot_panel_spec()
+        shell = ttk.Frame(parent, padding=spec["padding"], style=str(spec["shell"]))
+        shell.pack(fill=tk.BOTH, expand=True)
+        panel = ttk.Frame(shell, padding=(0, 0), style=str(spec["panel"]))
+        panel.pack(fill=tk.BOTH, expand=True)
+        setattr(self, f"{name}_plot_shell", shell)
+        setattr(self, f"{name}_plot_panel", panel)
+        canvas = FigureCanvasTkAgg(fig, master=panel)
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        return canvas
 
     def _build_log_panel(self) -> None:
         shell = ttk.Frame(self.log_tab, padding=(12, 12), style="Main.TFrame")
