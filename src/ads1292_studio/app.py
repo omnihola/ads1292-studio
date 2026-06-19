@@ -279,6 +279,12 @@ HEADER_CONNECTION_PILL = {
         "warning": "#FFF4E3",
         "neutral": "#EEF3FA",
     },
+    "foregrounds": {
+        "ready": "#1E7A46",
+        "running": "#2F6FED",
+        "warning": "#A76400",
+        "neutral": "#657084",
+    },
 }
 HEADER_LAYOUT_SPEC = {
     "frame": "Header.TFrame",
@@ -581,6 +587,7 @@ def header_connection_styles() -> dict[str, object]:
         "borderwidth": HEADER_CONNECTION_PILL["borderwidth"],
         "relief": HEADER_CONNECTION_PILL["relief"],
         "backgrounds": dict(HEADER_CONNECTION_PILL["backgrounds"]),
+        "foregrounds": dict(HEADER_CONNECTION_PILL["foregrounds"]),
     }
 
 
@@ -1502,10 +1509,11 @@ class App(tk.Tk):
             )
         connection_pill = header_connection_styles()
         connection_backgrounds = connection_pill["backgrounds"]
+        connection_foregrounds = connection_pill["foregrounds"]
         style.configure(
             "Connection.TLabel",
             background=connection_backgrounds["running"],
-            foreground=tokens["accent"],
+            foreground=connection_foregrounds["running"],
             font=connection_pill["font"],
             padding=connection_pill["padding"],
             borderwidth=connection_pill["borderwidth"],
@@ -1514,7 +1522,7 @@ class App(tk.Tk):
         style.configure(
             "Ready.Connection.TLabel",
             background=connection_backgrounds["ready"],
-            foreground=tokens["success"],
+            foreground=connection_foregrounds["ready"],
             font=connection_pill["font"],
             padding=connection_pill["padding"],
             borderwidth=connection_pill["borderwidth"],
@@ -1523,7 +1531,7 @@ class App(tk.Tk):
         style.configure(
             "Running.Connection.TLabel",
             background=connection_backgrounds["running"],
-            foreground=tokens["accent"],
+            foreground=connection_foregrounds["running"],
             font=connection_pill["font"],
             padding=connection_pill["padding"],
             borderwidth=connection_pill["borderwidth"],
@@ -1532,7 +1540,7 @@ class App(tk.Tk):
         style.configure(
             "Warning.Connection.TLabel",
             background=connection_backgrounds["warning"],
-            foreground=tokens["warning"],
+            foreground=connection_foregrounds["warning"],
             font=connection_pill["font"],
             padding=connection_pill["padding"],
             borderwidth=connection_pill["borderwidth"],
@@ -1541,7 +1549,7 @@ class App(tk.Tk):
         style.configure(
             "Neutral.Connection.TLabel",
             background=connection_backgrounds["neutral"],
-            foreground=tokens["muted"],
+            foreground=connection_foregrounds["neutral"],
             font=connection_pill["font"],
             padding=connection_pill["padding"],
             borderwidth=connection_pill["borderwidth"],

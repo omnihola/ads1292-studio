@@ -296,6 +296,12 @@ def test_header_connection_styles_make_status_a_pill() -> None:
             "warning": "#FFF4E3",
             "neutral": "#EEF3FA",
         },
+        "foregrounds": {
+            "ready": "#1E7A46",
+            "running": "#2F6FED",
+            "warning": "#A76400",
+            "neutral": "#657084",
+        },
     }
 
 
