@@ -145,15 +145,21 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
     }
 
 
-def test_app_delegates_interaction_chrome_to_style_helpers() -> None:
+def test_app_delegates_static_chrome_to_style_helpers() -> None:
     from ads1292_studio.app import App
 
     source = inspect.getsource(App._configure_status_styles)
 
+    assert "configure_base_chrome(style)" in source
+    assert "configure_header_chrome(style)" in source
     assert "configure_toolbar_chrome(style)" in source
     assert "configure_form_chrome(style)" in source
+    assert "configure_panel_chrome(style)" in source
+    assert "configure_scrollbar_chrome(style)" in source
+    assert "configure_sidebar_card_chrome(style)" in source
     assert "configure_button_chrome(style)" in source
     assert "configure_notebook_chrome(style)" in source
+    assert "configure_status_chrome(style)" in source
 
 
 def test_toolbar_frame_spec_groups_acquisition_controls_as_one_surface() -> None:

@@ -5,19 +5,95 @@ from tkinter import ttk
 from ads1292_studio.gui_specs import (
     action_section_styles,
     base_checkbutton_style,
+    base_chrome_spec,
     base_notebook_styles,
     button_chrome_spec,
+    card_label_spec,
+    event_count_styles,
+    header_connection_styles,
+    header_frame_spec,
+    header_text_styles,
     input_chrome_spec,
     muted_label_spec,
+    panel_chrome_spec,
+    protocol_note_styles,
+    safety_notice_styles,
+    scrollbar_chrome_spec,
     section_heading_styles,
     sidebar_notebook_styles,
+    status_detail_styles,
+    status_label_spec,
     toolbar_control_styles,
     toolbar_frame_spec,
     toolbar_group_label_spec,
     toolbar_hint_styles,
     toolbar_label_spec,
+    workflow_hint_styles,
     workspace_notebook_styles,
 )
+
+
+def configure_base_chrome(style: ttk.Style) -> None:
+    base_chrome = base_chrome_spec()
+    style.configure(
+        ".",
+        font=base_chrome["font"],
+        background=base_chrome["background"],
+        foreground=base_chrome["foreground"],
+    )
+    style.configure(
+        str(base_chrome["frame"]),
+        background=base_chrome["background"],
+        borderwidth=base_chrome["borderwidth"],
+    )
+    style.configure(str(base_chrome["sidebar"]), background=base_chrome["background"])
+    style.configure(str(base_chrome["main"]), background=base_chrome["background"])
+    style.configure(
+        str(base_chrome["label"]),
+        background=base_chrome["background"],
+        foreground=base_chrome["foreground"],
+        borderwidth=base_chrome["borderwidth"],
+    )
+
+
+def configure_header_chrome(style: ttk.Style) -> None:
+    header_frame = header_frame_spec()
+    style.configure(
+        str(header_frame["frame"]),
+        background=header_frame["background"],
+        borderwidth=header_frame["borderwidth"],
+    )
+    style.configure(
+        str(header_frame["separator"]),
+        background=header_frame["separator_background"],
+        borderwidth=header_frame["borderwidth"],
+    )
+    for text_spec in header_text_styles().values():
+        style.configure(
+            str(text_spec["style"]),
+            background=text_spec["background"],
+            foreground=text_spec["foreground"],
+            font=text_spec["font"],
+        )
+    connection_pill = header_connection_styles()
+    connection_backgrounds = connection_pill["backgrounds"]
+    connection_foregrounds = connection_pill["foregrounds"]
+    for tone, style_name in (
+        ("running", "Connection.TLabel"),
+        ("ready", "Ready.Connection.TLabel"),
+        ("running", "Running.Connection.TLabel"),
+        ("warning", "Warning.Connection.TLabel"),
+        ("neutral", "Neutral.Connection.TLabel"),
+    ):
+        style.configure(
+            style_name,
+            background=connection_backgrounds[tone],
+            foreground=connection_foregrounds[tone],
+            font=connection_pill["font"],
+            padding=connection_pill["padding"],
+            borderwidth=connection_pill["borderwidth"],
+            relief=connection_pill["relief"],
+        )
 
 
 def configure_toolbar_chrome(style: ttk.Style) -> None:
@@ -191,6 +267,103 @@ def configure_form_chrome(style: ttk.Style) -> None:
     )
 
 
+def configure_panel_chrome(style: ttk.Style) -> None:
+    panel_chrome = panel_chrome_spec()
+    for panel_style in (
+        "Card.TFrame",
+        "PlotPanel.TFrame",
+        "LogPanel.TFrame",
+        "WorkflowHint.TFrame",
+        "SafetyNotice.TFrame",
+        "StatusDetail.TFrame",
+        "EventCount.TFrame",
+        "ProtocolNote.TFrame",
+    ):
+        style.configure(
+            panel_style,
+            background=panel_chrome["background"],
+            borderwidth=panel_chrome["borderwidth"],
+            relief=panel_chrome["relief"],
+            bordercolor=panel_chrome["border"],
+            lightcolor=panel_chrome["border"],
+            darkcolor=panel_chrome["border"],
+        )
+    for notice_style in (workflow_hint_styles(), safety_notice_styles()):
+        style.configure(
+            notice_style["frame"],
+            background=notice_style["background"],
+            borderwidth=panel_chrome["borderwidth"],
+            relief=panel_chrome["relief"],
+            bordercolor=panel_chrome["border"],
+            lightcolor=panel_chrome["border"],
+            darkcolor=panel_chrome["border"],
+        )
+
+
+def configure_scrollbar_chrome(style: ttk.Style) -> None:
+    scrollbar_spec = scrollbar_chrome_spec()
+    style.configure(
+        str(scrollbar_spec["vertical"]),
+        width=scrollbar_spec["width"],
+        background=scrollbar_spec["background"],
+        troughcolor=scrollbar_spec["trough"],
+        bordercolor=scrollbar_spec["border"],
+        arrowcolor=scrollbar_spec["arrow"],
+        relief=scrollbar_spec["relief"],
+        borderwidth=scrollbar_spec["borderwidth"],
+    )
+    style.map(
+        str(scrollbar_spec["vertical"]),
+        background=[("active", scrollbar_spec["active_background"])],
+        arrowcolor=[("active", scrollbar_spec["active_background"])],
+    )
+
+
+def configure_sidebar_card_chrome(style: ttk.Style) -> None:
+    card_label = card_label_spec()
+    style.configure(
+        str(card_label["style"]),
+        background=card_label["background"],
+        foreground=card_label["foreground"],
+        font=card_label["font"],
+    )
+
+    workflow_hint = workflow_hint_styles()
+    style.configure(
+        workflow_hint["label"],
+        background=workflow_hint["background"],
+        foreground=workflow_hint["foreground"],
+        font=workflow_hint["font"],
+    )
+
+    safety_notice = safety_notice_styles()
+    style.configure(
+        safety_notice["label"],
+        background=safety_notice["background"],
+        foreground=safety_notice["foreground"],
+        font=safety_notice["font"],
+    )
+
+    _configure_label_value_pair(style, status_detail_styles())
+    _configure_label_value_pair(style, event_count_styles())
+    _configure_label_value_pair(style, protocol_note_styles())
+
+
+def _configure_label_value_pair(style: ttk.Style, chrome: dict[str, object]) -> None:
+    style.configure(
+        chrome["label"],
+        background=chrome["background"],
+        foreground=chrome["label_foreground"],
+        font=chrome["label_font"],
+    )
+    style.configure(
+        chrome["value"],
+        background=chrome["background"],
+        foreground=chrome["value_foreground"],
+        font=chrome["value_font"],
+    )
+
+
 def configure_button_chrome(style: ttk.Style) -> None:
     button_chrome = button_chrome_spec()
     _configure_button_style(style, "TButton", button_chrome["default"])
@@ -220,6 +393,25 @@ def _configure_button_style(style: ttk.Style, style_name: str, chrome: dict[str,
             ("active", chrome["active_background"]),
         ],
     )
+
+
+def configure_status_chrome(style: ttk.Style) -> None:
+    status_label = status_label_spec()
+    status_backgrounds = status_label["backgrounds"]
+    status_foregrounds = status_label["foregrounds"]
+    for tone, style_name in (
+        ("ready", "Ready.Status.TLabel"),
+        ("running", "Running.Status.TLabel"),
+        ("warning", "Warning.Status.TLabel"),
+        ("neutral", "Neutral.Status.TLabel"),
+    ):
+        style.configure(
+            style_name,
+            background=status_backgrounds[tone],
+            foreground=status_foregrounds[tone],
+            font=status_label["font"],
+            padding=status_label["padding"],
+        )
 
 
 def configure_notebook_chrome(style: ttk.Style) -> None:

@@ -71,9 +71,15 @@ from ads1292_studio.gui_state import (
     toolbar_display_hint_text,
 )
 from ads1292_studio.gui_style import (
+    configure_base_chrome,
     configure_button_chrome,
     configure_form_chrome,
+    configure_header_chrome,
     configure_notebook_chrome,
+    configure_panel_chrome,
+    configure_scrollbar_chrome,
+    configure_sidebar_card_chrome,
+    configure_status_chrome,
     configure_toolbar_chrome,
 )
 from ads1292_studio.gui_workers import (
@@ -311,234 +317,16 @@ class App(tk.Tk):
             style.theme_use("clam")
         except tk.TclError:
             pass
-        tokens = APP_VISUAL_TOKENS
-        base_chrome = base_chrome_spec()
-        style.configure(
-            ".",
-            font=base_chrome["font"],
-            background=base_chrome["background"],
-            foreground=base_chrome["foreground"],
-        )
-        style.configure(
-            str(base_chrome["frame"]),
-            background=base_chrome["background"],
-            borderwidth=base_chrome["borderwidth"],
-        )
-        header_frame = header_frame_spec()
-        style.configure(
-            str(header_frame["frame"]),
-            background=header_frame["background"],
-            borderwidth=header_frame["borderwidth"],
-        )
-        style.configure(
-            str(header_frame["separator"]),
-            background=header_frame["separator_background"],
-            borderwidth=header_frame["borderwidth"],
-        )
+        configure_base_chrome(style)
+        configure_header_chrome(style)
         configure_toolbar_chrome(style)
-        style.configure(str(base_chrome["sidebar"]), background=base_chrome["background"])
-        style.configure(str(base_chrome["main"]), background=base_chrome["background"])
-        style.configure(
-            str(base_chrome["label"]),
-            background=base_chrome["background"],
-            foreground=base_chrome["foreground"],
-            borderwidth=base_chrome["borderwidth"],
-        )
-        for text_spec in header_text_styles().values():
-            style.configure(
-                str(text_spec["style"]),
-                background=text_spec["background"],
-                foreground=text_spec["foreground"],
-                font=text_spec["font"],
-            )
-        connection_pill = header_connection_styles()
-        connection_backgrounds = connection_pill["backgrounds"]
-        connection_foregrounds = connection_pill["foregrounds"]
-        style.configure(
-            "Connection.TLabel",
-            background=connection_backgrounds["running"],
-            foreground=connection_foregrounds["running"],
-            font=connection_pill["font"],
-            padding=connection_pill["padding"],
-            borderwidth=connection_pill["borderwidth"],
-            relief=connection_pill["relief"],
-        )
-        style.configure(
-            "Ready.Connection.TLabel",
-            background=connection_backgrounds["ready"],
-            foreground=connection_foregrounds["ready"],
-            font=connection_pill["font"],
-            padding=connection_pill["padding"],
-            borderwidth=connection_pill["borderwidth"],
-            relief=connection_pill["relief"],
-        )
-        style.configure(
-            "Running.Connection.TLabel",
-            background=connection_backgrounds["running"],
-            foreground=connection_foregrounds["running"],
-            font=connection_pill["font"],
-            padding=connection_pill["padding"],
-            borderwidth=connection_pill["borderwidth"],
-            relief=connection_pill["relief"],
-        )
-        style.configure(
-            "Warning.Connection.TLabel",
-            background=connection_backgrounds["warning"],
-            foreground=connection_foregrounds["warning"],
-            font=connection_pill["font"],
-            padding=connection_pill["padding"],
-            borderwidth=connection_pill["borderwidth"],
-            relief=connection_pill["relief"],
-        )
-        style.configure(
-            "Neutral.Connection.TLabel",
-            background=connection_backgrounds["neutral"],
-            foreground=connection_foregrounds["neutral"],
-            font=connection_pill["font"],
-            padding=connection_pill["padding"],
-            borderwidth=connection_pill["borderwidth"],
-            relief=connection_pill["relief"],
-        )
         configure_form_chrome(style)
-        panel_chrome = panel_chrome_spec()
-        for panel_style in (
-            "Card.TFrame",
-            "PlotPanel.TFrame",
-            "LogPanel.TFrame",
-            "WorkflowHint.TFrame",
-            "SafetyNotice.TFrame",
-            "StatusDetail.TFrame",
-            "EventCount.TFrame",
-            "ProtocolNote.TFrame",
-        ):
-            style.configure(
-                panel_style,
-                background=panel_chrome["background"],
-                borderwidth=panel_chrome["borderwidth"],
-                relief=panel_chrome["relief"],
-                bordercolor=panel_chrome["border"],
-                lightcolor=panel_chrome["border"],
-                darkcolor=panel_chrome["border"],
-            )
-        workflow_hint = workflow_hint_styles()
-        safety_notice = safety_notice_styles()
-        for notice_style in (workflow_hint, safety_notice):
-            style.configure(
-                notice_style["frame"],
-                background=notice_style["background"],
-                borderwidth=panel_chrome["borderwidth"],
-                relief=panel_chrome["relief"],
-                bordercolor=panel_chrome["border"],
-                lightcolor=panel_chrome["border"],
-                darkcolor=panel_chrome["border"],
-            )
-        scrollbar_spec = scrollbar_chrome_spec()
-        style.configure(
-            str(scrollbar_spec["vertical"]),
-            width=scrollbar_spec["width"],
-            background=scrollbar_spec["background"],
-            troughcolor=scrollbar_spec["trough"],
-            bordercolor=scrollbar_spec["border"],
-            arrowcolor=scrollbar_spec["arrow"],
-            relief=scrollbar_spec["relief"],
-            borderwidth=scrollbar_spec["borderwidth"],
-        )
-        style.map(
-            str(scrollbar_spec["vertical"]),
-            background=[("active", scrollbar_spec["active_background"])],
-            arrowcolor=[("active", scrollbar_spec["active_background"])],
-        )
-        card_label = card_label_spec()
-        style.configure(
-            str(card_label["style"]),
-            background=card_label["background"],
-            foreground=card_label["foreground"],
-            font=card_label["font"],
-        )
-        style.configure(
-            workflow_hint["label"],
-            background=workflow_hint["background"],
-            foreground=workflow_hint["foreground"],
-            font=workflow_hint["font"],
-        )
-        style.configure(
-            safety_notice["label"],
-            background=safety_notice["background"],
-            foreground=safety_notice["foreground"],
-            font=safety_notice["font"],
-        )
-        status_detail = status_detail_styles()
-        style.configure(
-            status_detail["label"],
-            background=status_detail["background"],
-            foreground=status_detail["label_foreground"],
-            font=status_detail["label_font"],
-        )
-        style.configure(
-            status_detail["value"],
-            background=status_detail["background"],
-            foreground=status_detail["value_foreground"],
-            font=status_detail["value_font"],
-        )
-        event_count = event_count_styles()
-        style.configure(
-            event_count["label"],
-            background=event_count["background"],
-            foreground=event_count["label_foreground"],
-            font=event_count["label_font"],
-        )
-        style.configure(
-            event_count["value"],
-            background=event_count["background"],
-            foreground=event_count["value_foreground"],
-            font=event_count["value_font"],
-        )
-        protocol_note = protocol_note_styles()
-        style.configure(
-            protocol_note["label"],
-            background=protocol_note["background"],
-            foreground=protocol_note["label_foreground"],
-            font=protocol_note["label_font"],
-        )
-        style.configure(
-            protocol_note["value"],
-            background=protocol_note["background"],
-            foreground=protocol_note["value_foreground"],
-            font=protocol_note["value_font"],
-        )
+        configure_panel_chrome(style)
+        configure_scrollbar_chrome(style)
+        configure_sidebar_card_chrome(style)
         configure_button_chrome(style)
         configure_notebook_chrome(style)
-        status_label = status_label_spec()
-        status_backgrounds = status_label["backgrounds"]
-        status_foregrounds = status_label["foregrounds"]
-        style.configure(
-            "Ready.Status.TLabel",
-            background=status_backgrounds["ready"],
-            foreground=status_foregrounds["ready"],
-            font=status_label["font"],
-            padding=status_label["padding"],
-        )
-        style.configure(
-            "Running.Status.TLabel",
-            background=status_backgrounds["running"],
-            foreground=status_foregrounds["running"],
-            font=status_label["font"],
-            padding=status_label["padding"],
-        )
-        style.configure(
-            "Warning.Status.TLabel",
-            background=status_backgrounds["warning"],
-            foreground=status_foregrounds["warning"],
-            font=status_label["font"],
-            padding=status_label["padding"],
-        )
-        style.configure(
-            "Neutral.Status.TLabel",
-            background=status_backgrounds["neutral"],
-            foreground=status_foregrounds["neutral"],
-            font=status_label["font"],
-            padding=status_label["padding"],
-        )
+        configure_status_chrome(style)
 
     def _build_workflow_hint(self, parent: ttk.Frame) -> None:
         styles = workflow_hint_styles()
