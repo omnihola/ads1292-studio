@@ -58,6 +58,7 @@
 | Stage sidecar templates separately | Missing sidecar cleanup should not silently edit raw recording folders; template JSON files should be generated in the index output directory for review first. |
 | Add template path traceability | A sidecar cleanup plan is more useful when each row shows both the staged template to review and the final target path beside the recording. |
 | Add sidecar apply scripts | After reviewing generated templates, users need a repeatable non-overwriting script to copy staged sidecars into their final locations without manual path mistakes. |
+| Make the left control column scrollable | The accumulated metadata, event, calibration, quality-gate, and protocol controls exceed smaller window heights, so the left column must scroll independently from the plot tabs. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -91,6 +92,8 @@
 | Sidecar completion still required hand-creating JSON files | Added a staged `*-sidecar-templates/` folder with generated metadata, events, calibration, protocol, and quality-gate JSON templates. |
 | Sidecar plan did not connect template files back to target paths | Added `template_path` to the sidecar plan CSV/HTML so users can review a staged template and know where it belongs later. |
 | Staged templates still required manual copy/paste into the recording folder | Added an executable `*-apply-sidecars.sh` helper that maps reviewed templates to final target paths using absolute paths and `cp -n`. |
+| Left sidebar controls were clipped when the GUI window was not tall enough | Replaced the plain `ttk.Frame` sidebar with a Canvas-backed `ScrollableFrame` with a vertical scrollbar and mouse-wheel scrolling. |
+| Sidebar scrollbar existed but mouse wheel still felt dead | macOS wheel deltas can be smaller than 120 and child widgets can receive the wheel event; fixed by converting any nonzero delta to a scroll unit and using pointer-gated global wheel binding. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`

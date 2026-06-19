@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 32
+Phase 33
 
 ## Phases
 
@@ -279,6 +279,15 @@ Phase 32
 - [x] Add tests and real `../record/ads1292` smoke test.
 - **Status:** complete
 
+### Phase 33: Scrollable Left Sidebar
+- [x] Identify root cause: left control column was a plain `ttk.Frame` with more controls than fit in smaller windows.
+- [x] Add a failing GUI layout test requiring a scrollable sidebar container.
+- [x] Add `ScrollableFrame` with Canvas, vertical scrollbar, scrollregion updates, and mouse-wheel scrolling.
+- [x] Move the existing metadata, event, calibration, quality-gate, protocol, and safety controls into the scrollable content frame.
+- [x] Fix macOS mouse-wheel handling so small trackpad deltas still scroll and wheel events over child controls are handled.
+- [x] Add tests and syntax verification.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -323,6 +332,7 @@ Phase 32
 | Stage sidecar templates instead of modifying raw folders | Commercial-style cleanup should be review-first; generated templates go to the report output folder so original recordings are not modified automatically. |
 | Add template path traceability to sidecar plans | A cleanup checklist should show both the staged template file to review and the final target path beside the raw recording. |
 | Add a sidecar apply script | After template review, users need a repeatable way to copy staged JSON sidecars into place without hand-copy errors or overwriting existing files. |
+| Make the left sidebar scrollable | The GUI has accumulated enough controls that a fixed-height left frame hides fields on smaller windows; the control column must scroll independently of the plot area. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -357,6 +367,10 @@ Phase 32
 | Sidecar plan lacked generated template paths | 1 | Added `template_path` to `SidecarPlanRow`, CSV export, HTML export, and tests. |
 | CodeGraph still not initialized in `ads1292-studio/` | 4 | Continued with direct file reads for Phase 32 and kept the limitation documented. |
 | Sidecar template bundle still required manual copy operations | 1 | Added an executable `*-apply-sidecars.sh` helper that uses absolute paths and `cp -n`. |
+| CodeGraph still not initialized in `ads1292-studio/` | 5 | Continued with direct file reads for Phase 33 and kept the limitation documented. |
+| Left sidebar controls were clipped in smaller windows | 1 | Replaced the plain sidebar frame with `ScrollableFrame` using Canvas plus a vertical scrollbar. |
+| Real Tk widget pytest aborted under macOS Tk | 1 | Replaced the unstable live-widget test with a source-level layout test and retained syntax/full-test verification. |
+| Mouse wheel still did not scroll the sidebar reliably | 1 | Added nonzero small-delta handling for macOS wheel events and pointer-gated global wheel binding for events over child controls. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

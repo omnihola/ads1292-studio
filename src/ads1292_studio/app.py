@@ -45,6 +45,56 @@ VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
 
 
+def _mousewheel_units(event: tk.Event) -> int:
+    if getattr(event, "num", None) == 4:
+        return -1
+    if getattr(event, "num", None) == 5:
+        return 1
+    delta = int(getattr(event, "delta", 0))
+    if delta == 0:
+        return 0
+    return -1 if delta > 0 else 1
+
+
+class ScrollableFrame:
+    def __init__(self, parent: tk.Widget, width: int = 280) -> None:
+        self.frame = ttk.Frame(parent)
+        self.canvas = tk.Canvas(self.frame, width=width, highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(self.frame, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.content = ttk.Frame(self.canvas, padding=10)
+        self._content_window = self.canvas.create_window((0, 0), window=self.content, anchor=tk.NW)
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.content.bind("<Configure>", self._update_scroll_region)
+        self.canvas.bind("<Configure>", self._fit_content_width)
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.canvas.bind_all("<Button-4>", self._on_mousewheel)
+        self.canvas.bind_all("<Button-5>", self._on_mousewheel)
+
+    def _update_scroll_region(self, _event: tk.Event) -> None:
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def _fit_content_width(self, event: tk.Event) -> None:
+        self.canvas.itemconfigure(self._content_window, width=event.width)
+
+    def _on_mousewheel(self, event: tk.Event) -> None:
+        if not self._contains_pointer(event):
+            return
+        units = _mousewheel_units(event)
+        if units:
+            self.canvas.yview_scroll(units, "units")
+
+    def _contains_pointer(self, event: tk.Event) -> bool:
+        x = int(getattr(event, "x_root", self.canvas.winfo_pointerx()))
+        y = int(getattr(event, "y_root", self.canvas.winfo_pointery()))
+        left = self.canvas.winfo_rootx()
+        top = self.canvas.winfo_rooty()
+        right = left + self.canvas.winfo_width()
+        bottom = top + self.canvas.winfo_height()
+        return left <= x <= right and top <= y <= bottom
+
+
 class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
@@ -113,8 +163,11 @@ class App(tk.Tk):
 
         body = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        side = ttk.Frame(body, padding=10, width=260)
-        body.add(side, weight=0)
+        side_shell = ttk.Frame(body, width=300)
+        body.add(side_shell, weight=0)
+        self.sidebar = ScrollableFrame(side_shell, width=280)
+        self.sidebar.frame.pack(fill=tk.BOTH, expand=True)
+        side = self.sidebar.content
         main = ttk.Frame(body)
         body.add(main, weight=1)
 

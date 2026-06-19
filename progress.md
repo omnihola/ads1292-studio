@@ -605,6 +605,11 @@
 | Sidecar apply script full tests | `conda run -n sensor python -m pytest -q` | All tests pass after apply-script export | 64 passed | Pass |
 | Sidecar apply script syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_index.py src/ads1292_studio/cli.py src/ads1292_studio/gui_session_index.py` | No syntax errors | Passed | Pass |
 | Sidecar apply script final real folder smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/ads1292 --out reports/session-index-apply-script-smoke-final --title ADS1292-Apply-Script-Smoke-Final` | Real folder script uses absolute paths and is executable | `rows=9`, `sidecar_plan_rows=45`, `sidecar_template_files=45`; `-rwxr-xr-x`; script contains absolute `cp -n` paths | Pass |
+| GUI scroll sidebar TDD red check | `conda run -n sensor python -m pytest tests/test_gui_scroll.py -q` before implementation | Missing scrollable sidebar implementation | `ImportError: cannot import name 'ScrollableFrame'` | Pass |
+| GUI scroll mousewheel red check | `conda run -n sensor python -m pytest tests/test_gui_scroll.py -q` before mousewheel fix | Missing small-delta mousewheel helper | `ImportError: cannot import name '_mousewheel_units'` | Pass |
+| GUI scroll sidebar focused test | `conda run -n sensor python -m pytest tests/test_gui_scroll.py -q` | ScrollableFrame source includes Canvas/scrollbar; mousewheel helper handles small macOS deltas and X11 buttons | 2 passed | Pass |
+| GUI scroll related tests | `conda run -n sensor python -m pytest tests/test_gui_quality.py tests/test_gui_quality_gate_config.py tests/test_gui_session_index.py tests/test_gui_scroll.py -q` | GUI helper tests pass after sidebar scroll and wheel fixes | 8 passed | Pass |
+| GUI scroll syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -650,12 +655,16 @@
 | 2026-06-18 | Sidecar plan lacked staged template paths during TDD red check | 1 | Added `template_path` to `SidecarPlanRow`, CSV output, HTML output, and tests. |
 | 2026-06-18 | CodeGraph remains uninitialized in `ads1292-studio/` | 4 | Used direct file reads for Phase 32 context and kept the limitation documented. |
 | 2026-06-18 | Sidecar apply script export was missing during TDD red check | 1 | Added `sidecar_apply_script_path`, executable script generation, CLI output, and GUI confirmation text. |
+| 2026-06-18 | CodeGraph remains uninitialized in `ads1292-studio/` | 5 | Used direct file reads for Phase 33 context and kept the limitation documented. |
+| 2026-06-18 | Left sidebar was a non-scrollable plain frame | 1 | Added `ScrollableFrame` and moved the sidebar controls into its content frame. |
+| 2026-06-18 | Live Tk widget pytest aborted under macOS Tk | 1 | Replaced it with a stable source-level layout test and kept GUI syntax/helper verification. |
+| 2026-06-18 | Sidebar mouse wheel still did not scroll reliably | 1 | Added `_mousewheel_units()` for small macOS deltas and pointer-gated global wheel handling for child widgets. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 32 complete; ready to run full verification, commit, and push the sidecar apply-script iteration. |
+| Where am I? | Phase 33 complete; ready to run full verification, commit, and push the scrollable-sidebar bugfix. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, staged sidecar template bundle exports, sidecar plan template-path traceability, and executable sidecar apply-script exports. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, staged sidecar template bundle exports, sidecar plan template-path traceability, executable sidecar apply-script exports, and mousewheel-scrollable left-sidebar controls. |

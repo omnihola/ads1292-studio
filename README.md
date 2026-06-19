@@ -100,6 +100,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - GUI-configurable quality gate thresholds can be saved and loaded as
   `.quality-gate.json` sidecars; live/offline quality text, reports, and
   session packages use the same pass/fail settings.
+- Scrollable left control sidebar keeps metadata, event, calibration,
+  quality-gate, protocol, and safety controls reachable on smaller windows.
 - Session index export scans a recordings folder, ignores generated summary
   CSVs, and writes a CSV/HTML experiment library with ECG source, contact,
   R-peak, HR, quality, and usable/review status.
