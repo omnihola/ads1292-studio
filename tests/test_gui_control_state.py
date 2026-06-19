@@ -480,6 +480,19 @@ def test_gui_control_states_start_with_safe_disabled_defaults() -> None:
     assert states["Session Index"] == "normal"
 
 
+def test_app_reexports_gui_state_helpers_from_focused_module() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App)
+
+    assert GuiState.__module__ == "ads1292_studio.gui_state"
+    assert GuiStatusCard.__module__ == "ads1292_studio.gui_state"
+    assert "class GuiState" not in source
+    assert "class GuiStatusCard" not in source
+
+
 def test_gui_control_states_disable_conflicting_actions_while_loading_csv() -> None:
     state = GuiState(
         connected=True,
