@@ -63,5 +63,5 @@ def test_app_batches_queued_log_messages_to_reduce_text_widget_churn() -> None:
     assert "def _append_log_messages" in source
     assert "format_log_entries(messages, stamp)" in source
     assert "self._trim_log_text()" in source
-    assert "log_messages.append(self.logs.get_nowait())" in source
-    assert "self._append_log_messages(tuple(log_messages))" in source
+    assert "drain_queue_items(self.logs, MAX_LOG_MESSAGES_PER_TICK)" in source
+    assert "self._append_log_messages(log_messages)" in source

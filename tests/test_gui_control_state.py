@@ -3,12 +3,15 @@ from ads1292_studio.app import (
     DEFAULT_FILTER_ENABLED,
     GuiState,
     GuiStatusCard,
+    MAX_LOG_MESSAGES_PER_TICK,
+    MAX_SAMPLES_PER_TICK,
     ads1292r_channel_label,
     apply_status_card_if_changed,
     ads1292r_secondary_channel_label,
     build_live_quality_samples,
     compute_live_quality_result,
     display_signal_values,
+    drain_queue_items,
     gui_control_states,
     gui_signal_quality_cards,
     gui_status_cards,
@@ -26,6 +29,7 @@ from ads1292_studio.app import (
     status_tone_style,
 )
 import numpy as np
+import queue
 
 from ads1292_studio.display import SoftwareFilterSettings
 
@@ -189,6 +193,28 @@ def test_apply_status_card_if_changed_updates_only_changed_fields() -> None:
     assert value_label.configure_calls == 1
     assert stripe.values["bg"] == status_tone_color("warning")
     assert stripe.configure_calls == 1
+
+
+def test_drain_queue_items_bounds_work_and_preserves_backlog() -> None:
+    values: queue.Queue[int] = queue.Queue()
+    for value in range(5):
+        values.put(value)
+
+    assert drain_queue_items(values, max_items=3) == (0, 1, 2)
+    assert drain_queue_items(values, max_items=10) == (3, 4)
+
+
+def test_drain_queue_items_does_not_consume_when_limit_is_zero() -> None:
+    values: queue.Queue[str] = queue.Queue()
+    values.put("pending")
+
+    assert drain_queue_items(values, max_items=0) == tuple()
+    assert values.get_nowait() == "pending"
+
+
+def test_tick_queue_limits_are_above_normal_streaming_rate() -> None:
+    assert MAX_SAMPLES_PER_TICK >= 2 * 500 * 0.05
+    assert MAX_LOG_MESSAGES_PER_TICK >= 50
 
 
 def test_should_apply_control_state_skips_unchanged_state() -> None:

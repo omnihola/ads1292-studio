@@ -11,6 +11,7 @@ import threading
 import tkinter as tk
 import tempfile
 from tkinter import filedialog, messagebox, ttk
+from typing import TypeVar
 
 os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "ads1292-studio-matplotlib"))
 
@@ -74,8 +75,12 @@ from ads1292_studio.signal_processing import (
 from ads1292_studio.workers import LiveWorker
 
 
+_T = TypeVar("_T")
+
 MAX_POINTS = 10000
 LIVE_MAX_RENDER_POINTS = 2500
+MAX_SAMPLES_PER_TICK = 1000
+MAX_LOG_MESSAGES_PER_TICK = 200
 VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
 DEFAULT_FILTER_ENABLED = False
@@ -1064,6 +1069,16 @@ def live_metrics_text(
 
 def format_log_entries(messages: tuple[str, ...], stamp: str) -> str:
     return "".join(f"[{stamp}] {message}\n" for message in messages)
+
+
+def drain_queue_items(item_queue: queue.Queue[_T], max_items: int) -> tuple[_T, ...]:
+    items: list[_T] = []
+    for _ in range(max(0, max_items)):
+        try:
+            items.append(item_queue.get_nowait())
+        except queue.Empty:
+            break
+    return tuple(items)
 
 
 def header_connection_tone(
@@ -3293,23 +3308,15 @@ class App(tk.Tk):
         self._drain_connect_results()
         self._drain_stream_start_results()
         self._drain_live_quality_results()
-        latest = None
-        while True:
-            try:
-                latest = self.samples.get_nowait()
-            except queue.Empty:
-                break
-            self._append_sample(latest)
+        sample_batch = drain_queue_items(self.samples, MAX_SAMPLES_PER_TICK)
+        latest = sample_batch[-1] if sample_batch else None
+        for sample in sample_batch:
+            self._append_sample(sample)
         if latest is not None:
             self._redraw_live()
             self._apply_control_states()
-        log_messages: list[str] = []
-        while True:
-            try:
-                log_messages.append(self.logs.get_nowait())
-            except queue.Empty:
-                break
-        self._append_log_messages(tuple(log_messages))
+        log_messages = drain_queue_items(self.logs, MAX_LOG_MESSAGES_PER_TICK)
+        self._append_log_messages(log_messages)
         self._drain_live_quality_results()
         self._schedule_tick()
 
