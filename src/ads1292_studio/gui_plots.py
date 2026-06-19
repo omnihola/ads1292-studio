@@ -10,6 +10,7 @@ from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 
 from ads1292_studio.display import EcgDisplaySettings, ecg_paper_grid_key, ecg_paper_grid_spec
+from ads1292_studio.gui_state import display_scale_reference_label
 from ads1292_studio.gui_specs import (
     empty_plot_messages,
     empty_plot_style,
@@ -234,27 +235,82 @@ def configure_status_axes(axes: tuple[object, ...]) -> None:
 
 def configure_initial_ecg_paper_grid(axes: tuple[object, ...]) -> None:
     settings = EcgDisplaySettings()
-    spec = ecg_paper_grid_spec(settings)
+    cache: dict[int, tuple[float, float, float, float]] = {}
     for ax in axes:
-        _, _, major_y, minor_y = ecg_paper_grid_key(settings, ax.get_ylim())
-        ax.xaxis.set_major_locator(MultipleLocator(float(spec["major_x_seconds"])))
-        ax.xaxis.set_minor_locator(MultipleLocator(float(spec["minor_x_seconds"])))
-        ax.yaxis.set_major_locator(MultipleLocator(major_y))
-        ax.yaxis.set_minor_locator(MultipleLocator(minor_y))
-        ax.grid(
-            True,
-            which="major",
-            color=spec["major_color"],
-            linewidth=spec["major_linewidth"],
-            alpha=spec["major_alpha"],
-        )
-        ax.grid(
-            True,
-            which="minor",
-            color=spec["minor_color"],
-            linewidth=spec["minor_linewidth"],
-            alpha=spec["minor_alpha"],
-        )
+        apply_ecg_paper_grid(ax, settings, cache=cache)
+
+
+def apply_ecg_paper_grid(
+    ax: object,
+    settings: EcgDisplaySettings,
+    cache: dict[int, tuple[float, float, float, float]],
+) -> None:
+    spec = ecg_paper_grid_spec(settings)
+    cache_key = ecg_paper_grid_key(settings, ax.get_ylim())
+    axis_id = id(ax)
+    if cache.get(axis_id) == cache_key:
+        return
+    cache[axis_id] = cache_key
+    ax.xaxis.set_major_locator(MultipleLocator(float(spec["major_x_seconds"])))
+    ax.xaxis.set_minor_locator(MultipleLocator(float(spec["minor_x_seconds"])))
+    _, _, major_y, minor_y = cache_key
+    ax.yaxis.set_major_locator(MultipleLocator(major_y))
+    ax.yaxis.set_minor_locator(MultipleLocator(minor_y))
+    ax.grid(
+        True,
+        which="major",
+        color=spec["major_color"],
+        linewidth=spec["major_linewidth"],
+        alpha=spec["major_alpha"],
+    )
+    ax.grid(
+        True,
+        which="minor",
+        color=spec["minor_color"],
+        linewidth=spec["minor_linewidth"],
+        alpha=spec["minor_alpha"],
+    )
+
+
+def draw_calibration_pulse(
+    ax: object,
+    artists: list[object],
+    settings: EcgDisplaySettings,
+    cache: dict[int, str],
+) -> None:
+    axis_id = id(ax)
+    label_text = display_scale_reference_label(settings)
+    if artists and cache.get(axis_id) == label_text:
+        return
+    if len(artists) >= 2 and hasattr(artists[1], "set_text"):
+        artists[1].set_text(label_text)
+        cache[axis_id] = label_text
+        return
+    for artist in artists:
+        artist.remove()
+    artists.clear()
+    line, = ax.plot(
+        [0.025, 0.025, 0.07, 0.07, 0.105],
+        [0.12, 0.30, 0.30, 0.12, 0.12],
+        transform=ax.transAxes,
+        color=PLOT_TRACE_COLORS["peak"],
+        linewidth=1.25,
+        solid_capstyle="butt",
+        clip_on=False,
+    )
+    label = ax.text(
+        0.115,
+        0.30,
+        label_text,
+        transform=ax.transAxes,
+        color=APP_VISUAL_TOKENS["muted"],
+        fontsize=8,
+        va="center",
+        ha="left",
+        clip_on=False,
+    )
+    artists.extend((line, label))
+    cache[axis_id] = label_text
 
 
 def show_empty_plot_state(artists: list[object], key: str, axes: tuple[object, ...]) -> None:

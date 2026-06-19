@@ -903,15 +903,34 @@ def test_live_and_review_status_axes_are_configured_as_status_tracks() -> None:
 
 
 def test_live_and_review_ecg_axes_start_with_ecg_paper_grid() -> None:
-    from ads1292_studio.gui_plots import build_live_plot_panel, build_review_plot_panel, configure_initial_ecg_paper_grid
+    from ads1292_studio.gui_plots import (
+        apply_ecg_paper_grid,
+        build_live_plot_panel,
+        build_review_plot_panel,
+        configure_initial_ecg_paper_grid,
+    )
 
     source = inspect.getsource(build_live_plot_panel) + inspect.getsource(build_review_plot_panel)
     configure_source = inspect.getsource(configure_initial_ecg_paper_grid)
+    apply_source = inspect.getsource(apply_ecg_paper_grid)
 
     assert "configure_initial_ecg_paper_grid((app.ax_live_ecg,))" in source
     assert "configure_initial_ecg_paper_grid((app.ax_review_ecg,))" in source
-    assert "ecg_paper_grid_spec(settings)" in configure_source
-    assert "which=\"minor\"" in configure_source
+    assert "apply_ecg_paper_grid(ax, settings" in configure_source
+    assert "ecg_paper_grid_spec(settings)" in apply_source
+    assert "which=\"minor\"" in apply_source
+
+
+def test_live_and_review_runtime_grid_and_calibration_are_plot_helpers() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._redraw_live) + inspect.getsource(App._show_review_frame)
+
+    assert "apply_ecg_paper_grid(self.ax_live_ecg" in source
+    assert "apply_ecg_paper_grid(self.ax_review_ecg" in source
+    assert "draw_calibration_pulse(" in source
+    assert "def _apply_ecg_paper_grid" not in inspect.getsource(App)
+    assert "def _draw_calibration_pulse" not in inspect.getsource(App)
 
 
 def test_live_and_review_display_reuse_filter_settings_snapshot() -> None:

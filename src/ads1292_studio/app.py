@@ -18,7 +18,6 @@ import matplotlib
 import numpy as np
 
 matplotlib.use("TkAgg")
-from matplotlib.ticker import MultipleLocator
 
 from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.calibration import Calibration, read_calibration_json, write_calibration_json
@@ -28,8 +27,6 @@ from ads1292_studio.display import (
     EcgDisplaySettings,
     SoftwareFilterSettings,
     display_mode_label,
-    ecg_paper_grid_key,
-    ecg_paper_grid_spec,
     parse_display_gain,
     parse_display_window,
     parse_sweep_speed,
@@ -91,10 +88,12 @@ from ads1292_studio.gui_workers import (
     live_quality_worker_available,
 )
 from ads1292_studio.gui_plots import (
+    apply_ecg_paper_grid,
     build_live_plot_panel,
     build_log_panel,
     build_pqrst_plot_panel,
     build_review_plot_panel,
+    draw_calibration_pulse,
     set_signal_axis_title,
     style_signal_axes,
 )
@@ -1168,73 +1167,6 @@ class App(tk.Tk):
             sample_rate_hz=SAMPLE_RATE_HZ,
         )
 
-    def _apply_ecg_paper_grid(self, ax: object, settings: EcgDisplaySettings) -> None:
-        spec = ecg_paper_grid_spec(settings)
-        cache_key = ecg_paper_grid_key(settings, ax.get_ylim())
-        axis_id = id(ax)
-        if self.ecg_paper_grid_cache.get(axis_id) == cache_key:
-            return
-        self.ecg_paper_grid_cache[axis_id] = cache_key
-        ax.xaxis.set_major_locator(MultipleLocator(float(spec["major_x_seconds"])))
-        ax.xaxis.set_minor_locator(MultipleLocator(float(spec["minor_x_seconds"])))
-        _, _, major_y, minor_y = cache_key
-        ax.yaxis.set_major_locator(MultipleLocator(major_y))
-        ax.yaxis.set_minor_locator(MultipleLocator(minor_y))
-        ax.grid(
-            True,
-            which="major",
-            color=spec["major_color"],
-            linewidth=spec["major_linewidth"],
-            alpha=spec["major_alpha"],
-        )
-        ax.grid(
-            True,
-            which="minor",
-            color=spec["minor_color"],
-            linewidth=spec["minor_linewidth"],
-            alpha=spec["minor_alpha"],
-        )
-
-    def _draw_calibration_pulse(
-        self,
-        ax: object,
-        artists: list[object],
-        settings: EcgDisplaySettings,
-    ) -> None:
-        axis_id = id(ax)
-        label_text = display_scale_reference_label(settings)
-        if artists and self.calibration_pulse_cache.get(axis_id) == label_text:
-            return
-        if len(artists) >= 2 and hasattr(artists[1], "set_text"):
-            artists[1].set_text(label_text)
-            self.calibration_pulse_cache[axis_id] = label_text
-            return
-        for artist in artists:
-            artist.remove()
-        artists.clear()
-        line, = ax.plot(
-            [0.025, 0.025, 0.07, 0.07, 0.105],
-            [0.12, 0.30, 0.30, 0.12, 0.12],
-            transform=ax.transAxes,
-            color=PLOT_TRACE_COLORS["peak"],
-            linewidth=1.25,
-            solid_capstyle="butt",
-            clip_on=False,
-        )
-        label = ax.text(
-            0.115,
-            0.30,
-            label_text,
-            transform=ax.transAxes,
-            color=APP_VISUAL_TOKENS["muted"],
-            fontsize=8,
-            va="center",
-            ha="left",
-            clip_on=False,
-        )
-        artists.extend((line, label))
-        self.calibration_pulse_cache[axis_id] = label_text
-
     def _apply_live_axis_titles(
         self,
         display_settings: EcgDisplaySettings,
@@ -1303,8 +1235,13 @@ class App(tk.Tk):
             set_axis_ylim_if_changed(self.ax_live_resp, stable_ylim(self.ax_live_resp.get_ylim(), resp_ylim))
             status_top = float(frame.visible_status.max()) + 0.5 if frame.visible_status.size else 1.0
             set_axis_ylim_if_changed(self.ax_live_status, (-0.5, max(1.0, status_top)))
-        self._apply_ecg_paper_grid(self.ax_live_ecg, display_settings)
-        self._draw_calibration_pulse(self.ax_live_ecg, self.live_calibration_artists, display_settings)
+        apply_ecg_paper_grid(self.ax_live_ecg, display_settings, self.ecg_paper_grid_cache)
+        draw_calibration_pulse(
+            self.ax_live_ecg,
+            self.live_calibration_artists,
+            display_settings,
+            self.calibration_pulse_cache,
+        )
         ecg_label = ads1292r_plot_layout_labels()[0]
         self._apply_live_axis_titles(display_settings, filter_settings)
         set_string_var_if_changed(
@@ -1363,8 +1300,13 @@ class App(tk.Tk):
         self.ax_review_status.set_xlim(0, frame.x_right)
         self.ax_review_status.set_ylim(*frame.status_ylim)
         self.ax_review_status.set_xlabel("Time (s)")
-        self._apply_ecg_paper_grid(self.ax_review_ecg, display_settings)
-        self._draw_calibration_pulse(self.ax_review_ecg, self.review_calibration_artists, display_settings)
+        apply_ecg_paper_grid(self.ax_review_ecg, display_settings, self.ecg_paper_grid_cache)
+        draw_calibration_pulse(
+            self.ax_review_ecg,
+            self.review_calibration_artists,
+            display_settings,
+            self.calibration_pulse_cache,
+        )
         self.review_canvas.draw_idle()
         self._draw_pqrst_review(frame.pqrst)
         set_string_var_if_changed(
