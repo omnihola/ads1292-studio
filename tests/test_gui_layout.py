@@ -3,6 +3,7 @@ from ads1292_studio.app import (
     ads1292r_plot_layout_labels,
     app_visual_tokens,
     app_window_spec,
+    base_checkbutton_style,
     base_chrome_spec,
     base_notebook_styles,
     button_chrome_spec,
@@ -263,6 +264,14 @@ def test_base_notebook_styles_keep_tab_defaults_consistent() -> None:
         "borderwidth": 0,
         "tab_padding": (14, 7),
         "tab_font": ("Aptos", 12, "bold"),
+    }
+
+
+def test_base_checkbutton_style_keeps_default_toggles_consistent() -> None:
+    assert base_checkbutton_style() == {
+        "style": "TCheckbutton",
+        "background": "#EEF3FA",
+        "foreground": "#172033",
     }
 
 

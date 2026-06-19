@@ -243,6 +243,11 @@ BASE_NOTEBOOK_STYLES = {
     "tab_padding": (14, 7),
     "tab_font": ("Aptos", 12, "bold"),
 }
+BASE_CHECKBUTTON_STYLE = {
+    "style": "TCheckbutton",
+    "background": "#EEF3FA",
+    "foreground": "#172033",
+}
 MAIN_TABS = ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
 STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
 SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
@@ -691,6 +696,10 @@ def base_chrome_spec() -> dict[str, object]:
 
 def base_notebook_styles() -> dict[str, object]:
     return dict(BASE_NOTEBOOK_STYLES)
+
+
+def base_checkbutton_style() -> dict[str, object]:
+    return dict(BASE_CHECKBUTTON_STYLE)
 
 
 def app_window_spec() -> dict[str, object]:
@@ -1955,7 +1964,12 @@ class App(tk.Tk):
                 ("active", stop_button["active_background"]),
             ],
         )
-        style.configure("TCheckbutton", background=tokens["panel_alt"], foreground=tokens["ink"])
+        base_checkbutton = base_checkbutton_style()
+        style.configure(
+            base_checkbutton["style"],
+            background=base_checkbutton["background"],
+            foreground=base_checkbutton["foreground"],
+        )
         base_notebook = base_notebook_styles()
         style.configure(
             base_notebook["notebook"],
