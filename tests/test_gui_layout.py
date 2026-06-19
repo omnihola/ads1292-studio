@@ -212,11 +212,11 @@ def test_gui_layout_frames_toolbar_channel_hint_as_chip() -> None:
         "frame": "ToolbarHint.TFrame",
         "label": "ToolbarHint.TLabel",
         "background": "#EAF1FF",
-        "foreground": "#1F4FB2",
+        "foreground": "#293247",
         "font": ("Aptos", 11, "bold"),
-        "border": "#D9E1EC",
-        "borderwidth": 1,
-        "relief": "solid",
+        "border": "#EAF1FF",
+        "borderwidth": 0,
+        "relief": "flat",
     }
 
 

@@ -184,11 +184,11 @@ TOOLBAR_HINT_STYLES = {
     "frame": "ToolbarHint.TFrame",
     "label": "ToolbarHint.TLabel",
     "background": "#EAF1FF",
-    "foreground": "#1F4FB2",
+    "foreground": "#293247",
     "font": ("Aptos", 11, "bold"),
-    "border": "#D9E1EC",
-    "borderwidth": 1,
-    "relief": "solid",
+    "border": "#EAF1FF",
+    "borderwidth": 0,
+    "relief": "flat",
 }
 TOOLBAR_GROUP_PADDING = {
     "separator": (12, 8),
