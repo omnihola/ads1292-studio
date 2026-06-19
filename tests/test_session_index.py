@@ -196,15 +196,17 @@ def test_export_session_index_writes_sidecar_completion_plan(tmp_path: Path) -> 
     assert export.sidecar_plan_html_path.exists()
     assert len(export.sidecar_plan_rows) == 4
     plan_text = export.sidecar_plan_csv_path.read_text()
-    assert "relative_path,sidecar,target_path,suggested_action" in plan_text
+    assert "relative_path,sidecar,target_path,template_path,suggested_action" in plan_text
     assert "partial.csv,events," in plan_text
     assert str(partial.with_suffix(".events.json")) in plan_text
+    assert str(export.sidecar_template_dir / "partial.events.json") in plan_text
     assert "Create events sidecar" in plan_text
     assert "quality_gate" in plan_text
     assert "ready.csv" not in plan_text
     html = export.sidecar_plan_html_path.read_text()
     assert "Sidecar Completion Plan" in html
     assert "partial.csv" in html
+    assert "Template Path" in html
     assert "quality-gate.json" in html
 
 

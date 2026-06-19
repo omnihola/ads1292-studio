@@ -53,7 +53,8 @@ Session index export writes both the recording library and a
 event, calibration, protocol, and quality-gate sidecars. It also writes a
 `*-sidecar-templates/` folder with reviewable JSON templates for those missing
 sidecars; the templates are staged in the report output folder and do not modify
-the original recording folder.
+the original recording folder. The sidecar plan includes both the generated
+template path and the final target sidecar path for each missing file.
 
 ## Features in V1
 
@@ -115,8 +116,8 @@ the original recording folder.
 - GUI Session Index export confirmation shows the same readiness and action
   queue counts as the CLI output.
 - Session index also exports a sidecar completion plan CSV/HTML that lists each
-  missing sidecar target path and suggested action, and the GUI confirmation
-  shows those plan paths.
+  missing sidecar target path, generated template path, and suggested action,
+  and the GUI confirmation shows those plan paths.
 - Session index stages JSON templates for missing sidecars in a separate
   `*-sidecar-templates/` folder so users can review metadata, event,
   calibration, protocol, and quality-gate templates before copying them beside

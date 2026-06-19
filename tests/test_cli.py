@@ -142,8 +142,11 @@ def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
     assert "sidecar_template_dir=" in captured
     assert "sidecar_template_files=5" in captured
     sidecar_plan = next(out_dir.glob("*-sidecar-plan.csv"))
-    assert "recording.csv,metadata," in sidecar_plan.read_text()
     template_dir = next(out_dir.glob("*-sidecar-templates"))
+    sidecar_plan_text = sidecar_plan.read_text()
+    assert "recording.csv,metadata," in sidecar_plan_text
+    assert str(template_dir / "recording.json") in sidecar_plan_text
+    assert str(template_dir / "recording.protocol.json") in sidecar_plan_text
     assert (template_dir / "recording.json").exists()
     assert (template_dir / "recording.protocol.json").exists()
 

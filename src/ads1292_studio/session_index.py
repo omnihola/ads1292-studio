@@ -56,6 +56,7 @@ class SidecarPlanRow:
     relative_path: str
     sidecar: str
     target_path: Path
+    template_path: Path
     suggested_action: str
 
 
@@ -98,7 +99,7 @@ def export_session_index(
     sidecar_plan_csv_path = output / f"{stamp}-{slug}-sidecar-plan.csv"
     sidecar_plan_html_path = output / f"{stamp}-{slug}-sidecar-plan.html"
     sidecar_template_dir = output / f"{stamp}-{slug}-sidecar-templates"
-    sidecar_plan_rows = build_sidecar_completion_plan(rows)
+    sidecar_plan_rows = build_sidecar_completion_plan(rows, sidecar_template_dir)
     _write_csv(csv_path, rows)
     html_path.write_text(_html(title, rows, summary))
     _write_sidecar_plan_csv(sidecar_plan_csv_path, sidecar_plan_rows)
@@ -117,12 +118,17 @@ def export_session_index(
     )
 
 
-def build_sidecar_completion_plan(rows: tuple[SessionIndexRow, ...]) -> tuple[SidecarPlanRow, ...]:
+def build_sidecar_completion_plan(
+    rows: tuple[SessionIndexRow, ...],
+    template_dir: Path | str,
+) -> tuple[SidecarPlanRow, ...]:
+    output = Path(template_dir)
     return tuple(
         SidecarPlanRow(
             relative_path=row.relative_path,
             sidecar=sidecar,
             target_path=_expected_sidecar_path(row.path, sidecar),
+            template_path=_template_path_for(output, row, sidecar),
             suggested_action=f"Create {_sidecar_label(sidecar)} sidecar",
         )
         for row in rows
@@ -331,7 +337,7 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
 
 
 def _write_sidecar_plan_csv(path: Path, rows: tuple[SidecarPlanRow, ...]) -> None:
-    columns = ["relative_path", "sidecar", "target_path", "suggested_action"]
+    columns = ["relative_path", "sidecar", "target_path", "template_path", "suggested_action"]
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
@@ -341,6 +347,7 @@ def _write_sidecar_plan_csv(path: Path, rows: tuple[SidecarPlanRow, ...]) -> Non
                     "relative_path": row.relative_path,
                     "sidecar": row.sidecar,
                     "target_path": str(row.target_path),
+                    "template_path": str(row.template_path),
                     "suggested_action": row.suggested_action,
                 }
             )
@@ -411,7 +418,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
 def _sidecar_plan_html(title: str, rows: tuple[SidecarPlanRow, ...]) -> str:
     body = []
     for row in rows:
-        values = [row.relative_path, row.sidecar, str(row.target_path), row.suggested_action]
+        values = [row.relative_path, row.sidecar, str(row.target_path), str(row.template_path), row.suggested_action]
         body.append("<tr>" + "".join(f"<td>{escape(value)}</td>" for value in values) + "</tr>")
     return f"""<!doctype html>
 <html>
@@ -429,7 +436,7 @@ def _sidecar_plan_html(title: str, rows: tuple[SidecarPlanRow, ...]) -> str:
   <h1>{escape(title)} Sidecar Completion Plan</h1>
   <p>Missing sidecar tasks: {len(rows)}</p>
   <table>
-    <tr><th>File</th><th>Sidecar</th><th>Target Path</th><th>Suggested Action</th></tr>
+    <tr><th>File</th><th>Sidecar</th><th>Target Path</th><th>Template Path</th><th>Suggested Action</th></tr>
     {"".join(body)}
   </table>
 </body>
