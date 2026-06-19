@@ -100,6 +100,7 @@ from ads1292_studio.gui_specs import (
     protocol_note_styles,
     safety_notice_styles,
     scrollbar_chrome_spec,
+    scrollable_frame_spec,
     secondary_action_button_labels,
     section_heading_styles,
     seaborn_plot_theme,
@@ -729,15 +730,23 @@ class ScrollableFrame:
 
     def __init__(self, parent: tk.Widget, width: int = 280) -> None:
         scrollbar_spec = scrollbar_chrome_spec()
+        frame_spec = scrollable_frame_spec()
         self.frame = ttk.Frame(parent)
-        self.canvas = tk.Canvas(self.frame, width=width, highlightthickness=0)
+        self.canvas = tk.Canvas(
+            self.frame,
+            width=width,
+            bg=str(frame_spec["canvas_background"]),
+            highlightthickness=int(frame_spec["highlightthickness"]),
+            borderwidth=int(frame_spec["borderwidth"]),
+            relief=str(frame_spec["relief"]),
+        )
         self.scrollbar = ttk.Scrollbar(
             self.frame,
             orient=tk.VERTICAL,
             command=self.canvas.yview,
             style=str(scrollbar_spec["vertical"]),
         )
-        self.content = ttk.Frame(self.canvas, padding=10)
+        self.content = ttk.Frame(self.canvas, padding=int(frame_spec["content_padding"]))
         self._content_window = self.canvas.create_window((0, 0), window=self.content, anchor=tk.NW)
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)

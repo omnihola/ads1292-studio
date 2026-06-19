@@ -9,6 +9,9 @@ def test_scrollable_frame_uses_canvas_scrollbar_and_mousewheel() -> None:
 
     assert "tk.Canvas" in source
     assert "ttk.Scrollbar" in source
+    assert "scrollable_frame_spec()" in source
+    assert "bg=str(frame_spec[\"canvas_background\"])" in source
+    assert "padding=int(frame_spec[\"content_padding\"])" in source
     assert "create_window" in source
     assert "yscrollcommand" in source
     assert "scrollregion" in source

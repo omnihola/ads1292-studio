@@ -382,6 +382,13 @@ SCROLLBAR_CHROME_SPEC = {
     "relief": "flat",
     "borderwidth": 0,
 }
+SCROLLABLE_FRAME_SPEC = {
+    "canvas_background": "#F6F8FB",
+    "content_padding": 10,
+    "highlightthickness": 0,
+    "borderwidth": 0,
+    "relief": "flat",
+}
 PANEL_CHROME_SPEC = {
     "background": "#FFFFFF",
     "border": "#D9E1EC",
@@ -668,6 +675,10 @@ def log_panel_spec() -> dict[str, object]:
 
 def scrollbar_chrome_spec() -> dict[str, object]:
     return dict(SCROLLBAR_CHROME_SPEC)
+
+
+def scrollable_frame_spec() -> dict[str, object]:
+    return dict(SCROLLABLE_FRAME_SPEC)
 
 
 def panel_chrome_spec() -> dict[str, object]:

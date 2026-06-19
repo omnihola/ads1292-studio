@@ -36,6 +36,7 @@ from ads1292_studio.app import (
     protocol_note_styles,
     safety_notice_styles,
     scrollbar_chrome_spec,
+    scrollable_frame_spec,
     secondary_action_button_labels,
     section_heading_styles,
     seaborn_plot_theme,
@@ -795,6 +796,16 @@ def test_scrollbar_chrome_spec_keeps_scroll_surfaces_subtle() -> None:
         "arrow": "#657084",
         "relief": "flat",
         "borderwidth": 0,
+    }
+
+
+def test_scrollable_frame_spec_prevents_default_tk_canvas_chrome() -> None:
+    assert scrollable_frame_spec() == {
+        "canvas_background": "#F6F8FB",
+        "content_padding": 10,
+        "highlightthickness": 0,
+        "borderwidth": 0,
+        "relief": "flat",
     }
 
 
