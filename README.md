@@ -108,6 +108,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - GUI buttons are state-gated: Start requires a confirmed connection, Stop
   requires streaming, and report/package export actions require available data
   instead of relying on error dialogs after invalid clicks.
+- Status tab includes a Next Step hint that translates connection, streaming,
+  loaded-data, and packaging state into the next valid operator action.
 - Session index export scans a recordings folder, ignores generated summary
   CSVs, and writes a CSV/HTML experiment library with ECG source, contact,
   R-peak, HR, quality, and usable/review status.

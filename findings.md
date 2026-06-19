@@ -61,6 +61,7 @@
 | Make the left control column scrollable | The accumulated metadata, event, calibration, quality-gate, and protocol controls exceed smaller window heights, so the left column must scroll independently from the plot tabs. |
 | Use task-based GUI groups before adding more features | Acquisition should stay in the top toolbar, while secondary review/export/package/library actions belong in a separate Actions group; metadata, validation, and protocol settings should not compete for attention in one long panel. |
 | Gate impossible GUI actions by state | Commercial-style software should disable Start before connection, Stop before streaming, and export/package actions before data exists, while keeping file/library workflows available. |
+| Pair disabled controls with next-step hints | Button gating prevents mistakes, but the Status tab should also say whether the next valid action is Connect, Start, Stop, Report, or Package. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -98,6 +99,7 @@
 | Sidebar scrollbar existed but mouse wheel still felt dead | macOS wheel deltas can be smaller than 120 and child widgets can receive the wheel event; fixed by converting any nonzero delta to a scroll unit and using pointer-gated global wheel binding. |
 | The GUI became feature-rich but visually crowded | Reorganized the left panel into Status, Session, Validation, Protocol, and Actions tabs, and removed secondary file/export/library buttons from the acquisition toolbar. |
 | The GUI still relied on error dialogs for impossible actions | Added a pure `gui_control_states()` model and wired buttons to it after connect/start/stop/load/sample updates. |
+| Disabled controls did not explain the workflow | Added `gui_workflow_hint()` and a Status-tab `Next Step` field so users can read the intended next action without trial-and-error. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`

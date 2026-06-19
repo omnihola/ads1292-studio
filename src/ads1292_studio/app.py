@@ -88,6 +88,24 @@ def gui_control_states(
     }
 
 
+def gui_workflow_hint(
+    *,
+    connected: bool,
+    streaming: bool,
+    has_data: bool,
+    has_recording_path: bool,
+) -> str:
+    if streaming:
+        return "Streaming: monitor signal quality, add events if needed, then press Stop."
+    if has_data and has_recording_path:
+        return "Data ready: export a report or package the recording with its sidecars."
+    if has_data:
+        return "Data loaded: export a report; package export needs a saved CSV path."
+    if connected:
+        return "Next: press Start to begin acquisition, or load a CSV for offline review."
+    return "Next: select an ADS1292 port and press Connect, or load an existing CSV."
+
+
 def _mousewheel_units(event: tk.Event) -> int:
     if getattr(event, "num", None) == 4:
         return -1
@@ -218,6 +236,7 @@ class App(tk.Tk):
         self.metrics_var = tk.StringVar(value="No session")
         self.quality_var = tk.StringVar(value="Quality: --")
         self.path_var = tk.StringVar(value="CSV: --")
+        self.workflow_hint_var = tk.StringVar(value="")
         self.session_id_var = tk.StringVar(value="untitled-session")
         self.subject_id_var = tk.StringVar(value="anonymous")
         self.electrode_var = tk.StringVar(value="commercial Ag/AgCl control")
@@ -245,6 +264,7 @@ class App(tk.Tk):
         self.protocol_steps_var = tk.StringVar(value=_format_protocol_steps(protocol.steps))
         self.protocol_acceptance_var = tk.StringVar(value=protocol.acceptance_notes)
         for label, var in (
+            ("Next Step", self.workflow_hint_var),
             ("Session", self.metrics_var),
             ("Quality", self.quality_var),
             ("Storage", self.path_var),
@@ -627,6 +647,14 @@ class App(tk.Tk):
             streaming=self.is_streaming,
             has_data=bool(self.loaded_samples or (self.ch1 and self.ch2)),
             has_recording_path=self.recording_path is not None,
+        )
+        self.workflow_hint_var.set(
+            gui_workflow_hint(
+                connected=self.connected_port is not None,
+                streaming=self.is_streaming,
+                has_data=bool(self.loaded_samples or (self.ch1 and self.ch2)),
+                has_recording_path=self.recording_path is not None,
+            )
         )
         for label, button in self.control_buttons.items():
             button.configure(state=states[label])
