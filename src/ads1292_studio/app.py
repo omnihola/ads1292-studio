@@ -27,6 +27,18 @@ from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.calibration import Calibration, read_calibration_json, write_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
+from ads1292_studio.display import (
+    EcgDisplaySettings,
+    SoftwareFilterSettings,
+    display_gain_labels,
+    display_mode_label,
+    display_window_labels,
+    ecg_paper_grid_spec,
+    parse_display_gain,
+    parse_display_window,
+    parse_sweep_speed,
+    sweep_speed_labels,
+)
 from ads1292_studio.events import EventMarker, read_events_json, write_events_json
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_session_index import build_session_index_message
@@ -52,7 +64,7 @@ from ads1292_studio.report import export_review_report
 from ads1292_studio.session_index import export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import (
-    bandpass,
+    apply_software_filters,
     detect_r_peaks,
     heart_rate_summary,
     pqrst_review,
@@ -61,11 +73,13 @@ from ads1292_studio.signal_processing import (
 from ads1292_studio.workers import LiveWorker
 
 
-MAX_POINTS = 5000
+MAX_POINTS = 10000
 VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
 DEFAULT_FILTER_ENABLED = False
 DEFAULT_ECG_INVERTED = False
+DEFAULT_DISPLAY_SETTINGS = EcgDisplaySettings()
+DEFAULT_FILTER_SETTINGS = SoftwareFilterSettings()
 DISPLAY_SMOOTHING_WINDOW = 11
 DISPLAY_MIN_ECG_SPAN_COUNTS = 8.0
 DISPLAY_MIN_RESP_SPAN_COUNTS = 40.0
@@ -221,6 +235,9 @@ TOOLBAR_LAYOUT_SPEC = {
     "inline_action_padding": (4, 4),
     "save_padding": (8, 4),
     "toggle_padding": (4, 4),
+    "display_label_padding": (4, 3),
+    "display_control_padding": (4, 8),
+    "display_width": 9,
     "separator_width": 1,
     "hint_padding": (12, 5),
 }
@@ -1102,12 +1119,16 @@ def display_signal_values(
     values: np.ndarray,
     *,
     filter_enabled: bool,
+    filter_settings: SoftwareFilterSettings | None = None,
     invert: bool = False,
+    gain: float = 1.0,
     sample_rate_hz: float = SAMPLE_RATE_HZ,
 ) -> np.ndarray:
-    display = values if not filter_enabled else bandpass(values, sample_rate_hz)
+    settings = filter_settings or SoftwareFilterSettings(bandpass_enabled=filter_enabled)
+    display = apply_software_filters(values, sample_rate_hz, settings)
     display = np.asarray(display, dtype=float)
-    return -display if invert else display
+    display = -display if invert else display
+    return display * gain
 
 
 def gui_signal_quality_cards(
@@ -1285,6 +1306,8 @@ class App(tk.Tk):
         self.board_hr: deque[int] = deque(maxlen=MAX_POINTS)
         self.board_rr: deque[int] = deque(maxlen=MAX_POINTS)
         self.empty_plot_artists: list[object] = []
+        self.live_calibration_artists: list[object] = []
+        self.review_calibration_artists: list[object] = []
 
         self._build_ui()
         self.refresh_ports()
@@ -1384,22 +1407,111 @@ class App(tk.Tk):
             style=toolbar_styles["toggle"],
         )
         self.save_check.pack(side=tk.LEFT, padx=toolbar_spec["save_padding"])
+
+        display_toolbar = ttk.Frame(self, padding=toolbar_spec["padding"], style=str(toolbar_spec["frame"]))
+        display_toolbar.pack(side=tk.TOP, fill=tk.X)
+        self.display_toolbar_frame = display_toolbar
+        toolbar = display_toolbar
         self.autoscale_var = tk.BooleanVar(value=True)
         self.autoscale_check = ttk.Checkbutton(
             toolbar,
             text="Auto scale",
             variable=self.autoscale_var,
+            command=self._refresh_display_plots,
             style=toolbar_styles["toggle"],
         )
         self.autoscale_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
-        self.filter_var = tk.BooleanVar(value=DEFAULT_FILTER_ENABLED)
+        self.highpass_filter_var = tk.BooleanVar(value=DEFAULT_FILTER_SETTINGS.highpass_enabled)
+        self.highpass_filter_check = ttk.Checkbutton(
+            toolbar,
+            text="HP",
+            variable=self.highpass_filter_var,
+            command=self._refresh_display_plots,
+            style=toolbar_styles["toggle"],
+        )
+        self.highpass_filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
+        self.notch_filter_var = tk.BooleanVar(value=DEFAULT_FILTER_SETTINGS.notch_enabled)
+        self.notch_filter_check = ttk.Checkbutton(
+            toolbar,
+            text="Notch",
+            variable=self.notch_filter_var,
+            command=self._refresh_display_plots,
+            style=toolbar_styles["toggle"],
+        )
+        self.notch_filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
+        self.lowpass_filter_var = tk.BooleanVar(value=DEFAULT_FILTER_SETTINGS.lowpass_enabled)
+        self.lowpass_filter_check = ttk.Checkbutton(
+            toolbar,
+            text="LP",
+            variable=self.lowpass_filter_var,
+            command=self._refresh_display_plots,
+            style=toolbar_styles["toggle"],
+        )
+        self.lowpass_filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
+        self.filter_var = tk.BooleanVar(value=DEFAULT_FILTER_SETTINGS.bandpass_enabled)
         self.filter_check = ttk.Checkbutton(
             toolbar,
-            text="Filter",
+            text="Bandpass",
             variable=self.filter_var,
+            command=self._refresh_display_plots,
             style=toolbar_styles["toggle"],
         )
         self.filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
+        self.display_filter_separator = ttk.Frame(
+            toolbar,
+            width=toolbar_spec["separator_width"],
+            style="ToolbarSeparator.TFrame",
+        )
+        self.display_filter_separator.pack(
+            side=tk.LEFT,
+            fill=tk.Y,
+            padx=toolbar_group_padding()["separator"],
+        )
+        self.display_window_var = tk.StringVar(value=f"{DEFAULT_DISPLAY_SETTINGS.time_window_seconds:g} s")
+        ttk.Label(toolbar, text="Window", style=str(toolbar_label_spec()["style"])).pack(
+            side=tk.LEFT,
+            padx=toolbar_spec["display_label_padding"],
+        )
+        self.display_window_combo = ttk.Combobox(
+            toolbar,
+            textvariable=self.display_window_var,
+            width=int(toolbar_spec["display_width"]),
+            values=display_window_labels(),
+            state="readonly",
+            style=toolbar_styles["port"],
+        )
+        self.display_window_combo.pack(side=tk.LEFT, padx=toolbar_spec["display_control_padding"])
+        self.display_window_combo.bind("<<ComboboxSelected>>", self._refresh_display_plots)
+        self.display_gain_var = tk.StringVar(value=f"{DEFAULT_DISPLAY_SETTINGS.gain:g}x")
+        ttk.Label(toolbar, text="Gain", style=str(toolbar_label_spec()["style"])).pack(
+            side=tk.LEFT,
+            padx=toolbar_spec["display_label_padding"],
+        )
+        self.display_gain_combo = ttk.Combobox(
+            toolbar,
+            textvariable=self.display_gain_var,
+            width=int(toolbar_spec["display_width"]),
+            values=display_gain_labels(),
+            state="readonly",
+            style=toolbar_styles["port"],
+        )
+        self.display_gain_combo.pack(side=tk.LEFT, padx=toolbar_spec["display_control_padding"])
+        self.display_gain_combo.bind("<<ComboboxSelected>>", self._refresh_display_plots)
+        self.sweep_speed_var = tk.StringVar(value=f"{DEFAULT_DISPLAY_SETTINGS.sweep_speed_mm_s} mm/s")
+        ttk.Label(toolbar, text="Speed", style=str(toolbar_label_spec()["style"])).pack(
+            side=tk.LEFT,
+            padx=toolbar_spec["display_label_padding"],
+        )
+        self.sweep_speed_combo = ttk.Combobox(
+            toolbar,
+            textvariable=self.sweep_speed_var,
+            width=int(toolbar_spec["display_width"]),
+            values=sweep_speed_labels(),
+            state="readonly",
+            style=toolbar_styles["port"],
+        )
+        self.sweep_speed_combo.pack(side=tk.LEFT, padx=toolbar_spec["display_control_padding"])
+        self.sweep_speed_combo.bind("<<ComboboxSelected>>", self._refresh_display_plots)
         self.toolbar_context_separator = ttk.Frame(
             toolbar,
             width=toolbar_spec["separator_width"],
@@ -2341,7 +2453,7 @@ class App(tk.Tk):
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.label_outer()
         self._style_signal_axes((self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
-        self.ax_live_ecg.set_ylabel("counts")
+        self.ax_live_ecg.set_ylabel("display counts")
         self.ax_live_resp.set_ylabel("counts")
         self.ax_live_status.set_xlabel("Time (s)")
         self._configure_live_time_axis()
@@ -2377,8 +2489,8 @@ class App(tk.Tk):
         for ax in (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status):
             ax.label_outer()
         self._style_signal_axes((self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
-        self.ax_review_status.set_xlabel("Samples")
-        self.ax_review_ecg.set_ylabel("counts")
+        self.ax_review_status.set_xlabel("Time (s)")
+        self.ax_review_ecg.set_ylabel("display counts")
         self.ax_review_resp.set_ylabel("counts")
         trace_styles = plot_trace_styles()
         self.review_ecg_line, = self.ax_review_ecg.plot([], [], color=PLOT_TRACE_COLORS["ecg"], **trace_styles["ecg"])
@@ -3147,29 +3259,114 @@ class App(tk.Tk):
         self.board_hr.append(sample.board_heart_rate)
         self.board_rr.append(sample.board_respiration_rate)
 
+    def _refresh_display_plots(self, _event: tk.Event | None = None) -> None:
+        if self.is_streaming and self.indices:
+            self._redraw_live()
+            return
+        if self.loaded_samples:
+            self._show_recording(self.loaded_samples)
+            return
+        if self.indices:
+            self._redraw_live()
+
+    def _display_settings(self) -> EcgDisplaySettings:
+        return EcgDisplaySettings(
+            time_window_seconds=parse_display_window(self.display_window_var.get()),
+            gain=parse_display_gain(self.display_gain_var.get()),
+            sweep_speed_mm_s=parse_sweep_speed(self.sweep_speed_var.get()),
+        ).normalized()
+
+    def _software_filter_settings(self) -> SoftwareFilterSettings:
+        return SoftwareFilterSettings(
+            highpass_enabled=bool(self.highpass_filter_var.get()),
+            notch_enabled=bool(self.notch_filter_var.get()),
+            lowpass_enabled=bool(self.lowpass_filter_var.get()),
+            bandpass_enabled=bool(self.filter_var.get()),
+        )
+
     def _ads1292r_display_channels(self) -> tuple[str, np.ndarray, np.ndarray]:
         ch1 = np.asarray(self.ch1, dtype=float)
         ch2 = np.asarray(self.ch2, dtype=float)
         return ADS1292R_ECG_SOURCE, ch2, ch1
 
-    def _display_signal(self, values: np.ndarray, *, invert: bool = False) -> np.ndarray:
+    def _display_signal(self, values: np.ndarray, *, invert: bool = False, gain: float = 1.0) -> np.ndarray:
         return display_signal_values(
             values,
             filter_enabled=bool(self.filter_var.get()),
+            filter_settings=self._software_filter_settings(),
             invert=invert,
+            gain=gain,
             sample_rate_hz=SAMPLE_RATE_HZ,
         )
+
+    def _apply_ecg_paper_grid(self, ax: object, settings: EcgDisplaySettings) -> None:
+        spec = ecg_paper_grid_spec(settings)
+        ax.xaxis.set_major_locator(MultipleLocator(float(spec["major_x_seconds"])))
+        ax.xaxis.set_minor_locator(MultipleLocator(float(spec["minor_x_seconds"])))
+        y_min, y_max = ax.get_ylim()
+        span = max(abs(y_max - y_min), 1.0)
+        major_y = max(span / 5.0, 1.0)
+        minor_y = max(major_y / 5.0, 0.2)
+        ax.yaxis.set_major_locator(MultipleLocator(major_y))
+        ax.yaxis.set_minor_locator(MultipleLocator(minor_y))
+        ax.grid(
+            True,
+            which="major",
+            color=spec["major_color"],
+            linewidth=spec["major_linewidth"],
+            alpha=spec["major_alpha"],
+        )
+        ax.grid(
+            True,
+            which="minor",
+            color=spec["minor_color"],
+            linewidth=spec["minor_linewidth"],
+            alpha=spec["minor_alpha"],
+        )
+
+    def _draw_calibration_pulse(
+        self,
+        ax: object,
+        artists: list[object],
+        settings: EcgDisplaySettings,
+    ) -> None:
+        for artist in artists:
+            artist.remove()
+        artists.clear()
+        line, = ax.plot(
+            [0.025, 0.025, 0.07, 0.07, 0.105],
+            [0.12, 0.30, 0.30, 0.12, 0.12],
+            transform=ax.transAxes,
+            color=PLOT_TRACE_COLORS["peak"],
+            linewidth=1.25,
+            solid_capstyle="butt",
+            clip_on=False,
+        )
+        label = ax.text(
+            0.115,
+            0.30,
+            f"1 mV | {settings.gain:g}x",
+            transform=ax.transAxes,
+            color=APP_VISUAL_TOKENS["muted"],
+            fontsize=8,
+            va="center",
+            ha="left",
+            clip_on=False,
+        )
+        artists.extend((line, label))
 
     def _redraw_live(self) -> None:
         if not self.indices:
             return
         self._clear_empty_plot_state()
+        display_settings = self._display_settings()
+        filter_settings = self._software_filter_settings()
         source, ecg_raw, resp_raw = self._ads1292r_display_channels()
-        ecg = self._display_signal(ecg_raw, invert=DEFAULT_ECG_INVERTED)
+        ecg = self._display_signal(ecg_raw, invert=DEFAULT_ECG_INVERTED, gain=display_settings.gain)
         resp = self._display_signal(resp_raw)
         x = np.asarray(self.indices, dtype=float) / SAMPLE_RATE_HZ
-        left = max(0.0, x[-1] - VISIBLE_SECONDS)
-        right = max(VISIBLE_SECONDS, x[-1])
+        left = max(0.0, x[-1] - display_settings.time_window_seconds)
+        right = max(display_settings.time_window_seconds, x[-1])
         visible = (x >= left) & (x <= right)
         visible_x = x[visible]
         visible_ecg = ecg[visible]
@@ -3189,14 +3386,16 @@ class App(tk.Tk):
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.set_xlim(left, right)
         if self.autoscale_var.get():
-            ecg_ylim = robust_ylim(visible_ecg_plot, min_span=DISPLAY_MIN_ECG_SPAN_COUNTS)
+            ecg_ylim = robust_ylim(visible_ecg_plot, min_span=DISPLAY_MIN_ECG_SPAN_COUNTS * display_settings.gain)
             resp_ylim = robust_ylim(visible_resp_plot, min_span=DISPLAY_MIN_RESP_SPAN_COUNTS)
             self.ax_live_ecg.set_ylim(*stable_ylim(self.ax_live_ecg.get_ylim(), ecg_ylim))
             self.ax_live_resp.set_ylim(*stable_ylim(self.ax_live_resp.get_ylim(), resp_ylim))
             self.ax_live_status.set_ylim(-0.5, max(1.0, float(visible_status.max()) + 0.5 if visible_status.size else 1.0))
+        self._apply_ecg_paper_grid(self.ax_live_ecg, display_settings)
+        self._draw_calibration_pulse(self.ax_live_ecg, self.live_calibration_artists, display_settings)
         hr = heart_rate_summary(peaks, SAMPLE_RATE_HZ)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
-        mode = "filtered, display-smoothed" if self.filter_var.get() else "raw, display-smoothed"
+        mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
         polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
         self._set_signal_axis_title(
             self.ax_live_ecg,
@@ -3221,15 +3420,17 @@ class App(tk.Tk):
         self._clear_empty_plot_state()
         self._clear_signal_buffers()
         self.sample_index = 0
+        display_settings = self._display_settings()
+        filter_settings = self._software_filter_settings()
         full_ch1 = np.asarray([sample.ch1 for sample in samples], dtype=float)
         full_ch2 = np.asarray([sample.ch2 for sample in samples], dtype=float)
         full_status_ints = tuple(sample.lead_off_bits for sample in samples)
         source = ADS1292R_ECG_SOURCE
-        ecg = self._display_signal(full_ch2, invert=DEFAULT_ECG_INVERTED)
+        ecg = self._display_signal(full_ch2, invert=DEFAULT_ECG_INVERTED, gain=display_settings.gain)
         resp = self._display_signal(full_ch1)
         result = review_channels(full_ch1, full_ch2, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
         metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
-        x = np.arange(ecg.size)
+        x = np.arange(ecg.size) / SAMPLE_RATE_HZ
         status_arr = np.asarray(full_status_ints, dtype=float)
         display_ecg = smooth_for_plot(ecg, window=DISPLAY_SMOOTHING_WINDOW)
         display_resp = smooth_for_plot(resp, window=DISPLAY_SMOOTHING_WINDOW)
@@ -3240,8 +3441,9 @@ class App(tk.Tk):
         self.review_ecg_line.set_data(plot_x, plot_ecg)
         self.review_resp_line.set_data(plot_x, plot_resp)
         self.review_status_line.set_data(plot_x, plot_status)
-        self.review_peak_line.set_data(list(result.peaks), ecg[list(result.peaks)] if result.peaks else [])
-        mode = "filtered, display-smoothed" if self.filter_var.get() else "raw, display-smoothed"
+        peak_x = np.asarray(result.peaks, dtype=float) / SAMPLE_RATE_HZ if result.peaks else []
+        self.review_peak_line.set_data(peak_x, ecg[list(result.peaks)] if result.peaks else [])
+        mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
         polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
         self._set_signal_axis_title(
             self.ax_review_ecg,
@@ -3251,13 +3453,16 @@ class App(tk.Tk):
         self._set_signal_axis_title(self.ax_review_resp, resp_label)
         self._set_signal_axis_title(self.ax_review_status, contact_label)
         for ax, values, min_span in (
-            (self.ax_review_ecg, display_ecg, DISPLAY_MIN_ECG_SPAN_COUNTS),
+            (self.ax_review_ecg, display_ecg, DISPLAY_MIN_ECG_SPAN_COUNTS * display_settings.gain),
             (self.ax_review_resp, display_resp, DISPLAY_MIN_RESP_SPAN_COUNTS),
         ):
             ax.set_xlim(0, max(1, x[-1] if x.size else 1))
             ax.set_ylim(*robust_ylim(values, min_span=min_span))
         self.ax_review_status.set_xlim(0, max(1, x[-1] if x.size else 1))
         self.ax_review_status.set_ylim(-0.5, max(1.0, float(status_arr.max()) + 0.5 if status_arr.size else 1.0))
+        self.ax_review_status.set_xlabel("Time (s)")
+        self._apply_ecg_paper_grid(self.ax_review_ecg, display_settings)
+        self._draw_calibration_pulse(self.ax_review_ecg, self.review_calibration_artists, display_settings)
         self.review_canvas.draw_idle()
         self._draw_pqrst(ecg, result.peaks)
         self.metrics_var.set(

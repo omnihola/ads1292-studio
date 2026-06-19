@@ -241,6 +241,9 @@ def test_toolbar_layout_spec_keeps_acquisition_controls_ordered() -> None:
         "inline_action_padding": (4, 4),
         "save_padding": (8, 4),
         "toggle_padding": (4, 4),
+        "display_label_padding": (4, 3),
+        "display_control_padding": (4, 8),
+        "display_width": 9,
         "separator_width": 1,
         "hint_padding": (12, 5),
     }

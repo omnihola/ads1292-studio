@@ -21,6 +21,8 @@ from ads1292_studio.app import (
 )
 import numpy as np
 
+from ads1292_studio.display import SoftwareFilterSettings
+
 
 class _FakeStringVar:
     def __init__(self, value: str) -> None:
@@ -59,6 +61,20 @@ def test_default_display_is_raw_without_ecg_inversion() -> None:
         display_signal_values(values, filter_enabled=DEFAULT_FILTER_ENABLED, invert=True),
         np.array([-10.0, 20.0, -30.0]),
     )
+
+
+def test_display_signal_gain_is_display_only() -> None:
+    values = np.array([10.0, -20.0, 30.0])
+
+    display = display_signal_values(
+        values,
+        filter_enabled=False,
+        filter_settings=SoftwareFilterSettings(),
+        gain=2.0,
+    )
+
+    np.testing.assert_array_equal(display, np.array([20.0, -40.0, 60.0]))
+    np.testing.assert_array_equal(values, np.array([10.0, -20.0, 30.0]))
 
 
 def test_compute_live_quality_result_keeps_generation_and_metrics() -> None:

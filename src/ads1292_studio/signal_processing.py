@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 from scipy import signal
 
+from ads1292_studio.display import SoftwareFilterSettings
 from ads1292_studio.models import ChannelChoice, HeartRateSummary, PqrstReview, ReviewResult
 
 
@@ -19,6 +20,50 @@ def bandpass(values, sample_rate_hz: float, low_hz: float = 0.7, high_hz: float 
     low = max(low_hz / nyquist, 0.0001)
     b, a = signal.butter(2, [low, high], btype="band")
     return signal.filtfilt(b, a, arr)
+
+
+def highpass(values, sample_rate_hz: float, cutoff_hz: float = 0.5) -> np.ndarray:
+    arr = as_float_array(values)
+    if arr.size < 16:
+        return arr - np.median(arr) if arr.size else arr
+    cutoff = max(cutoff_hz / (sample_rate_hz / 2), 0.0001)
+    b, a = signal.butter(2, cutoff, btype="highpass")
+    return signal.filtfilt(b, a, arr)
+
+
+def lowpass(values, sample_rate_hz: float, cutoff_hz: float = 40.0) -> np.ndarray:
+    arr = as_float_array(values)
+    if arr.size < 16:
+        return arr
+    cutoff = min(cutoff_hz / (sample_rate_hz / 2), 0.99)
+    b, a = signal.butter(2, cutoff, btype="lowpass")
+    return signal.filtfilt(b, a, arr)
+
+
+def notch(values, sample_rate_hz: float, notch_hz: float = 60.0, q: float = 30.0) -> np.ndarray:
+    arr = as_float_array(values)
+    if arr.size < 16:
+        return arr
+    normalized = min(notch_hz / (sample_rate_hz / 2), 0.99)
+    b, a = signal.iirnotch(normalized, q)
+    return signal.filtfilt(b, a, arr)
+
+
+def apply_software_filters(
+    values,
+    sample_rate_hz: float,
+    settings: SoftwareFilterSettings,
+) -> np.ndarray:
+    display = as_float_array(values)
+    if settings.bandpass_enabled:
+        return bandpass(display, sample_rate_hz)
+    if settings.highpass_enabled:
+        display = highpass(display, sample_rate_hz, settings.highpass_hz)
+    if settings.notch_enabled:
+        display = notch(display, sample_rate_hz, settings.notch_hz)
+    if settings.lowpass_enabled:
+        display = lowpass(display, sample_rate_hz, settings.lowpass_hz)
+    return display
 
 
 def detrend_median(values, window: int = 500) -> np.ndarray:
