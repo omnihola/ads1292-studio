@@ -168,6 +168,17 @@ PLOT_PANEL_SPEC = {
     "panel": "Card.TFrame",
     "padding": (12, 12),
 }
+PLOT_AXIS_STYLE = {
+    "face": "#FFFFFF",
+    "grid": "#D9E1EC",
+    "spine": "#D9E1EC",
+    "tick": "#657084",
+    "label": "#172033",
+    "grid_linewidth": 0.7,
+    "grid_alpha": 0.45,
+    "spine_linewidth": 0.8,
+    "tick_label_size": 9,
+}
 SIDEBAR_FIELD_STYLES = {
     "label": "FieldLabel.TLabel",
     "entry": "Field.TEntry",
@@ -309,6 +320,10 @@ def log_panel_spec() -> dict[str, str]:
 
 def plot_panel_spec() -> dict[str, object]:
     return dict(PLOT_PANEL_SPEC)
+
+
+def plot_axis_style() -> dict[str, object]:
+    return dict(PLOT_AXIS_STYLE)
 
 
 def sidebar_field_styles() -> dict[str, str]:
@@ -1574,17 +1589,19 @@ class App(tk.Tk):
         return fig
 
     def _style_signal_axes(self, axes: tuple[object, ...]) -> None:
+        style = plot_axis_style()
         for ax in axes:
-            ax.set_facecolor(APP_VISUAL_TOKENS["panel"])
-            ax.grid(True, color=APP_VISUAL_TOKENS["border"], linewidth=0.8, alpha=0.65)
-            ax.tick_params(colors=APP_VISUAL_TOKENS["muted"], labelsize=9)
-            ax.xaxis.label.set_color(APP_VISUAL_TOKENS["ink"])
-            ax.yaxis.label.set_color(APP_VISUAL_TOKENS["ink"])
-            ax.title.set_color(APP_VISUAL_TOKENS["ink"])
+            ax.set_facecolor(style["face"])
+            ax.grid(True, color=style["grid"], linewidth=style["grid_linewidth"], alpha=style["grid_alpha"])
+            ax.tick_params(colors=style["tick"], labelsize=style["tick_label_size"])
+            ax.xaxis.label.set_color(style["label"])
+            ax.yaxis.label.set_color(style["label"])
+            ax.title.set_color(style["label"])
             for side in ("top", "right"):
                 ax.spines[side].set_visible(False)
             for side in ("left", "bottom"):
-                ax.spines[side].set_color(APP_VISUAL_TOKENS["border"])
+                ax.spines[side].set_color(style["spine"])
+                ax.spines[side].set_linewidth(style["spine_linewidth"])
 
     def _show_empty_plot_state(self, key: str, axes: tuple[object, ...]) -> None:
         style = empty_plot_style()

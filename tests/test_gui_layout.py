@@ -9,6 +9,7 @@ from ads1292_studio.app import (
     header_connection_styles,
     log_panel_spec,
     main_tab_labels,
+    plot_axis_style,
     plot_panel_spec,
     plot_trace_colors,
     primary_toolbar_button_labels,
@@ -252,4 +253,18 @@ def test_plot_panel_spec_frames_signal_workspaces() -> None:
         "shell": "Main.TFrame",
         "panel": "Card.TFrame",
         "padding": (12, 12),
+    }
+
+
+def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
+    assert plot_axis_style() == {
+        "face": "#FFFFFF",
+        "grid": "#D9E1EC",
+        "spine": "#D9E1EC",
+        "tick": "#657084",
+        "label": "#172033",
+        "grid_linewidth": 0.7,
+        "grid_alpha": 0.45,
+        "spine_linewidth": 0.8,
+        "tick_label_size": 9,
     }
