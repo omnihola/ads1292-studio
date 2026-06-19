@@ -17,12 +17,13 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 from ads1292_studio.batch import export_batch_summary
-from ads1292_studio.calibration import Calibration, counts_to_microvolts, read_calibration_json, write_calibration_json
+from ads1292_studio.calibration import Calibration, read_calibration_json, write_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.events import EventMarker, read_events_json, write_events_json
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_session_index import build_session_index_message
+from ads1292_studio.macos_stderr import install_macos_stderr_filter
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.plots import decimate_for_plot, robust_ylim
@@ -45,6 +46,8 @@ from ads1292_studio.workers import LiveWorker
 MAX_POINTS = 5000
 VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
+DEFAULT_FILTER_ENABLED = False
+DEFAULT_ECG_INVERTED = False
 PRIMARY_TOOLBAR_BUTTONS = ("Refresh", "Connect", "Start", "Stop")
 SECONDARY_ACTION_BUTTONS = (
     "Load CSV",
@@ -319,6 +322,18 @@ def gui_status_cards(
     )
 
 
+def display_signal_values(
+    values: np.ndarray,
+    *,
+    filter_enabled: bool,
+    invert: bool = False,
+    sample_rate_hz: float = SAMPLE_RATE_HZ,
+) -> np.ndarray:
+    display = values if not filter_enabled else bandpass(values, sample_rate_hz)
+    display = np.asarray(display, dtype=float)
+    return -display if invert else display
+
+
 def gui_signal_quality_cards(
     *,
     quality_label: str | None = None,
@@ -467,7 +482,7 @@ class App(tk.Tk):
         ttk.Checkbutton(toolbar, text="Save CSV", variable=self.save_var).pack(side=tk.LEFT, padx=8)
         self.autoscale_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(toolbar, text="Auto scale", variable=self.autoscale_var).pack(side=tk.LEFT, padx=4)
-        self.filter_var = tk.BooleanVar(value=True)
+        self.filter_var = tk.BooleanVar(value=DEFAULT_FILTER_ENABLED)
         ttk.Checkbutton(toolbar, text="Filter", variable=self.filter_var).pack(side=tk.LEFT, padx=4)
         self.source_var = tk.StringVar(value=ADS1292R_ECG_SOURCE)
         ttk.Label(toolbar, text="Layout: CH2 ECG / CH1 Resp").pack(side=tk.LEFT, padx=(12, 2))
@@ -685,8 +700,8 @@ class App(tk.Tk):
         self.ax_live_status = fig.add_subplot(313, sharex=self.ax_live_ecg)
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.label_outer()
-        self.ax_live_ecg.set_ylabel("uV")
-        self.ax_live_resp.set_ylabel("uV")
+        self.ax_live_ecg.set_ylabel("counts")
+        self.ax_live_resp.set_ylabel("counts")
         self.ax_live_status.set_xlabel("Time (s)")
         self.live_ecg_line, = self.ax_live_ecg.plot([], [], lw=1.0)
         self.live_peak_line, = self.ax_live_ecg.plot([], [], "r.", ms=5)
@@ -704,8 +719,8 @@ class App(tk.Tk):
         for ax in (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status):
             ax.label_outer()
         self.ax_review_status.set_xlabel("Samples")
-        self.ax_review_ecg.set_ylabel("uV")
-        self.ax_review_resp.set_ylabel("uV")
+        self.ax_review_ecg.set_ylabel("counts")
+        self.ax_review_resp.set_ylabel("counts")
         self.review_ecg_line, = self.ax_review_ecg.plot([], [], lw=0.9)
         self.review_peak_line, = self.ax_review_ecg.plot([], [], "r.", ms=5)
         self.review_resp_line, = self.ax_review_resp.plot([], [], lw=0.8)
@@ -1234,15 +1249,19 @@ class App(tk.Tk):
         ch2 = np.asarray(self.ch2, dtype=float)
         return ADS1292R_ECG_SOURCE, ch2, ch1
 
-    def _display_signal(self, values: np.ndarray) -> np.ndarray:
-        display = values if not self.filter_var.get() else bandpass(values, SAMPLE_RATE_HZ)
-        return counts_to_microvolts(display, self._calibration())
+    def _display_signal(self, values: np.ndarray, *, invert: bool = False) -> np.ndarray:
+        return display_signal_values(
+            values,
+            filter_enabled=bool(self.filter_var.get()),
+            invert=invert,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+        )
 
     def _redraw_live(self) -> None:
         if not self.indices:
             return
         source, ecg_raw, resp_raw = self._ads1292r_display_channels()
-        ecg = self._display_signal(ecg_raw)
+        ecg = self._display_signal(ecg_raw, invert=DEFAULT_ECG_INVERTED)
         resp = self._display_signal(resp_raw)
         x = np.asarray(self.indices, dtype=float) / SAMPLE_RATE_HZ
         left = max(0.0, x[-1] - VISIBLE_SECONDS)
@@ -1264,7 +1283,9 @@ class App(tk.Tk):
             self.ax_live_status.set_ylim(-0.5, max(1.0, max(self.status or [0]) + 0.5))
         hr = heart_rate_summary(peaks, SAMPLE_RATE_HZ)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
-        self.ax_live_ecg.set_title(f"ECG display: {ecg_label} | R peaks {len(peaks)}")
+        mode = "filtered" if self.filter_var.get() else "raw"
+        polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
+        self.ax_live_ecg.set_title(f"ECG display: {ecg_label} | {mode}{polarity} | R peaks {len(peaks)}")
         self.ax_live_resp.set_title(resp_label)
         self.ax_live_status.set_title(contact_label)
         self.metrics_var.set(
@@ -1295,7 +1316,7 @@ class App(tk.Tk):
         full_ch2 = np.asarray([sample.ch2 for sample in samples], dtype=float)
         full_status_ints = tuple(sample.lead_off_bits for sample in samples)
         source = ADS1292R_ECG_SOURCE
-        ecg = self._display_signal(full_ch2)
+        ecg = self._display_signal(full_ch2, invert=DEFAULT_ECG_INVERTED)
         resp = self._display_signal(full_ch1)
         result = review_channels(full_ch1, full_ch2, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
         metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
@@ -1309,8 +1330,9 @@ class App(tk.Tk):
         self.review_resp_line.set_data(plot_x, plot_resp)
         self.review_status_line.set_data(plot_x, plot_status)
         self.review_peak_line.set_data(list(result.peaks), ecg[list(result.peaks)] if result.peaks else [])
+        polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
         self.ax_review_ecg.set_title(
-            f"Offline ECG: {ecg_label} | "
+            f"Offline ECG: {ecg_label} | {'filtered' if self.filter_var.get() else 'raw'}{polarity} | "
             f"HR {result.heart_rate.median_bpm:.1f} bpm | peaks {len(result.peaks)}"
         )
         self.ax_review_resp.set_title(resp_label)
@@ -1413,6 +1435,7 @@ class App(tk.Tk):
 
 
 def main() -> None:
+    install_macos_stderr_filter()
     App().mainloop()
 
 

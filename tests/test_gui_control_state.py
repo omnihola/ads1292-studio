@@ -1,7 +1,10 @@
 from ads1292_studio.app import (
+    DEFAULT_ECG_INVERTED,
+    DEFAULT_FILTER_ENABLED,
     GuiState,
     ads1292r_channel_label,
     ads1292r_secondary_channel_label,
+    display_signal_values,
     gui_control_states,
     gui_signal_quality_cards,
     gui_status_cards,
@@ -9,6 +12,7 @@ from ads1292_studio.app import (
     gui_workflow_hint,
     status_tone_style,
 )
+import numpy as np
 
 
 def test_ads1292r_channel_labels_name_ti_board_semantics() -> None:
@@ -20,6 +24,21 @@ def test_ads1292r_channel_labels_name_ti_board_semantics() -> None:
 def test_ads1292r_secondary_channel_label_names_remaining_plot() -> None:
     assert ads1292r_secondary_channel_label("CH2") == "CH1 Respiration raw"
     assert ads1292r_secondary_channel_label("CH1") == "CH2 ECG Lead I (LA-RA)"
+
+
+def test_default_display_is_raw_without_ecg_inversion() -> None:
+    values = np.array([10.0, -20.0, 30.0])
+
+    assert DEFAULT_FILTER_ENABLED is False
+    assert DEFAULT_ECG_INVERTED is False
+    np.testing.assert_array_equal(
+        display_signal_values(values, filter_enabled=DEFAULT_FILTER_ENABLED, invert=DEFAULT_ECG_INVERTED),
+        values,
+    )
+    np.testing.assert_array_equal(
+        display_signal_values(values, filter_enabled=DEFAULT_FILTER_ENABLED, invert=True),
+        np.array([-10.0, 20.0, -30.0]),
+    )
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:
