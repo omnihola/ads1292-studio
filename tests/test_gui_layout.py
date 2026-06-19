@@ -850,7 +850,8 @@ def test_live_and_review_display_reuse_filter_settings_snapshot() -> None:
     source = inspect.getsource(App._redraw_live) + inspect.getsource(App._show_recording)
 
     assert "filter_settings = self._software_filter_settings()" in source
-    assert source.count("filter_settings=filter_settings") == 4
+    assert "build_live_render_frame(" in source
+    assert source.count("filter_settings=filter_settings") == 3
 
 
 def test_control_state_updates_skip_redundant_tk_writes() -> None:

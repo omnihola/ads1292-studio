@@ -4,7 +4,6 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
-from itertools import islice
 from pathlib import Path
 import queue
 import threading
@@ -126,6 +125,7 @@ from ads1292_studio.gui_specs import (
     workspace_layout_spec,
     workspace_notebook_styles,
 )
+from ads1292_studio.live_render import build_live_render_frame, display_signal_values
 from ads1292_studio.macos_stderr import install_macos_stderr_filter
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
@@ -141,9 +141,6 @@ from ads1292_studio.report import export_review_report
 from ads1292_studio.session_index import export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import (
-    apply_software_filters,
-    detect_r_peaks,
-    heart_rate_summary,
     pqrst_review,
     review_channels,
 )
@@ -509,28 +506,6 @@ def gui_status_cards(
         data,
         GuiStatusCard("Package", package_value, package_tone),
     )
-
-
-def display_signal_values(
-    values: np.ndarray,
-    *,
-    filter_enabled: bool,
-    filter_settings: SoftwareFilterSettings | None = None,
-    invert: bool = False,
-    gain: float = 1.0,
-    sample_rate_hz: float = SAMPLE_RATE_HZ,
-) -> np.ndarray:
-    settings = filter_settings or SoftwareFilterSettings(bandpass_enabled=filter_enabled)
-    display = apply_software_filters(values, sample_rate_hz, settings)
-    display = np.asarray(display, dtype=float)
-    display = -display if invert else display
-    return display * gain
-
-
-def deque_tail_array(values: deque[float] | deque[int], count: int, *, dtype: object = float) -> np.ndarray:
-    visible_count = max(0, min(len(values), int(count)))
-    start = len(values) - visible_count
-    return np.fromiter(islice(values, start, None), dtype=dtype, count=visible_count)
 
 
 def compact_ecg_source_label(source: str | None) -> str:
@@ -2386,61 +2361,37 @@ class App(tk.Tk):
         self._clear_empty_plot_state()
         display_settings = self._display_settings()
         filter_settings = self._software_filter_settings()
-        visible_count = min(
-            len(self.indices),
-            len(self.ch1),
-            len(self.ch2),
-            len(self.status),
-            int(display_settings.time_window_seconds * SAMPLE_RATE_HZ) + 2,
-        )
-        if visible_count <= 0:
-            return
-        source = ADS1292R_ECG_SOURCE
-        visible_x = deque_tail_array(self.indices, visible_count, dtype=float) / SAMPLE_RATE_HZ
-        left = max(0.0, visible_x[-1] - display_settings.time_window_seconds)
-        right = max(display_settings.time_window_seconds, visible_x[-1])
-        ecg_raw = deque_tail_array(self.ch2, visible_count, dtype=float)
-        resp_raw = deque_tail_array(self.ch1, visible_count, dtype=float)
-        visible_ecg = self._display_signal(
-            ecg_raw,
+        frame = build_live_render_frame(
+            indices=self.indices,
+            ch1=self.ch1,
+            ch2=self.ch2,
+            status=self.status,
+            display_settings=display_settings,
             filter_settings=filter_settings,
-            invert=DEFAULT_ECG_INVERTED,
-            gain=display_settings.gain,
+            source=ADS1292R_ECG_SOURCE,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+            smoothing_window=DISPLAY_SMOOTHING_WINDOW,
+            max_render_points=LIVE_MAX_RENDER_POINTS,
+            ecg_inverted=DEFAULT_ECG_INVERTED,
         )
-        visible_resp = self._display_signal(resp_raw, filter_settings=filter_settings)
-        visible_ecg_plot = smooth_for_plot(visible_ecg, window=DISPLAY_SMOOTHING_WINDOW)
-        visible_resp_plot = smooth_for_plot(visible_resp, window=DISPLAY_SMOOTHING_WINDOW)
-        visible_status = deque_tail_array(self.status, visible_count, dtype=float)
-        peaks = detect_r_peaks(visible_ecg, SAMPLE_RATE_HZ)
-        peaks_x = visible_x[list(peaks)] if peaks else []
-        peaks_y = visible_ecg_plot[list(peaks)] if peaks else []
-        plot_ecg_x, plot_ecg = decimate_extrema_for_plot(
-            visible_x,
-            visible_ecg_plot,
-            LIVE_MAX_RENDER_POINTS,
-        )
-        plot_resp_x, plot_resp = decimate_extrema_for_plot(
-            visible_x,
-            visible_resp_plot,
-            LIVE_MAX_RENDER_POINTS,
-        )
-        plot_status_x, plot_status = decimate_for_plot(visible_x, visible_status, LIVE_MAX_RENDER_POINTS)
+        if frame is None:
+            return
 
-        self.live_ecg_line.set_data(plot_ecg_x, plot_ecg)
-        self.live_peak_line.set_data(peaks_x, peaks_y)
-        self.live_resp_line.set_data(plot_resp_x, plot_resp)
-        self.live_status_line.set_data(plot_status_x, plot_status)
+        self.live_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
+        self.live_peak_line.set_data(frame.peaks_x, frame.peaks_y)
+        self.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
+        self.live_status_line.set_data(frame.plot_status_x, frame.plot_status)
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
-            ax.set_xlim(left, right)
+            ax.set_xlim(frame.left, frame.right)
         if self.autoscale_var.get():
-            ecg_ylim = robust_ylim(visible_ecg_plot, min_span=DISPLAY_MIN_ECG_SPAN_COUNTS * display_settings.gain)
-            resp_ylim = robust_ylim(visible_resp_plot, min_span=DISPLAY_MIN_RESP_SPAN_COUNTS)
+            ecg_ylim = robust_ylim(frame.visible_ecg_plot, min_span=DISPLAY_MIN_ECG_SPAN_COUNTS * display_settings.gain)
+            resp_ylim = robust_ylim(frame.visible_resp_plot, min_span=DISPLAY_MIN_RESP_SPAN_COUNTS)
             self.ax_live_ecg.set_ylim(*stable_ylim(self.ax_live_ecg.get_ylim(), ecg_ylim))
             self.ax_live_resp.set_ylim(*stable_ylim(self.ax_live_resp.get_ylim(), resp_ylim))
-            self.ax_live_status.set_ylim(-0.5, max(1.0, float(visible_status.max()) + 0.5 if visible_status.size else 1.0))
+            status_top = float(frame.visible_status.max()) + 0.5 if frame.visible_status.size else 1.0
+            self.ax_live_status.set_ylim(-0.5, max(1.0, status_top))
         self._apply_ecg_paper_grid(self.ax_live_ecg, display_settings)
         self._draw_calibration_pulse(self.ax_live_ecg, self.live_calibration_artists, display_settings)
-        hr = heart_rate_summary(peaks, SAMPLE_RATE_HZ)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
         mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
         set_signal_axis_title(
@@ -2453,15 +2404,15 @@ class App(tk.Tk):
             self.metrics_var,
             live_metrics_text(
                 sample_index=self.sample_index,
-                duration_seconds=float(visible_x[-1]),
+                duration_seconds=float(frame.visible_x[-1]),
                 ecg_label=ecg_label,
-                heart_rate_bpm=hr.median_bpm,
-                peak_count=len(peaks),
+                heart_rate_bpm=frame.heart_rate.median_bpm,
+                peak_count=len(frame.peaks),
             ),
         )
         self._schedule_live_quality_update(
-            source=source,
-            valid_rr=hr.valid_rr_count,
+            source=frame.source,
+            valid_rr=frame.heart_rate.valid_rr_count,
         )
         self.live_canvas.draw_idle()
 

@@ -1,4 +1,3 @@
-from collections import deque
 import queue
 
 import numpy as np
@@ -20,7 +19,6 @@ from ads1292_studio.app import (
     configure_widget_option_if_changed,
     compute_live_quality_result,
     display_scale_reference_label,
-    deque_tail_array,
     display_signal_values,
     display_refresh_key,
     drain_queue_items,
@@ -232,14 +230,6 @@ def test_drain_queue_items_does_not_consume_when_limit_is_zero() -> None:
 
     assert drain_queue_items(values, max_items=0) == tuple()
     assert values.get_nowait() == "pending"
-
-
-def test_deque_tail_array_limits_live_plot_work_to_visible_tail() -> None:
-    values = deque(range(10), maxlen=10)
-
-    assert deque_tail_array(values, 4, dtype=float).tolist() == [6.0, 7.0, 8.0, 9.0]
-    assert deque_tail_array(values, 50, dtype=int).tolist() == list(range(10))
-    assert deque_tail_array(values, 0, dtype=float).tolist() == []
 
 
 def test_display_refresh_key_changes_only_when_visible_display_state_changes() -> None:
