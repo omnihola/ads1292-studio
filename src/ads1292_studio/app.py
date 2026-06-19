@@ -518,6 +518,11 @@ STATUS_DETAIL_STYLES = {
     "label": "StatusDetailLabel.TLabel",
     "value": "StatusDetailValue.TLabel",
     "stripe": "#D9E1EC",
+    "background": "#FFFFFF",
+    "label_foreground": "#657084",
+    "label_font": ("Aptos", 10, "bold"),
+    "value_foreground": "#172033",
+    "value_font": ("Aptos", 11),
 }
 CARD_LABEL_SPEC = {
     "style": "CardLabel.TLabel",
@@ -1755,17 +1760,18 @@ class App(tk.Tk):
             foreground=safety_notice["foreground"],
             font=safety_notice["font"],
         )
+        status_detail = status_detail_styles()
         style.configure(
-            "StatusDetailLabel.TLabel",
-            background=tokens["panel"],
-            foreground=tokens["muted"],
-            font=("Aptos", 10, "bold"),
+            status_detail["label"],
+            background=status_detail["background"],
+            foreground=status_detail["label_foreground"],
+            font=status_detail["label_font"],
         )
         style.configure(
-            "StatusDetailValue.TLabel",
-            background=tokens["panel"],
-            foreground=tokens["ink"],
-            font=("Aptos", 11),
+            status_detail["value"],
+            background=status_detail["background"],
+            foreground=status_detail["value_foreground"],
+            font=status_detail["value_font"],
         )
         style.configure(
             "EventCountLabel.TLabel",

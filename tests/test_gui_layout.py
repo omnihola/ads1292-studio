@@ -437,6 +437,11 @@ def test_status_detail_styles_frame_session_quality_and_storage() -> None:
         "label": "StatusDetailLabel.TLabel",
         "value": "StatusDetailValue.TLabel",
         "stripe": "#D9E1EC",
+        "background": "#FFFFFF",
+        "label_foreground": "#657084",
+        "label_font": ("Aptos", 10, "bold"),
+        "value_foreground": "#172033",
+        "value_font": ("Aptos", 11),
     }
 
 
