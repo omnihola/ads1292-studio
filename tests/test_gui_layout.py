@@ -20,6 +20,7 @@ from ads1292_studio.app import (
     toolbar_button_style,
     toolbar_control_styles,
     toolbar_group_padding,
+    toolbar_hint_styles,
     workflow_hint_styles,
     workspace_notebook_styles,
 )
@@ -44,6 +45,13 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
     assert toolbar_control_styles() == {
         "port": "Port.TCombobox",
         "toggle": "ToolbarToggle.TCheckbutton",
+    }
+
+
+def test_gui_layout_frames_toolbar_channel_hint_as_chip() -> None:
+    assert toolbar_hint_styles() == {
+        "frame": "ToolbarHint.TFrame",
+        "label": "ToolbarHint.TLabel",
     }
 
 

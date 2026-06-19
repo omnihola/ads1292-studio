@@ -63,6 +63,10 @@ TOOLBAR_CONTROL_STYLES = {
     "port": "Port.TCombobox",
     "toggle": "ToolbarToggle.TCheckbutton",
 }
+TOOLBAR_HINT_STYLES = {
+    "frame": "ToolbarHint.TFrame",
+    "label": "ToolbarHint.TLabel",
+}
 TOOLBAR_GROUP_PADDING = {
     "separator": (12, 8),
     "tight": (4, 4),
@@ -362,6 +366,10 @@ def toolbar_button_style(label: str) -> str:
 
 def toolbar_control_styles() -> dict[str, str]:
     return dict(TOOLBAR_CONTROL_STYLES)
+
+
+def toolbar_hint_styles() -> dict[str, str]:
+    return dict(TOOLBAR_HINT_STYLES)
 
 
 def toolbar_group_padding() -> dict[str, tuple[int, int]]:
@@ -802,7 +810,7 @@ class App(tk.Tk):
             padx=toolbar_group_padding()["separator"],
         )
         self.source_var = tk.StringVar(value=ADS1292R_ECG_SOURCE)
-        ttk.Label(toolbar, text="CH2 ECG / CH1 Resp / Contact", style="ToolbarHint.TLabel").pack(side=tk.LEFT)
+        self._build_toolbar_hint_chip(toolbar, "CH2 ECG / CH1 Resp / Contact")
 
         body = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -1017,7 +1025,13 @@ class App(tk.Tk):
         style.configure("Warning.Connection.TLabel", background=tokens["panel"], foreground=tokens["warning"], font=("Aptos", 12, "bold"))
         style.configure("Neutral.Connection.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12, "bold"))
         style.configure("ToolbarLabel.TLabel", background=tokens["panel_alt"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
-        style.configure("ToolbarHint.TLabel", background=tokens["panel_alt"], foreground=tokens["muted"])
+        style.configure("ToolbarHint.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        style.configure(
+            "ToolbarHint.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["accent_dark"],
+            font=("Aptos", 11, "bold"),
+        )
         style.configure(
             "Port.TCombobox",
             fieldbackground=tokens["panel"],
@@ -1239,6 +1253,13 @@ class App(tk.Tk):
             padding=(10, 8),
         )
         self.safety_notice_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+    def _build_toolbar_hint_chip(self, parent: ttk.Frame, text: str) -> None:
+        styles = toolbar_hint_styles()
+        self.toolbar_hint_chip = ttk.Frame(parent, padding=(10, 5), style=styles["frame"])
+        self.toolbar_hint_chip.pack(side=tk.LEFT)
+        self.toolbar_hint_label = ttk.Label(self.toolbar_hint_chip, text=text, style=styles["label"])
+        self.toolbar_hint_label.pack(side=tk.LEFT)
 
     def _build_status_detail_card(self, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:
         styles = status_detail_styles()
