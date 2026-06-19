@@ -154,6 +154,9 @@ def cmd_index(args: argparse.Namespace) -> int:
     print(f"package_ready={export.summary.package_ready}")
     print(f"incomplete_records={export.summary.incomplete_records}")
     print(f"needs_signal_review={export.summary.needs_signal_review}")
+    print(f"action_package_record={export.summary.action_package_record}")
+    print(f"action_complete_sidecars={export.summary.action_complete_sidecars}")
+    print(f"action_review_signal={export.summary.action_review_signal}")
     return 0
 
 

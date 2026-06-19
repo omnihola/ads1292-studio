@@ -175,7 +175,11 @@ def test_export_session_index_summarizes_package_readiness(tmp_path: Path) -> No
     assert export.summary.package_ready == 1
     assert export.summary.incomplete_records == 1
     assert export.summary.needs_signal_review == 1
+    assert export.summary.action_package_record == 1
+    assert export.summary.action_complete_sidecars == 1
+    assert export.summary.action_review_signal == 1
     html = export.html_path.read_text()
     assert "Package-ready recordings: 1" in html
     assert "Incomplete records: 1" in html
     assert "Need signal review: 1" in html
+    assert "Next actions: package record 1 | complete sidecars 1 | review signal 1" in html

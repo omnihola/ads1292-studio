@@ -52,6 +52,7 @@
 | Add package-ready status | Library rows should combine waveform usability and sidecar completeness before a recording is treated as ready for reporting or packaging. |
 | Add package-ready summary counts | Folder-level readiness counts are needed before a user can treat a session library as an experiment package queue. |
 | Add next-action guidance | Package readiness should be translated into a concrete next step for each record, not left as status-code interpretation. |
+| Add next-action summary counts | The library needs a queue-level view of package, sidecar-completion, and signal-review actions. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -78,6 +79,7 @@
 | Session index could show usable ECG while the record was still incomplete | Added `package_ready_status` so usable waveform, missing sidecars, and signal-review cases are separated. |
 | Session index required reading every row to understand folder readiness | Added `SessionIndexSummary`, HTML summary text, and CLI counts for package-ready, incomplete, and signal-review records. |
 | Session index still required manual interpretation of readiness states | Added `next_action` values: `complete_sidecars`, `review_signal`, and `package_record`. |
+| Session index still lacked counts for action queues | Added action summary counts to `SessionIndexSummary`, HTML exports, and CLI `index`. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -112,6 +114,7 @@
 - Package-ready session index smoke found the real `Good ECG/QRS` recordings are still `incomplete_record` because the older CSV files are missing required sidecars.
 - Session index summary smoke on `../record/ads1292` found `rows=9`, `package_ready=0`, `incomplete_records=9`, and `needs_signal_review=0`.
 - Session index next-action smoke on `../record/ads1292` found all 9 old records have `next_action=complete_sidecars` because required sidecars are missing.
+- Session index action-summary smoke on `../record/ads1292` found `action_package_record=0`, `action_complete_sidecars=9`, and `action_review_signal=0`.
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

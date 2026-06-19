@@ -131,6 +131,9 @@ def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
     assert "package_ready=0" in captured
     assert "incomplete_records=1" in captured
     assert "needs_signal_review=0" in captured
+    assert "action_package_record=0" in captured
+    assert "action_complete_sidecars=1" in captured
+    assert "action_review_signal=0" in captured
 
 
 def test_cli_qc_returns_success_for_good_recording(tmp_path: Path) -> None:

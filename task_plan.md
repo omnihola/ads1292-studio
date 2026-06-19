@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 26
+Phase 27
 
 ## Phases
 
@@ -229,6 +229,14 @@ Phase 26
 - [x] Add tests and real `../record/ads1292` smoke test.
 - **Status:** complete
 
+### Phase 27: Session Index Action Summary
+- [x] Add next-action summary counts to `SessionIndexSummary`.
+- [x] Count package, sidecar-completion, and signal-review queues.
+- [x] Show next-action summary in HTML session index exports.
+- [x] Print next-action summary from CLI `index`.
+- [x] Add tests and real `../record/ads1292` smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -267,6 +275,7 @@ Phase 26
 | Add package-ready status | A recording should only be called package-ready when waveform quality is usable and required sidecars are complete. |
 | Add package-ready summary counts | A session library needs top-level readiness counts so users can see whether a folder is ready for package/report use without reading every row. |
 | Add next-action guidance | Status fields should translate into an actionable workflow: complete sidecars, review signal, or package the record. |
+| Add next-action summary counts | Commercial-style queue views should show how many records are waiting for each next action. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -291,6 +300,7 @@ Phase 26
 | Session index package-ready field was missing during TDD red check | 1 | Added package-ready status to rows, CSV exports, and HTML exports. |
 | Session index summary fields were missing during TDD red check | 1 | Added `SessionIndexSummary`, HTML summary text, and CLI summary output. |
 | Session index next-action field was missing during TDD red check | 1 | Added `next_action` to rows, CSV exports, and HTML exports. |
+| Session index action-summary fields were missing during TDD red check | 1 | Added next-action counts to summary, HTML, and CLI output. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.
