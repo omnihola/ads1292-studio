@@ -151,6 +151,9 @@ def cmd_index(args: argparse.Namespace) -> int:
     print(f"csv={export.csv_path}")
     print(f"html={export.html_path}")
     print(f"rows={len(export.rows)}")
+    print(f"package_ready={export.summary.package_ready}")
+    print(f"incomplete_records={export.summary.incomplete_records}")
+    print(f"needs_signal_review={export.summary.needs_signal_review}")
     return 0
 
 

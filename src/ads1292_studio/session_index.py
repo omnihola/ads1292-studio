@@ -35,10 +35,20 @@ class SessionIndexRow:
 
 
 @dataclass(frozen=True)
+class SessionIndexSummary:
+    recordings: int
+    usable_recordings: int
+    package_ready: int
+    incomplete_records: int
+    needs_signal_review: int
+
+
+@dataclass(frozen=True)
 class SessionIndexExport:
     csv_path: Path
     html_path: Path
     rows: tuple[SessionIndexRow, ...]
+    summary: SessionIndexSummary
 
 
 def scan_recording_directory(root: Path | str) -> tuple[SessionIndexRow, ...]:
@@ -57,6 +67,7 @@ def export_session_index(
     title: str = "ADS1292 Session Index",
 ) -> SessionIndexExport:
     rows = scan_recording_directory(root)
+    summary = summarize_rows(rows)
     output = Path(out_dir)
     output.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
@@ -64,8 +75,18 @@ def export_session_index(
     csv_path = output / f"{stamp}-{slug}.csv"
     html_path = output / f"{stamp}-{slug}.html"
     _write_csv(csv_path, rows)
-    html_path.write_text(_html(title, rows))
-    return SessionIndexExport(csv_path=csv_path, html_path=html_path, rows=rows)
+    html_path.write_text(_html(title, rows, summary))
+    return SessionIndexExport(csv_path=csv_path, html_path=html_path, rows=rows, summary=summary)
+
+
+def summarize_rows(rows: tuple[SessionIndexRow, ...]) -> SessionIndexSummary:
+    return SessionIndexSummary(
+        recordings=len(rows),
+        usable_recordings=sum(1 for row in rows if row.status == "usable"),
+        package_ready=sum(1 for row in rows if row.package_ready_status == "package_ready"),
+        incomplete_records=sum(1 for row in rows if row.package_ready_status == "incomplete_record"),
+        needs_signal_review=sum(1 for row in rows if row.package_ready_status == "needs_signal_review"),
+    )
 
 
 def _looks_like_recording_csv(path: Path) -> bool:
@@ -177,8 +198,7 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
             writer.writerow({column: getattr(row, column) for column in columns})
 
 
-def _html(title: str, rows: tuple[SessionIndexRow, ...]) -> str:
-    usable = sum(1 for row in rows if row.status == "usable")
+def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSummary) -> str:
     header = [
         "File",
         "Session",
@@ -226,7 +246,8 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...]) -> str:
 </head>
 <body>
   <h1>{escape(title)}</h1>
-  <p>Recordings: {len(rows)} | Usable recordings: {usable}</p>
+  <p>Recordings: {summary.recordings} | Usable recordings: {summary.usable_recordings}</p>
+  <p>Package-ready recordings: {summary.package_ready} | Incomplete records: {summary.incomplete_records} | Need signal review: {summary.needs_signal_review}</p>
   <table>
     <tr>{"".join(f"<th>{escape(item)}</th>" for item in header)}</tr>
     {"".join(body)}

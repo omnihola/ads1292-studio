@@ -389,6 +389,21 @@
   - `tests/test_session_index.py`
   - `README.md`
 
+### Phase 25: Session Index Readiness Summary
+- **Status:** complete
+- Actions taken:
+  - Added `SessionIndexSummary` for folder-level readiness counts.
+  - Exposed summary counts through `SessionIndexExport`.
+  - Added package-ready, incomplete-record, and signal-review counts to HTML session index exports.
+  - Added package-ready, incomplete-record, and signal-review counts to CLI `index` output.
+  - Verified against the real `../record/ads1292` folder; all 9 old records are correctly summarized as incomplete because required sidecars are missing.
+- Files created/modified:
+  - `src/ads1292_studio/session_index.py`
+  - `src/ads1292_studio/cli.py`
+  - `tests/test_session_index.py`
+  - `tests/test_cli.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -504,6 +519,11 @@
 | Session index package-ready CLI/smoke tests | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library -q` plus real `index ../record/ads1292` smoke | CSV/HTML include package-ready status and real folder exports | 5 passed; real smoke wrote 9 rows with `Package Ready`, `package_ready_status`, `Good ECG/QRS`, and `incomplete_record` | Pass |
 | Session index package-ready full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 58 passed | Pass |
 | Session index package-ready syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_index.py` | No syntax errors | Passed | Pass |
+| Session index summary TDD red check | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library -q` before implementation | Missing summary object and CLI summary lines | `AttributeError: 'SessionIndexExport' object has no attribute 'summary'`; missing `package_ready=0` output | Pass |
+| Session index summary focused tests | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library -q` | Summary object, HTML text, and CLI output pass | 6 passed | Pass |
+| Session index summary full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 59 passed | Pass |
+| Session index summary syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_index.py src/ads1292_studio/cli.py` | No syntax errors | Passed | Pass |
+| Session index summary real folder smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/ads1292 --out reports/session-index-summary-smoke --title ADS1292-Session-Index-Summary-Smoke` | Real folder summary counts are printed and HTML contains summary text | `rows=9`, `package_ready=0`, `incomplete_records=9`, `needs_signal_review=0`; HTML contains package-ready summary line | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -536,12 +556,13 @@
 | 2026-06-18 | Initial session index fixture was too short/sparse to be classified usable | 1 | Reused the established 7-second ECG-like synthetic waveform from batch tests. |
 | 2026-06-18 | Session index sidecar fields were missing during TDD red check | 1 | Added sidecar status and missing sidecar fields to row, CSV, and HTML output. |
 | 2026-06-18 | Session index package-ready field was missing during TDD red check | 1 | Added package-ready status to row model, CSV export, and HTML export. |
+| 2026-06-18 | Session index summary fields were missing during TDD red check | 1 | Added `SessionIndexSummary`, HTML summary text, and CLI summary output. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 24 complete; ready to commit and push session index package-readiness iteration. |
+| Where am I? | Phase 25 complete; ready to commit and push session index readiness-summary iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, and package-ready session index status. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, and session index readiness summary counts. |

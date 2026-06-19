@@ -143,3 +143,22 @@ def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     assert "Usable recordings" in html
     assert "Sidecars" in html
     assert "Package Ready" in html
+
+
+def test_export_session_index_summarizes_package_readiness(tmp_path: Path) -> None:
+    ready = _write_recording(tmp_path, "ready.csv", "MOTAC gel + Ag/AgCl")
+    _write_recording(tmp_path, "incomplete.csv", "MOTAC gel + Ag/AgCl")
+    review = _write_recording(tmp_path, "review.csv", "MOTAC gel + Ag/AgCl", samples=_review_samples())
+    _write_complete_sidecars(ready)
+    _write_complete_sidecars(review)
+
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Package Summary")
+
+    assert export.summary.recordings == 3
+    assert export.summary.package_ready == 1
+    assert export.summary.incomplete_records == 1
+    assert export.summary.needs_signal_review == 1
+    html = export.html_path.read_text()
+    assert "Package-ready recordings: 1" in html
+    assert "Incomplete records: 1" in html
+    assert "Need signal review: 1" in html

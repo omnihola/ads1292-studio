@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 24
+Phase 25
 
 ## Phases
 
@@ -212,6 +212,14 @@ Phase 24
 - [x] Verify against the real `../record/ads1292` folder.
 - **Status:** complete
 
+### Phase 25: Session Index Readiness Summary
+- [x] Add session index summary counts for recordings, usable recordings, package-ready records, incomplete records, and signal-review records.
+- [x] Expose summary counts on `SessionIndexExport`.
+- [x] Show package-ready summary counts in HTML exports.
+- [x] Print package-ready summary counts from CLI `index`.
+- [x] Add tests and real `../record/ads1292` smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -248,6 +256,7 @@ Phase 24
 | Add session index export | A commercial-style app needs an experiment library view, not only one-file report/package actions. |
 | Add sidecar completeness audit | Good waveform data is not a complete experiment record unless metadata, event, calibration, protocol, and quality-gate context are present. |
 | Add package-ready status | A recording should only be called package-ready when waveform quality is usable and required sidecars are complete. |
+| Add package-ready summary counts | A session library needs top-level readiness counts so users can see whether a folder is ready for package/report use without reading every row. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -270,6 +279,7 @@ Phase 24
 | Session index module was missing during TDD red check | 1 | Added `session_index.py`, CLI `index`, and GUI Session Index action. |
 | Session index sidecar fields were missing during TDD red check | 1 | Added sidecar status and missing sidecar columns to rows, CSV, and HTML. |
 | Session index package-ready field was missing during TDD red check | 1 | Added package-ready status to rows, CSV exports, and HTML exports. |
+| Session index summary fields were missing during TDD red check | 1 | Added `SessionIndexSummary`, HTML summary text, and CLI summary output. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.
