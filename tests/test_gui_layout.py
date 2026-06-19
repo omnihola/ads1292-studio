@@ -24,6 +24,7 @@ from ads1292_studio.app import (
     plot_panel_spec,
     plot_trace_colors,
     plot_trace_styles,
+    pqrst_plot_style,
     primary_toolbar_button_labels,
     protocol_note_styles,
     safety_notice_styles,
@@ -548,6 +549,23 @@ def test_plot_trace_styles_returns_nested_copies() -> None:
     styles["ecg"]["linewidth"] = 99
 
     assert plot_trace_styles()["ecg"]["linewidth"] == 1.15
+
+
+def test_pqrst_plot_style_keeps_morphology_review_readable() -> None:
+    assert pqrst_plot_style() == {
+        "average": {"linewidth": 2.1, "label": "average beat"},
+        "r_marker": {"linestyle": "--", "linewidth": 1.0, "label": "R"},
+        "p_search": {"start_ms": -220, "end_ms": -80, "alpha": 0.09, "label": "P search"},
+        "t_search": {"start_ms": 120, "end_ms": 380, "alpha": 0.09, "label": "T search"},
+        "legend": {"loc": "upper right", "frameon": True, "fontsize": 9},
+    }
+
+
+def test_pqrst_plot_style_returns_nested_copies() -> None:
+    style = pqrst_plot_style()
+    style["average"]["linewidth"] = 99
+
+    assert pqrst_plot_style()["average"]["linewidth"] == 2.1
 
 
 def test_empty_plot_messages_guide_the_first_run_workflow() -> None:

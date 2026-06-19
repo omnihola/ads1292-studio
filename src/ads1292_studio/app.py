@@ -354,6 +354,13 @@ PLOT_TRACE_STYLES = {
     "contact": {"linewidth": 1.0, "drawstyle": "steps-post"},
     "peak": {"linestyle": "None", "marker": "o", "markersize": 4.2, "markeredgewidth": 0.0},
 }
+PQRST_PLOT_STYLE = {
+    "average": {"linewidth": 2.1, "label": "average beat"},
+    "r_marker": {"linestyle": "--", "linewidth": 1.0, "label": "R"},
+    "p_search": {"start_ms": -220, "end_ms": -80, "alpha": 0.09, "label": "P search"},
+    "t_search": {"start_ms": 120, "end_ms": 380, "alpha": 0.09, "label": "T search"},
+    "legend": {"loc": "upper right", "frameon": True, "fontsize": 9},
+}
 EMPTY_PLOT_MESSAGES = {
     "live": (
         "Connect an ADS1292 board, then press Start",
@@ -672,6 +679,10 @@ def plot_trace_colors() -> dict[str, str]:
 
 def plot_trace_styles() -> dict[str, dict[str, object]]:
     return {name: dict(values) for name, values in PLOT_TRACE_STYLES.items()}
+
+
+def pqrst_plot_style() -> dict[str, dict[str, object]]:
+    return {name: dict(values) for name, values in PQRST_PLOT_STYLE.items()}
 
 
 def empty_plot_messages() -> dict[str, tuple[str, ...]]:
@@ -3019,17 +3030,35 @@ class App(tk.Tk):
         self.ax_pqrst.set_xlabel("Time relative to R peak (ms)")
         self.ax_pqrst.set_ylabel("Filtered counts")
         if review.average_beat:
+            pqrst_style = pqrst_plot_style()
             self.ax_pqrst.plot(
                 review.time_ms,
                 review.average_beat,
-                lw=2.0,
                 color=PLOT_TRACE_COLORS["ecg"],
-                label="average beat",
+                **pqrst_style["average"],
             )
-            self.ax_pqrst.axvline(0, color=PLOT_TRACE_COLORS["peak"], linestyle="--", lw=1, label="R")
-            self.ax_pqrst.axvspan(-220, -80, color=APP_VISUAL_TOKENS["success"], alpha=0.08, label="P search")
-            self.ax_pqrst.axvspan(120, 380, color=APP_VISUAL_TOKENS["warning"], alpha=0.08, label="T search")
-            self.ax_pqrst.legend(loc="upper right")
+            self.ax_pqrst.axvline(
+                0,
+                color=PLOT_TRACE_COLORS["peak"],
+                **pqrst_style["r_marker"],
+            )
+            p_search = pqrst_style["p_search"]
+            self.ax_pqrst.axvspan(
+                p_search["start_ms"],
+                p_search["end_ms"],
+                color=APP_VISUAL_TOKENS["success"],
+                alpha=p_search["alpha"],
+                label=p_search["label"],
+            )
+            t_search = pqrst_style["t_search"]
+            self.ax_pqrst.axvspan(
+                t_search["start_ms"],
+                t_search["end_ms"],
+                color=APP_VISUAL_TOKENS["warning"],
+                alpha=t_search["alpha"],
+                label=t_search["label"],
+            )
+            self.ax_pqrst.legend(**pqrst_style["legend"])
         self._set_signal_axis_title(
             self.ax_pqrst,
             f"PQRST review: QRS={review.qrs_clear}, P tentative={review.p_tentative}, "
