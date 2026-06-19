@@ -134,6 +134,7 @@ SIDEBAR_FIELD_STYLES = {
     "label": "FieldLabel.TLabel",
     "entry": "Field.TEntry",
 }
+SIDEBAR_ACTION_BUTTON_STYLE = "SidebarAction.TButton"
 
 
 @dataclass(frozen=True)
@@ -202,6 +203,10 @@ def log_panel_spec() -> dict[str, str]:
 
 def sidebar_field_styles() -> dict[str, str]:
     return dict(SIDEBAR_FIELD_STYLES)
+
+
+def sidebar_action_button_style() -> str:
+    return SIDEBAR_ACTION_BUTTON_STYLE
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -681,7 +686,13 @@ class App(tk.Tk):
         ttk.Label(session_side, text="Events", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
         self._metadata_entry(session_side, "Event label", self.event_label_var)
         self._metadata_entry(session_side, "Event notes", self.event_notes_var)
-        ttk.Button(session_side, text="Add Event", command=self.add_event).pack(anchor=tk.W, fill=tk.X, pady=(6, 2))
+        self.add_event_button = ttk.Button(
+            session_side,
+            text="Add Event",
+            command=self.add_event,
+            style=sidebar_action_button_style(),
+        )
+        self.add_event_button.pack(anchor=tk.W, fill=tk.X, pady=(6, 2))
         ttk.Label(session_side, textvariable=self.event_count_var, wraplength=260, justify=tk.LEFT).pack(anchor=tk.W)
 
         ttk.Label(validation_side, text="Calibration", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
@@ -706,19 +717,49 @@ class App(tk.Tk):
         self._metadata_entry(protocol_side, "Acceptance", self.protocol_acceptance_var)
 
         ttk.Label(actions_side, text="Review", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
-        self.load_csv_button = ttk.Button(actions_side, text="Load CSV", command=self.load_csv)
+        self.load_csv_button = ttk.Button(
+            actions_side,
+            text="Load CSV",
+            command=self.load_csv,
+            style=sidebar_action_button_style(),
+        )
         self.load_csv_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        self.export_report_button = ttk.Button(actions_side, text="Export Report", command=self.export_report)
+        self.export_report_button = ttk.Button(
+            actions_side,
+            text="Export Report",
+            command=self.export_report,
+            style=sidebar_action_button_style(),
+        )
         self.export_report_button.pack(anchor=tk.W, fill=tk.X, pady=2)
         ttk.Label(actions_side, text="Package", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
-        self.export_package_button = ttk.Button(actions_side, text="Export Package", command=self.export_package)
+        self.export_package_button = ttk.Button(
+            actions_side,
+            text="Export Package",
+            command=self.export_package,
+            style=sidebar_action_button_style(),
+        )
         self.export_package_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        self.verify_package_button = ttk.Button(actions_side, text="Verify Package", command=self.verify_package)
+        self.verify_package_button = ttk.Button(
+            actions_side,
+            text="Verify Package",
+            command=self.verify_package,
+            style=sidebar_action_button_style(),
+        )
         self.verify_package_button.pack(anchor=tk.W, fill=tk.X, pady=2)
         ttk.Label(actions_side, text="Library", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
-        self.batch_compare_button = ttk.Button(actions_side, text="Batch Compare", command=self.batch_compare)
+        self.batch_compare_button = ttk.Button(
+            actions_side,
+            text="Batch Compare",
+            command=self.batch_compare,
+            style=sidebar_action_button_style(),
+        )
         self.batch_compare_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        self.session_index_button = ttk.Button(actions_side, text="Session Index", command=self.session_index)
+        self.session_index_button = ttk.Button(
+            actions_side,
+            text="Session Index",
+            command=self.session_index,
+            style=sidebar_action_button_style(),
+        )
         self.session_index_button.pack(anchor=tk.W, fill=tk.X, pady=2)
         ttk.Label(actions_side, text="Safety", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
         ttk.Label(
@@ -791,6 +832,18 @@ class App(tk.Tk):
         style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
         style.configure("TButton", padding=(10, 6), font=("Aptos", 12))
+        style.configure(
+            "SidebarAction.TButton",
+            padding=(10, 7),
+            font=("Aptos", 11, "bold"),
+            foreground=tokens["ink"],
+            background=tokens["panel"],
+        )
+        style.map(
+            "SidebarAction.TButton",
+            foreground=[("disabled", tokens["muted"]), ("active", tokens["accent_dark"])],
+            background=[("disabled", tokens["border"]), ("active", tokens["panel_alt"])],
+        )
         style.configure(
             "Primary.TButton",
             padding=(12, 6),

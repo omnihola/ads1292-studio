@@ -7,6 +7,7 @@ from ads1292_studio.app import (
     plot_trace_colors,
     primary_toolbar_button_labels,
     secondary_action_button_labels,
+    sidebar_action_button_style,
     sidebar_field_styles,
     sidebar_tab_labels,
     toolbar_button_style,
@@ -52,6 +53,10 @@ def test_sidebar_field_styles_make_forms_consistent() -> None:
         "label": "FieldLabel.TLabel",
         "entry": "Field.TEntry",
     }
+
+
+def test_sidebar_action_button_style_keeps_secondary_actions_consistent() -> None:
+    assert sidebar_action_button_style() == "SidebarAction.TButton"
 
 
 def test_gui_layout_uses_ads1292r_synchronized_three_panel_view() -> None:
