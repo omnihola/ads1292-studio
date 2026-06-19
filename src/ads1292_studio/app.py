@@ -177,6 +177,7 @@ from ads1292_studio.gui_specs import (
     workflow_hint_styles,
     workspace_layout_spec,
     workspace_notebook_styles,
+    workspace_tab_strip_styles,
 )
 from ads1292_studio.live_render import build_live_render_frame, display_signal_values
 from ads1292_studio.macos_stderr import install_macos_stderr_filter

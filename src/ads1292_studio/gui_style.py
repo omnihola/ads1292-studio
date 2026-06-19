@@ -30,6 +30,7 @@ from ads1292_studio.gui_specs import (
     toolbar_label_spec,
     workflow_hint_styles,
     workspace_notebook_styles,
+    workspace_tab_strip_styles,
 )
 
 
@@ -438,6 +439,8 @@ def configure_notebook_chrome(style: ttk.Style) -> None:
 
     _configure_named_notebook(style, "Sidebar.TNotebook", "Sidebar.TNotebook.Tab", sidebar_notebook_styles())
     _configure_named_notebook(style, "Workspace.TNotebook", "Workspace.TNotebook.Tab", workspace_notebook_styles())
+    _configure_workspace_tab_strip(style)
+    style.layout("Workspace.TNotebook.Tab", [])
 
 
 def _configure_named_notebook(
@@ -470,4 +473,36 @@ def _configure_named_notebook(
             ("selected", chrome["active_background"]),
             ("active", chrome["active_background"]),
         ],
+    )
+
+
+def _configure_workspace_tab_strip(style: ttk.Style) -> None:
+    chrome = workspace_tab_strip_styles()
+    style.configure(
+        chrome["frame"],
+        background=chrome["background"],
+        borderwidth=0,
+    )
+    style.configure(
+        chrome["tab"],
+        background=chrome["background"],
+        foreground=chrome["foreground"],
+        font=chrome["font"],
+        padding=chrome["tab_padding"],
+        borderwidth=0,
+        relief="flat",
+    )
+    style.configure(
+        chrome["selected_tab"],
+        background=chrome["selected_background"],
+        foreground=chrome["selected_foreground"],
+        font=chrome["font"],
+        padding=chrome["tab_padding"],
+        borderwidth=0,
+        relief="flat",
+    )
+    style.map(
+        chrome["tab"],
+        background=[("active", chrome["hover_background"])],
+        foreground=[("active", chrome["selected_foreground"])],
     )

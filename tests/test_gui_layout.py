@@ -59,6 +59,7 @@ from ads1292_studio.app import (
     workflow_hint_styles,
     workspace_layout_spec,
     workspace_notebook_styles,
+    workspace_tab_strip_styles,
 )
 from ads1292_studio.plot_theme import new_export_figure, style_export_axes
 
@@ -453,6 +454,42 @@ def test_workspace_notebook_styles_make_selected_tabs_visible() -> None:
         "tab_borderwidth": 0,
         "tab_relief": "flat",
     }
+
+
+def test_workspace_tab_strip_styles_replace_native_tab_chrome() -> None:
+    assert workspace_tab_strip_styles() == {
+        "frame": "WorkspaceTabStrip.TFrame",
+        "tab": "WorkspaceTab.TLabel",
+        "selected_tab": "Selected.WorkspaceTab.TLabel",
+        "background": "#F6F8FB",
+        "selected_background": "#FFFFFF",
+        "hover_background": "#EAF1FF",
+        "foreground": "#657084",
+        "selected_foreground": "#2F6FED",
+        "font": ("Aptos", 12, "bold"),
+        "padding": (4, 0, 4, 6),
+        "tab_padding": (12, 7),
+        "tab_gap": (0, 4),
+    }
+
+
+def test_workspace_tabs_use_custom_segmented_strip() -> None:
+    from ads1292_studio.gui_layout import build_workspace_tabs
+
+    source = inspect.getsource(build_workspace_tabs)
+
+    assert "app.workspace_tab_strip" in source
+    assert "app.workspace_tab_labels" in source
+    assert "_select_workspace_tab(app, target)" in source
+    assert "<<NotebookTabChanged>>" in source
+
+
+def test_workspace_notebook_native_tabs_are_hidden() -> None:
+    from ads1292_studio.gui_style import configure_notebook_chrome
+
+    source = inspect.getsource(configure_notebook_chrome)
+
+    assert 'style.layout("Workspace.TNotebook.Tab", [])' in source
 
 
 def test_sidebar_field_styles_make_forms_consistent() -> None:
