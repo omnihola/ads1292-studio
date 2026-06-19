@@ -129,21 +129,21 @@ from ads1292_studio.gui_specs import (
 from ads1292_studio.live_render import build_live_render_frame, display_signal_values
 from ads1292_studio.macos_stderr import install_macos_stderr_filter
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
-from ads1292_studio.models import Recording, StreamSample, StreamStartResult
+from ads1292_studio.models import PqrstReview, Recording, StreamSample, StreamStartResult
 from ads1292_studio.plot_theme import (
     APP_VISUAL_TOKENS,
     PLOT_TRACE_COLORS,
 )
-from ads1292_studio.plots import decimate_extrema_for_plot, decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
+from ads1292_studio.plots import robust_ylim, stable_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
 from ads1292_studio.report import export_review_report
+from ads1292_studio.review_render import ReviewRenderFrame, build_review_render_frame
 from ads1292_studio.session_index import export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import (
     pqrst_review,
-    review_channels,
 )
 from ads1292_studio.workers import LiveWorker
 
@@ -208,6 +208,9 @@ class GuiState:
 class CsvLoadResult:
     path: Path
     recording: Recording | None = None
+    review_frame: ReviewRenderFrame | None = None
+    display_settings: EcgDisplaySettings | None = None
+    filter_settings: SoftwareFilterSettings | None = None
     error: str | None = None
 
 
@@ -1730,16 +1733,43 @@ class App(tk.Tk):
         self.quality_var.set("Quality: waiting for CSV parse")
         self._log(f"Loading CSV in background: {csv_path}")
         self._apply_control_states()
+        display_settings = self._display_settings()
+        filter_settings = self._software_filter_settings()
         threading.Thread(
             target=self._read_csv_in_background,
-            args=(csv_path,),
+            args=(csv_path, display_settings, filter_settings),
             daemon=True,
         ).start()
 
-    def _read_csv_in_background(self, path: Path) -> None:
+    def _read_csv_in_background(
+        self,
+        path: Path,
+        display_settings: EcgDisplaySettings,
+        filter_settings: SoftwareFilterSettings,
+    ) -> None:
         try:
             recording = read_recording_csv(path)
-            self.csv_load_results.put(CsvLoadResult(path=path, recording=recording))
+            review_frame = build_review_render_frame(
+                recording.samples,
+                display_settings=display_settings,
+                filter_settings=filter_settings,
+                source=ADS1292R_ECG_SOURCE,
+                sample_rate_hz=SAMPLE_RATE_HZ,
+                smoothing_window=DISPLAY_SMOOTHING_WINDOW,
+                max_points=MAX_POINTS,
+                ecg_inverted=DEFAULT_ECG_INVERTED,
+                min_ecg_span_counts=DISPLAY_MIN_ECG_SPAN_COUNTS,
+                min_resp_span_counts=DISPLAY_MIN_RESP_SPAN_COUNTS,
+            )
+            self.csv_load_results.put(
+                CsvLoadResult(
+                    path=path,
+                    recording=recording,
+                    review_frame=review_frame,
+                    display_settings=display_settings,
+                    filter_settings=filter_settings,
+                )
+            )
         except Exception as exc:
             self.csv_load_results.put(CsvLoadResult(path=path, error=str(exc)))
 
@@ -1766,7 +1796,14 @@ class App(tk.Tk):
             self._load_calibration_sidecar(result.path)
             self._load_protocol_sidecar(result.path)
             self._load_quality_gate_sidecar(result.path)
-            self._show_recording(result.recording.samples)
+            if (
+                result.review_frame is not None
+                and result.display_settings == self._display_settings()
+                and result.filter_settings == self._software_filter_settings()
+            ):
+                self._show_review_frame(result.recording.samples, result.review_frame)
+            else:
+                self._show_recording(result.recording.samples)
             self.path_var.set(f"CSV: {result.path}")
             self._log(f"Loaded {result.path}")
         except Exception as exc:
@@ -2439,84 +2476,78 @@ class App(tk.Tk):
         self.live_canvas.draw_idle()
 
     def _show_recording(self, samples: tuple[StreamSample, ...]) -> None:
+        frame = build_review_render_frame(
+            samples,
+            display_settings=self._display_settings(),
+            filter_settings=self._software_filter_settings(),
+            source=ADS1292R_ECG_SOURCE,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+            smoothing_window=DISPLAY_SMOOTHING_WINDOW,
+            max_points=MAX_POINTS,
+            ecg_inverted=DEFAULT_ECG_INVERTED,
+            min_ecg_span_counts=DISPLAY_MIN_ECG_SPAN_COUNTS,
+            min_resp_span_counts=DISPLAY_MIN_RESP_SPAN_COUNTS,
+        )
+        self._show_review_frame(samples, frame)
+
+    def _show_review_frame(self, samples: tuple[StreamSample, ...], frame: ReviewRenderFrame) -> None:
         self._clear_empty_plot_state()
         self._clear_signal_buffers()
         self.sample_index = 0
         display_settings = self._display_settings()
-        filter_settings = self._software_filter_settings()
-        full_ch1 = np.asarray([sample.ch1 for sample in samples], dtype=float)
-        full_ch2 = np.asarray([sample.ch2 for sample in samples], dtype=float)
-        full_status_ints = tuple(sample.lead_off_bits for sample in samples)
-        source = ADS1292R_ECG_SOURCE
-        ecg = self._display_signal(
-            full_ch2,
-            filter_settings=filter_settings,
-            invert=DEFAULT_ECG_INVERTED,
-            gain=display_settings.gain,
-        )
-        resp = self._display_signal(full_ch1, filter_settings=filter_settings)
-        result = review_channels(full_ch1, full_ch2, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
-        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
-        x = np.arange(ecg.size) / SAMPLE_RATE_HZ
-        status_arr = np.asarray(full_status_ints, dtype=float)
-        display_ecg = smooth_for_plot(ecg, window=DISPLAY_SMOOTHING_WINDOW)
-        display_resp = smooth_for_plot(resp, window=DISPLAY_SMOOTHING_WINDOW)
-        plot_ecg_x, plot_ecg = decimate_extrema_for_plot(x, display_ecg, MAX_POINTS)
-        plot_resp_x, plot_resp = decimate_extrema_for_plot(x, display_resp, MAX_POINTS)
-        plot_status_x, plot_status = decimate_for_plot(x, status_arr, MAX_POINTS)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
-        self.review_ecg_line.set_data(plot_ecg_x, plot_ecg)
-        self.review_resp_line.set_data(plot_resp_x, plot_resp)
-        self.review_status_line.set_data(plot_status_x, plot_status)
-        peak_x = np.asarray(result.peaks, dtype=float) / SAMPLE_RATE_HZ if result.peaks else []
-        self.review_peak_line.set_data(peak_x, ecg[list(result.peaks)] if result.peaks else [])
-        mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
+        self.review_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
+        self.review_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
+        self.review_status_line.set_data(frame.plot_status_x, frame.plot_status)
+        self.review_peak_line.set_data(frame.peak_x, frame.peak_y)
         polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
         set_signal_axis_title(
             self.ax_review_ecg,
-            f"Offline ECG: {ecg_label} | {mode}{polarity} | "
-            f"HR {result.heart_rate.median_bpm:.1f} bpm | peaks {len(result.peaks)}",
+            f"Offline ECG: {ecg_label} | {frame.mode}{polarity} | "
+            f"HR {frame.review.heart_rate.median_bpm:.1f} bpm | peaks {len(frame.review.peaks)}",
         )
         set_signal_axis_title(self.ax_review_resp, resp_label)
         set_signal_axis_title(self.ax_review_status, contact_label)
-        for ax, values, min_span in (
-            (self.ax_review_ecg, display_ecg, DISPLAY_MIN_ECG_SPAN_COUNTS * display_settings.gain),
-            (self.ax_review_resp, display_resp, DISPLAY_MIN_RESP_SPAN_COUNTS),
-        ):
-            ax.set_xlim(0, max(1, x[-1] if x.size else 1))
-            ax.set_ylim(*robust_ylim(values, min_span=min_span))
-        self.ax_review_status.set_xlim(0, max(1, x[-1] if x.size else 1))
-        self.ax_review_status.set_ylim(-0.5, max(1.0, float(status_arr.max()) + 0.5 if status_arr.size else 1.0))
+        self.ax_review_ecg.set_xlim(0, frame.x_right)
+        self.ax_review_ecg.set_ylim(*frame.ecg_ylim)
+        self.ax_review_resp.set_xlim(0, frame.x_right)
+        self.ax_review_resp.set_ylim(*frame.resp_ylim)
+        self.ax_review_status.set_xlim(0, frame.x_right)
+        self.ax_review_status.set_ylim(*frame.status_ylim)
         self.ax_review_status.set_xlabel("Time (s)")
         self._apply_ecg_paper_grid(self.ax_review_ecg, display_settings)
         self._draw_calibration_pulse(self.ax_review_ecg, self.review_calibration_artists, display_settings)
         self.review_canvas.draw_idle()
-        self._draw_pqrst(ecg, result.peaks)
-        self.metrics_var.set(
-            f"samples {len(samples)} | duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | source {ecg_label}"
+        self._draw_pqrst_review(frame.pqrst)
+        set_string_var_if_changed(
+            self.metrics_var,
+            f"samples {frame.sample_count} | duration {frame.duration_seconds:.1f} s | source {ecg_label}",
         )
-        self.quality_var.set(
-            f"{self._quality_text(source, result.heart_rate.valid_rr_count, samples, full_status_ints, metrics=metrics)} | "
-            f"QRS {'clear' if result.pqrst.qrs_clear else 'unclear'} | "
-            f"P {'tentative' if result.pqrst.p_tentative else 'not reliable'} | "
-            f"T {'tentative' if result.pqrst.t_tentative else 'not reliable'}"
+        set_string_var_if_changed(
+            self.quality_var,
+            f"{self._quality_text(frame.source, frame.review.heart_rate.valid_rr_count, samples, frame.status_values, metrics=frame.metrics)} | "
+            f"QRS {'clear' if frame.review.pqrst.qrs_clear else 'unclear'} | "
+            f"P {'tentative' if frame.review.pqrst.p_tentative else 'not reliable'} | "
+            f"T {'tentative' if frame.review.pqrst.t_tentative else 'not reliable'}",
         )
         self._apply_signal_quality_cards(
             gui_signal_quality_cards(
-                quality_label=metrics.quality_label,
-                ecg_source=metrics.ecg_source,
-                contact_ok_percent=metrics.contact_ok_percent,
-                lead_off_bad_samples=metrics.lead_off_bad_samples,
-                r_peaks=metrics.r_peaks,
-                hr_median_bpm=metrics.hr_median_bpm,
-                baseline_drift_counts=metrics.baseline_drift_counts,
-                noise_rms_counts=metrics.noise_rms_counts,
-                peak_to_peak_counts=metrics.peak_to_peak_counts,
+                quality_label=frame.metrics.quality_label,
+                ecg_source=frame.metrics.ecg_source,
+                contact_ok_percent=frame.metrics.contact_ok_percent,
+                lead_off_bad_samples=frame.metrics.lead_off_bad_samples,
+                r_peaks=frame.metrics.r_peaks,
+                hr_median_bpm=frame.metrics.hr_median_bpm,
+                baseline_drift_counts=frame.metrics.baseline_drift_counts,
+                noise_rms_counts=frame.metrics.noise_rms_counts,
+                peak_to_peak_counts=frame.metrics.peak_to_peak_counts,
             )
         )
 
     def _draw_pqrst(self, ecg: np.ndarray, peaks: tuple[int, ...]) -> None:
-        review = pqrst_review(ecg, peaks, SAMPLE_RATE_HZ)
+        self._draw_pqrst_review(pqrst_review(ecg, peaks, SAMPLE_RATE_HZ))
+
+    def _draw_pqrst_review(self, review: PqrstReview) -> None:
         self.ax_pqrst.clear()
         style_signal_axes((self.ax_pqrst,))
         self.ax_pqrst.set_xlabel("Time relative to R peak (ms)")

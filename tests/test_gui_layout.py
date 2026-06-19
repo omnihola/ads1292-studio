@@ -893,7 +893,19 @@ def test_live_and_review_display_reuse_filter_settings_snapshot() -> None:
 
     assert "filter_settings = self._software_filter_settings()" in source
     assert "build_live_render_frame(" in source
-    assert source.count("filter_settings=filter_settings") == 3
+    assert "build_review_render_frame(" in source
+    assert "filter_settings=filter_settings" in source
+    assert "filter_settings=self._software_filter_settings()" in source
+
+
+def test_csv_loader_precomputes_review_render_frame_off_the_tk_thread() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._read_csv_in_background) + inspect.getsource(App._finish_csv_load)
+
+    assert "review_frame = build_review_render_frame(" in source
+    assert "review_frame=review_frame" in source
+    assert "self._show_review_frame(result.recording.samples, result.review_frame)" in source
 
 
 def test_control_state_updates_skip_redundant_tk_writes() -> None:
