@@ -4,6 +4,7 @@ from ads1292_studio.app import (
     GuiState,
     ads1292r_channel_label,
     ads1292r_secondary_channel_label,
+    build_live_quality_samples,
     compute_live_quality_result,
     display_signal_values,
     gui_control_states,
@@ -18,7 +19,6 @@ from ads1292_studio.app import (
     status_tone_color,
     status_tone_style,
 )
-from ads1292_studio.models import StreamSample
 import numpy as np
 
 
@@ -62,24 +62,17 @@ def test_default_display_is_raw_without_ecg_inversion() -> None:
 
 
 def test_compute_live_quality_result_keeps_generation_and_metrics() -> None:
-    samples = tuple(
-        StreamSample(
-            timestamp=index / 500.0,
-            ch1=0,
-            ch2=1000 if index % 250 == 0 else 0,
-            board_heart_rate=0,
-            board_respiration_rate=0,
-            status_byte=0,
-        )
-        for index in range(1000)
-    )
+    ch1_values = tuple(0.0 for _ in range(1000))
+    ch2_values = tuple(1000.0 if index % 250 == 0 else 0.0 for index in range(1000))
+    status_values = tuple(0 for _ in range(1000))
 
     result = compute_live_quality_result(
         generation=7,
         source="CH2",
         valid_rr=3,
-        samples=samples,
-        status_values=tuple(sample.lead_off_bits for sample in samples),
+        ch1_values=ch1_values,
+        ch2_values=ch2_values,
+        status_values=status_values,
     )
 
     assert result.generation == 7
@@ -87,7 +80,21 @@ def test_compute_live_quality_result_keeps_generation_and_metrics() -> None:
     assert result.valid_rr == 3
     assert result.error is None
     assert result.metrics is not None
-    assert result.metrics.sample_count == len(samples)
+    assert result.metrics.sample_count == len(ch2_values)
+    assert len(result.samples) == len(ch2_values)
+
+
+def test_build_live_quality_samples_preserves_channel_and_status_order() -> None:
+    samples = build_live_quality_samples(
+        ch1_values=(10.0, 20.0),
+        ch2_values=(-1.0, -2.0),
+        status_values=(0, 3),
+    )
+
+    assert [sample.timestamp for sample in samples] == [0.0, 1 / 500.0]
+    assert [sample.ch1 for sample in samples] == [10, 20]
+    assert [sample.ch2 for sample in samples] == [-1, -2]
+    assert [sample.lead_off_bits for sample in samples] == [0, 3]
 
 
 def test_set_string_var_if_changed_skips_redundant_tk_updates() -> None:

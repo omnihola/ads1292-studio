@@ -1208,14 +1208,34 @@ def compute_live_quality_result(
     generation: int,
     source: str,
     valid_rr: int,
-    samples: tuple[StreamSample, ...],
+    ch1_values: tuple[float, ...],
+    ch2_values: tuple[float, ...],
     status_values: tuple[int, ...],
 ) -> LiveQualityResult:
     try:
+        samples = build_live_quality_samples(ch1_values, ch2_values, status_values)
         metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
     except Exception as exc:  # pragma: no cover - defensive worker boundary
-        return LiveQualityResult(generation, source, valid_rr, samples, status_values, error=str(exc))
+        return LiveQualityResult(generation, source, valid_rr, tuple(), status_values, error=str(exc))
     return LiveQualityResult(generation, source, valid_rr, samples, status_values, metrics=metrics)
+
+
+def build_live_quality_samples(
+    ch1_values: tuple[float, ...],
+    ch2_values: tuple[float, ...],
+    status_values: tuple[int, ...],
+) -> tuple[StreamSample, ...]:
+    return tuple(
+        StreamSample(
+            timestamp=index / SAMPLE_RATE_HZ,
+            ch1=int(ch1),
+            ch2=int(ch2),
+            board_heart_rate=0,
+            board_respiration_rate=0,
+            status_byte=int(status),
+        )
+        for index, (ch1, ch2, status) in enumerate(zip(ch1_values, ch2_values, status_values))
+    )
 
 
 def set_string_var_if_changed(variable: tk.StringVar, value: str) -> bool:
@@ -3088,7 +3108,8 @@ class App(tk.Tk):
         *,
         source: str,
         valid_rr: int,
-        samples: tuple[StreamSample, ...],
+        ch1_values: tuple[float, ...],
+        ch2_values: tuple[float, ...],
         status_values: tuple[int, ...],
     ) -> None:
         self.live_quality_generation += 1
@@ -3100,7 +3121,8 @@ class App(tk.Tk):
             generation=generation,
             source=source,
             valid_rr=valid_rr,
-            samples=samples,
+            ch1_values=ch1_values,
+            ch2_values=ch2_values,
             status_values=status_values,
         )
         future.add_done_callback(self._queue_live_quality_result)
@@ -3235,11 +3257,11 @@ class App(tk.Tk):
             self.metrics_var,
             f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {ecg_label} | HR {hr.median_bpm:.0f} bpm",
         )
-        samples = tuple(self._current_samples())
         self._schedule_live_quality_update(
             source=source,
             valid_rr=hr.valid_rr_count,
-            samples=samples,
+            ch1_values=tuple(self.ch1),
+            ch2_values=tuple(self.ch2),
             status_values=tuple(self.status),
         )
         self.live_canvas.draw_idle()
@@ -3377,19 +3399,6 @@ class App(tk.Tk):
             sample_rate_hz=SAMPLE_RATE_HZ,
             gate=self._quality_gate(),
             metrics=metrics,
-        )
-
-    def _current_samples(self) -> tuple[StreamSample, ...]:
-        return tuple(
-            StreamSample(
-                timestamp=index / SAMPLE_RATE_HZ,
-                ch1=int(ch1),
-                ch2=int(ch2),
-                board_heart_rate=0,
-                board_respiration_rate=0,
-                status_byte=int(status),
-            )
-            for index, (ch1, ch2, status) in enumerate(zip(self.ch1, self.ch2, self.status))
         )
 
     def _log(self, message: str) -> None:
