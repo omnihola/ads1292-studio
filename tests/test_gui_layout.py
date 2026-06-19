@@ -491,7 +491,7 @@ def test_card_label_spec_keeps_status_cards_scannable() -> None:
         "background": "#FFFFFF",
         "foreground": "#657084",
         "width": 12,
-        "content_padding": (10, 8),
+        "content_padding": (12, 8),
         "signal_value_wrap": 170,
     }
 
