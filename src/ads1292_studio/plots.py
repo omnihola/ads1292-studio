@@ -43,3 +43,22 @@ def robust_ylim(values, *, min_span: float = 0.0) -> tuple[float, float]:
         hi = center + half_span
     pad = max(1.0, 0.15 * (hi - lo))
     return float(lo - pad), float(hi + pad)
+
+
+def stable_ylim(
+    current_ylim: tuple[float, float],
+    target_ylim: tuple[float, float],
+    *,
+    shrink_ratio: float = 0.55,
+) -> tuple[float, float]:
+    current_lo, current_hi = current_ylim
+    target_lo, target_hi = target_ylim
+    current_span = current_hi - current_lo
+    target_span = target_hi - target_lo
+    if current_span <= 0 or target_span <= 0:
+        return target_ylim
+    if target_lo < current_lo or target_hi > current_hi:
+        return target_ylim
+    if target_span < current_span * shrink_ratio:
+        return target_ylim
+    return current_ylim

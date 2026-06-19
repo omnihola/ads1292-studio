@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ads1292_studio.plots import decimate_for_plot, robust_ylim, smooth_for_plot
+from ads1292_studio.plots import decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
 
 
 def test_smooth_for_plot_returns_original_values_when_window_is_too_small() -> None:
@@ -31,6 +31,19 @@ def test_robust_ylim_can_keep_flat_noise_from_being_overzoomed() -> None:
     assert hi - lo >= 8.0
     assert lo < -1.0
     assert hi > -0.8
+
+
+def test_stable_ylim_keeps_current_range_for_small_inside_changes() -> None:
+    assert stable_ylim((-5.0, 5.0), (-4.0, 4.0)) == (-5.0, 5.0)
+
+
+def test_stable_ylim_expands_when_signal_leaves_current_range() -> None:
+    assert stable_ylim((-5.0, 5.0), (-6.0, 5.0)) == (-6.0, 5.0)
+    assert stable_ylim((-5.0, 5.0), (-5.0, 6.0)) == (-5.0, 6.0)
+
+
+def test_stable_ylim_shrinks_after_large_range_change() -> None:
+    assert stable_ylim((-10.0, 10.0), (-3.0, 3.0)) == (-3.0, 3.0)
 
 
 def test_decimate_for_plot_returns_unchanged_arrays_when_within_budget() -> None:

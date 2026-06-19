@@ -32,7 +32,7 @@ from ads1292_studio.gui_session_index import build_session_index_message
 from ads1292_studio.macos_stderr import install_macos_stderr_filter
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
-from ads1292_studio.plots import decimate_for_plot, robust_ylim, smooth_for_plot
+from ads1292_studio.plots import decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
@@ -3240,8 +3240,10 @@ class App(tk.Tk):
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.set_xlim(left, right)
         if self.autoscale_var.get():
-            self.ax_live_ecg.set_ylim(*robust_ylim(visible_ecg_plot, min_span=DISPLAY_MIN_ECG_SPAN_COUNTS))
-            self.ax_live_resp.set_ylim(*robust_ylim(visible_resp_plot, min_span=DISPLAY_MIN_RESP_SPAN_COUNTS))
+            ecg_ylim = robust_ylim(visible_ecg_plot, min_span=DISPLAY_MIN_ECG_SPAN_COUNTS)
+            resp_ylim = robust_ylim(visible_resp_plot, min_span=DISPLAY_MIN_RESP_SPAN_COUNTS)
+            self.ax_live_ecg.set_ylim(*stable_ylim(self.ax_live_ecg.get_ylim(), ecg_ylim))
+            self.ax_live_resp.set_ylim(*stable_ylim(self.ax_live_resp.get_ylim(), resp_ylim))
             self.ax_live_status.set_ylim(-0.5, max(1.0, float(visible_status.max()) + 0.5 if visible_status.size else 1.0))
         hr = heart_rate_summary(peaks, SAMPLE_RATE_HZ)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
