@@ -357,8 +357,8 @@ PLOT_TRACE_STYLES = {
 PQRST_PLOT_STYLE = {
     "average": {"linewidth": 2.1, "label": "average beat"},
     "r_marker": {"linestyle": "--", "linewidth": 1.0, "label": "R"},
-    "p_search": {"start_ms": -220, "end_ms": -80, "alpha": 0.09, "label": "P search"},
-    "t_search": {"start_ms": 120, "end_ms": 380, "alpha": 0.09, "label": "T search"},
+    "p_search": {"start_ms": -220, "end_ms": -80, "color": "#1E7A46", "alpha": 0.09, "label": "P search"},
+    "t_search": {"start_ms": 120, "end_ms": 380, "color": "#A76400", "alpha": 0.09, "label": "T search"},
     "legend": {
         "loc": "upper right",
         "frameon": True,
@@ -3054,7 +3054,7 @@ class App(tk.Tk):
             self.ax_pqrst.axvspan(
                 p_search["start_ms"],
                 p_search["end_ms"],
-                color=APP_VISUAL_TOKENS["success"],
+                color=p_search["color"],
                 alpha=p_search["alpha"],
                 label=p_search["label"],
             )
@@ -3062,7 +3062,7 @@ class App(tk.Tk):
             self.ax_pqrst.axvspan(
                 t_search["start_ms"],
                 t_search["end_ms"],
-                color=APP_VISUAL_TOKENS["warning"],
+                color=t_search["color"],
                 alpha=t_search["alpha"],
                 label=t_search["label"],
             )
