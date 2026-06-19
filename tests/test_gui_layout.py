@@ -16,6 +16,7 @@ from ads1292_studio.app import (
     header_layout_spec,
     header_text_styles,
     input_chrome_spec,
+    live_axis_spec,
     log_panel_spec,
     main_tab_labels,
     muted_label_spec,
@@ -593,6 +594,12 @@ def test_plot_trace_styles_keep_live_and_review_signals_readable() -> None:
             "markeredgecolor": "#FFFFFF",
             "markeredgewidth": 0.7,
         },
+    }
+
+
+def test_live_axis_spec_keeps_time_grid_stable() -> None:
+    assert live_axis_spec() == {
+        "x_major_tick_seconds": 1.0,
     }
 
 

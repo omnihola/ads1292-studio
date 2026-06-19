@@ -20,6 +20,7 @@ import numpy as np
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 
 from ads1292_studio.batch import export_batch_summary
@@ -399,6 +400,9 @@ PLOT_TRACE_STYLES = {
         "markeredgewidth": 0.7,
     },
 }
+LIVE_AXIS_SPEC = {
+    "x_major_tick_seconds": 1.0,
+}
 PQRST_PLOT_STYLE = {
     "average": {"linewidth": 2.25, "label": "average beat"},
     "r_marker": {"linestyle": "--", "linewidth": 1.0, "label": "R"},
@@ -775,6 +779,10 @@ def seaborn_plot_theme() -> dict[str, object]:
 
 def plot_trace_styles() -> dict[str, dict[str, object]]:
     return {name: dict(values) for name, values in PLOT_TRACE_STYLES.items()}
+
+
+def live_axis_spec() -> dict[str, float]:
+    return dict(LIVE_AXIS_SPEC)
 
 
 def pqrst_plot_style() -> dict[str, dict[str, object]]:
@@ -2395,6 +2403,7 @@ class App(tk.Tk):
         self.ax_live_ecg.set_ylabel("counts")
         self.ax_live_resp.set_ylabel("counts")
         self.ax_live_status.set_xlabel("Time (s)")
+        self._configure_live_time_axis()
         trace_styles = plot_trace_styles()
         self.live_ecg_line, = self.ax_live_ecg.plot([], [], color=PLOT_TRACE_COLORS["ecg"], **trace_styles["ecg"])
         self.live_peak_line, = self.ax_live_ecg.plot([], [], color=PLOT_TRACE_COLORS["peak"], **trace_styles["peak"])
@@ -2412,6 +2421,11 @@ class App(tk.Tk):
         )
         self._show_empty_plot_state("live", (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
         self.live_canvas = self._build_plot_canvas(self.live_tab, fig, name="live")
+
+    def _configure_live_time_axis(self) -> None:
+        spec = live_axis_spec()
+        for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
+            ax.xaxis.set_major_locator(MultipleLocator(float(spec["x_major_tick_seconds"])))
 
     def _build_review_plot(self) -> None:
         fig = self._new_plot_figure(figsize=(10, 7))
