@@ -32,6 +32,7 @@ class SessionIndexRow:
     sidecar_status: str
     missing_sidecars: str
     package_ready_status: str
+    next_action: str
 
 
 @dataclass(frozen=True)
@@ -114,6 +115,7 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
     metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz)
     sidecar_status, missing_sidecars = _sidecar_status(path)
     waveform_status = _status_for_quality(metrics.quality_label)
+    package_ready_status = _package_ready_status(waveform_status, sidecar_status)
     return SessionIndexRow(
         path=path,
         relative_path=path.relative_to(root).as_posix(),
@@ -133,7 +135,8 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
         status=waveform_status,
         sidecar_status=sidecar_status,
         missing_sidecars=missing_sidecars,
-        package_ready_status=_package_ready_status(waveform_status, sidecar_status),
+        package_ready_status=package_ready_status,
+        next_action=_next_action(package_ready_status),
     )
 
 
@@ -170,6 +173,14 @@ def _package_ready_status(waveform_status: str, sidecar_status: str) -> str:
     return "package_ready"
 
 
+def _next_action(package_ready_status: str) -> str:
+    if package_ready_status == "package_ready":
+        return "package_record"
+    if package_ready_status == "needs_signal_review":
+        return "review_signal"
+    return "complete_sidecars"
+
+
 def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
     columns = [
         "relative_path",
@@ -190,6 +201,7 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
         "sidecar_status",
         "missing_sidecars",
         "package_ready_status",
+        "next_action",
     ]
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
@@ -213,6 +225,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
         "Sidecars",
         "Missing Sidecars",
         "Package Ready",
+        "Next Action",
     ]
     body = []
     for row in rows:
@@ -230,6 +243,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
             row.sidecar_status,
             row.missing_sidecars,
             row.package_ready_status,
+            row.next_action,
         ]
         body.append("<tr>" + "".join(f"<td>{escape(value)}</td>" for value in values) + "</tr>")
     return f"""<!doctype html>

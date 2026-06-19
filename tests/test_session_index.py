@@ -120,6 +120,20 @@ def test_scan_recording_directory_reports_package_ready_status(tmp_path: Path) -
     assert rows["review"].package_ready_status == "needs_signal_review"
 
 
+def test_scan_recording_directory_reports_next_action(tmp_path: Path) -> None:
+    ready = _write_recording(tmp_path, "ready.csv", "MOTAC gel + Ag/AgCl")
+    incomplete = _write_recording(tmp_path, "incomplete.csv", "MOTAC gel + Ag/AgCl")
+    review = _write_recording(tmp_path, "review.csv", "MOTAC gel + Ag/AgCl", samples=_review_samples())
+    _write_complete_sidecars(ready)
+    _write_complete_sidecars(review)
+
+    rows = {row.session_id: row for row in scan_recording_directory(tmp_path)}
+
+    assert rows["ready"].next_action == "package_record"
+    assert rows["incomplete"].next_action == "complete_sidecars"
+    assert rows["review"].next_action == "review_signal"
+
+
 def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     _write_recording(tmp_path, "control.csv", "commercial Ag/AgCl")
     motac = _write_recording(tmp_path, "motac.csv", "MOTAC gel + Ag/AgCl")
@@ -137,12 +151,15 @@ def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     assert "commercial Ag/AgCl" in csv_text
     assert "sidecar_status,missing_sidecars" in csv_text
     assert "package_ready_status" in csv_text
+    assert "next_action" in csv_text
     assert "package_ready" in csv_text
+    assert "package_record" in csv_text
     assert "complete," in csv_text
     assert "MOTAC Session Library" in html
     assert "Usable recordings" in html
     assert "Sidecars" in html
     assert "Package Ready" in html
+    assert "Next Action" in html
 
 
 def test_export_session_index_summarizes_package_readiness(tmp_path: Path) -> None:

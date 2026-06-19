@@ -101,6 +101,8 @@ by electrode label.
   `needs_signal_review`.
 - Session index HTML and CLI output include package-ready summary counts so
   incomplete records and signal-review records are visible before packaging.
+- Session index rows include a next-action recommendation:
+  `complete_sidecars`, `review_signal`, or `package_record`.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety
