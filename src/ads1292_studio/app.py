@@ -1214,6 +1214,12 @@ def display_signal_values(
     return display * gain
 
 
+def compact_ecg_source_label(source: str | None) -> str:
+    if source in {"CH1", "CH2"}:
+        return source
+    return "--"
+
+
 def gui_signal_quality_cards(
     *,
     quality_label: str | None = None,
@@ -1234,7 +1240,7 @@ def gui_signal_quality_cards(
             GuiStatusCard("Artifacts", "--", "neutral"),
         )
 
-    source = ads1292r_channel_label(ecg_source) if ecg_source else "--"
+    source = compact_ecg_source_label(ecg_source)
     contact = 0.0 if contact_ok_percent is None else contact_ok_percent
     bad_samples = 0 if lead_off_bad_samples is None else lead_off_bad_samples
     peak_count = 0 if r_peaks is None else r_peaks
@@ -1249,7 +1255,7 @@ def gui_signal_quality_cards(
     artifact_tone = "warning" if drift >= 250.0 or noise >= 150.0 else "neutral"
     hr_value = f"{hr:.1f}" if hr > 0 else "--"
     return (
-        GuiStatusCard("Signal", f"{quality_label} on {source}", signal_tone),
+        GuiStatusCard("Signal", f"{quality_label} | {source}", signal_tone),
         GuiStatusCard("Contact", f"{contact:.1f}% OK, {bad_samples} bad", contact_tone),
         GuiStatusCard("Heart rate", f"{hr_value} bpm, {peak_count} R", hr_tone),
         GuiStatusCard("Artifacts", f"drift {drift:.0f} ct, noise {noise:.1f} ct, p2p {p2p:.0f} ct", artifact_tone),

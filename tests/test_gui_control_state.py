@@ -9,6 +9,7 @@ from ads1292_studio.app import (
     apply_status_card_if_changed,
     ads1292r_secondary_channel_label,
     build_live_quality_samples,
+    compact_ecg_source_label,
     compute_live_quality_result,
     display_scale_reference_label,
     display_signal_values,
@@ -278,6 +279,13 @@ def test_display_scale_reference_label_does_not_claim_voltage_calibration() -> N
 
     assert label == "Scale ref | 5x"
     assert "mV" not in label
+
+
+def test_compact_ecg_source_label_keeps_status_cards_short() -> None:
+    assert compact_ecg_source_label("CH2") == "CH2"
+    assert compact_ecg_source_label("CH1") == "CH1"
+    assert compact_ecg_source_label("Auto") == "--"
+    assert compact_ecg_source_label(None) == "--"
 
 
 def test_tick_queue_limits_are_above_normal_streaming_rate() -> None:
@@ -719,7 +727,7 @@ def test_gui_signal_quality_cards_expose_real_recording_summary() -> None:
     )
 
     assert [(card.label, card.value, card.tone) for card in cards] == [
-        ("Signal", "Good ECG/QRS on CH2 ECG Lead I (LA-RA)", "ready"),
+        ("Signal", "Good ECG/QRS | CH2", "ready"),
         ("Contact", "99.9% OK, 28 bad", "ready"),
         ("Heart rate", "86.7 bpm, 129 R", "ready"),
         ("Artifacts", "drift 44 ct, noise 50.5 ct, p2p 8709 ct", "neutral"),
@@ -740,7 +748,7 @@ def test_gui_signal_quality_cards_warn_when_loaded_signal_needs_review() -> None
     )
 
     assert [(card.label, card.value, card.tone) for card in cards] == [
-        ("Signal", "Needs review on CH1 Respiration raw", "warning"),
+        ("Signal", "Needs review | CH1", "warning"),
         ("Contact", "88.0% OK, 1200 bad", "warning"),
         ("Heart rate", "-- bpm, 1 R", "warning"),
         ("Artifacts", "drift 300 ct, noise 220.0 ct, p2p 7000 ct", "warning"),
