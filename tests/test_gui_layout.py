@@ -10,6 +10,7 @@ from ads1292_studio.app import (
     log_panel_spec,
     main_tab_labels,
     plot_axis_style,
+    plot_canvas_widget_style,
     plot_panel_spec,
     plot_trace_colors,
     primary_toolbar_button_labels,
@@ -267,4 +268,12 @@ def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
         "grid_alpha": 0.45,
         "spine_linewidth": 0.8,
         "tick_label_size": 9,
+    }
+
+
+def test_plot_canvas_widget_style_removes_embedded_canvas_chrome() -> None:
+    assert plot_canvas_widget_style() == {
+        "background": "#FFFFFF",
+        "borderwidth": 0,
+        "highlightthickness": 0,
     }

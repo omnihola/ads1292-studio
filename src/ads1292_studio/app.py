@@ -179,6 +179,11 @@ PLOT_AXIS_STYLE = {
     "spine_linewidth": 0.8,
     "tick_label_size": 9,
 }
+PLOT_CANVAS_WIDGET_STYLE = {
+    "background": "#FFFFFF",
+    "borderwidth": 0,
+    "highlightthickness": 0,
+}
 SIDEBAR_FIELD_STYLES = {
     "label": "FieldLabel.TLabel",
     "entry": "Field.TEntry",
@@ -324,6 +329,10 @@ def plot_panel_spec() -> dict[str, object]:
 
 def plot_axis_style() -> dict[str, object]:
     return dict(PLOT_AXIS_STYLE)
+
+
+def plot_canvas_widget_style() -> dict[str, object]:
+    return dict(PLOT_CANVAS_WIDGET_STYLE)
 
 
 def sidebar_field_styles() -> dict[str, str]:
@@ -1557,7 +1566,9 @@ class App(tk.Tk):
         setattr(self, f"{name}_plot_shell", shell)
         setattr(self, f"{name}_plot_panel", panel)
         canvas = FigureCanvasTkAgg(fig, master=panel)
-        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        canvas_widget = canvas.get_tk_widget()
+        canvas_widget.configure(**plot_canvas_widget_style())
+        canvas_widget.pack(fill=tk.BOTH, expand=True)
         return canvas
 
     def _build_log_panel(self) -> None:
