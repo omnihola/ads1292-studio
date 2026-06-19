@@ -87,3 +87,6 @@ def test_build_session_index_message_includes_action_queue_counts(tmp_path: Path
     assert "Package record: 1" in message
     assert "Complete sidecars: 1" in message
     assert "Review signal: 1" in message
+    assert "Sidecar plan rows: 4" in message
+    assert str(export.sidecar_plan_csv_path) in message
+    assert str(export.sidecar_plan_html_path) in message

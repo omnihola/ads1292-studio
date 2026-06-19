@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 28
+Phase 29
 
 ## Phases
 
@@ -245,6 +245,15 @@ Phase 28
 - [x] Add tests and real `../record/ads1292` smoke test.
 - **Status:** complete
 
+### Phase 29: Session Index Sidecar Completion Plan
+- [x] Add a testable sidecar completion plan row model.
+- [x] Export `*-sidecar-plan.csv` and `*-sidecar-plan.html` from session index runs.
+- [x] List each missing metadata, events, calibration, protocol, and quality-gate target path.
+- [x] Print sidecar plan paths and row counts from CLI `index`.
+- [x] Show sidecar plan paths and task count in the GUI Session Index confirmation.
+- [x] Add tests and real `../record/ads1292` smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -285,6 +294,7 @@ Phase 28
 | Add next-action guidance | Status fields should translate into an actionable workflow: complete sidecars, review signal, or package the record. |
 | Add next-action summary counts | Commercial-style queue views should show how many records are waiting for each next action. |
 | Show session index queues in GUI confirmation | The GUI should surface the same queue-level readiness information as CLI/HTML after exporting the library. |
+| Export sidecar completion plans | Old recordings can be incomplete even when they contain usable ECG, so the library should produce a concrete checklist of missing sidecar files and target paths. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -311,6 +321,8 @@ Phase 28
 | Session index next-action field was missing during TDD red check | 1 | Added `next_action` to rows, CSV exports, and HTML exports. |
 | Session index action-summary fields were missing during TDD red check | 1 | Added next-action counts to summary, HTML, and CLI output. |
 | GUI session index confirmation lacked queue counts | 1 | Added a testable message builder and wired it into the GUI confirmation dialog. |
+| CodeGraph not initialized in `ads1292-studio/` | 1 | Used direct file reads for Phase 29 inspection and logged the missing index state. |
+| Session index completion plan fields were missing during TDD red check | 1 | Added `SidecarPlanRow`, sidecar plan CSV/HTML exports, CLI output, and GUI confirmation text. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

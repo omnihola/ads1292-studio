@@ -17,5 +17,9 @@ def build_session_index_message(export: SessionIndexExport) -> str:
             f"Package record: {summary.action_package_record}",
             f"Complete sidecars: {summary.action_complete_sidecars}",
             f"Review signal: {summary.action_review_signal}",
+            "",
+            f"Sidecar plan rows: {len(export.sidecar_plan_rows)}",
+            str(export.sidecar_plan_csv_path),
+            str(export.sidecar_plan_html_path),
         ]
     )

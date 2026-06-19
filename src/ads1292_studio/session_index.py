@@ -48,11 +48,22 @@ class SessionIndexSummary:
 
 
 @dataclass(frozen=True)
+class SidecarPlanRow:
+    relative_path: str
+    sidecar: str
+    target_path: Path
+    suggested_action: str
+
+
+@dataclass(frozen=True)
 class SessionIndexExport:
     csv_path: Path
     html_path: Path
+    sidecar_plan_csv_path: Path
+    sidecar_plan_html_path: Path
     rows: tuple[SessionIndexRow, ...]
     summary: SessionIndexSummary
+    sidecar_plan_rows: tuple[SidecarPlanRow, ...]
 
 
 def scan_recording_directory(root: Path | str) -> tuple[SessionIndexRow, ...]:
@@ -78,9 +89,36 @@ def export_session_index(
     slug = _slugify(title)
     csv_path = output / f"{stamp}-{slug}.csv"
     html_path = output / f"{stamp}-{slug}.html"
+    sidecar_plan_csv_path = output / f"{stamp}-{slug}-sidecar-plan.csv"
+    sidecar_plan_html_path = output / f"{stamp}-{slug}-sidecar-plan.html"
+    sidecar_plan_rows = build_sidecar_completion_plan(rows)
     _write_csv(csv_path, rows)
     html_path.write_text(_html(title, rows, summary))
-    return SessionIndexExport(csv_path=csv_path, html_path=html_path, rows=rows, summary=summary)
+    _write_sidecar_plan_csv(sidecar_plan_csv_path, sidecar_plan_rows)
+    sidecar_plan_html_path.write_text(_sidecar_plan_html(title, sidecar_plan_rows))
+    return SessionIndexExport(
+        csv_path=csv_path,
+        html_path=html_path,
+        sidecar_plan_csv_path=sidecar_plan_csv_path,
+        sidecar_plan_html_path=sidecar_plan_html_path,
+        rows=rows,
+        summary=summary,
+        sidecar_plan_rows=sidecar_plan_rows,
+    )
+
+
+def build_sidecar_completion_plan(rows: tuple[SessionIndexRow, ...]) -> tuple[SidecarPlanRow, ...]:
+    return tuple(
+        SidecarPlanRow(
+            relative_path=row.relative_path,
+            sidecar=sidecar,
+            target_path=_expected_sidecar_path(row.path, sidecar),
+            suggested_action=f"Create {_sidecar_label(sidecar)} sidecar",
+        )
+        for row in rows
+        for sidecar in row.missing_sidecars.split(";")
+        if sidecar
+    )
 
 
 def summarize_rows(rows: tuple[SessionIndexRow, ...]) -> SessionIndexSummary:
@@ -171,6 +209,24 @@ def _sidecar_status(csv_path: Path) -> tuple[str, str]:
     return ("complete", "") if not missing else ("missing", ";".join(missing))
 
 
+def _expected_sidecar_path(csv_path: Path, sidecar: str) -> Path:
+    if sidecar == "metadata":
+        return csv_path.with_suffix(".json")
+    if sidecar == "events":
+        return csv_path.with_suffix(".events.json")
+    if sidecar == "calibration":
+        return csv_path.with_suffix(".calibration.json")
+    if sidecar == "protocol":
+        return csv_path.with_suffix(".protocol.json")
+    if sidecar == "quality_gate":
+        return csv_path.with_suffix(".quality-gate.json")
+    return csv_path.with_suffix(f".{sidecar}.json")
+
+
+def _sidecar_label(sidecar: str) -> str:
+    return sidecar.replace("_", " ")
+
+
 def _package_ready_status(waveform_status: str, sidecar_status: str) -> str:
     if sidecar_status != "complete":
         return "incomplete_record"
@@ -214,6 +270,22 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
         writer.writeheader()
         for row in rows:
             writer.writerow({column: getattr(row, column) for column in columns})
+
+
+def _write_sidecar_plan_csv(path: Path, rows: tuple[SidecarPlanRow, ...]) -> None:
+    columns = ["relative_path", "sidecar", "target_path", "suggested_action"]
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=columns)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(
+                {
+                    "relative_path": row.relative_path,
+                    "sidecar": row.sidecar,
+                    "target_path": str(row.target_path),
+                    "suggested_action": row.suggested_action,
+                }
+            )
 
 
 def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSummary) -> str:
@@ -271,6 +343,35 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
   <p>Next actions: package record {summary.action_package_record} | complete sidecars {summary.action_complete_sidecars} | review signal {summary.action_review_signal}</p>
   <table>
     <tr>{"".join(f"<th>{escape(item)}</th>" for item in header)}</tr>
+    {"".join(body)}
+  </table>
+</body>
+</html>
+"""
+
+
+def _sidecar_plan_html(title: str, rows: tuple[SidecarPlanRow, ...]) -> str:
+    body = []
+    for row in rows:
+        values = [row.relative_path, row.sidecar, str(row.target_path), row.suggested_action]
+        body.append("<tr>" + "".join(f"<td>{escape(value)}</td>" for value in values) + "</tr>")
+    return f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{escape(title)} Sidecar Completion Plan</title>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 32px; }}
+    table {{ border-collapse: collapse; width: 100%; }}
+    th, td {{ border: 1px solid #ddd; padding: 6px 8px; text-align: left; }}
+    th {{ background: #f3f4f6; }}
+  </style>
+</head>
+<body>
+  <h1>{escape(title)} Sidecar Completion Plan</h1>
+  <p>Missing sidecar tasks: {len(rows)}</p>
+  <table>
+    <tr><th>File</th><th>Sidecar</th><th>Target Path</th><th>Suggested Action</th></tr>
     {"".join(body)}
   </table>
 </body>

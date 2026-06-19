@@ -54,6 +54,7 @@
 | Add next-action guidance | Package readiness should be translated into a concrete next step for each record, not left as status-code interpretation. |
 | Add next-action summary counts | The library needs a queue-level view of package, sidecar-completion, and signal-review actions. |
 | Show session index queues in GUI confirmation | GUI users should see the same queue-level readiness counts immediately after export, not only by opening HTML or using CLI. |
+| Export sidecar completion plans | The real recording folder has usable ECG recordings that are still incomplete records; session index should export a checklist of missing sidecar target paths so cleanup is actionable. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -82,6 +83,8 @@
 | Session index still required manual interpretation of readiness states | Added `next_action` values: `complete_sidecars`, `review_signal`, and `package_record`. |
 | Session index still lacked counts for action queues | Added action summary counts to `SessionIndexSummary`, HTML exports, and CLI `index`. |
 | GUI Session Index confirmation only reported row count and path | Added `build_session_index_message()` and wired the GUI dialog to readiness/action queue counts. |
+| CodeGraph is not initialized in `ads1292-studio/` | Use direct file reads until `.codegraph/` is initialized for this subfolder. |
+| Session index could say `complete_sidecars` without a concrete checklist | Added `*-sidecar-plan.csv` and `*-sidecar-plan.html` with one row per missing sidecar and target path. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -118,6 +121,7 @@
 - Session index next-action smoke on `../record/ads1292` found all 9 old records have `next_action=complete_sidecars` because required sidecars are missing.
 - Session index action-summary smoke on `../record/ads1292` found `action_package_record=0`, `action_complete_sidecars=9`, and `action_review_signal=0`.
 - GUI session index message smoke on `../record/ads1292` produced a confirmation text with `Package-ready: 0`, `Incomplete records: 9`, and `Complete sidecars: 9`.
+- Session index sidecar-plan smoke on `../record/ads1292` found `rows=9`, `sidecar_plan_rows=45`, and wrote CSV/HTML checklists for missing metadata, events, calibration, protocol, and quality-gate sidecars.
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

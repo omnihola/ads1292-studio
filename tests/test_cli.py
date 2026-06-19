@@ -124,16 +124,23 @@ def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
 
     csv_outputs = list(out_dir.glob("*.csv"))
     html_outputs = list(out_dir.glob("*.html"))
-    assert len(csv_outputs) == 1
-    assert len(html_outputs) == 1
-    assert "recording.csv" in csv_outputs[0].read_text()
-    assert "CLI Session Index" in html_outputs[0].read_text()
+    assert len(csv_outputs) == 2
+    assert len(html_outputs) == 2
+    index_csv = next(path for path in csv_outputs if not path.stem.endswith("-sidecar-plan"))
+    index_html = next(path for path in html_outputs if not path.stem.endswith("-sidecar-plan"))
+    assert "recording.csv" in index_csv.read_text()
+    assert "CLI Session Index" in index_html.read_text()
     assert "package_ready=0" in captured
     assert "incomplete_records=1" in captured
     assert "needs_signal_review=0" in captured
     assert "action_package_record=0" in captured
     assert "action_complete_sidecars=1" in captured
     assert "action_review_signal=0" in captured
+    assert "sidecar_plan_csv=" in captured
+    assert "sidecar_plan_html=" in captured
+    assert "sidecar_plan_rows=5" in captured
+    sidecar_plan = next(out_dir.glob("*-sidecar-plan.csv"))
+    assert "recording.csv,metadata," in sidecar_plan.read_text()
 
 
 def test_cli_qc_returns_success_for_good_recording(tmp_path: Path) -> None:

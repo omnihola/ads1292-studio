@@ -48,6 +48,10 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/
 Batch export writes both a per-recording CSV and a `*-groups.csv` summary grouped
 by electrode label.
 
+Session index export writes both the recording library and a
+`*-sidecar-plan.csv` / `*-sidecar-plan.html` checklist for missing metadata,
+event, calibration, protocol, and quality-gate sidecars.
+
 ## Features in V1
 
 - Explicit Refresh / Connect / Start / Stop flow.
@@ -107,6 +111,9 @@ by electrode label.
   package, sidecar-completion, and signal-review queues.
 - GUI Session Index export confirmation shows the same readiness and action
   queue counts as the CLI output.
+- Session index also exports a sidecar completion plan CSV/HTML that lists each
+  missing sidecar target path and suggested action, and the GUI confirmation
+  shows those plan paths.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

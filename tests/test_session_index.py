@@ -183,3 +183,26 @@ def test_export_session_index_summarizes_package_readiness(tmp_path: Path) -> No
     assert "Incomplete records: 1" in html
     assert "Need signal review: 1" in html
     assert "Next actions: package record 1 | complete sidecars 1 | review signal 1" in html
+
+
+def test_export_session_index_writes_sidecar_completion_plan(tmp_path: Path) -> None:
+    partial = _write_recording(tmp_path, "partial.csv", "commercial Ag/AgCl")
+    ready = _write_recording(tmp_path, "ready.csv", "MOTAC gel + Ag/AgCl")
+    _write_complete_sidecars(ready)
+
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Completion Plan")
+
+    assert export.sidecar_plan_csv_path.exists()
+    assert export.sidecar_plan_html_path.exists()
+    assert len(export.sidecar_plan_rows) == 4
+    plan_text = export.sidecar_plan_csv_path.read_text()
+    assert "relative_path,sidecar,target_path,suggested_action" in plan_text
+    assert "partial.csv,events," in plan_text
+    assert str(partial.with_suffix(".events.json")) in plan_text
+    assert "Create events sidecar" in plan_text
+    assert "quality_gate" in plan_text
+    assert "ready.csv" not in plan_text
+    html = export.sidecar_plan_html_path.read_text()
+    assert "Sidecar Completion Plan" in html
+    assert "partial.csv" in html
+    assert "quality-gate.json" in html
