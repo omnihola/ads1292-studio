@@ -10,6 +10,7 @@ from ads1292_studio.app import (
     ads1292r_secondary_channel_label,
     build_live_quality_samples,
     compact_ecg_source_label,
+    configure_widget_option_if_changed,
     compute_live_quality_result,
     display_scale_reference_label,
     display_signal_values,
@@ -156,6 +157,16 @@ def test_set_string_var_if_changed_skips_redundant_tk_updates() -> None:
     assert set_string_var_if_changed(var, "running") is True
     assert var.value == "running"
     assert var.set_calls == 1
+
+
+def test_configure_widget_option_if_changed_skips_redundant_tk_updates() -> None:
+    widget = _FakeWidget(state="normal")
+
+    assert configure_widget_option_if_changed(widget, "state", "normal") is False
+    assert widget.configure_calls == 0
+    assert configure_widget_option_if_changed(widget, "state", "disabled") is True
+    assert widget.values["state"] == "disabled"
+    assert widget.configure_calls == 1
 
 
 def test_apply_status_card_if_changed_skips_redundant_tk_updates() -> None:

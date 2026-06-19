@@ -808,6 +808,18 @@ def test_live_and_review_display_reuse_filter_settings_snapshot() -> None:
     assert source.count("filter_settings=filter_settings") == 4
 
 
+def test_control_state_updates_skip_redundant_tk_writes() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._apply_control_states)
+
+    assert "set_string_var_if_changed(" in source
+    assert "configure_widget_option_if_changed(" in source
+    assert "button.configure(state=" not in source
+    assert "workflow_hint_var.set(" not in source
+    assert "status_overview_var.set(" not in source
+
+
 def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
     assert plot_figure_layouts() == {
         "three_panel": {

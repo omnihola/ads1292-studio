@@ -1308,6 +1308,13 @@ def set_string_var_if_changed(variable: tk.StringVar, value: str) -> bool:
     return True
 
 
+def configure_widget_option_if_changed(widget: object, option: str, value: object) -> bool:
+    if widget.cget(option) == value:
+        return False
+    widget.configure(**{option: value})
+    return True
+
+
 def apply_status_card_if_changed(
     *,
     variable: tk.StringVar,
@@ -3189,14 +3196,18 @@ class App(tk.Tk):
             return
         self.last_control_state = state
         states = gui_control_states(state=state)
-        self.workflow_hint_var.set(
+        set_string_var_if_changed(
+            self.workflow_hint_var,
             gui_workflow_hint(state=state)
         )
-        self.status_overview_var.set(
+        set_string_var_if_changed(
+            self.status_overview_var,
             gui_status_overview(state=state)
         )
-        self.connection_label.configure(
-            style=header_connection_style(header_connection_tone(state=state))
+        configure_widget_option_if_changed(
+            self.connection_label,
+            "style",
+            header_connection_style(header_connection_tone(state=state)),
         )
         for card in gui_status_cards(state=state):
             apply_status_card_if_changed(
@@ -3208,7 +3219,7 @@ class App(tk.Tk):
         if not state.has_data:
             self._apply_signal_quality_cards(gui_signal_quality_cards())
         for label, button in self.control_buttons.items():
-            button.configure(state=states[label])
+            configure_widget_option_if_changed(button, "state", states[label])
 
     def _apply_signal_quality_cards(self, cards: tuple[GuiStatusCard, ...]) -> None:
         for card in cards:
