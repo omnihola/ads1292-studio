@@ -52,6 +52,7 @@ VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
 DEFAULT_FILTER_ENABLED = False
 DEFAULT_ECG_INVERTED = False
+LIVE_QUALITY_UPDATE_SAMPLES = int(0.5 * SAMPLE_RATE_HZ)
 APP_WINDOW_SPEC = {
     "geometry": "1320x860",
     "min_size": (1120, 740),
@@ -1122,6 +1123,19 @@ def display_signal_values(
     return -display if invert else display
 
 
+def should_update_live_quality(
+    last_sample_index: int,
+    current_sample_index: int,
+    *,
+    interval_samples: int = LIVE_QUALITY_UPDATE_SAMPLES,
+) -> bool:
+    if current_sample_index <= 0:
+        return False
+    if last_sample_index <= 0:
+        return True
+    return current_sample_index - last_sample_index >= max(1, interval_samples)
+
+
 def gui_signal_quality_cards(
     *,
     quality_label: str | None = None,
@@ -1250,6 +1264,7 @@ class App(tk.Tk):
         self.indices: deque[int] = deque(maxlen=MAX_POINTS)
         self.board_hr: deque[int] = deque(maxlen=MAX_POINTS)
         self.board_rr: deque[int] = deque(maxlen=MAX_POINTS)
+        self.last_live_quality_sample_index = 0
         self.empty_plot_artists: list[object] = []
 
         self._build_ui()
@@ -2808,6 +2823,7 @@ class App(tk.Tk):
     def _clear_signal_buffers(self) -> None:
         for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
             buffer.clear()
+        self.last_live_quality_sample_index = 0
 
     def _apply_control_states(self) -> None:
         if not hasattr(self, "control_buttons"):
@@ -3060,22 +3076,24 @@ class App(tk.Tk):
         self.metrics_var.set(
             f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {ecg_label} | HR {hr.median_bpm:.0f} bpm"
         )
-        samples = tuple(self._current_samples())
-        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
-        self.quality_var.set(self._quality_text(source, hr.valid_rr_count, samples, tuple(self.status), metrics=metrics))
-        self._apply_signal_quality_cards(
-            gui_signal_quality_cards(
-                quality_label=metrics.quality_label,
-                ecg_source=metrics.ecg_source,
-                contact_ok_percent=metrics.contact_ok_percent,
-                lead_off_bad_samples=metrics.lead_off_bad_samples,
-                r_peaks=metrics.r_peaks,
-                hr_median_bpm=metrics.hr_median_bpm,
-                baseline_drift_counts=metrics.baseline_drift_counts,
-                noise_rms_counts=metrics.noise_rms_counts,
-                peak_to_peak_counts=metrics.peak_to_peak_counts,
+        if should_update_live_quality(self.last_live_quality_sample_index, self.sample_index):
+            samples = tuple(self._current_samples())
+            metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
+            self.quality_var.set(self._quality_text(source, hr.valid_rr_count, samples, tuple(self.status), metrics=metrics))
+            self._apply_signal_quality_cards(
+                gui_signal_quality_cards(
+                    quality_label=metrics.quality_label,
+                    ecg_source=metrics.ecg_source,
+                    contact_ok_percent=metrics.contact_ok_percent,
+                    lead_off_bad_samples=metrics.lead_off_bad_samples,
+                    r_peaks=metrics.r_peaks,
+                    hr_median_bpm=metrics.hr_median_bpm,
+                    baseline_drift_counts=metrics.baseline_drift_counts,
+                    noise_rms_counts=metrics.noise_rms_counts,
+                    peak_to_peak_counts=metrics.peak_to_peak_counts,
+                )
             )
-        )
+            self.last_live_quality_sample_index = self.sample_index
         self.live_canvas.draw_idle()
 
     def _show_recording(self, samples: tuple[StreamSample, ...]) -> None:
