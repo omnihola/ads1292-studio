@@ -1,8 +1,10 @@
 from ads1292_studio.app import (
     DEFAULT_ECG_INVERTED,
     DEFAULT_FILTER_ENABLED,
+    ACTIVE_TICK_INTERVAL_MS,
     GuiState,
     GuiStatusCard,
+    IDLE_TICK_INTERVAL_MS,
     MAX_LOG_MESSAGES_PER_TICK,
     MAX_SAMPLES_PER_TICK,
     ads1292r_channel_label,
@@ -20,6 +22,7 @@ from ads1292_studio.app import (
     gui_signal_quality_cards,
     gui_status_cards,
     gui_status_overview,
+    gui_tick_interval_ms,
     gui_workflow_hint,
     header_connection_style,
     header_connection_tone,
@@ -384,6 +387,20 @@ def test_gui_state_busy_is_true_for_connecting_starting_or_loading() -> None:
     assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, starting=True).busy is True
     assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, loading_csv=True).busy is True
     assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False).busy is False
+
+
+def test_gui_tick_interval_slows_only_when_idle() -> None:
+    idle = GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False)
+    streaming = GuiState(connected=True, streaming=True, has_data=True, has_recording_path=True)
+    connecting = GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, connecting=True)
+    loading = GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, loading_csv=True)
+    starting = GuiState(connected=True, streaming=False, has_data=False, has_recording_path=False, starting=True)
+
+    assert gui_tick_interval_ms(idle) == IDLE_TICK_INTERVAL_MS
+    assert gui_tick_interval_ms(streaming) == ACTIVE_TICK_INTERVAL_MS
+    assert gui_tick_interval_ms(connecting) == ACTIVE_TICK_INTERVAL_MS
+    assert gui_tick_interval_ms(loading) == ACTIVE_TICK_INTERVAL_MS
+    assert gui_tick_interval_ms(starting) == ACTIVE_TICK_INTERVAL_MS
 
 
 def test_gui_control_states_disable_everything_while_connecting() -> None:

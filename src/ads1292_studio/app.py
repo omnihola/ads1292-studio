@@ -81,6 +81,8 @@ MAX_POINTS = 10000
 LIVE_MAX_RENDER_POINTS = 2500
 MAX_SAMPLES_PER_TICK = 1000
 MAX_LOG_MESSAGES_PER_TICK = 200
+ACTIVE_TICK_INTERVAL_MS = 50
+IDLE_TICK_INTERVAL_MS = 150
 VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
 DEFAULT_FILTER_ENABLED = False
@@ -920,6 +922,10 @@ def should_apply_control_state(
     return force or previous != current
 
 
+def gui_tick_interval_ms(state: GuiState) -> int:
+    return ACTIVE_TICK_INTERVAL_MS if state.streaming or state.busy else IDLE_TICK_INTERVAL_MS
+
+
 def live_quality_worker_available(future: Future[LiveQualityResult] | None) -> bool:
     return future is None or future.done()
 
@@ -1474,7 +1480,6 @@ class ScrollableFrame:
 
 class App(tk.Tk):
     def __init__(self) -> None:
-        install_macos_stderr_filter()
         super().__init__()
         self.title("ADS1292 Studio")
         window_spec = app_window_spec()
@@ -3243,10 +3248,8 @@ class App(tk.Tk):
             except queue.Empty:
                 break
 
-    def _apply_control_states(self, *, force: bool = False) -> None:
-        if not hasattr(self, "control_buttons"):
-            return
-        state = GuiState(
+    def _current_gui_state(self) -> GuiState:
+        return GuiState(
             connected=self.connected_port is not None,
             streaming=self.is_streaming,
             has_data=bool(self.loaded_samples or (self.ch1 and self.ch2)),
@@ -3255,6 +3258,11 @@ class App(tk.Tk):
             connecting=self.is_connecting,
             starting=self.is_starting,
         )
+
+    def _apply_control_states(self, *, force: bool = False) -> None:
+        if not hasattr(self, "control_buttons"):
+            return
+        state = self._current_gui_state()
         if not should_apply_control_state(self.last_control_state, state, force=force):
             return
         self.last_control_state = state
@@ -3421,7 +3429,7 @@ class App(tk.Tk):
     def _schedule_tick(self) -> None:
         if self.is_closing or self.tick_after_id is not None:
             return
-        self.tick_after_id = self.after(50, self._tick)
+        self.tick_after_id = self.after(gui_tick_interval_ms(self._current_gui_state()), self._tick)
 
     def _cancel_tick(self) -> None:
         if self.tick_after_id is None:

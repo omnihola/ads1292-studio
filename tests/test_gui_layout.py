@@ -865,6 +865,15 @@ def test_control_state_updates_skip_redundant_tk_writes() -> None:
     assert "status_overview_var.set(" not in source
 
 
+def test_tick_scheduler_uses_current_gui_state_for_adaptive_interval() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._schedule_tick)
+
+    assert "gui_tick_interval_ms(self._current_gui_state())" in source
+    assert "self._gui_state()" not in source
+
+
 def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
     assert plot_figure_layouts() == {
         "three_panel": {
