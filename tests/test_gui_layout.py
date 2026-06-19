@@ -462,8 +462,8 @@ def test_safety_notice_styles_make_research_use_boundary_visible() -> None:
 def test_sidebar_text_card_spec_keeps_long_notes_readable() -> None:
     assert sidebar_text_card_spec() == {
         "stripe_width": 4,
-        "label_padding": (10, 8),
-        "content_padding": (10, 8),
+        "label_padding": (12, 8),
+        "content_padding": (12, 8),
         "primary_wrap": 240,
         "detail_wrap": 230,
         "value_top_padding": (3, 0),

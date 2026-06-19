@@ -559,8 +559,8 @@ SAFETY_NOTICE_STYLES = {
 }
 SIDEBAR_TEXT_CARD_SPEC = {
     "stripe_width": 4,
-    "label_padding": (10, 8),
-    "content_padding": (10, 8),
+    "label_padding": (12, 8),
+    "content_padding": (12, 8),
     "primary_wrap": 240,
     "detail_wrap": 230,
     "value_top_padding": (3, 0),
