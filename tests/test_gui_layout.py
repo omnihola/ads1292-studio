@@ -33,6 +33,7 @@ from ads1292_studio.app import (
     scrollbar_chrome_spec,
     secondary_action_button_labels,
     section_heading_styles,
+    seaborn_plot_theme,
     sidebar_action_button_style,
     sidebar_field_styles,
     sidebar_layout_spec,
@@ -565,7 +566,19 @@ def test_plot_trace_colors_distinguish_ecg_respiration_and_contact() -> None:
 
     assert colors["ecg"] != colors["respiration"]
     assert colors["contact"] != colors["ecg"]
-    assert colors["peak"] == "#E34A4A"
+    assert colors["ecg"] == "#0173B2"
+    assert colors["respiration"] == "#CC78BC"
+    assert colors["peak"] == "#D55E00"
+
+
+def test_seaborn_plot_theme_uses_clean_signal_grid() -> None:
+    theme = seaborn_plot_theme()
+
+    assert theme["style"] == "whitegrid"
+    assert theme["context"] == "notebook"
+    assert theme["palette"] == "colorblind"
+    assert theme["rc"]["axes.facecolor"] == "#FFFFFF"
+    assert theme["rc"]["figure.facecolor"] == "#F6F8FB"
 
 
 def test_plot_trace_styles_keep_live_and_review_signals_readable() -> None:

@@ -11,6 +11,7 @@ dependencies = [
   "matplotlib",
   "numpy",
   "pyserial",
+  "seaborn",
   "scipy",
 ]
 

@@ -19,6 +19,7 @@ import numpy as np
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+import seaborn as sns
 
 from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.calibration import Calibration, read_calibration_json, write_calibration_json
@@ -362,10 +363,28 @@ APP_VISUAL_TOKENS = {
     "danger": "#B3261E",
 }
 PLOT_TRACE_COLORS = {
-    "ecg": "#2F6FED",
-    "respiration": "#7A5CDB",
-    "contact": "#516070",
-    "peak": "#E34A4A",
+    "ecg": "#0173B2",
+    "respiration": "#CC78BC",
+    "contact": "#949494",
+    "peak": "#D55E00",
+}
+SEABORN_PLOT_THEME = {
+    "style": "whitegrid",
+    "context": "notebook",
+    "palette": "colorblind",
+    "rc": {
+        "axes.facecolor": "#FFFFFF",
+        "axes.edgecolor": "#D9E1EC",
+        "axes.grid": True,
+        "axes.labelcolor": "#293247",
+        "axes.titlecolor": "#172033",
+        "figure.facecolor": "#F6F8FB",
+        "grid.color": "#D9E1EC",
+        "grid.linewidth": 0.7,
+        "lines.antialiased": True,
+        "xtick.color": "#657084",
+        "ytick.color": "#657084",
+    },
 }
 PLOT_TRACE_STYLES = {
     "ecg": {"linewidth": 1.45, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
@@ -735,6 +754,11 @@ def app_window_spec() -> dict[str, object]:
 
 def plot_trace_colors() -> dict[str, str]:
     return dict(PLOT_TRACE_COLORS)
+
+
+def seaborn_plot_theme() -> dict[str, object]:
+    theme = {key: value for key, value in SEABORN_PLOT_THEME.items() if key != "rc"}
+    return {"rc": dict(SEABORN_PLOT_THEME["rc"]), **theme}
 
 
 def plot_trace_styles() -> dict[str, dict[str, object]]:
@@ -2424,6 +2448,13 @@ class App(tk.Tk):
         self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     def _new_plot_figure(self, *, figsize: tuple[float, float]) -> Figure:
+        theme = seaborn_plot_theme()
+        sns.set_theme(
+            style=str(theme["style"]),
+            context=str(theme["context"]),
+            palette=str(theme["palette"]),
+            rc=theme["rc"],
+        )
         fig = Figure(figsize=figsize, dpi=100)
         fig.patch.set_facecolor(APP_VISUAL_TOKENS["surface"])
         return fig
@@ -2448,8 +2479,7 @@ class App(tk.Tk):
             ax.xaxis.label.set_color(style["label"])
             ax.yaxis.label.set_color(style["label"])
             self._set_signal_axis_title(ax, ax.get_title())
-            for side in ("top", "right"):
-                ax.spines[side].set_visible(False)
+            sns.despine(ax=ax, top=True, right=True, left=False, bottom=False)
             for side in ("left", "bottom"):
                 ax.spines[side].set_color(style["spine"])
                 ax.spines[side].set_linewidth(style["spine_linewidth"])
