@@ -463,6 +463,11 @@ def test_event_count_styles_make_session_events_visible() -> None:
         "label": "EventCountLabel.TLabel",
         "value": "EventCountValue.TLabel",
         "stripe": "#7A5CDB",
+        "background": "#FFFFFF",
+        "label_foreground": "#657084",
+        "label_font": ("Aptos", 10, "bold"),
+        "value_foreground": "#172033",
+        "value_font": ("Aptos", 11, "bold"),
     }
 
 

@@ -538,6 +538,11 @@ EVENT_COUNT_STYLES = {
     "label": "EventCountLabel.TLabel",
     "value": "EventCountValue.TLabel",
     "stripe": "#7A5CDB",
+    "background": "#FFFFFF",
+    "label_foreground": "#657084",
+    "label_font": ("Aptos", 10, "bold"),
+    "value_foreground": "#172033",
+    "value_font": ("Aptos", 11, "bold"),
 }
 PROTOCOL_NOTE_STYLES = {
     "frame": "ProtocolNote.TFrame",
@@ -1773,17 +1778,18 @@ class App(tk.Tk):
             foreground=status_detail["value_foreground"],
             font=status_detail["value_font"],
         )
+        event_count = event_count_styles()
         style.configure(
-            "EventCountLabel.TLabel",
-            background=tokens["panel"],
-            foreground=tokens["muted"],
-            font=("Aptos", 10, "bold"),
+            event_count["label"],
+            background=event_count["background"],
+            foreground=event_count["label_foreground"],
+            font=event_count["label_font"],
         )
         style.configure(
-            "EventCountValue.TLabel",
-            background=tokens["panel"],
-            foreground=tokens["ink"],
-            font=("Aptos", 11, "bold"),
+            event_count["value"],
+            background=event_count["background"],
+            foreground=event_count["value_foreground"],
+            font=event_count["value_font"],
         )
         style.configure(
             "ProtocolNoteLabel.TLabel",
