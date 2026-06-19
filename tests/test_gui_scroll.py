@@ -19,10 +19,14 @@ def test_scrollable_frame_uses_canvas_scrollbar_and_mousewheel() -> None:
 
 
 def test_app_imports_scrollable_frame_instead_of_defining_it_inline() -> None:
+    from ads1292_studio.gui_sidebar import build_sidebar
+
     source = inspect.getsource(App)
+    sidebar_source = inspect.getsource(build_sidebar)
 
     assert "class ScrollableFrame" not in source
-    assert "self.sidebar_scrolls: dict[str, ScrollableFrame]" in source
+    assert "ScrollableFrame(tab" in sidebar_source
+    assert "app.sidebar_scrolls: dict[str, ScrollableFrame]" in sidebar_source
 
 
 def test_scrollable_frame_uses_single_global_mousewheel_dispatcher() -> None:

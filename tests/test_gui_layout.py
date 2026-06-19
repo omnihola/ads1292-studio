@@ -263,9 +263,9 @@ def test_gui_layout_frames_toolbar_channel_hint_as_chip() -> None:
 
 
 def test_toolbar_hint_chip_uses_dynamic_textvariable() -> None:
-    from ads1292_studio.app import App
+    from ads1292_studio.gui_sidebar import build_toolbar_hint_chip
 
-    source = inspect.getsource(App._build_toolbar_hint_chip)
+    source = inspect.getsource(build_toolbar_hint_chip)
 
     assert "textvariable=variable" in source
     assert "text=" not in source
@@ -613,7 +613,7 @@ def test_status_sidebar_includes_channel_map_before_signal_quality() -> None:
     source = inspect.getsource(populate_sidebar)
 
     assert "Channel Map" in source
-    assert "app._build_channel_map_cards(status_side)" in source
+    assert "build_channel_map_cards(app, status_side)" in source
     assert source.index("Channel Map") < source.index("Signal Quality")
 
 

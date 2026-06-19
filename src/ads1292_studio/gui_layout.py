@@ -25,6 +25,20 @@ from ads1292_studio.gui_specs import (
     workspace_layout_spec,
     workspace_notebook_styles,
 )
+from ads1292_studio.gui_sidebar import (
+    build_action_section_heading,
+    build_channel_map_cards,
+    build_event_count_card,
+    build_protocol_note_card,
+    build_safety_notice,
+    build_sidebar,
+    build_signal_quality_cards,
+    build_status_cards,
+    build_status_detail_card,
+    build_toolbar_hint_chip,
+    build_workflow_hint,
+    metadata_entry,
+)
 from ads1292_studio.protocol import protocol_template
 
 
@@ -206,7 +220,7 @@ def build_display_toolbar(
     app.toolbar_context_separator.pack(side=tk.LEFT, fill=tk.Y, padx=toolbar_group_padding()["separator"])
     app.source_var = tk.StringVar(value=ADS1292R_ECG_SOURCE)
     app.toolbar_hint_var = tk.StringVar(value=initial_hint_text)
-    app._build_toolbar_hint_chip(toolbar, app.toolbar_hint_var)
+    build_toolbar_hint_chip(app, toolbar, app.toolbar_hint_var)
 
 
 def _toolbar_group_label(toolbar: ttk.Frame, text: str) -> None:
@@ -254,7 +268,7 @@ def build_body_shell(app: Any) -> tuple[dict[str, ttk.Frame], ttk.Frame]:
     )
     app.sidebar_shell = side_shell
     body.add(side_shell, weight=workspace_spec["sidebar_weight"])
-    sidebar = app._build_sidebar(side_shell)
+    sidebar = build_sidebar(app, side_shell)
     main = ttk.Frame(body, padding=workspace_spec["main_padding"], style=str(workspace_spec["main"]))
     app.main_workspace = main
     body.add(main, weight=workspace_spec["main_weight"])
@@ -317,39 +331,39 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
     actions_side = sidebar["Actions"]
 
     ttk.Label(status_side, text="Next Step", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 6))
-    app._build_workflow_hint(status_side)
+    build_workflow_hint(app, status_side)
     ttk.Label(status_side, text="Overview", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
-    app._build_status_cards(status_side)
+    build_status_cards(app, status_side)
     ttk.Label(status_side, text="Channel Map", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
-    app._build_channel_map_cards(status_side)
+    build_channel_map_cards(app, status_side)
     ttk.Label(status_side, text="Signal Quality", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
-    app._build_signal_quality_cards(status_side)
+    build_signal_quality_cards(app, status_side)
     for label, var in (("Session", app.metrics_var), ("Quality", app.quality_var), ("Storage", app.path_var)):
-        app._build_status_detail_card(status_side, label, var)
+        build_status_detail_card(app, status_side, label, var)
 
     ttk.Label(session_side, text="Recording Notes", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
-    app._metadata_entry(session_side, "Session ID", app.session_id_var)
-    app._metadata_entry(session_side, "Subject", app.subject_id_var)
-    app._metadata_entry(session_side, "Electrode", app.electrode_var)
-    app._metadata_entry(session_side, "Montage", app.montage_var)
-    app._metadata_entry(session_side, "Operator", app.operator_var)
-    app._metadata_entry(session_side, "Notes", app.notes_var)
+    metadata_entry(app, session_side, "Session ID", app.session_id_var)
+    metadata_entry(app, session_side, "Subject", app.subject_id_var)
+    metadata_entry(app, session_side, "Electrode", app.electrode_var)
+    metadata_entry(app, session_side, "Montage", app.montage_var)
+    metadata_entry(app, session_side, "Operator", app.operator_var)
+    metadata_entry(app, session_side, "Notes", app.notes_var)
     ttk.Label(session_side, text="Events", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
-    app._metadata_entry(session_side, "Event label", app.event_label_var)
-    app._metadata_entry(session_side, "Event notes", app.event_notes_var)
+    metadata_entry(app, session_side, "Event label", app.event_label_var)
+    metadata_entry(app, session_side, "Event notes", app.event_notes_var)
     app.add_event_button = _sidebar_button(session_side, "Add Event", app.add_event)
-    app._build_event_count_card(session_side)
+    build_event_count_card(app, session_side)
 
     ttk.Label(validation_side, text="Calibration", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
-    app._metadata_entry(validation_side, "Label", app.calibration_label_var)
-    app._metadata_entry(validation_side, "Vref mV", app.vref_mv_var)
-    app._metadata_entry(validation_side, "PGA gain", app.pga_gain_var)
+    metadata_entry(app, validation_side, "Label", app.calibration_label_var)
+    metadata_entry(app, validation_side, "Vref mV", app.vref_mv_var)
+    metadata_entry(app, validation_side, "PGA gain", app.pga_gain_var)
     ttk.Label(validation_side, text="Quality Gate", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
-    app._metadata_entry(validation_side, "Min duration s", app.gate_min_duration_var)
-    app._metadata_entry(validation_side, "Min contact %", app.gate_min_contact_var)
-    app._metadata_entry(validation_side, "Min R peaks", app.gate_min_r_peaks_var)
-    app._metadata_entry(validation_side, "HR min bpm", app.gate_min_hr_var)
-    app._metadata_entry(validation_side, "HR max bpm", app.gate_max_hr_var)
+    metadata_entry(app, validation_side, "Min duration s", app.gate_min_duration_var)
+    metadata_entry(app, validation_side, "Min contact %", app.gate_min_contact_var)
+    metadata_entry(app, validation_side, "Min R peaks", app.gate_min_r_peaks_var)
+    metadata_entry(app, validation_side, "HR min bpm", app.gate_min_hr_var)
+    metadata_entry(app, validation_side, "HR max bpm", app.gate_max_hr_var)
     app.gate_require_qrs_check = ttk.Checkbutton(
         validation_side,
         text="Require QRS clear",
@@ -357,28 +371,28 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
         style=sidebar_field_styles()["check"],
     )
     app.gate_require_qrs_check.pack(anchor=tk.W, pady=(5, 2))
-    app._metadata_entry(validation_side, "Max drift counts", app.gate_max_drift_var)
-    app._metadata_entry(validation_side, "Max noise RMS", app.gate_max_noise_var)
-    app._metadata_entry(validation_side, "Max peak-to-peak", app.gate_max_ptp_var)
+    metadata_entry(app, validation_side, "Max drift counts", app.gate_max_drift_var)
+    metadata_entry(app, validation_side, "Max noise RMS", app.gate_max_noise_var)
+    metadata_entry(app, validation_side, "Max peak-to-peak", app.gate_max_ptp_var)
 
     ttk.Label(protocol_side, text="Protocol", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
-    app._metadata_entry(protocol_side, "Name", app.protocol_name_var)
-    app._metadata_entry(protocol_side, "Objective", app.protocol_objective_var)
-    app._build_protocol_note_card(protocol_side, "Steps", app.protocol_steps_var)
-    app._build_protocol_note_card(protocol_side, "Acceptance", app.protocol_acceptance_var)
+    metadata_entry(app, protocol_side, "Name", app.protocol_name_var)
+    metadata_entry(app, protocol_side, "Objective", app.protocol_objective_var)
+    build_protocol_note_card(app, protocol_side, "Steps", app.protocol_steps_var)
+    build_protocol_note_card(app, protocol_side, "Acceptance", app.protocol_acceptance_var)
 
     app.action_section_labels = {}
-    app._build_action_section_heading(actions_side, "Review", top_padding=8)
+    build_action_section_heading(app, actions_side, "Review", top_padding=8)
     app.load_csv_button = _sidebar_button(actions_side, "Load CSV", app.load_csv)
     app.export_report_button = _sidebar_button(actions_side, "Export Report", app.export_report)
-    app._build_action_section_heading(actions_side, "Package")
+    build_action_section_heading(app, actions_side, "Package")
     app.export_package_button = _sidebar_button(actions_side, "Export Package", app.export_package)
     app.verify_package_button = _sidebar_button(actions_side, "Verify Package", app.verify_package)
-    app._build_action_section_heading(actions_side, "Library")
+    build_action_section_heading(app, actions_side, "Library")
     app.batch_compare_button = _sidebar_button(actions_side, "Batch Compare", app.batch_compare)
     app.session_index_button = _sidebar_button(actions_side, "Session Index", app.session_index)
-    app._build_action_section_heading(actions_side, "Safety")
-    app._build_safety_notice(actions_side)
+    build_action_section_heading(app, actions_side, "Safety")
+    build_safety_notice(app, actions_side)
 
 
 def _sidebar_button(parent: ttk.Frame, text: str, command: object) -> ttk.Button:
