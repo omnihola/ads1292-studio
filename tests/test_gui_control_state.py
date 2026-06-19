@@ -1,6 +1,7 @@
 from ads1292_studio.app import (
     GuiState,
     gui_control_states,
+    gui_signal_quality_cards,
     gui_status_cards,
     gui_status_overview,
     gui_workflow_hint,
@@ -276,3 +277,56 @@ def test_gui_state_reports_package_readiness() -> None:
 
     assert unsaved.package_ready is False
     assert saved.package_ready is True
+
+
+def test_gui_signal_quality_cards_expose_real_recording_summary() -> None:
+    cards = gui_signal_quality_cards(
+        quality_label="Good ECG/QRS",
+        ecg_source="CH2",
+        contact_ok_percent=99.9376,
+        lead_off_bad_samples=28,
+        r_peaks=129,
+        hr_median_bpm=86.705,
+        baseline_drift_counts=44.0,
+        noise_rms_counts=50.461,
+        peak_to_peak_counts=8709.0,
+    )
+
+    assert [(card.label, card.value, card.tone) for card in cards] == [
+        ("Signal", "Good ECG/QRS on CH2", "ready"),
+        ("Contact", "99.9% OK, 28 bad", "ready"),
+        ("Heart rate", "86.7 bpm, 129 R", "ready"),
+        ("Artifacts", "drift 44 ct, noise 50.5 ct, p2p 8709 ct", "neutral"),
+    ]
+
+
+def test_gui_signal_quality_cards_warn_when_loaded_signal_needs_review() -> None:
+    cards = gui_signal_quality_cards(
+        quality_label="Needs review",
+        ecg_source="CH1",
+        contact_ok_percent=88.0,
+        lead_off_bad_samples=1200,
+        r_peaks=1,
+        hr_median_bpm=0.0,
+        baseline_drift_counts=300.0,
+        noise_rms_counts=220.0,
+        peak_to_peak_counts=7000.0,
+    )
+
+    assert [(card.label, card.value, card.tone) for card in cards] == [
+        ("Signal", "Needs review on CH1", "warning"),
+        ("Contact", "88.0% OK, 1200 bad", "warning"),
+        ("Heart rate", "-- bpm, 1 R", "warning"),
+        ("Artifacts", "drift 300 ct, noise 220.0 ct, p2p 7000 ct", "warning"),
+    ]
+
+
+def test_gui_signal_quality_cards_have_empty_defaults() -> None:
+    cards = gui_signal_quality_cards()
+
+    assert [(card.label, card.value, card.tone) for card in cards] == [
+        ("Signal", "not reviewed", "neutral"),
+        ("Contact", "--", "neutral"),
+        ("Heart rate", "--", "neutral"),
+        ("Artifacts", "--", "neutral"),
+    ]

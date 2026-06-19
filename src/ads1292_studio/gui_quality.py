@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import TestProtocol
-from ads1292_studio.quality import compute_quality_metrics
+from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, evaluate_quality_gate
 from ads1292_studio.segments import analyze_protocol_segments, evaluate_segment_quality_gates
 
@@ -16,11 +16,12 @@ def build_quality_text(
     protocol: TestProtocol | None = None,
     sample_rate_hz: float = 500.0,
     gate: QualityGate | None = None,
+    metrics: QualityMetrics | None = None,
 ) -> str:
     lead_bad = sum(1 for value in status_values if value != 0)
     contact = "OK" if lead_bad == 0 else f"{lead_bad} bad samples"
     rhythm = "detecting" if valid_rr < 2 else "R peaks detected"
-    metrics = compute_quality_metrics(samples, sample_rate_hz, selected_source)
+    metrics = metrics or compute_quality_metrics(samples, sample_rate_hz, selected_source)
     gate_result = evaluate_quality_gate(metrics, gate)
     parts = [
         f"Gate {gate_result.label}",

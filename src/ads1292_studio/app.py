@@ -26,6 +26,7 @@ from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
+from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
 from ads1292_studio.report import export_review_report
 from ads1292_studio.session_index import export_session_index
@@ -55,6 +56,7 @@ SECONDARY_ACTION_BUTTONS = (
 )
 SIDEBAR_TABS = ("Status", "Session", "Validation", "Protocol", "Actions")
 STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
+SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
 STATUS_TONE_STYLES = {
     "ready": "Ready.Status.TLabel",
     "running": "Running.Status.TLabel",
@@ -240,6 +242,48 @@ def gui_status_cards(
     )
 
 
+def gui_signal_quality_cards(
+    *,
+    quality_label: str | None = None,
+    ecg_source: str | None = None,
+    contact_ok_percent: float | None = None,
+    lead_off_bad_samples: int | None = None,
+    r_peaks: int | None = None,
+    hr_median_bpm: float | None = None,
+    baseline_drift_counts: float | None = None,
+    noise_rms_counts: float | None = None,
+    peak_to_peak_counts: float | None = None,
+) -> tuple[GuiStatusCard, ...]:
+    if quality_label is None:
+        return (
+            GuiStatusCard("Signal", "not reviewed", "neutral"),
+            GuiStatusCard("Contact", "--", "neutral"),
+            GuiStatusCard("Heart rate", "--", "neutral"),
+            GuiStatusCard("Artifacts", "--", "neutral"),
+        )
+
+    source = ecg_source or "--"
+    contact = 0.0 if contact_ok_percent is None else contact_ok_percent
+    bad_samples = 0 if lead_off_bad_samples is None else lead_off_bad_samples
+    peak_count = 0 if r_peaks is None else r_peaks
+    hr = 0.0 if hr_median_bpm is None else hr_median_bpm
+    drift = 0.0 if baseline_drift_counts is None else baseline_drift_counts
+    noise = 0.0 if noise_rms_counts is None else noise_rms_counts
+    p2p = 0.0 if peak_to_peak_counts is None else peak_to_peak_counts
+
+    signal_tone = "ready" if quality_label in {"Good ECG/QRS", "Usable ECG/QRS"} else "warning"
+    contact_tone = "ready" if contact >= 95.0 else "warning"
+    hr_tone = "ready" if peak_count >= 5 and 35.0 <= hr <= 180.0 else "warning"
+    artifact_tone = "warning" if drift >= 250.0 or noise >= 150.0 else "neutral"
+    hr_value = f"{hr:.1f}" if hr > 0 else "--"
+    return (
+        GuiStatusCard("Signal", f"{quality_label} on {source}", signal_tone),
+        GuiStatusCard("Contact", f"{contact:.1f}% OK, {bad_samples} bad", contact_tone),
+        GuiStatusCard("Heart rate", f"{hr_value} bpm, {peak_count} R", hr_tone),
+        GuiStatusCard("Artifacts", f"drift {drift:.0f} ct, noise {noise:.1f} ct, p2p {p2p:.0f} ct", artifact_tone),
+    )
+
+
 def _mousewheel_units(event: tk.Event) -> int:
     if getattr(event, "num", None) == 4:
         return -1
@@ -375,6 +419,8 @@ class App(tk.Tk):
         self.status_overview_var = tk.StringVar(value="")
         self.status_card_vars = {label: tk.StringVar(value="") for label in STATUS_CARD_LABELS}
         self.status_card_value_labels: dict[str, ttk.Label] = {}
+        self.signal_card_vars = {label: tk.StringVar(value="") for label in SIGNAL_CARD_LABELS}
+        self.signal_card_value_labels: dict[str, ttk.Label] = {}
         self.session_id_var = tk.StringVar(value="untitled-session")
         self.subject_id_var = tk.StringVar(value="anonymous")
         self.electrode_var = tk.StringVar(value="commercial Ag/AgCl control")
@@ -405,6 +451,8 @@ class App(tk.Tk):
         ttk.Label(status_side, textvariable=self.workflow_hint_var, wraplength=260, justify=tk.LEFT).pack(anchor=tk.W)
         ttk.Label(status_side, text="Overview", font=("", 12, "bold")).pack(anchor=tk.W, pady=(12, 4))
         self._build_status_cards(status_side)
+        ttk.Label(status_side, text="Signal Quality", font=("", 12, "bold")).pack(anchor=tk.W, pady=(12, 4))
+        self._build_signal_quality_cards(status_side)
         for label, var in (
             ("Session", self.metrics_var),
             ("Quality", self.quality_var),
@@ -519,6 +567,21 @@ class App(tk.Tk):
             )
             value_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
             self.status_card_value_labels[label] = value_label
+
+    def _build_signal_quality_cards(self, parent: ttk.Frame) -> None:
+        for label in SIGNAL_CARD_LABELS:
+            row = ttk.Frame(parent)
+            row.pack(anchor=tk.W, fill=tk.X, pady=1)
+            ttk.Label(row, text=label, width=12).pack(side=tk.LEFT)
+            value_label = ttk.Label(
+                row,
+                textvariable=self.signal_card_vars[label],
+                style=status_tone_style("neutral"),
+                wraplength=170,
+                justify=tk.LEFT,
+            )
+            value_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            self.signal_card_value_labels[label] = value_label
 
     def _build_sidebar(self, parent: ttk.Frame) -> dict[str, ttk.Frame]:
         self.sidebar_notebook = ttk.Notebook(parent)
@@ -821,8 +884,17 @@ class App(tk.Tk):
             self.status_card_value_labels[card.label].configure(
                 style=status_tone_style(card.tone)
             )
+        if not state.has_data:
+            self._apply_signal_quality_cards(gui_signal_quality_cards())
         for label, button in self.control_buttons.items():
             button.configure(state=states[label])
+
+    def _apply_signal_quality_cards(self, cards: tuple[GuiStatusCard, ...]) -> None:
+        for card in cards:
+            self.signal_card_vars[card.label].set(card.value)
+            self.signal_card_value_labels[card.label].configure(
+                style=status_tone_style(card.tone)
+            )
 
     def _metadata(self) -> SessionMetadata:
         return SessionMetadata(
@@ -1019,7 +1091,22 @@ class App(tk.Tk):
         self.metrics_var.set(
             f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {source} | HR {hr.median_bpm:.0f} bpm"
         )
-        self.quality_var.set(self._quality_text(source, hr.valid_rr_count, tuple(self._current_samples())))
+        samples = tuple(self._current_samples())
+        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get())
+        self.quality_var.set(self._quality_text(source, hr.valid_rr_count, samples, metrics=metrics))
+        self._apply_signal_quality_cards(
+            gui_signal_quality_cards(
+                quality_label=metrics.quality_label,
+                ecg_source=metrics.ecg_source,
+                contact_ok_percent=metrics.contact_ok_percent,
+                lead_off_bad_samples=metrics.lead_off_bad_samples,
+                r_peaks=metrics.r_peaks,
+                hr_median_bpm=metrics.hr_median_bpm,
+                baseline_drift_counts=metrics.baseline_drift_counts,
+                noise_rms_counts=metrics.noise_rms_counts,
+                peak_to_peak_counts=metrics.peak_to_peak_counts,
+            )
+        )
         self.live_canvas.draw_idle()
 
     def _show_recording(self, samples: tuple[StreamSample, ...]) -> None:
@@ -1032,6 +1119,7 @@ class App(tk.Tk):
         raw_ch1 = np.asarray(self.ch1, dtype=float)
         raw_ch2 = np.asarray(self.ch2, dtype=float)
         result = review_channels(raw_ch1, raw_ch2, SAMPLE_RATE_HZ, self.source_var.get())
+        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get())
         x = np.arange(ecg.size)
         self.review_ecg_line.set_data(x, ecg)
         self.review_other_line.set_data(x, other)
@@ -1049,10 +1137,23 @@ class App(tk.Tk):
             f"samples {len(samples)} | duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | source {source}"
         )
         self.quality_var.set(
-            f"{self._quality_text(source, result.heart_rate.valid_rr_count, samples)} | "
+            f"{self._quality_text(source, result.heart_rate.valid_rr_count, samples, metrics=metrics)} | "
             f"QRS {'clear' if result.pqrst.qrs_clear else 'unclear'} | "
             f"P {'tentative' if result.pqrst.p_tentative else 'not reliable'} | "
             f"T {'tentative' if result.pqrst.t_tentative else 'not reliable'}"
+        )
+        self._apply_signal_quality_cards(
+            gui_signal_quality_cards(
+                quality_label=metrics.quality_label,
+                ecg_source=metrics.ecg_source,
+                contact_ok_percent=metrics.contact_ok_percent,
+                lead_off_bad_samples=metrics.lead_off_bad_samples,
+                r_peaks=metrics.r_peaks,
+                hr_median_bpm=metrics.hr_median_bpm,
+                baseline_drift_counts=metrics.baseline_drift_counts,
+                noise_rms_counts=metrics.noise_rms_counts,
+                peak_to_peak_counts=metrics.peak_to_peak_counts,
+            )
         )
 
     def _draw_pqrst(self, ecg: np.ndarray, peaks: tuple[int, ...]) -> None:
@@ -1073,7 +1174,13 @@ class App(tk.Tk):
         self.ax_pqrst.grid(True, alpha=0.25)
         self.pqrst_canvas.draw_idle()
 
-    def _quality_text(self, source: str, valid_rr: int, samples: tuple[StreamSample, ...]) -> str:
+    def _quality_text(
+        self,
+        source: str,
+        valid_rr: int,
+        samples: tuple[StreamSample, ...],
+        metrics=None,
+    ) -> str:
         protocol = self._protocol()
         should_evaluate_protocol = bool(self.loaded_samples) or protocol_ready_for_live_quality(
             samples,
@@ -1089,6 +1196,7 @@ class App(tk.Tk):
             protocol=protocol if should_evaluate_protocol else None,
             sample_rate_hz=SAMPLE_RATE_HZ,
             gate=self._quality_gate(),
+            metrics=metrics,
         )
 
     def _current_samples(self) -> tuple[StreamSample, ...]:

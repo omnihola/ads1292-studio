@@ -48,3 +48,16 @@ def test_csv_reader_accepts_legacy_ecg_resp_headers(tmp_path: Path) -> None:
     assert loaded.samples[0].ch2 == 99
     assert loaded.samples[0].status_byte == 16
     assert loaded.samples[0].lead_off_bits == 0
+
+
+def test_csv_reader_combines_canonical_lead_off_bits_when_status_byte_omits_them(tmp_path: Path) -> None:
+    path = tmp_path / "recording.csv"
+    path.write_text(
+        "timestamp,ch1_counts,ch2_counts,board_heart_rate,board_respiration_rate,status_byte,lead_off_bits\n"
+        "1.0,7,99,80,20,16,5\n"
+    )
+
+    loaded = read_recording_csv(path)
+
+    assert loaded.samples[0].status_byte == 21
+    assert loaded.samples[0].lead_off_bits == 5

@@ -106,6 +106,8 @@
 | Workflow hints did not provide a stable state snapshot | Added a Status-tab `Overview` field driven by the same connection/streaming/data/recording-path state as button gating and workflow hints. |
 | Status overview still lacked visual state semantics | Added `gui_status_cards()` plus deterministic tone-to-style mapping, then rendered Overview as styled status rows in the sidebar. |
 | GUI state booleans were duplicated across helpers and `_apply_control_states()` | Added immutable `GuiState`, kept existing helper APIs compatible, and refactored `_apply_control_states()` to compute state once. |
+| Actual exported recording `recordings/2026-06-18-221342-ads1292-studio.csv` is usable but the GUI hid the conclusion in long text | The record has 44,884 samples over 89.766 s, auto-selects CH2, reports `Good ECG/QRS`, 99.94% contact, 129 R peaks, HR median 86.7 bpm, QRS/P/T tentative flags true. |
+| Canonical CSV files include both `status_byte` and `lead_off_bits` | Offline import should combine the explicit low-nibble lead-off value with `status_byte` so contact flags are not lost when reloading exported data. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -151,6 +153,7 @@
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.
 - Generated review figures from the saved CSV show CH2 has repeated sharp QRS-like spikes, while CH1 can look flat/noisy depending on the time window.
 - R-aligned average from CH2 shows a strong R/QRS complex; P and T are too small/unstable to report as validated morphology.
+- The 2026-06-18 22:13 exported studio recording confirms the current real setup can produce a usable ECG signal on CH2; GUI review should make that conclusion visible without requiring CLI analysis.
 
 ---
 *Update this file after every 2 view/browser/search operations.*
