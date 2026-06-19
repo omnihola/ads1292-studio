@@ -12,6 +12,7 @@ from ads1292_studio.app import (
     sidebar_tab_labels,
     toolbar_button_style,
     toolbar_control_styles,
+    toolbar_group_padding,
     workspace_notebook_styles,
 )
 
@@ -35,6 +36,13 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
     assert toolbar_control_styles() == {
         "port": "Port.TCombobox",
         "toggle": "ToolbarToggle.TCheckbutton",
+    }
+
+
+def test_gui_layout_spaces_toolbar_groups() -> None:
+    assert toolbar_group_padding() == {
+        "separator": (12, 8),
+        "tight": (4, 4),
     }
 
 

@@ -63,6 +63,10 @@ TOOLBAR_CONTROL_STYLES = {
     "port": "Port.TCombobox",
     "toggle": "ToolbarToggle.TCheckbutton",
 }
+TOOLBAR_GROUP_PADDING = {
+    "separator": (12, 8),
+    "tight": (4, 4),
+}
 SECONDARY_ACTION_BUTTONS = (
     "Load CSV",
     "Export Report",
@@ -279,6 +283,10 @@ def toolbar_button_style(label: str) -> str:
 
 def toolbar_control_styles() -> dict[str, str]:
     return dict(TOOLBAR_CONTROL_STYLES)
+
+
+def toolbar_group_padding() -> dict[str, tuple[int, int]]:
+    return dict(TOOLBAR_GROUP_PADDING)
 
 
 def secondary_action_button_labels() -> tuple[str, ...]:
@@ -669,6 +677,16 @@ class App(tk.Tk):
             style=toolbar_button_style("Stop"),
         )
         self.stop_button.pack(side=tk.LEFT)
+        self.toolbar_acquisition_separator = ttk.Frame(
+            toolbar,
+            width=1,
+            style="ToolbarSeparator.TFrame",
+        )
+        self.toolbar_acquisition_separator.pack(
+            side=tk.LEFT,
+            fill=tk.Y,
+            padx=toolbar_group_padding()["separator"],
+        )
 
         self.save_var = tk.BooleanVar(value=True)
         self.save_check = ttk.Checkbutton(
@@ -694,8 +712,18 @@ class App(tk.Tk):
             style=toolbar_styles["toggle"],
         )
         self.filter_check.pack(side=tk.LEFT, padx=4)
+        self.toolbar_context_separator = ttk.Frame(
+            toolbar,
+            width=1,
+            style="ToolbarSeparator.TFrame",
+        )
+        self.toolbar_context_separator.pack(
+            side=tk.LEFT,
+            fill=tk.Y,
+            padx=toolbar_group_padding()["separator"],
+        )
         self.source_var = tk.StringVar(value=ADS1292R_ECG_SOURCE)
-        ttk.Label(toolbar, text="CH2 ECG / CH1 Resp / Contact", style="ToolbarHint.TLabel").pack(side=tk.LEFT, padx=(12, 2))
+        ttk.Label(toolbar, text="CH2 ECG / CH1 Resp / Contact", style="ToolbarHint.TLabel").pack(side=tk.LEFT)
 
         body = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -896,6 +924,7 @@ class App(tk.Tk):
         style.configure("TFrame", background=tokens["surface"])
         style.configure("Header.TFrame", background=tokens["panel"], borderwidth=0)
         style.configure("Toolbar.TFrame", background=tokens["panel_alt"], borderwidth=1, relief=tk.FLAT)
+        style.configure("ToolbarSeparator.TFrame", background=tokens["border"])
         style.configure("SidebarShell.TFrame", background=tokens["surface"])
         style.configure("Main.TFrame", background=tokens["surface"])
         style.configure("TLabel", background=tokens["surface"], foreground=tokens["ink"])
