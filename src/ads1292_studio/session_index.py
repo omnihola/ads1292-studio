@@ -6,9 +6,13 @@ from datetime import datetime
 from html import escape
 from pathlib import Path
 
+from ads1292_studio.calibration import calibration_template, write_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
-from ads1292_studio.metadata import SessionMetadata, read_metadata_json
+from ads1292_studio.events import event_template, write_events_json
+from ads1292_studio.metadata import SessionMetadata, read_metadata_json, write_metadata_json
+from ads1292_studio.protocol import protocol_template, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
+from ads1292_studio.quality_gate import quality_gate_template, write_quality_gate_json
 
 
 @dataclass(frozen=True)
@@ -61,9 +65,11 @@ class SessionIndexExport:
     html_path: Path
     sidecar_plan_csv_path: Path
     sidecar_plan_html_path: Path
+    sidecar_template_dir: Path
     rows: tuple[SessionIndexRow, ...]
     summary: SessionIndexSummary
     sidecar_plan_rows: tuple[SidecarPlanRow, ...]
+    sidecar_template_paths: tuple[Path, ...]
 
 
 def scan_recording_directory(root: Path | str) -> tuple[SessionIndexRow, ...]:
@@ -91,19 +97,23 @@ def export_session_index(
     html_path = output / f"{stamp}-{slug}.html"
     sidecar_plan_csv_path = output / f"{stamp}-{slug}-sidecar-plan.csv"
     sidecar_plan_html_path = output / f"{stamp}-{slug}-sidecar-plan.html"
+    sidecar_template_dir = output / f"{stamp}-{slug}-sidecar-templates"
     sidecar_plan_rows = build_sidecar_completion_plan(rows)
     _write_csv(csv_path, rows)
     html_path.write_text(_html(title, rows, summary))
     _write_sidecar_plan_csv(sidecar_plan_csv_path, sidecar_plan_rows)
     sidecar_plan_html_path.write_text(_sidecar_plan_html(title, sidecar_plan_rows))
+    sidecar_template_paths = write_sidecar_template_bundle(sidecar_template_dir, rows)
     return SessionIndexExport(
         csv_path=csv_path,
         html_path=html_path,
         sidecar_plan_csv_path=sidecar_plan_csv_path,
         sidecar_plan_html_path=sidecar_plan_html_path,
+        sidecar_template_dir=sidecar_template_dir,
         rows=rows,
         summary=summary,
         sidecar_plan_rows=sidecar_plan_rows,
+        sidecar_template_paths=sidecar_template_paths,
     )
 
 
@@ -119,6 +129,19 @@ def build_sidecar_completion_plan(rows: tuple[SessionIndexRow, ...]) -> tuple[Si
         for sidecar in row.missing_sidecars.split(";")
         if sidecar
     )
+
+
+def write_sidecar_template_bundle(template_dir: Path | str, rows: tuple[SessionIndexRow, ...]) -> tuple[Path, ...]:
+    output = Path(template_dir)
+    written: list[Path] = []
+    for row in rows:
+        for sidecar in row.missing_sidecars.split(";"):
+            if not sidecar:
+                continue
+            path = _template_path_for(output, row, sidecar)
+            _write_sidecar_template(path, row, sidecar)
+            written.append(path)
+    return tuple(written)
 
 
 def summarize_rows(rows: tuple[SessionIndexRow, ...]) -> SessionIndexSummary:
@@ -225,6 +248,41 @@ def _expected_sidecar_path(csv_path: Path, sidecar: str) -> Path:
 
 def _sidecar_label(sidecar: str) -> str:
     return sidecar.replace("_", " ")
+
+
+def _template_path_for(template_dir: Path, row: SessionIndexRow, sidecar: str) -> Path:
+    target_name = _expected_sidecar_path(row.path, sidecar).name
+    parent = Path(row.relative_path).parent
+    if str(parent) == ".":
+        return template_dir / target_name
+    return template_dir / parent / target_name
+
+
+def _write_sidecar_template(path: Path, row: SessionIndexRow, sidecar: str) -> None:
+    if sidecar == "metadata":
+        write_metadata_json(
+            path,
+            SessionMetadata(
+                session_id=row.session_id,
+                subject_id=row.subject_id,
+                electrode=row.electrode,
+                montage=row.montage,
+                operator=row.operator,
+                notes="Review and complete this generated metadata sidecar before packaging.",
+            ),
+        )
+        return
+    if sidecar == "events":
+        write_events_json(path, event_template())
+        return
+    if sidecar == "calibration":
+        write_calibration_json(path, calibration_template())
+        return
+    if sidecar == "protocol":
+        write_protocol_json(path, protocol_template())
+        return
+    if sidecar == "quality_gate":
+        write_quality_gate_json(path, quality_gate_template())
 
 
 def _package_ready_status(waveform_status: str, sidecar_status: str) -> str:

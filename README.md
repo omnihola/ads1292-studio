@@ -50,7 +50,10 @@ by electrode label.
 
 Session index export writes both the recording library and a
 `*-sidecar-plan.csv` / `*-sidecar-plan.html` checklist for missing metadata,
-event, calibration, protocol, and quality-gate sidecars.
+event, calibration, protocol, and quality-gate sidecars. It also writes a
+`*-sidecar-templates/` folder with reviewable JSON templates for those missing
+sidecars; the templates are staged in the report output folder and do not modify
+the original recording folder.
 
 ## Features in V1
 
@@ -114,6 +117,10 @@ event, calibration, protocol, and quality-gate sidecars.
 - Session index also exports a sidecar completion plan CSV/HTML that lists each
   missing sidecar target path and suggested action, and the GUI confirmation
   shows those plan paths.
+- Session index stages JSON templates for missing sidecars in a separate
+  `*-sidecar-templates/` folder so users can review metadata, event,
+  calibration, protocol, and quality-gate templates before copying them beside
+  raw recordings.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

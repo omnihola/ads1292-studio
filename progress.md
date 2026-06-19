@@ -589,6 +589,11 @@
 | Sidecar plan full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 62 passed | Pass |
 | Sidecar plan syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_index.py src/ads1292_studio/cli.py src/ads1292_studio/gui_session_index.py` | No syntax errors | Passed | Pass |
 | Sidecar plan real folder smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/ads1292 --out reports/session-index-sidecar-plan-smoke --title ADS1292-Sidecar-Plan-Smoke` | Real folder writes sidecar completion checklist | `rows=9`, `sidecar_plan_rows=45`, `action_complete_sidecars=9`; CSV lists metadata/events/calibration/protocol/quality_gate targets | Pass |
+| Sidecar template bundle TDD red check | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library tests/test_gui_session_index.py -q` before implementation | Missing template bundle fields and CLI/GUI output | `AttributeError: 'SessionIndexExport' object has no attribute 'sidecar_template_dir'`; missing `sidecar_template_dir=` and `Sidecar template files` output | Pass |
+| Sidecar template bundle focused tests | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library tests/test_gui_session_index.py -q` | Session index stages sidecar templates and reports bundle paths/counts | 10 passed | Pass |
+| Sidecar template bundle full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 63 passed | Pass |
+| Sidecar template bundle syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_index.py src/ads1292_studio/cli.py src/ads1292_studio/gui_session_index.py` | No syntax errors | Passed | Pass |
+| Sidecar template bundle real folder smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/ads1292 --out reports/session-index-template-bundle-smoke --title ADS1292-Template-Bundle-Smoke` | Real folder writes staged sidecar templates in report output only | `rows=9`, `sidecar_plan_rows=45`, `sidecar_template_files=45`; protocol template contains MOTAC ECG validation; target recording sidecar remained absent | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -628,12 +633,14 @@
 | 2026-06-18 | CodeGraph is not initialized in `ads1292-studio/` | 1 | Used direct file reads for Phase 29 context and logged the missing index. |
 | 2026-06-18 | Session index sidecar plan fields were missing during TDD red check | 1 | Added `SidecarPlanRow`, CSV/HTML plan exports, CLI output, and GUI message fields. |
 | 2026-06-18 | GUI sidecar plan test expected 5 missing rows for a fixture that already had metadata | 1 | Corrected the expected count to 4 because `_write_recording()` creates metadata JSON. |
+| 2026-06-18 | CodeGraph remains uninitialized in `ads1292-studio/` | 2 | Used direct file reads for Phase 30 context and kept the limitation documented. |
+| 2026-06-18 | Session index sidecar template bundle fields were missing during TDD red check | 1 | Added staged template bundle paths, template file generation, CLI output, and GUI message fields. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 29 complete; ready to commit and push the session index sidecar completion-plan iteration. |
+| Where am I? | Phase 30 complete; ready to commit and push the session index sidecar template-bundle iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, and session index sidecar completion-plan exports. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, and staged sidecar template bundle exports. |

@@ -21,5 +21,8 @@ def build_session_index_message(export: SessionIndexExport) -> str:
             f"Sidecar plan rows: {len(export.sidecar_plan_rows)}",
             str(export.sidecar_plan_csv_path),
             str(export.sidecar_plan_html_path),
+            "",
+            f"Sidecar template files: {len(export.sidecar_template_paths)}",
+            str(export.sidecar_template_dir),
         ]
     )

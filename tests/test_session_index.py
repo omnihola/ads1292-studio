@@ -206,3 +206,26 @@ def test_export_session_index_writes_sidecar_completion_plan(tmp_path: Path) -> 
     assert "Sidecar Completion Plan" in html
     assert "partial.csv" in html
     assert "quality-gate.json" in html
+
+
+def test_export_session_index_writes_sidecar_template_bundle(tmp_path: Path) -> None:
+    partial = _write_recording(tmp_path, "partial.csv", "commercial Ag/AgCl")
+    ready = _write_recording(tmp_path, "ready.csv", "MOTAC gel + Ag/AgCl")
+    _write_complete_sidecars(ready)
+
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Template Bundle")
+
+    assert export.sidecar_template_dir.exists()
+    assert len(export.sidecar_template_paths) == 4
+    template_names = {path.name for path in export.sidecar_template_paths}
+    assert template_names == {
+        "partial.events.json",
+        "partial.calibration.json",
+        "partial.protocol.json",
+        "partial.quality-gate.json",
+    }
+    assert not partial.with_suffix(".events.json").exists()
+    protocol_text = (export.sidecar_template_dir / "partial.protocol.json").read_text()
+    gate_text = (export.sidecar_template_dir / "partial.quality-gate.json").read_text()
+    assert "MOTAC ECG validation" in protocol_text
+    assert "min_contact_ok_percent" in gate_text
