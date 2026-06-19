@@ -24,5 +24,8 @@ def build_session_index_message(export: SessionIndexExport) -> str:
             "",
             f"Sidecar template files: {len(export.sidecar_template_paths)}",
             str(export.sidecar_template_dir),
+            "",
+            "Apply sidecars script:",
+            str(export.sidecar_apply_script_path),
         ]
     )

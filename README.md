@@ -54,7 +54,9 @@ event, calibration, protocol, and quality-gate sidecars. It also writes a
 `*-sidecar-templates/` folder with reviewable JSON templates for those missing
 sidecars; the templates are staged in the report output folder and do not modify
 the original recording folder. The sidecar plan includes both the generated
-template path and the final target sidecar path for each missing file.
+template path and the final target sidecar path for each missing file. It also
+writes an executable `*-apply-sidecars.sh` helper that copies reviewed templates
+beside the raw recordings with `cp -n`, so existing sidecars are not overwritten.
 
 ## Features in V1
 
@@ -122,6 +124,9 @@ template path and the final target sidecar path for each missing file.
   `*-sidecar-templates/` folder so users can review metadata, event,
   calibration, protocol, and quality-gate templates before copying them beside
   raw recordings.
+- Session index writes an executable `*-apply-sidecars.sh` helper that maps the
+  staged templates to their final target sidecar paths without overwriting
+  existing files.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

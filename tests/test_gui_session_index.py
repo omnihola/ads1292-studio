@@ -92,3 +92,5 @@ def test_build_session_index_message_includes_action_queue_counts(tmp_path: Path
     assert str(export.sidecar_plan_html_path) in message
     assert "Sidecar template files: 4" in message
     assert str(export.sidecar_template_dir) in message
+    assert "Apply sidecars script:" in message
+    assert str(export.sidecar_apply_script_path) in message

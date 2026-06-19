@@ -210,6 +210,23 @@ def test_export_session_index_writes_sidecar_completion_plan(tmp_path: Path) -> 
     assert "quality-gate.json" in html
 
 
+def test_export_session_index_writes_sidecar_apply_script(tmp_path: Path) -> None:
+    partial = _write_recording(tmp_path, "nested/partial.csv", "commercial Ag/AgCl")
+    ready = _write_recording(tmp_path, "ready.csv", "MOTAC gel + Ag/AgCl")
+    _write_complete_sidecars(ready)
+
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Apply Script")
+
+    assert export.sidecar_apply_script_path.exists()
+    script = export.sidecar_apply_script_path.read_text()
+    assert script.startswith("#!/bin/sh\n")
+    assert "Review generated sidecar templates before running this script." in script
+    assert str(export.sidecar_template_dir / "nested" / "partial.events.json") in script
+    assert str(partial.with_suffix(".events.json")) in script
+    assert "cp -n" in script
+    assert "ready.csv" not in script
+
+
 def test_export_session_index_writes_sidecar_template_bundle(tmp_path: Path) -> None:
     partial = _write_recording(tmp_path, "partial.csv", "commercial Ag/AgCl")
     ready = _write_recording(tmp_path, "ready.csv", "MOTAC gel + Ag/AgCl")

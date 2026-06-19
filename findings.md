@@ -57,6 +57,7 @@
 | Export sidecar completion plans | The real recording folder has usable ECG recordings that are still incomplete records; session index should export a checklist of missing sidecar target paths so cleanup is actionable. |
 | Stage sidecar templates separately | Missing sidecar cleanup should not silently edit raw recording folders; template JSON files should be generated in the index output directory for review first. |
 | Add template path traceability | A sidecar cleanup plan is more useful when each row shows both the staged template to review and the final target path beside the recording. |
+| Add sidecar apply scripts | After reviewing generated templates, users need a repeatable non-overwriting script to copy staged sidecars into their final locations without manual path mistakes. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -89,6 +90,7 @@
 | Session index could say `complete_sidecars` without a concrete checklist | Added `*-sidecar-plan.csv` and `*-sidecar-plan.html` with one row per missing sidecar and target path. |
 | Sidecar completion still required hand-creating JSON files | Added a staged `*-sidecar-templates/` folder with generated metadata, events, calibration, protocol, and quality-gate JSON templates. |
 | Sidecar plan did not connect template files back to target paths | Added `template_path` to the sidecar plan CSV/HTML so users can review a staged template and know where it belongs later. |
+| Staged templates still required manual copy/paste into the recording folder | Added an executable `*-apply-sidecars.sh` helper that maps reviewed templates to final target paths using absolute paths and `cp -n`. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -128,6 +130,7 @@
 - Session index sidecar-plan smoke on `../record/ads1292` found `rows=9`, `sidecar_plan_rows=45`, and wrote CSV/HTML checklists for missing metadata, events, calibration, protocol, and quality-gate sidecars.
 - Session index template-bundle smoke on `../record/ads1292` found `rows=9`, `sidecar_plan_rows=45`, and `sidecar_template_files=45`; templates were written under `reports/session-index-template-bundle-smoke/...-sidecar-templates` and the original `../record/ads1292` folder was not modified.
 - Session index template-path smoke on `../record/ads1292` confirmed `sidecar-plan.csv` and HTML include both `target_path` and `template_path`, with template paths under `reports/session-index-template-path-smoke/...-sidecar-templates`.
+- Session index apply-script smoke on `../record/ads1292` found `rows=9`, `sidecar_plan_rows=45`, and `sidecar_template_files=45`; the executable `*-apply-sidecars.sh` contains `cp -n` commands from staged template paths to final `../record/ads1292` sidecar targets.
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

@@ -599,6 +599,12 @@
 | Sidecar plan template-path full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 63 passed | Pass |
 | Sidecar plan template-path syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_index.py src/ads1292_studio/cli.py src/ads1292_studio/gui_session_index.py` | No syntax errors | Passed | Pass |
 | Sidecar plan template-path real folder smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/ads1292 --out reports/session-index-template-path-smoke --title ADS1292-Template-Path-Smoke` | Real folder sidecar plan maps targets to staged templates | `rows=9`, `sidecar_plan_rows=45`, `sidecar_template_files=45`; CSV/HTML include `Template Path` and `sidecar-templates` paths | Pass |
+| Sidecar apply script TDD red check | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library tests/test_gui_session_index.py -q` before implementation | Missing sidecar apply script export and CLI/GUI output | `AttributeError: 'SessionIndexExport' object has no attribute 'sidecar_apply_script_path'`; missing `sidecar_apply_script=` and `Apply sidecars script:` | Pass |
+| Sidecar apply script focused tests | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library tests/test_gui_session_index.py -q` | Session index writes executable apply script and CLI/GUI expose it | 11 passed | Pass |
+| Sidecar apply script real folder smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/ads1292 --out reports/session-index-apply-script-smoke --title ADS1292-Apply-Script-Smoke` | Real folder writes apply script for reviewed sidecar templates | `rows=9`, `sidecar_plan_rows=45`, `sidecar_template_files=45`; script is executable and contains `cp -n` commands | Pass |
+| Sidecar apply script full tests | `conda run -n sensor python -m pytest -q` | All tests pass after apply-script export | 64 passed | Pass |
+| Sidecar apply script syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_index.py src/ads1292_studio/cli.py src/ads1292_studio/gui_session_index.py` | No syntax errors | Passed | Pass |
+| Sidecar apply script final real folder smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/ads1292 --out reports/session-index-apply-script-smoke-final --title ADS1292-Apply-Script-Smoke-Final` | Real folder script uses absolute paths and is executable | `rows=9`, `sidecar_plan_rows=45`, `sidecar_template_files=45`; `-rwxr-xr-x`; script contains absolute `cp -n` paths | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -642,12 +648,14 @@
 | 2026-06-18 | Session index sidecar template bundle fields were missing during TDD red check | 1 | Added staged template bundle paths, template file generation, CLI output, and GUI message fields. |
 | 2026-06-18 | CodeGraph remains uninitialized in `ads1292-studio/` | 3 | Used direct file reads for Phase 31 context and kept the limitation documented. |
 | 2026-06-18 | Sidecar plan lacked staged template paths during TDD red check | 1 | Added `template_path` to `SidecarPlanRow`, CSV output, HTML output, and tests. |
+| 2026-06-18 | CodeGraph remains uninitialized in `ads1292-studio/` | 4 | Used direct file reads for Phase 32 context and kept the limitation documented. |
+| 2026-06-18 | Sidecar apply script export was missing during TDD red check | 1 | Added `sidecar_apply_script_path`, executable script generation, CLI output, and GUI confirmation text. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 31 complete; ready to commit and push the sidecar plan template-path traceability iteration. |
+| Where am I? | Phase 32 complete; ready to run full verification, commit, and push the sidecar apply-script iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, staged sidecar template bundle exports, and sidecar plan template-path traceability. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, staged sidecar template bundle exports, sidecar plan template-path traceability, and executable sidecar apply-script exports. |

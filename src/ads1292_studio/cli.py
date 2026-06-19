@@ -153,6 +153,7 @@ def cmd_index(args: argparse.Namespace) -> int:
     print(f"sidecar_plan_csv={export.sidecar_plan_csv_path}")
     print(f"sidecar_plan_html={export.sidecar_plan_html_path}")
     print(f"sidecar_template_dir={export.sidecar_template_dir}")
+    print(f"sidecar_apply_script={export.sidecar_apply_script_path}")
     print(f"rows={len(export.rows)}")
     print(f"sidecar_plan_rows={len(export.sidecar_plan_rows)}")
     print(f"sidecar_template_files={len(export.sidecar_template_paths)}")

@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 31
+Phase 32
 
 ## Phases
 
@@ -271,6 +271,14 @@ Phase 31
 - [x] Add tests and real `../record/ads1292` smoke test.
 - **Status:** complete
 
+### Phase 32: Sidecar Apply Script Export
+- [x] Add failing tests that require a generated sidecar apply script path in session index exports, CLI output, and GUI confirmation text.
+- [x] Generate an executable `*-apply-sidecars.sh` helper from sidecar plan rows.
+- [x] Use absolute paths in the helper script so it is not dependent on the caller's current working directory.
+- [x] Use `cp -n` so reviewed template sidecars do not overwrite existing target sidecars.
+- [x] Add tests and real `../record/ads1292` smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -314,6 +322,7 @@ Phase 31
 | Export sidecar completion plans | Old recordings can be incomplete even when they contain usable ECG, so the library should produce a concrete checklist of missing sidecar files and target paths. |
 | Stage sidecar templates instead of modifying raw folders | Commercial-style cleanup should be review-first; generated templates go to the report output folder so original recordings are not modified automatically. |
 | Add template path traceability to sidecar plans | A cleanup checklist should show both the staged template file to review and the final target path beside the raw recording. |
+| Add a sidecar apply script | After template review, users need a repeatable way to copy staged JSON sidecars into place without hand-copy errors or overwriting existing files. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -346,6 +355,8 @@ Phase 31
 | Sidecar template bundle fields were missing during TDD red check | 1 | Added staged template bundle export, CLI output, and GUI confirmation text. |
 | CodeGraph still not initialized in `ads1292-studio/` | 3 | Continued with direct file reads for Phase 31 and kept the limitation documented. |
 | Sidecar plan lacked generated template paths | 1 | Added `template_path` to `SidecarPlanRow`, CSV export, HTML export, and tests. |
+| CodeGraph still not initialized in `ads1292-studio/` | 4 | Continued with direct file reads for Phase 32 and kept the limitation documented. |
+| Sidecar template bundle still required manual copy operations | 1 | Added an executable `*-apply-sidecars.sh` helper that uses absolute paths and `cp -n`. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.
