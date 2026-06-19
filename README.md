@@ -34,6 +34,8 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-e
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --events reports/events-template.json --out reports
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-calibration-template reports/calibration-template.json
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --calibration reports/calibration-template.json --out reports
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-protocol-template reports/protocol-template.json
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record/ads1292/2026-06-18-164923-ads1292-live.csv --protocol reports/protocol-template.json --out reports
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package ../record/ads1292/2026-06-18-164923-ads1292-live.csv --out packages
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/<session>/manifest.json
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ../record/ads1292/2026-06-18-164923-ads1292-live.csv
@@ -64,6 +66,8 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch recording-
   package manifest.
 - Quality gate pass/fail checks for minimum duration, contact percentage, QRS
   clarity, R-peak count, and heart-rate bounds.
+- Test protocol sidecars for baseline, motion, and recovery steps; protocol
+  templates can be included in reports and session packages.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

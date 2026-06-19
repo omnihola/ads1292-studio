@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 13
+Phase 14
 
 ## Phases
 
@@ -115,6 +115,16 @@ Phase 13
 - [x] Add tests and real CSV smoke test.
 - **Status:** complete
 
+### Phase 14: Protocol Templates & Test Plan Sidecars
+- [x] Add protocol JSON model for objective, operator instructions, steps, and acceptance notes.
+- [x] Add MOTAC ECG validation protocol template.
+- [x] Include protocol steps in HTML reports.
+- [x] Add CLI `--write-protocol-template` and `--protocol` report options.
+- [x] Copy protocol sidecars into session packages and manifests.
+- [x] Add GUI protocol fields and `.protocol.json` sidecar save/load.
+- [x] Add tests and real CSV smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -139,6 +149,7 @@ Phase 13
 | Add session package manifest | Research/commercial-style records need raw data, sidecars, report artifacts, and hashes tied together for later audit. |
 | Add package verification | Auditable records must be re-checkable after transfer or Dropbox/GitHub storage. |
 | Add quality gate | MOTAC vs commercial electrode tests need explicit pass/fail criteria instead of only descriptive metrics. |
+| Add protocol sidecars | Commercial-style gel validation needs repeatable baseline, motion, and recovery steps attached to each recording. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -155,6 +166,7 @@ Phase 13
 | `packages/` was not ignored initially | 1 | Added `packages/` to `.gitignore` before committing package smoke output. |
 | Package verification function was missing | 1 | Added TDD tests, `verify_session_package`, CLI `verify-package`, and GUI Verify Package. |
 | Initial quality gate test used short synthetic data | 1 | Made the test threshold explicit and added CLI `--allow-unclear-qrs` for debug/synthetic data. |
+| Temporary protocol sidecar was copied outside the subfolder during smoke setup | 1 | Removed the file immediately and reran package smoke using only ignored files inside `ads1292-studio/`. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

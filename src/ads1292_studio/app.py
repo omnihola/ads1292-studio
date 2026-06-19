@@ -22,6 +22,7 @@ from ads1292_studio.events import EventMarker, read_events_json, write_events_js
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
+from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import evaluate_quality_gate
 from ads1292_studio.report import export_review_report
@@ -129,6 +130,11 @@ class App(tk.Tk):
         self.calibration_label_var = tk.StringVar(value="ADS1292 default")
         self.vref_mv_var = tk.StringVar(value="2420")
         self.pga_gain_var = tk.StringVar(value="6")
+        protocol = protocol_template()
+        self.protocol_name_var = tk.StringVar(value=protocol.name)
+        self.protocol_objective_var = tk.StringVar(value=protocol.objective)
+        self.protocol_steps_var = tk.StringVar(value=_format_protocol_steps(protocol.steps))
+        self.protocol_acceptance_var = tk.StringVar(value=protocol.acceptance_notes)
         for label, var in (
             ("Session", self.metrics_var),
             ("Quality", self.quality_var),
@@ -153,6 +159,11 @@ class App(tk.Tk):
         self._metadata_entry(side, "Label", self.calibration_label_var)
         self._metadata_entry(side, "Vref mV", self.vref_mv_var)
         self._metadata_entry(side, "PGA gain", self.pga_gain_var)
+        ttk.Label(side, text="Protocol", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        self._metadata_entry(side, "Name", self.protocol_name_var)
+        self._metadata_entry(side, "Objective", self.protocol_objective_var)
+        self._metadata_entry(side, "Steps", self.protocol_steps_var)
+        self._metadata_entry(side, "Acceptance", self.protocol_acceptance_var)
         ttk.Label(side, text="Research use only. Use battery power.", wraplength=230, justify=tk.LEFT).pack(anchor=tk.W)
 
         self.notebook = ttk.Notebook(main)
@@ -263,6 +274,7 @@ class App(tk.Tk):
             write_metadata_json(csv_path.with_suffix(".json"), self._metadata())
             write_events_json(self._events_path(csv_path), self.event_markers)
             write_calibration_json(self._calibration_path(csv_path), self._calibration())
+            write_protocol_json(self._protocol_path(csv_path), self._protocol())
             self.path_var.set(f"CSV: {csv_path}")
         self.worker.start(port, csv_path)
         self.start_button.configure(state=tk.DISABLED)
@@ -287,6 +299,7 @@ class App(tk.Tk):
             self._show_recording(recording.samples)
             self._load_event_sidecar(Path(path))
             self._load_calibration_sidecar(Path(path))
+            self._load_protocol_sidecar(Path(path))
             self.path_var.set(f"CSV: {path}")
             self._log(f"Loaded {path}")
         except Exception as exc:
@@ -334,6 +347,7 @@ class App(tk.Tk):
                 metadata=self._metadata(),
                 events=tuple(self.event_markers),
                 calibration=self._calibration(),
+                protocol=self._protocol(),
             )
             self._log(f"Exported report: {export.html_path}")
             messagebox.showinfo("Report exported", f"Saved report:\n{export.html_path}")
@@ -431,6 +445,9 @@ class App(tk.Tk):
     def _calibration_path(self, csv_path: Path) -> Path:
         return csv_path.with_suffix(".calibration.json")
 
+    def _protocol_path(self, csv_path: Path) -> Path:
+        return csv_path.with_suffix(".protocol.json")
+
     def _load_event_sidecar(self, csv_path: Path) -> None:
         path = self._events_path(csv_path)
         if not path.exists():
@@ -457,6 +474,15 @@ class App(tk.Tk):
             label=self.calibration_label_var.get(),
         ).normalized()
 
+    def _protocol(self) -> TestProtocol:
+        return TestProtocol(
+            name=self.protocol_name_var.get(),
+            objective=self.protocol_objective_var.get(),
+            operator_instructions="Follow the listed protocol steps.",
+            steps=_parse_protocol_steps(self.protocol_steps_var.get()),
+            acceptance_notes=self.protocol_acceptance_var.get(),
+        ).normalized()
+
     def _load_calibration_sidecar(self, csv_path: Path) -> None:
         path = self._calibration_path(csv_path)
         if not path.exists():
@@ -467,12 +493,24 @@ class App(tk.Tk):
         self.pga_gain_var.set(f"{calibration.pga_gain:g}")
         self._log(f"Loaded calibration: {path}")
 
+    def _load_protocol_sidecar(self, csv_path: Path) -> None:
+        path = self._protocol_path(csv_path)
+        if not path.exists():
+            return
+        protocol = read_protocol_json(path)
+        self.protocol_name_var.set(protocol.name)
+        self.protocol_objective_var.set(protocol.objective)
+        self.protocol_steps_var.set(_format_protocol_steps(protocol.steps))
+        self.protocol_acceptance_var.set(protocol.acceptance_notes)
+        self._log(f"Loaded protocol: {path}")
+
     def _write_current_sidecars(self) -> None:
         if self.recording_path is None:
             return
         write_metadata_json(self.recording_path.with_suffix(".json"), self._metadata())
         write_events_json(self._events_path(self.recording_path), self.event_markers)
         write_calibration_json(self._calibration_path(self.recording_path), self._calibration())
+        write_protocol_json(self._protocol_path(self.recording_path), self._protocol())
 
     def _tick(self) -> None:
         latest = None
@@ -637,6 +675,29 @@ def _float_from_var(variable: tk.StringVar, fallback: float) -> float:
         return float(variable.get())
     except ValueError:
         return fallback
+
+
+def _format_protocol_steps(steps: tuple[ProtocolStep, ...]) -> str:
+    return "; ".join(
+        f"{step.start_seconds:g},{step.duration_seconds:g},{step.label},{step.instruction}" for step in steps
+    )
+
+
+def _parse_protocol_steps(text: str) -> tuple[ProtocolStep, ...]:
+    steps: list[ProtocolStep] = []
+    for chunk in text.split(";"):
+        parts = [part.strip() for part in chunk.split(",", 3)]
+        if len(parts) != 4:
+            continue
+        try:
+            start = float(parts[0])
+            duration = float(parts[1])
+        except ValueError:
+            continue
+        steps.append(ProtocolStep(start, duration, parts[2], parts[3]).normalized())
+    if steps:
+        return tuple(steps)
+    return protocol_template().steps
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ from ads1292_studio.csv_io import CsvRecorder, read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.events import event_template, read_events_json, write_events_json
 from ads1292_studio.metadata import metadata_template, read_metadata_json, write_metadata_json
+from ads1292_studio.protocol import protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, evaluate_quality_gate
 from ads1292_studio.report import export_review_report
@@ -98,12 +99,17 @@ def cmd_report(args: argparse.Namespace) -> int:
         write_calibration_json(args.write_calibration_template, calibration_template())
         print(f"calibration_template={args.write_calibration_template}")
         return 0
+    if args.write_protocol_template:
+        write_protocol_json(args.write_protocol_template, protocol_template())
+        print(f"protocol_template={args.write_protocol_template}")
+        return 0
     if args.csv is None:
         raise SystemExit("CSV path is required unless writing a template")
     recording = read_recording_csv(args.csv)
     metadata = read_metadata_json(args.meta) if args.meta else None
     events = read_events_json(args.events) if args.events else tuple()
     calibration = read_calibration_json(args.calibration) if args.calibration else calibration_template()
+    protocol = read_protocol_json(args.protocol) if args.protocol else None
     export = export_review_report(
         samples=recording.samples,
         out_dir=args.out,
@@ -113,6 +119,7 @@ def cmd_report(args: argparse.Namespace) -> int:
         metadata=metadata,
         events=events,
         calibration=calibration,
+        protocol=protocol,
     )
     print(f"html={export.html_path}")
     print(f"ecg_png={export.ecg_png_path}")
@@ -193,9 +200,11 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--meta", type=Path)
     report.add_argument("--events", type=Path)
     report.add_argument("--calibration", type=Path)
+    report.add_argument("--protocol", type=Path)
     report.add_argument("--write-meta-template", type=Path)
     report.add_argument("--write-events-template", type=Path)
     report.add_argument("--write-calibration-template", type=Path)
+    report.add_argument("--write-protocol-template", type=Path)
     report.set_defaults(func=cmd_report)
     batch = sub.add_parser("batch")
     batch.add_argument("csvs", type=Path, nargs="+")

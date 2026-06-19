@@ -11,6 +11,7 @@ from ads1292_studio.calibration import calibration_template, read_calibration_js
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.events import read_events_json
 from ads1292_studio.metadata import read_metadata_json
+from ads1292_studio.protocol import read_protocol_json
 from ads1292_studio.report import export_review_report
 
 
@@ -47,10 +48,12 @@ def export_session_package(
     metadata = None
     events = tuple()
     calibration = calibration_template()
+    protocol = None
     sidecars = (
         ("metadata", source_csv.with_suffix(".json")),
         ("events", source_csv.with_suffix(".events.json")),
         ("calibration", source_csv.with_suffix(".calibration.json")),
+        ("protocol", source_csv.with_suffix(".protocol.json")),
     )
     for role, sidecar in sidecars:
         if not sidecar.exists():
@@ -64,6 +67,8 @@ def export_session_package(
             events = read_events_json(copied)
         elif role == "calibration":
             calibration = read_calibration_json(copied)
+        elif role == "protocol":
+            protocol = read_protocol_json(copied)
 
     recording = read_recording_csv(copied_csv)
     report_dir = package_dir / "report"
@@ -76,6 +81,7 @@ def export_session_package(
         metadata=metadata,
         events=events,
         calibration=calibration,
+        protocol=protocol,
     )
     files.extend(
         [

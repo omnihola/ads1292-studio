@@ -4,6 +4,7 @@ from ads1292_studio.calibration import Calibration, read_calibration_json, write
 from ads1292_studio.cli import main
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.models import StreamSample
+from ads1292_studio.protocol import ProtocolStep, TestProtocol, read_protocol_json, write_protocol_json
 
 
 def _write_small_csv(path: Path) -> None:
@@ -58,6 +59,35 @@ def test_cli_report_uses_calibration_json(tmp_path: Path) -> None:
     html = next(out_dir.glob("*.html")).read_text()
     assert "half-vref-gain-3" in html
     assert "1.210 V" in html
+
+
+def test_cli_writes_protocol_template(tmp_path: Path) -> None:
+    path = tmp_path / "protocol-template.json"
+
+    assert main(["report", "--write-protocol-template", str(path)]) == 0
+
+    assert read_protocol_json(path).steps[0].label == "baseline"
+
+
+def test_cli_report_uses_protocol_json(tmp_path: Path) -> None:
+    csv_path = tmp_path / "recording.csv"
+    protocol_path = tmp_path / "protocol.json"
+    out_dir = tmp_path / "report"
+    _write_small_csv(csv_path)
+    write_protocol_json(
+        protocol_path,
+        TestProtocol(
+            name="CLI protocol",
+            objective="Confirm protocol appears in report.",
+            steps=(ProtocolStep(start_seconds=0.0, duration_seconds=1.0, label="baseline", instruction="Sit still."),),
+        ),
+    )
+
+    assert main(["report", str(csv_path), "--protocol", str(protocol_path), "--out", str(out_dir)]) == 0
+
+    html = next(out_dir.glob("*.html")).read_text()
+    assert "Test Protocol" in html
+    assert "CLI protocol" in html
 
 
 def test_cli_package_writes_manifest(tmp_path: Path) -> None:

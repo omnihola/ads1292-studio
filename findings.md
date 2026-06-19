@@ -38,6 +38,7 @@
 | Add session package manifest | A complete experiment record should bundle raw CSV, sidecars, report outputs, metrics, bytes, and SHA256 checksums. |
 | Add package verification | The package manifest should not only record hashes; the app must verify them after transfer or archive. |
 | Add quality gate | Electrode validation needs explicit pass/fail gates for contact, duration, QRS, R peaks, and HR bounds. |
+| Add protocol sidecars | Commercial-quality gel validation needs the planned baseline, motion, and recovery steps saved with each recording. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -55,6 +56,7 @@
 | Session package output can pollute git | Generated `packages/` artifacts should be ignored like `reports/` and `recordings/`. |
 | Package verify was missing after manifest export | Added a verifier so modified/missing files are detected instead of silently trusted. |
 | Synthetic QC data can fail strict QRS checks | Keep default QC strict for real recordings, but allow `--allow-unclear-qrs` for debug fixtures. |
+| Protocol sidecar smoke setup briefly touched the parent `record/` folder | Removed the temporary file and reran smoke using ignored files inside `ads1292-studio/reports/`. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -73,6 +75,8 @@
 - Session package command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package <csv> --out packages`
 - Session package verify command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/<session>/manifest.json`
 - Quality gate command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv>`
+- Protocol template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-protocol-template reports/protocol-template.json`
+- Protocol report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --protocol reports/protocol-template.json --out reports`
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

@@ -198,6 +198,28 @@
   - `tests/test_cli.py`
   - `README.md`
 
+### Phase 14: Protocol Templates & Test Plan Sidecars
+- **Status:** complete
+- Actions taken:
+  - Added `ProtocolStep` and `TestProtocol` models with JSON read/write helpers.
+  - Added a MOTAC ECG validation protocol template with baseline, motion, and recovery steps.
+  - Added protocol sections to exported HTML reports.
+  - Added CLI `report --write-protocol-template` and `report --protocol`.
+  - Added session package support for `.protocol.json` sidecars and manifest entries.
+  - Added GUI protocol fields and automatic `.protocol.json` sidecar save/load.
+  - Added tests for protocol JSON, report integration, CLI integration, and package manifest integration.
+- Files created/modified:
+  - `src/ads1292_studio/protocol.py`
+  - `src/ads1292_studio/report.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/session_package.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_protocol.py`
+  - `tests/test_quality_report.py`
+  - `tests/test_cli.py`
+  - `tests/test_session_package.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -248,6 +270,13 @@
 | Quality gate syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/quality_gate.py src/ads1292_studio/report.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
 | Quality gate real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv>` | Real ADS1292 CSV passes QC | `quality_gate=Pass`, `ecg_source=CH2`, `quality=Good ECG/QRS` | Pass |
 | Quality gate report smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --out reports/qc-smoke` | HTML contains Quality Gate Pass | grep found `Quality Gate`, `Pass`, `Good ECG/QRS`, `CH2` | Pass |
+| Protocol TDD red check | `conda run -n sensor python -m pytest tests/test_protocol.py tests/test_quality_report.py tests/test_cli.py -q` before implementation | Missing protocol module | `ModuleNotFoundError: ads1292_studio.protocol` | Pass |
+| Protocol related tests | `conda run -n sensor python -m pytest tests/test_protocol.py tests/test_quality_report.py tests/test_cli.py tests/test_session_package.py -q` | Protocol/report/CLI/package tests pass | 15 passed | Pass |
+| Full tests after protocol sidecars | `conda run -n sensor python -m pytest -q` | All tests pass | 35 passed | Pass |
+| Protocol syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/protocol.py src/ads1292_studio/report.py src/ads1292_studio/cli.py src/ads1292_studio/session_package.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| Protocol template smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-protocol-template reports/protocol-smoke/protocol.json` | Template JSON generated | `protocol_template=reports/protocol-smoke/protocol.json` | Pass |
+| Protocol report real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --protocol reports/protocol-smoke/protocol.json --out reports/protocol-smoke` | Report includes protocol and CH2 quality | grep found `Test Protocol`, `MOTAC ECG validation`, `baseline`, `motion`, `recovery`, `CH2`, `Good ECG/QRS` | Pass |
+| Protocol package real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package reports/protocol-smoke/package-source.csv --out packages/protocol-smoke` | Manifest and package report include protocol | grep found `"role": "protocol"`, `Test Protocol`, `CH2`, `Good ECG/QRS` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -265,12 +294,14 @@
 | 2026-06-18 | `packages/` output was initially unignored | 1 | Added `packages/` to `.gitignore`. |
 | 2026-06-18 | Package verification API did not exist | 1 | Added `verify_session_package`, CLI `verify-package`, GUI Verify Package, and tamper test. |
 | 2026-06-18 | Synthetic QC fixture failed default QRS gate | 1 | Added explicit `--allow-unclear-qrs` option for synthetic/debug records and kept default real-data gate strict. |
+| 2026-06-18 | Pytest warned that `TestProtocol` looked like a test class | 1 | Added `__test__ = False` to the dataclass. |
+| 2026-06-18 | Temporary protocol sidecar was copied outside `ads1292-studio/` during smoke setup | 1 | Removed it immediately and reran package smoke with ignored files inside `reports/`. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 13 complete; ready to commit and push quality gate iteration. |
+| Where am I? | Phase 14 complete; ready to commit and push protocol sidecar iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, and quality gates. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, and protocol sidecars. |
