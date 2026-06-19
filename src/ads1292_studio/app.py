@@ -20,6 +20,7 @@ from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.events import EventMarker, read_events_json, write_events_json
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
+from ads1292_studio.gui_session_index import build_session_index_message
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
@@ -413,7 +414,7 @@ class App(tk.Tk):
                 title="ADS1292 Session Index",
             )
             self._log(f"Exported session index: {export.html_path}")
-            messagebox.showinfo("Session index exported", f"Indexed {len(export.rows)} recordings:\n{export.html_path}")
+            messagebox.showinfo("Session index exported", build_session_index_message(export))
         except Exception as exc:
             messagebox.showerror("Session index failed", str(exc))
 

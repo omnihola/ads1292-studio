@@ -433,6 +433,20 @@
   - `tests/test_cli.py`
   - `README.md`
 
+### Phase 28: GUI Session Index Summary Message
+- **Status:** complete
+- Actions taken:
+  - Added `gui_session_index.py` with a testable `build_session_index_message()` helper.
+  - Included total recordings, package-ready, incomplete, and signal-review counts in the GUI confirmation text.
+  - Included package, sidecar-completion, and signal-review action queue counts in the GUI confirmation text.
+  - Wired the GUI `Session Index` action to show the new summary message after export.
+  - Verified against the real `../record/ads1292` folder; the generated GUI message reports 9 records and 9 complete-sidecar actions.
+- Files created/modified:
+  - `src/ads1292_studio/gui_session_index.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_gui_session_index.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -563,6 +577,11 @@
 | Session index action-summary full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 60 passed | Pass |
 | Session index action-summary syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_index.py src/ads1292_studio/cli.py` | No syntax errors | Passed | Pass |
 | Session index action-summary real folder smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ../record/ads1292 --out reports/session-index-action-summary-smoke --title ADS1292-Action-Summary-Smoke` | Real folder action queue counts are printed and HTML contains summary text | `rows=9`, `action_package_record=0`, `action_complete_sidecars=9`, `action_review_signal=0` | Pass |
+| GUI session index message TDD red check | `conda run -n sensor python -m pytest tests/test_gui_session_index.py -q` before implementation | Missing GUI session index message helper | `ModuleNotFoundError: No module named 'ads1292_studio.gui_session_index'` | Pass |
+| GUI session index message focused test | `conda run -n sensor python -m pytest tests/test_gui_session_index.py -q` | GUI message includes readiness and action queue counts | 1 passed | Pass |
+| GUI session index message full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 61 passed | Pass |
+| GUI session index message syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/gui_session_index.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| GUI session index message real folder smoke | `PYTHONPATH=src conda run -n sensor python -c "... build_session_index_message(export) ..."` | Real folder GUI message includes queue counts | Message printed `Indexed 9 recordings`, `Package-ready: 0`, `Incomplete records: 9`, `Complete sidecars: 9` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -598,12 +617,13 @@
 | 2026-06-18 | Session index summary fields were missing during TDD red check | 1 | Added `SessionIndexSummary`, HTML summary text, and CLI summary output. |
 | 2026-06-18 | Session index next-action field was missing during TDD red check | 1 | Added `next_action` to row model, CSV export, and HTML export. |
 | 2026-06-18 | Session index action-summary fields were missing during TDD red check | 1 | Added next-action counts to summary, HTML export, and CLI output. |
+| 2026-06-18 | GUI session index message helper was missing during TDD red check | 1 | Added `gui_session_index.py` and wired it into `app.session_index()`. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 27 complete; ready to commit and push session index action-summary iteration. |
+| Where am I? | Phase 28 complete; ready to commit and push GUI session index summary-message iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, and next-action queue counts. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, and GUI session index summary confirmation. |

@@ -105,6 +105,8 @@ by electrode label.
   `complete_sidecars`, `review_signal`, or `package_record`.
 - Session index HTML and CLI output include next-action summary counts for
   package, sidecar-completion, and signal-review queues.
+- GUI Session Index export confirmation shows the same readiness and action
+  queue counts as the CLI output.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety
