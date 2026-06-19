@@ -4,6 +4,7 @@ from ads1292_studio.app import (
     app_visual_tokens,
     app_window_spec,
     base_chrome_spec,
+    base_notebook_styles,
     button_chrome_spec,
     card_label_spec,
     empty_plot_messages,
@@ -252,6 +253,17 @@ def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:
 
 def test_gui_layout_uses_task_based_sidebar_tabs() -> None:
     assert sidebar_tab_labels() == ("Status", "Session", "Validation", "Protocol", "Actions")
+
+
+def test_base_notebook_styles_keep_tab_defaults_consistent() -> None:
+    assert base_notebook_styles() == {
+        "notebook": "TNotebook",
+        "tab": "TNotebook.Tab",
+        "background": "#F6F8FB",
+        "borderwidth": 0,
+        "tab_padding": (14, 7),
+        "tab_font": ("Aptos", 12, "bold"),
+    }
 
 
 def test_sidebar_notebook_styles_make_navigation_compact() -> None:

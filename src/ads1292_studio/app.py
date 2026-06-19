@@ -235,6 +235,14 @@ BASE_CHROME_SPEC = {
     "sidebar": "SidebarShell.TFrame",
     "main": "Main.TFrame",
 }
+BASE_NOTEBOOK_STYLES = {
+    "notebook": "TNotebook",
+    "tab": "TNotebook.Tab",
+    "background": "#F6F8FB",
+    "borderwidth": 0,
+    "tab_padding": (14, 7),
+    "tab_font": ("Aptos", 12, "bold"),
+}
 MAIN_TABS = ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
 STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
 SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
@@ -679,6 +687,10 @@ def app_visual_tokens() -> dict[str, str]:
 
 def base_chrome_spec() -> dict[str, object]:
     return dict(BASE_CHROME_SPEC)
+
+
+def base_notebook_styles() -> dict[str, object]:
+    return dict(BASE_NOTEBOOK_STYLES)
 
 
 def app_window_spec() -> dict[str, object]:
@@ -1944,8 +1956,17 @@ class App(tk.Tk):
             ],
         )
         style.configure("TCheckbutton", background=tokens["panel_alt"], foreground=tokens["ink"])
-        style.configure("TNotebook", background=tokens["surface"], borderwidth=0)
-        style.configure("TNotebook.Tab", padding=(14, 7), font=("Aptos", 12, "bold"))
+        base_notebook = base_notebook_styles()
+        style.configure(
+            base_notebook["notebook"],
+            background=base_notebook["background"],
+            borderwidth=base_notebook["borderwidth"],
+        )
+        style.configure(
+            base_notebook["tab"],
+            padding=base_notebook["tab_padding"],
+            font=base_notebook["tab_font"],
+        )
         sidebar_tabs = sidebar_notebook_styles()
         style.configure(
             "Sidebar.TNotebook",
