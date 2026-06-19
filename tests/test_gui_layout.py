@@ -591,7 +591,7 @@ def test_plot_trace_styles_returns_nested_copies() -> None:
 
 def test_pqrst_plot_style_keeps_morphology_review_readable() -> None:
     assert pqrst_plot_style() == {
-        "average": {"linewidth": 2.1, "label": "average beat"},
+        "average": {"linewidth": 2.25, "label": "average beat"},
         "r_marker": {"linestyle": "--", "linewidth": 1.0, "label": "R"},
         "p_search": {"start_ms": -220, "end_ms": -80, "color": "#1E7A46", "alpha": 0.09, "label": "P search"},
         "t_search": {"start_ms": 120, "end_ms": 380, "color": "#A76400", "alpha": 0.09, "label": "T search"},
@@ -616,7 +616,7 @@ def test_pqrst_plot_style_returns_nested_copies() -> None:
     style = pqrst_plot_style()
     style["average"]["linewidth"] = 99
 
-    assert pqrst_plot_style()["average"]["linewidth"] == 2.1
+    assert pqrst_plot_style()["average"]["linewidth"] == 2.25
 
 
 def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
