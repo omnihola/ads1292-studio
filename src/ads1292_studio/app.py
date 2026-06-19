@@ -287,6 +287,14 @@ SAFETY_NOTICE_STYLES = {
     "label": "SafetyNotice.TLabel",
     "stripe": "#A76400",
 }
+SIDEBAR_TEXT_CARD_SPEC = {
+    "stripe_width": 4,
+    "label_padding": (10, 8),
+    "content_padding": (10, 8),
+    "primary_wrap": 240,
+    "detail_wrap": 230,
+    "value_top_padding": (3, 0),
+}
 STATUS_DETAIL_STYLES = {
     "frame": "StatusDetail.TFrame",
     "label": "StatusDetailLabel.TLabel",
@@ -457,6 +465,10 @@ def workflow_hint_styles() -> dict[str, str]:
 
 def safety_notice_styles() -> dict[str, str]:
     return dict(SAFETY_NOTICE_STYLES)
+
+
+def sidebar_text_card_spec() -> dict[str, object]:
+    return dict(SIDEBAR_TEXT_CARD_SPEC)
 
 
 def status_detail_styles() -> dict[str, str]:
@@ -1482,11 +1494,12 @@ class App(tk.Tk):
 
     def _build_workflow_hint(self, parent: ttk.Frame) -> None:
         styles = workflow_hint_styles()
+        spec = sidebar_text_card_spec()
         self.workflow_hint_frame = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
         self.workflow_hint_frame.pack(anchor=tk.W, fill=tk.X, pady=(0, 4))
         self.workflow_hint_stripe = tk.Frame(
             self.workflow_hint_frame,
-            width=4,
+            width=spec["stripe_width"],
             bg=styles["stripe"],
             highlightthickness=0,
         )
@@ -1494,20 +1507,21 @@ class App(tk.Tk):
         self.workflow_hint_label = ttk.Label(
             self.workflow_hint_frame,
             textvariable=self.workflow_hint_var,
-            wraplength=240,
+            wraplength=spec["primary_wrap"],
             justify=tk.LEFT,
             style=styles["label"],
-            padding=(10, 8),
+            padding=spec["label_padding"],
         )
         self.workflow_hint_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
     def _build_safety_notice(self, parent: ttk.Frame) -> None:
         styles = safety_notice_styles()
+        spec = sidebar_text_card_spec()
         self.safety_notice_frame = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
         self.safety_notice_frame.pack(anchor=tk.W, fill=tk.X, pady=(0, 4))
         self.safety_notice_stripe = tk.Frame(
             self.safety_notice_frame,
-            width=4,
+            width=spec["stripe_width"],
             bg=styles["stripe"],
             highlightthickness=0,
         )
@@ -1515,10 +1529,10 @@ class App(tk.Tk):
         self.safety_notice_label = ttk.Label(
             self.safety_notice_frame,
             text="Research use only. Use battery power during human-subject measurements.",
-            wraplength=240,
+            wraplength=spec["primary_wrap"],
             justify=tk.LEFT,
             style=styles["label"],
-            padding=(10, 8),
+            padding=spec["label_padding"],
         )
         self.safety_notice_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
@@ -1543,58 +1557,61 @@ class App(tk.Tk):
 
     def _build_status_detail_card(self, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:
         styles = status_detail_styles()
+        spec = sidebar_text_card_spec()
         row = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
         row.pack(anchor=tk.W, fill=tk.X, pady=3)
-        stripe = tk.Frame(row, width=4, bg=styles["stripe"], highlightthickness=0)
+        stripe = tk.Frame(row, width=spec["stripe_width"], bg=styles["stripe"], highlightthickness=0)
         stripe.pack(side=tk.LEFT, fill=tk.Y)
-        content = ttk.Frame(row, padding=(10, 8), style=styles["frame"])
+        content = ttk.Frame(row, padding=spec["content_padding"], style=styles["frame"])
         content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ttk.Label(content, text=label, style=styles["label"]).pack(anchor=tk.W)
         value_label = ttk.Label(
             content,
             textvariable=variable,
-            wraplength=230,
+            wraplength=spec["detail_wrap"],
             justify=tk.LEFT,
             style=styles["value"],
         )
-        value_label.pack(anchor=tk.W, fill=tk.X, pady=(3, 0))
+        value_label.pack(anchor=tk.W, fill=tk.X, pady=spec["value_top_padding"])
         self.status_detail_value_labels[label] = value_label
 
     def _build_event_count_card(self, parent: ttk.Frame) -> None:
         styles = event_count_styles()
+        spec = sidebar_text_card_spec()
         row = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
         row.pack(anchor=tk.W, fill=tk.X, pady=(7, 2))
-        stripe = tk.Frame(row, width=4, bg=styles["stripe"], highlightthickness=0)
+        stripe = tk.Frame(row, width=spec["stripe_width"], bg=styles["stripe"], highlightthickness=0)
         stripe.pack(side=tk.LEFT, fill=tk.Y)
-        content = ttk.Frame(row, padding=(10, 8), style=styles["frame"])
+        content = ttk.Frame(row, padding=spec["content_padding"], style=styles["frame"])
         content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ttk.Label(content, text="Event markers", style=styles["label"]).pack(anchor=tk.W)
         self.event_count_label = ttk.Label(
             content,
             textvariable=self.event_count_var,
-            wraplength=230,
+            wraplength=spec["detail_wrap"],
             justify=tk.LEFT,
             style=styles["value"],
         )
-        self.event_count_label.pack(anchor=tk.W, fill=tk.X, pady=(3, 0))
+        self.event_count_label.pack(anchor=tk.W, fill=tk.X, pady=spec["value_top_padding"])
 
     def _build_protocol_note_card(self, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:
         styles = protocol_note_styles()
+        spec = sidebar_text_card_spec()
         row = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
         row.pack(anchor=tk.W, fill=tk.X, pady=(8, 2))
-        stripe = tk.Frame(row, width=4, bg=styles["stripe"], highlightthickness=0)
+        stripe = tk.Frame(row, width=spec["stripe_width"], bg=styles["stripe"], highlightthickness=0)
         stripe.pack(side=tk.LEFT, fill=tk.Y)
-        content = ttk.Frame(row, padding=(10, 8), style=styles["frame"])
+        content = ttk.Frame(row, padding=spec["content_padding"], style=styles["frame"])
         content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ttk.Label(content, text=label, style=styles["label"]).pack(anchor=tk.W)
         value_label = ttk.Label(
             content,
             textvariable=variable,
-            wraplength=230,
+            wraplength=spec["detail_wrap"],
             justify=tk.LEFT,
             style=styles["value"],
         )
-        value_label.pack(anchor=tk.W, fill=tk.X, pady=(3, 0))
+        value_label.pack(anchor=tk.W, fill=tk.X, pady=spec["value_top_padding"])
         self.protocol_note_labels[label] = value_label
 
     def _build_status_cards(self, parent: ttk.Frame) -> None:
