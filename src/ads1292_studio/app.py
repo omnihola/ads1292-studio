@@ -402,12 +402,12 @@ EMPTY_PLOT_STYLE = {
     "text_color": "#516070",
     "box_face": "#F8FAFD",
     "box_edge": "#D9E1EC",
-    "font_size": 11,
-    "font_weight": "bold",
-    "alpha": 0.96,
+    "font_size": 10,
+    "font_weight": "normal",
+    "alpha": 0.9,
     "box_pad": 0.55,
     "rounding": 0.18,
-    "line_width": 0.8,
+    "line_width": 0.6,
 }
 LOG_PANEL_SPEC = {
     "shell": "Main.TFrame",
