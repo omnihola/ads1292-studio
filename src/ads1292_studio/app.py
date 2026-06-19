@@ -97,6 +97,12 @@ SECONDARY_ACTION_BUTTONS = (
     "Session Index",
 )
 SIDEBAR_TABS = ("Status", "Session", "Validation", "Protocol", "Actions")
+SIDEBAR_LAYOUT_SPEC = {
+    "shell": "SidebarShell.TFrame",
+    "width": 348,
+    "padding": (12, 12),
+    "scroll_width": 316,
+}
 MAIN_TABS = ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
 STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
 SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
@@ -412,6 +418,10 @@ def action_section_styles() -> dict[str, str]:
 
 def sidebar_notebook_styles() -> dict[str, str]:
     return dict(SIDEBAR_NOTEBOOK_STYLES)
+
+
+def sidebar_layout_spec() -> dict[str, object]:
+    return dict(SIDEBAR_LAYOUT_SPEC)
 
 
 def workspace_notebook_styles() -> dict[str, str]:
@@ -950,7 +960,14 @@ class App(tk.Tk):
 
         body = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        side_shell = ttk.Frame(body, width=340, padding=(10, 10), style="SidebarShell.TFrame")
+        sidebar_spec = sidebar_layout_spec()
+        side_shell = ttk.Frame(
+            body,
+            width=sidebar_spec["width"],
+            padding=sidebar_spec["padding"],
+            style=str(sidebar_spec["shell"]),
+        )
+        self.sidebar_shell = side_shell
         body.add(side_shell, weight=0)
         sidebar = self._build_sidebar(side_shell)
         status_side = sidebar["Status"]
@@ -1562,13 +1579,14 @@ class App(tk.Tk):
             self.signal_card_value_labels[label] = value_label
 
     def _build_sidebar(self, parent: ttk.Frame) -> dict[str, ttk.Frame]:
+        spec = sidebar_layout_spec()
         self.sidebar_notebook = ttk.Notebook(parent, style=sidebar_notebook_styles()["notebook"])
         self.sidebar_notebook.pack(fill=tk.BOTH, expand=True)
         self.sidebar_scrolls: dict[str, ScrollableFrame] = {}
         sections: dict[str, ttk.Frame] = {}
         for label in SIDEBAR_TABS:
             tab = ttk.Frame(self.sidebar_notebook)
-            scroll = ScrollableFrame(tab, width=310)
+            scroll = ScrollableFrame(tab, width=int(spec["scroll_width"]))
             scroll.frame.pack(fill=tk.BOTH, expand=True)
             self.sidebar_notebook.add(tab, text=label)
             self.sidebar_scrolls[label] = scroll

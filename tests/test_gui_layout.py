@@ -22,6 +22,7 @@ from ads1292_studio.app import (
     section_heading_styles,
     sidebar_action_button_style,
     sidebar_field_styles,
+    sidebar_layout_spec,
     sidebar_notebook_styles,
     sidebar_tab_labels,
     status_detail_styles,
@@ -115,6 +116,15 @@ def test_sidebar_notebook_styles_make_navigation_compact() -> None:
         "tab": "Sidebar.TNotebook.Tab",
         "selected_foreground": "#2F6FED",
         "inactive_foreground": "#657084",
+    }
+
+
+def test_sidebar_layout_spec_stabilizes_control_column() -> None:
+    assert sidebar_layout_spec() == {
+        "shell": "SidebarShell.TFrame",
+        "width": 348,
+        "padding": (12, 12),
+        "scroll_width": 316,
     }
 
 
