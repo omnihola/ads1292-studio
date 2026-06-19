@@ -473,7 +473,7 @@ PLOT_AXIS_STYLE = {
     "grid_linewidth": 0.7,
     "grid_alpha": 0.38,
     "axisbelow": True,
-    "spine_linewidth": 0.8,
+    "spine_linewidth": 0.7,
     "tick_label_size": 9,
     "tick_direction": "out",
     "tick_length": 3.0,
