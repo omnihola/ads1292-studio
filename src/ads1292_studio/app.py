@@ -205,7 +205,7 @@ TOOLBAR_LAYOUT_SPEC = {
     "save_padding": (8, 4),
     "toggle_padding": (4, 4),
     "separator_width": 1,
-    "hint_padding": (10, 5),
+    "hint_padding": (12, 5),
 }
 SECONDARY_ACTION_BUTTONS = (
     "Load CSV",
