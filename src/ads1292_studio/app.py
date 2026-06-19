@@ -679,9 +679,12 @@ class App(tk.Tk):
 
     def _build_live_plot(self) -> None:
         fig = Figure(figsize=(10, 7), dpi=100)
+        fig.subplots_adjust(hspace=0.55)
         self.ax_live_ecg = fig.add_subplot(311)
         self.ax_live_resp = fig.add_subplot(312, sharex=self.ax_live_ecg)
         self.ax_live_status = fig.add_subplot(313, sharex=self.ax_live_ecg)
+        for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
+            ax.label_outer()
         self.ax_live_ecg.set_ylabel("uV")
         self.ax_live_resp.set_ylabel("uV")
         self.ax_live_status.set_xlabel("Time (s)")
@@ -694,9 +697,12 @@ class App(tk.Tk):
 
     def _build_review_plot(self) -> None:
         fig = Figure(figsize=(10, 7), dpi=100)
+        fig.subplots_adjust(hspace=0.55)
         self.ax_review_ecg = fig.add_subplot(311)
         self.ax_review_resp = fig.add_subplot(312, sharex=self.ax_review_ecg)
         self.ax_review_status = fig.add_subplot(313, sharex=self.ax_review_ecg)
+        for ax in (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status):
+            ax.label_outer()
         self.ax_review_status.set_xlabel("Samples")
         self.ax_review_ecg.set_ylabel("uV")
         self.ax_review_resp.set_ylabel("uV")
