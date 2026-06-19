@@ -426,13 +426,17 @@ def test_log_panel_spec_keeps_long_sessions_readable() -> None:
         "height": 12,
         "wrap": "word",
         "scrollbar": "vertical",
-        "font": ("Aptos", 12),
-        "background": "#FFFFFF",
+        "font": ("Menlo", 12),
+        "background": "#F8FAFD",
         "foreground": "#172033",
         "insert": "#2F6FED",
         "select_background": "#2F6FED",
         "select_foreground": "#FFFFFF",
         "text_padding": (12, 10),
+        "spacing": (2, 2),
+        "borderwidth": 0,
+        "highlightthickness": 0,
+        "relief": "flat",
     }
 
 
