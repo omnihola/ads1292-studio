@@ -52,7 +52,9 @@ VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
 DEFAULT_FILTER_ENABLED = False
 DEFAULT_ECG_INVERTED = False
-DISPLAY_SMOOTHING_WINDOW = 5
+DISPLAY_SMOOTHING_WINDOW = 11
+DISPLAY_MIN_ECG_SPAN_COUNTS = 8.0
+DISPLAY_MIN_RESP_SPAN_COUNTS = 40.0
 APP_WINDOW_SPEC = {
     "geometry": "1320x860",
     "min_size": (1120, 740),
@@ -3052,8 +3054,8 @@ class App(tk.Tk):
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.set_xlim(left, right)
         if self.autoscale_var.get():
-            self.ax_live_ecg.set_ylim(*robust_ylim(visible_ecg))
-            self.ax_live_resp.set_ylim(*robust_ylim(visible_resp))
+            self.ax_live_ecg.set_ylim(*robust_ylim(visible_ecg_plot, min_span=DISPLAY_MIN_ECG_SPAN_COUNTS))
+            self.ax_live_resp.set_ylim(*robust_ylim(visible_resp_plot, min_span=DISPLAY_MIN_RESP_SPAN_COUNTS))
             self.ax_live_status.set_ylim(-0.5, max(1.0, float(visible_status.max()) + 0.5 if visible_status.size else 1.0))
         hr = heart_rate_summary(peaks, SAMPLE_RATE_HZ)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
@@ -3100,8 +3102,10 @@ class App(tk.Tk):
         metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
         x = np.arange(ecg.size)
         status_arr = np.asarray(full_status_ints, dtype=float)
-        plot_x, plot_ecg = decimate_for_plot(x, smooth_for_plot(ecg, window=DISPLAY_SMOOTHING_WINDOW), MAX_POINTS)
-        _, plot_resp = decimate_for_plot(x, smooth_for_plot(resp, window=DISPLAY_SMOOTHING_WINDOW), MAX_POINTS)
+        display_ecg = smooth_for_plot(ecg, window=DISPLAY_SMOOTHING_WINDOW)
+        display_resp = smooth_for_plot(resp, window=DISPLAY_SMOOTHING_WINDOW)
+        plot_x, plot_ecg = decimate_for_plot(x, display_ecg, MAX_POINTS)
+        _, plot_resp = decimate_for_plot(x, display_resp, MAX_POINTS)
         _, plot_status = decimate_for_plot(x, status_arr, MAX_POINTS)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
         self.review_ecg_line.set_data(plot_x, plot_ecg)
@@ -3117,9 +3121,12 @@ class App(tk.Tk):
         )
         self._set_signal_axis_title(self.ax_review_resp, resp_label)
         self._set_signal_axis_title(self.ax_review_status, contact_label)
-        for ax, values in ((self.ax_review_ecg, ecg), (self.ax_review_resp, resp)):
+        for ax, values, min_span in (
+            (self.ax_review_ecg, display_ecg, DISPLAY_MIN_ECG_SPAN_COUNTS),
+            (self.ax_review_resp, display_resp, DISPLAY_MIN_RESP_SPAN_COUNTS),
+        ):
             ax.set_xlim(0, max(1, x[-1] if x.size else 1))
-            ax.set_ylim(*robust_ylim(values))
+            ax.set_ylim(*robust_ylim(values, min_span=min_span))
         self.ax_review_status.set_xlim(0, max(1, x[-1] if x.size else 1))
         self.ax_review_status.set_ylim(-0.5, max(1.0, float(status_arr.max()) + 0.5 if status_arr.size else 1.0))
         self.review_canvas.draw_idle()

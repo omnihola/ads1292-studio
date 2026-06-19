@@ -24,7 +24,7 @@ def decimate_for_plot(x, y, max_points: int) -> tuple[np.ndarray, np.ndarray]:
     return x_arr[::step], y_arr[::step]
 
 
-def robust_ylim(values) -> tuple[float, float]:
+def robust_ylim(values, *, min_span: float = 0.0) -> tuple[float, float]:
     arr = np.asarray(values, dtype=float)
     if arr.size == 0:
         return -1.0, 1.0
@@ -35,5 +35,11 @@ def robust_ylim(values) -> tuple[float, float]:
     if lo == hi:
         lo -= 1
         hi += 1
+    span = hi - lo
+    if span < min_span:
+        center = (hi + lo) / 2.0
+        half_span = min_span / 2.0
+        lo = center - half_span
+        hi = center + half_span
     pad = max(1.0, 0.15 * (hi - lo))
     return float(lo - pad), float(hi + pad)
