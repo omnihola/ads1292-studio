@@ -377,12 +377,19 @@ SIDEBAR_FIELD_STYLES = {
 }
 SECTION_HEADING_STYLES = {
     "label": "SectionHeading.TLabel",
-    "padding": (2, 4),
+    "padding": (2, 5),
+    "font": ("Aptos", 12, "bold"),
+    "background": "#F6F8FB",
+    "foreground": "#1F4FB2",
 }
 SIDEBAR_ACTION_BUTTON_STYLE = "SidebarAction.TButton"
 ACTION_SECTION_STYLES = {
     "frame": "ActionSection.TFrame",
     "label": "ActionSection.TLabel",
+    "padding": (8, 5),
+    "font": ("Aptos", 10, "bold"),
+    "background": "#EEF3FA",
+    "foreground": "#1F4FB2",
 }
 SIDEBAR_NOTEBOOK_STYLES = {
     "notebook": "Sidebar.TNotebook",
@@ -1459,12 +1466,13 @@ class App(tk.Tk):
             foreground=[("disabled", tokens["muted"]), ("active", tokens["accent_dark"])],
             background=[("active", tokens["panel_alt"])],
         )
+        section_heading = section_heading_styles()
         style.configure(
             "SectionHeading.TLabel",
-            background=tokens["surface"],
-            foreground=tokens["accent_dark"],
-            font=("Aptos", 12, "bold"),
-            padding=SECTION_HEADING_STYLES["padding"],
+            background=section_heading["background"],
+            foreground=section_heading["foreground"],
+            font=section_heading["font"],
+            padding=section_heading["padding"],
         )
         style.configure("Muted.TLabel", background=tokens["surface"], foreground=tokens["muted"])
         label_chrome = input_chrome["label"]
@@ -1474,13 +1482,14 @@ class App(tk.Tk):
             foreground=label_chrome["foreground"],
             font=label_chrome["font"],
         )
-        style.configure("ActionSection.TFrame", background=tokens["panel_alt"], borderwidth=0)
+        action_section = action_section_styles()
+        style.configure("ActionSection.TFrame", background=action_section["background"], borderwidth=0)
         style.configure(
             "ActionSection.TLabel",
-            background=tokens["panel_alt"],
-            foreground=tokens["accent_dark"],
-            font=("Aptos", 10, "bold"),
-            padding=(8, 4),
+            background=action_section["background"],
+            foreground=action_section["foreground"],
+            font=action_section["font"],
+            padding=action_section["padding"],
         )
         entry_chrome = input_chrome["entry"]
         style.configure(

@@ -294,7 +294,10 @@ def test_sidebar_field_styles_make_forms_consistent() -> None:
 def test_section_heading_styles_make_sidebar_groups_scannable() -> None:
     assert section_heading_styles() == {
         "label": "SectionHeading.TLabel",
-        "padding": (2, 4),
+        "padding": (2, 5),
+        "font": ("Aptos", 12, "bold"),
+        "background": "#F6F8FB",
+        "foreground": "#1F4FB2",
     }
 
 
@@ -306,6 +309,10 @@ def test_action_section_styles_make_sidebar_action_groups_scannable() -> None:
     assert action_section_styles() == {
         "frame": "ActionSection.TFrame",
         "label": "ActionSection.TLabel",
+        "padding": (8, 5),
+        "font": ("Aptos", 10, "bold"),
+        "background": "#EEF3FA",
+        "foreground": "#1F4FB2",
     }
 
 
