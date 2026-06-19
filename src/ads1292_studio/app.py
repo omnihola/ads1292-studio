@@ -884,6 +884,15 @@ def _gui_state(
     )
 
 
+def should_apply_control_state(
+    previous: GuiState | None,
+    current: GuiState,
+    *,
+    force: bool = False,
+) -> bool:
+    return force or previous != current
+
+
 def primary_toolbar_button_labels() -> tuple[str, ...]:
     return PRIMARY_TOOLBAR_BUTTONS
 
@@ -1311,6 +1320,7 @@ class App(tk.Tk):
         self.review_calibration_artists: list[object] = []
         self.ecg_paper_grid_cache: dict[int, tuple[float, float, float, float]] = {}
         self.calibration_pulse_cache: dict[int, str] = {}
+        self.last_control_state: GuiState | None = None
 
         self._build_ui()
         self.refresh_ports()
@@ -2974,7 +2984,7 @@ class App(tk.Tk):
             except queue.Empty:
                 break
 
-    def _apply_control_states(self) -> None:
+    def _apply_control_states(self, *, force: bool = False) -> None:
         if not hasattr(self, "control_buttons"):
             return
         state = GuiState(
@@ -2986,6 +2996,9 @@ class App(tk.Tk):
             connecting=self.is_connecting,
             starting=self.is_starting,
         )
+        if not should_apply_control_state(self.last_control_state, state, force=force):
+            return
+        self.last_control_state = state
         states = gui_control_states(state=state)
         self.workflow_hint_var.set(
             gui_workflow_hint(state=state)

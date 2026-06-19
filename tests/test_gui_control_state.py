@@ -15,6 +15,7 @@ from ads1292_studio.app import (
     header_connection_style,
     header_connection_tone,
     set_string_var_if_changed,
+    should_apply_control_state,
     status_label_spec,
     status_tone_color,
     status_tone_style,
@@ -121,6 +122,21 @@ def test_set_string_var_if_changed_skips_redundant_tk_updates() -> None:
     assert set_string_var_if_changed(var, "running") is True
     assert var.value == "running"
     assert var.set_calls == 1
+
+
+def test_should_apply_control_state_skips_unchanged_state() -> None:
+    state = GuiState(connected=True, streaming=True, has_data=True, has_recording_path=True)
+
+    assert should_apply_control_state(None, state) is True
+    assert should_apply_control_state(state, state) is False
+    assert should_apply_control_state(state, state, force=True) is True
+    assert (
+        should_apply_control_state(
+            state,
+            GuiState(connected=True, streaming=False, has_data=True, has_recording_path=True),
+        )
+        is True
+    )
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:
