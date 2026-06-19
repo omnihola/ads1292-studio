@@ -414,6 +414,7 @@ def test_section_heading_styles_make_sidebar_groups_scannable() -> None:
 def test_muted_label_spec_keeps_secondary_copy_subtle() -> None:
     assert muted_label_spec() == {
         "style": "Muted.TLabel",
+        "font": ("Aptos", 11),
         "background": "#F6F8FB",
         "foreground": "#657084",
     }

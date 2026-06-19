@@ -500,6 +500,7 @@ SECTION_HEADING_STYLES = {
 }
 MUTED_LABEL_SPEC = {
     "style": "Muted.TLabel",
+    "font": ("Aptos", 11),
     "background": "#F6F8FB",
     "foreground": "#657084",
 }
@@ -1738,6 +1739,7 @@ class App(tk.Tk):
             str(muted_label["style"]),
             background=muted_label["background"],
             foreground=muted_label["foreground"],
+            font=muted_label["font"],
         )
         label_chrome = input_chrome["label"]
         style.configure(
