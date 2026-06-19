@@ -22,7 +22,7 @@ TOOLBAR_BUTTON_STYLES = {
 }
 BUTTON_CHROME_SPEC = {
     "default": {
-        "padding": (10, 6),
+        "padding": (9, 5),
         "font": ("Aptos", 12),
         "foreground": "#172033",
         "background": "#FFFFFF",
@@ -34,7 +34,7 @@ BUTTON_CHROME_SPEC = {
         "relief": "flat",
     },
     "primary": {
-        "padding": (12, 6),
+        "padding": (10, 5),
         "font": ("Aptos", 12, "bold"),
         "foreground": "#FFFFFF",
         "background": "#2F6FED",
@@ -46,7 +46,7 @@ BUTTON_CHROME_SPEC = {
         "relief": "flat",
     },
     "stop": {
-        "padding": (12, 6),
+        "padding": (10, 5),
         "font": ("Aptos", 12, "bold"),
         "foreground": "#B3261E",
         "background": "#FFFFFF",
@@ -58,7 +58,7 @@ BUTTON_CHROME_SPEC = {
         "relief": "flat",
     },
     "sidebar": {
-        "padding": (12, 7),
+        "padding": (10, 5),
         "font": ("Aptos", 11, "bold"),
         "foreground": "#172033",
         "background": "#FFFFFF",
@@ -78,7 +78,7 @@ INPUT_CHROME_SPEC = {
         "foreground": "#657084",
     },
     "entry": {
-        "padding": (9, 6),
+        "padding": (8, 5),
         "fieldbackground": "#FFFFFF",
         "foreground": "#172033",
         "insert": "#2F6FED",
@@ -89,7 +89,7 @@ INPUT_CHROME_SPEC = {
         "relief": "flat",
     },
     "combobox": {
-        "padding": (8, 5),
+        "padding": (7, 4),
         "fieldbackground": "#FFFFFF",
         "background": "#FFFFFF",
         "foreground": "#172033",
@@ -115,8 +115,8 @@ INPUT_CHROME_SPEC = {
         "active_background": "#F6F8FB",
     },
     "toolbar_toggle": {
-        "padding": (5, 4),
-        "font": ("Aptos", 11, "bold"),
+        "padding": (4, 3),
+        "font": ("Aptos", 10, "bold"),
         "background": "#EEF3FA",
         "foreground": "#293247",
         "active_foreground": "#1F4FB2",
@@ -138,13 +138,13 @@ TOOLBAR_FRAME_SPEC = {
 }
 TOOLBAR_LABEL_SPEC = {
     "style": "ToolbarLabel.TLabel",
-    "font": ("Aptos", 12, "bold"),
+    "font": ("Aptos", 11, "bold"),
     "background": "#EEF3FA",
     "foreground": "#172033",
 }
 TOOLBAR_GROUP_LABEL_SPEC = {
     "style": "ToolbarGroupLabel.TLabel",
-    "font": ("Aptos", 10, "bold"),
+    "font": ("Aptos", 9, "bold"),
     "background": "#EEF3FA",
     "foreground": "#657084",
     "padding": (2, 2),
@@ -154,30 +154,30 @@ TOOLBAR_HINT_STYLES = {
     "label": "ToolbarHint.TLabel",
     "background": "#EAF1FF",
     "foreground": "#293247",
-    "font": ("Aptos", 11, "bold"),
+    "font": ("Aptos", 10, "bold"),
     "border": "#EAF1FF",
     "borderwidth": 0,
     "relief": "flat",
 }
 TOOLBAR_GROUP_PADDING = {
-    "separator": (12, 8),
-    "tight": (4, 4),
+    "separator": (8, 6),
+    "tight": (3, 3),
 }
 TOOLBAR_LAYOUT_SPEC = {
     "frame": "Toolbar.TFrame",
-    "padding": (16, 10, 16, 10),
+    "padding": (12, 6, 12, 6),
     "port_width": 36,
-    "port_padding": (8, 8),
-    "refresh_padding": (0, 4),
-    "primary_action_padding": (12, 4),
-    "inline_action_padding": (4, 4),
-    "save_padding": (8, 4),
-    "toggle_padding": (4, 4),
+    "port_padding": (6, 6),
+    "refresh_padding": (0, 3),
+    "primary_action_padding": (8, 3),
+    "inline_action_padding": (3, 3),
+    "save_padding": (6, 3),
+    "toggle_padding": (3, 3),
     "display_label_padding": (4, 3),
-    "display_control_padding": (4, 8),
+    "display_control_padding": (3, 6),
     "display_width": 9,
     "separator_width": 1,
-    "hint_padding": (12, 5),
+    "hint_padding": (10, 4),
 }
 SECONDARY_ACTION_BUTTONS = (
     "Load CSV",
@@ -190,9 +190,9 @@ SECONDARY_ACTION_BUTTONS = (
 SIDEBAR_TABS = ("Status", "Session", "Validation", "Protocol", "Actions")
 SIDEBAR_LAYOUT_SPEC = {
     "shell": "SidebarShell.TFrame",
-    "width": 348,
-    "padding": (12, 12),
-    "scroll_width": 316,
+    "width": 328,
+    "padding": (10, 10),
+    "scroll_width": 296,
 }
 WORKSPACE_LAYOUT_SPEC = {
     "main": "Main.TFrame",
@@ -446,8 +446,8 @@ SIDEBAR_FIELD_STYLES = {
 }
 SECTION_HEADING_STYLES = {
     "label": "SectionHeading.TLabel",
-    "padding": (2, 5),
-    "font": ("Aptos", 12, "bold"),
+    "padding": (2, 4),
+    "font": ("Aptos", 11, "bold"),
     "background": "#F6F8FB",
     "foreground": "#293247",
 }
@@ -461,7 +461,7 @@ SIDEBAR_ACTION_BUTTON_STYLE = "SidebarAction.TButton"
 ACTION_SECTION_STYLES = {
     "frame": "ActionSection.TFrame",
     "label": "ActionSection.TLabel",
-    "padding": (10, 5),
+    "padding": (8, 4),
     "font": ("Aptos", 10, "bold"),
     "background": "#EEF3FA",
     "foreground": "#293247",
@@ -514,11 +514,11 @@ SAFETY_NOTICE_STYLES = {
 }
 SIDEBAR_TEXT_CARD_SPEC = {
     "stripe_width": 4,
-    "label_padding": (12, 8),
-    "content_padding": (12, 8),
-    "primary_wrap": 240,
-    "detail_wrap": 230,
-    "value_top_padding": (3, 0),
+    "label_padding": (10, 6),
+    "content_padding": (10, 6),
+    "primary_wrap": 220,
+    "detail_wrap": 215,
+    "value_top_padding": (2, 0),
 }
 STATUS_DETAIL_STYLES = {
     "frame": "StatusDetail.TFrame",
@@ -530,7 +530,7 @@ STATUS_DETAIL_STYLES = {
     "label_font": ("Aptos", 10, "bold"),
     "value_foreground": "#172033",
     "value_font": ("Aptos", 11),
-    "value_wrap": 245,
+    "value_wrap": 225,
 }
 CARD_LABEL_SPEC = {
     "style": "CardLabel.TLabel",
@@ -538,11 +538,11 @@ CARD_LABEL_SPEC = {
     "background": "#FFFFFF",
     "foreground": "#657084",
     "width": 12,
-    "content_padding": (12, 8),
+    "content_padding": (10, 6),
     "stripe_width": 5,
-    "row_padding": (0, 4),
-    "value_padding": (8, 0),
-    "signal_value_wrap": 170,
+    "row_padding": (0, 2),
+    "value_padding": (6, 0),
+    "signal_value_wrap": 160,
 }
 EVENT_COUNT_STYLES = {
     "frame": "EventCount.TFrame",

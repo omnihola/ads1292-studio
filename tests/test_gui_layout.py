@@ -87,7 +87,7 @@ def test_gui_layout_assigns_toolbar_action_hierarchy() -> None:
 def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
     assert button_chrome_spec() == {
         "default": {
-            "padding": (10, 6),
+            "padding": (9, 5),
             "font": ("Aptos", 12),
             "foreground": "#172033",
             "background": "#FFFFFF",
@@ -99,7 +99,7 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "relief": "flat",
         },
         "primary": {
-            "padding": (12, 6),
+            "padding": (10, 5),
             "font": ("Aptos", 12, "bold"),
             "foreground": "#FFFFFF",
             "background": "#2F6FED",
@@ -111,7 +111,7 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "relief": "flat",
         },
         "stop": {
-            "padding": (12, 6),
+            "padding": (10, 5),
             "font": ("Aptos", 12, "bold"),
             "foreground": "#B3261E",
             "background": "#FFFFFF",
@@ -123,7 +123,7 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "relief": "flat",
         },
         "sidebar": {
-            "padding": (12, 7),
+            "padding": (10, 5),
             "font": ("Aptos", 11, "bold"),
             "foreground": "#172033",
             "background": "#FFFFFF",
@@ -158,7 +158,7 @@ def test_toolbar_frame_spec_groups_acquisition_controls_as_one_surface() -> None
 def test_toolbar_label_spec_keeps_toolbar_labels_consistent() -> None:
     assert toolbar_label_spec() == {
         "style": "ToolbarLabel.TLabel",
-        "font": ("Aptos", 12, "bold"),
+        "font": ("Aptos", 11, "bold"),
         "background": "#EEF3FA",
         "foreground": "#172033",
     }
@@ -167,7 +167,7 @@ def test_toolbar_label_spec_keeps_toolbar_labels_consistent() -> None:
 def test_toolbar_group_label_spec_adds_scanable_control_groups() -> None:
     assert toolbar_group_label_spec() == {
         "style": "ToolbarGroupLabel.TLabel",
-        "font": ("Aptos", 10, "bold"),
+        "font": ("Aptos", 9, "bold"),
         "background": "#EEF3FA",
         "foreground": "#657084",
         "padding": (2, 2),
@@ -183,7 +183,7 @@ def test_input_chrome_spec_keeps_forms_readable() -> None:
             "foreground": "#657084",
         },
         "entry": {
-            "padding": (9, 6),
+            "padding": (8, 5),
             "fieldbackground": "#FFFFFF",
             "foreground": "#172033",
             "insert": "#2F6FED",
@@ -194,7 +194,7 @@ def test_input_chrome_spec_keeps_forms_readable() -> None:
             "relief": "flat",
         },
         "combobox": {
-            "padding": (8, 5),
+            "padding": (7, 4),
             "fieldbackground": "#FFFFFF",
             "background": "#FFFFFF",
             "foreground": "#172033",
@@ -220,8 +220,8 @@ def test_input_chrome_spec_keeps_forms_readable() -> None:
             "active_background": "#F6F8FB",
         },
         "toolbar_toggle": {
-            "padding": (5, 4),
-            "font": ("Aptos", 11, "bold"),
+            "padding": (4, 3),
+            "font": ("Aptos", 10, "bold"),
             "background": "#EEF3FA",
             "foreground": "#293247",
             "active_foreground": "#1F4FB2",
@@ -237,7 +237,7 @@ def test_gui_layout_frames_toolbar_channel_hint_as_chip() -> None:
         "label": "ToolbarHint.TLabel",
         "background": "#EAF1FF",
         "foreground": "#293247",
-        "font": ("Aptos", 11, "bold"),
+        "font": ("Aptos", 10, "bold"),
         "border": "#EAF1FF",
         "borderwidth": 0,
         "relief": "flat",
@@ -255,27 +255,27 @@ def test_toolbar_hint_chip_uses_dynamic_textvariable() -> None:
 
 def test_gui_layout_spaces_toolbar_groups() -> None:
     assert toolbar_group_padding() == {
-        "separator": (12, 8),
-        "tight": (4, 4),
+        "separator": (8, 6),
+        "tight": (3, 3),
     }
 
 
 def test_toolbar_layout_spec_keeps_acquisition_controls_ordered() -> None:
     assert toolbar_layout_spec() == {
         "frame": "Toolbar.TFrame",
-        "padding": (16, 10, 16, 10),
+        "padding": (12, 6, 12, 6),
         "port_width": 36,
-        "port_padding": (8, 8),
-        "refresh_padding": (0, 4),
-        "primary_action_padding": (12, 4),
-        "inline_action_padding": (4, 4),
-        "save_padding": (8, 4),
-        "toggle_padding": (4, 4),
+        "port_padding": (6, 6),
+        "refresh_padding": (0, 3),
+        "primary_action_padding": (8, 3),
+        "inline_action_padding": (3, 3),
+        "save_padding": (6, 3),
+        "toggle_padding": (3, 3),
         "display_label_padding": (4, 3),
-        "display_control_padding": (4, 8),
+        "display_control_padding": (3, 6),
         "display_width": 9,
         "separator_width": 1,
-        "hint_padding": (12, 5),
+        "hint_padding": (10, 4),
     }
 
 
@@ -336,9 +336,9 @@ def test_sidebar_notebook_styles_make_navigation_compact() -> None:
 def test_sidebar_layout_spec_stabilizes_control_column() -> None:
     assert sidebar_layout_spec() == {
         "shell": "SidebarShell.TFrame",
-        "width": 348,
-        "padding": (12, 12),
-        "scroll_width": 316,
+        "width": 328,
+        "padding": (10, 10),
+        "scroll_width": 296,
     }
 
 
@@ -448,8 +448,8 @@ def test_sidebar_field_styles_make_forms_consistent() -> None:
 def test_section_heading_styles_make_sidebar_groups_scannable() -> None:
     assert section_heading_styles() == {
         "label": "SectionHeading.TLabel",
-        "padding": (2, 5),
-        "font": ("Aptos", 12, "bold"),
+        "padding": (2, 4),
+        "font": ("Aptos", 11, "bold"),
         "background": "#F6F8FB",
         "foreground": "#293247",
     }
@@ -472,7 +472,7 @@ def test_action_section_styles_make_sidebar_action_groups_scannable() -> None:
     assert action_section_styles() == {
         "frame": "ActionSection.TFrame",
         "label": "ActionSection.TLabel",
-        "padding": (10, 5),
+        "padding": (8, 4),
         "font": ("Aptos", 10, "bold"),
         "background": "#EEF3FA",
         "foreground": "#293247",
@@ -504,11 +504,11 @@ def test_safety_notice_styles_make_research_use_boundary_visible() -> None:
 def test_sidebar_text_card_spec_keeps_long_notes_readable() -> None:
     assert sidebar_text_card_spec() == {
         "stripe_width": 4,
-        "label_padding": (12, 8),
-        "content_padding": (12, 8),
-        "primary_wrap": 240,
-        "detail_wrap": 230,
-        "value_top_padding": (3, 0),
+        "label_padding": (10, 6),
+        "content_padding": (10, 6),
+        "primary_wrap": 220,
+        "detail_wrap": 215,
+        "value_top_padding": (2, 0),
     }
 
 
@@ -523,7 +523,7 @@ def test_status_detail_styles_frame_session_quality_and_storage() -> None:
         "label_font": ("Aptos", 10, "bold"),
         "value_foreground": "#172033",
         "value_font": ("Aptos", 11),
-        "value_wrap": 245,
+        "value_wrap": 225,
     }
 
 
@@ -534,11 +534,11 @@ def test_card_label_spec_keeps_status_cards_scannable() -> None:
         "background": "#FFFFFF",
         "foreground": "#657084",
         "width": 12,
-        "content_padding": (12, 8),
+        "content_padding": (10, 6),
         "stripe_width": 5,
-        "row_padding": (0, 4),
-        "value_padding": (8, 0),
-        "signal_value_wrap": 170,
+        "row_padding": (0, 2),
+        "value_padding": (6, 0),
+        "signal_value_wrap": 160,
     }
 
 
