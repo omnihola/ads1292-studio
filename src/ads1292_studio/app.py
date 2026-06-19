@@ -101,7 +101,7 @@ BUTTON_CHROME_SPEC = {
         "relief": "flat",
     },
     "sidebar": {
-        "padding": (10, 7),
+        "padding": (12, 7),
         "font": ("Aptos", 11, "bold"),
         "foreground": "#172033",
         "background": "#FFFFFF",
