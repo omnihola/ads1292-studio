@@ -14,6 +14,7 @@ from ads1292_studio.app import (
     gui_workflow_hint,
     header_connection_style,
     header_connection_tone,
+    live_quality_worker_available,
     set_string_var_if_changed,
     should_apply_control_state,
     status_label_spec,
@@ -36,6 +37,14 @@ class _FakeStringVar:
     def set(self, value: str) -> None:
         self.value = value
         self.set_calls += 1
+
+
+class _FakeFuture:
+    def __init__(self, done: bool) -> None:
+        self._done = done
+
+    def done(self) -> bool:
+        return self._done
 
 
 def test_ads1292r_channel_labels_name_ti_board_semantics() -> None:
@@ -137,6 +146,12 @@ def test_should_apply_control_state_skips_unchanged_state() -> None:
         )
         is True
     )
+
+
+def test_live_quality_worker_available_skips_when_future_is_running() -> None:
+    assert live_quality_worker_available(None) is True
+    assert live_quality_worker_available(_FakeFuture(done=True)) is True
+    assert live_quality_worker_available(_FakeFuture(done=False)) is False
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:

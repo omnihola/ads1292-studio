@@ -894,6 +894,10 @@ def should_apply_control_state(
     return force or previous != current
 
 
+def live_quality_worker_available(future: Future[LiveQualityResult] | None) -> bool:
+    return future is None or future.done()
+
+
 def primary_toolbar_button_labels() -> tuple[str, ...]:
     return PRIMARY_TOOLBAR_BUTTONS
 
@@ -3186,14 +3190,14 @@ class App(tk.Tk):
         *,
         source: str,
         valid_rr: int,
-        ch1_values: tuple[float, ...],
-        ch2_values: tuple[float, ...],
-        status_values: tuple[int, ...],
     ) -> None:
+        if not live_quality_worker_available(self.live_quality_future):
+            return
+        ch1_values = tuple(self.ch1)
+        ch2_values = tuple(self.ch2)
+        status_values = tuple(self.status)
         self.live_quality_generation += 1
         generation = self.live_quality_generation
-        if self.live_quality_future is not None and not self.live_quality_future.done():
-            self.live_quality_future.cancel()
         future = self.live_quality_executor.submit(
             compute_live_quality_result,
             generation=generation,
@@ -3445,9 +3449,6 @@ class App(tk.Tk):
         self._schedule_live_quality_update(
             source=source,
             valid_rr=hr.valid_rr_count,
-            ch1_values=tuple(self.ch1),
-            ch2_values=tuple(self.ch2),
-            status_values=tuple(self.status),
         )
         self.live_canvas.draw_idle()
 
