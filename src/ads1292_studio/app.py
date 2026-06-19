@@ -4,16 +4,16 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
-import os
 from pathlib import Path
 import queue
 import threading
 import tkinter as tk
-import tempfile
 from tkinter import filedialog, messagebox, ttk
 from typing import TypeVar
 
-os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "ads1292-studio-matplotlib"))
+from ads1292_studio.matplotlib_runtime import configure_matplotlib_cache
+
+configure_matplotlib_cache()
 
 import matplotlib
 import numpy as np

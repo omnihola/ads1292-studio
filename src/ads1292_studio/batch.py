@@ -4,11 +4,11 @@ import csv
 from dataclasses import dataclass
 from datetime import datetime
 from html import escape
-import os
 from pathlib import Path
-import tempfile
 
-os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "ads1292-studio-matplotlib"))
+from ads1292_studio.matplotlib_runtime import configure_matplotlib_cache
+
+configure_matplotlib_cache()
 
 import matplotlib
 

@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from ads1292_studio.matplotlib_runtime import configure_matplotlib_cache
+
+configure_matplotlib_cache()
+
 from matplotlib.figure import Figure
 import seaborn as sns
 
