@@ -465,7 +465,7 @@ PLOT_AXIS_STYLE = {
     "label": "#293247",
     "title": "#172033",
     "grid_linewidth": 0.7,
-    "grid_alpha": 0.45,
+    "grid_alpha": 0.38,
     "axisbelow": True,
     "spine_linewidth": 0.8,
     "tick_label_size": 9,
