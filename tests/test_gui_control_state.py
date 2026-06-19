@@ -728,9 +728,9 @@ def test_gui_signal_quality_cards_expose_real_recording_summary() -> None:
 
     assert [(card.label, card.value, card.tone) for card in cards] == [
         ("Signal", "Good ECG/QRS | CH2", "ready"),
-        ("Contact", "99.9% OK, 28 bad", "ready"),
-        ("Heart rate", "86.7 bpm, 129 R", "ready"),
-        ("Artifacts", "drift 44 ct, noise 50.5 ct, p2p 8709 ct", "neutral"),
+        ("Contact", "99.9% OK | 28 bad", "ready"),
+        ("Heart rate", "86.7 bpm | 129 R", "ready"),
+        ("Artifacts", "drift 44 | noise 50.5 | p2p 8709 ct", "neutral"),
     ]
 
 
@@ -749,9 +749,9 @@ def test_gui_signal_quality_cards_warn_when_loaded_signal_needs_review() -> None
 
     assert [(card.label, card.value, card.tone) for card in cards] == [
         ("Signal", "Needs review | CH1", "warning"),
-        ("Contact", "88.0% OK, 1200 bad", "warning"),
-        ("Heart rate", "-- bpm, 1 R", "warning"),
-        ("Artifacts", "drift 300 ct, noise 220.0 ct, p2p 7000 ct", "warning"),
+        ("Contact", "88.0% OK | 1200 bad", "warning"),
+        ("Heart rate", "-- bpm | 1 R", "warning"),
+        ("Artifacts", "drift 300 | noise 220.0 | p2p 7000 ct", "warning"),
     ]
 
 

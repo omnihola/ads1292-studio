@@ -1256,9 +1256,9 @@ def gui_signal_quality_cards(
     hr_value = f"{hr:.1f}" if hr > 0 else "--"
     return (
         GuiStatusCard("Signal", f"{quality_label} | {source}", signal_tone),
-        GuiStatusCard("Contact", f"{contact:.1f}% OK, {bad_samples} bad", contact_tone),
-        GuiStatusCard("Heart rate", f"{hr_value} bpm, {peak_count} R", hr_tone),
-        GuiStatusCard("Artifacts", f"drift {drift:.0f} ct, noise {noise:.1f} ct, p2p {p2p:.0f} ct", artifact_tone),
+        GuiStatusCard("Contact", f"{contact:.1f}% OK | {bad_samples} bad", contact_tone),
+        GuiStatusCard("Heart rate", f"{hr_value} bpm | {peak_count} R", hr_tone),
+        GuiStatusCard("Artifacts", f"drift {drift:.0f} | noise {noise:.1f} | p2p {p2p:.0f} ct", artifact_tone),
     )
 
 
