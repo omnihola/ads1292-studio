@@ -429,6 +429,24 @@ def display_refresh_key(
     )
 
 
+def axis_limits_changed(
+    current: tuple[float, float],
+    target: tuple[float, float],
+    *,
+    tolerance: float = 1e-9,
+) -> bool:
+    return abs(float(current[0]) - float(target[0])) > tolerance or abs(float(current[1]) - float(target[1])) > tolerance
+
+
+def set_axis_ylim_if_changed(ax: object, limits: tuple[float, float]) -> bool:
+    target = (float(limits[0]), float(limits[1]))
+    current = tuple(float(value) for value in ax.get_ylim())
+    if not axis_limits_changed(current, target):
+        return False
+    ax.set_ylim(*target)
+    return True
+
+
 def toolbar_display_hint_text(settings: EcgDisplaySettings, filters: SoftwareFilterSettings) -> str:
     return f"CH2 Lead I | CH1 Resp | Contact | {display_mode_label(settings, filters)}"
 
@@ -2598,10 +2616,10 @@ class App(tk.Tk):
         if self.autoscale_var.get():
             ecg_ylim = robust_ylim(frame.visible_ecg_plot, min_span=DISPLAY_MIN_ECG_SPAN_COUNTS * display_settings.gain)
             resp_ylim = robust_ylim(frame.visible_resp_plot, min_span=DISPLAY_MIN_RESP_SPAN_COUNTS)
-            self.ax_live_ecg.set_ylim(*stable_ylim(self.ax_live_ecg.get_ylim(), ecg_ylim))
-            self.ax_live_resp.set_ylim(*stable_ylim(self.ax_live_resp.get_ylim(), resp_ylim))
+            set_axis_ylim_if_changed(self.ax_live_ecg, stable_ylim(self.ax_live_ecg.get_ylim(), ecg_ylim))
+            set_axis_ylim_if_changed(self.ax_live_resp, stable_ylim(self.ax_live_resp.get_ylim(), resp_ylim))
             status_top = float(frame.visible_status.max()) + 0.5 if frame.visible_status.size else 1.0
-            self.ax_live_status.set_ylim(-0.5, max(1.0, status_top))
+            set_axis_ylim_if_changed(self.ax_live_status, (-0.5, max(1.0, status_top)))
         self._apply_ecg_paper_grid(self.ax_live_ecg, display_settings)
         self._draw_calibration_pulse(self.ax_live_ecg, self.live_calibration_artists, display_settings)
         ecg_label = ads1292r_plot_layout_labels()[0]
