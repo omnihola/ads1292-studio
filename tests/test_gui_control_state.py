@@ -12,7 +12,6 @@ from ads1292_studio.app import (
     gui_workflow_hint,
     header_connection_style,
     header_connection_tone,
-    should_update_live_quality,
     status_label_spec,
     status_tone_color,
     status_tone_style,
@@ -44,13 +43,6 @@ def test_default_display_is_raw_without_ecg_inversion() -> None:
         display_signal_values(values, filter_enabled=DEFAULT_FILTER_ENABLED, invert=True),
         np.array([-10.0, 20.0, -30.0]),
     )
-
-
-def test_live_quality_cards_refresh_on_first_sample_then_throttle() -> None:
-    assert should_update_live_quality(0, 0, interval_samples=250) is False
-    assert should_update_live_quality(0, 12, interval_samples=250) is True
-    assert should_update_live_quality(12, 200, interval_samples=250) is False
-    assert should_update_live_quality(12, 262, interval_samples=250) is True
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:

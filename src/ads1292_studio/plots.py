@@ -3,6 +3,18 @@ from __future__ import annotations
 import numpy as np
 
 
+def smooth_for_plot(values, window: int = 5) -> np.ndarray:
+    arr = np.asarray(values, dtype=float)
+    if window <= 1 or arr.size < window:
+        return arr
+    if window % 2 == 0:
+        window += 1
+    pad = window // 2
+    padded = np.pad(arr, pad_width=pad, mode="edge")
+    kernel = np.full(window, 1.0 / window)
+    return np.convolve(padded, kernel, mode="valid")
+
+
 def decimate_for_plot(x, y, max_points: int) -> tuple[np.ndarray, np.ndarray]:
     x_arr = np.asarray(x)
     y_arr = np.asarray(y)

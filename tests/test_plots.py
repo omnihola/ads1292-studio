@@ -2,7 +2,25 @@ from __future__ import annotations
 
 import numpy as np
 
-from ads1292_studio.plots import decimate_for_plot
+from ads1292_studio.plots import decimate_for_plot, smooth_for_plot
+
+
+def test_smooth_for_plot_returns_original_values_when_window_is_too_small() -> None:
+    values = np.array([1.0, 4.0, 1.0])
+
+    out = smooth_for_plot(values, window=1)
+
+    np.testing.assert_array_equal(out, values)
+
+
+def test_smooth_for_plot_keeps_length_and_reduces_single_sample_spikes() -> None:
+    values = np.array([0.0, 0.0, 9.0, 0.0, 0.0])
+
+    out = smooth_for_plot(values, window=3)
+
+    assert out.size == values.size
+    assert out[2] < values[2]
+    assert out[2] == 3.0
 
 
 def test_decimate_for_plot_returns_unchanged_arrays_when_within_budget() -> None:

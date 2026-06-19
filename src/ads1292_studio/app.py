@@ -30,7 +30,7 @@ from ads1292_studio.gui_session_index import build_session_index_message
 from ads1292_studio.macos_stderr import install_macos_stderr_filter
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
-from ads1292_studio.plots import decimate_for_plot, robust_ylim
+from ads1292_studio.plots import decimate_for_plot, robust_ylim, smooth_for_plot
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
@@ -52,7 +52,7 @@ VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
 DEFAULT_FILTER_ENABLED = False
 DEFAULT_ECG_INVERTED = False
-LIVE_QUALITY_UPDATE_SAMPLES = int(0.5 * SAMPLE_RATE_HZ)
+DISPLAY_SMOOTHING_WINDOW = 5
 APP_WINDOW_SPEC = {
     "geometry": "1320x860",
     "min_size": (1120, 740),
@@ -366,9 +366,9 @@ PLOT_TRACE_COLORS = {
     "peak": "#E34A4A",
 }
 PLOT_TRACE_STYLES = {
-    "ecg": {"linewidth": 1.25},
-    "respiration": {"linewidth": 0.95},
-    "contact": {"linewidth": 1.0, "drawstyle": "steps-post"},
+    "ecg": {"linewidth": 1.45, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
+    "respiration": {"linewidth": 1.05, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
+    "contact": {"linewidth": 1.0, "drawstyle": "steps-post", "antialiased": True},
     "peak": {
         "linestyle": "None",
         "marker": "o",
@@ -1123,19 +1123,6 @@ def display_signal_values(
     return -display if invert else display
 
 
-def should_update_live_quality(
-    last_sample_index: int,
-    current_sample_index: int,
-    *,
-    interval_samples: int = LIVE_QUALITY_UPDATE_SAMPLES,
-) -> bool:
-    if current_sample_index <= 0:
-        return False
-    if last_sample_index <= 0:
-        return True
-    return current_sample_index - last_sample_index >= max(1, interval_samples)
-
-
 def gui_signal_quality_cards(
     *,
     quality_label: str | None = None,
@@ -1264,7 +1251,6 @@ class App(tk.Tk):
         self.indices: deque[int] = deque(maxlen=MAX_POINTS)
         self.board_hr: deque[int] = deque(maxlen=MAX_POINTS)
         self.board_rr: deque[int] = deque(maxlen=MAX_POINTS)
-        self.last_live_quality_sample_index = 0
         self.empty_plot_artists: list[object] = []
 
         self._build_ui()
@@ -2823,7 +2809,6 @@ class App(tk.Tk):
     def _clear_signal_buffers(self) -> None:
         for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
             buffer.clear()
-        self.last_live_quality_sample_index = 0
 
     def _apply_control_states(self) -> None:
         if not hasattr(self, "control_buttons"):
@@ -3049,23 +3034,30 @@ class App(tk.Tk):
         left = max(0.0, x[-1] - VISIBLE_SECONDS)
         right = max(VISIBLE_SECONDS, x[-1])
         visible = (x >= left) & (x <= right)
+        visible_x = x[visible]
+        visible_ecg = ecg[visible]
+        visible_resp = resp[visible]
+        visible_ecg_plot = smooth_for_plot(visible_ecg, window=DISPLAY_SMOOTHING_WINDOW)
+        visible_resp_plot = smooth_for_plot(visible_resp, window=DISPLAY_SMOOTHING_WINDOW)
+        status_arr = np.asarray(self.status, dtype=float)
+        visible_status = status_arr[visible]
         peaks = detect_r_peaks(ecg[visible], SAMPLE_RATE_HZ)
-        peaks_x = x[visible][list(peaks)] if peaks else []
-        peaks_y = ecg[visible][list(peaks)] if peaks else []
+        peaks_x = visible_x[list(peaks)] if peaks else []
+        peaks_y = visible_ecg_plot[list(peaks)] if peaks else []
 
-        self.live_ecg_line.set_data(x, ecg)
+        self.live_ecg_line.set_data(visible_x, visible_ecg_plot)
         self.live_peak_line.set_data(peaks_x, peaks_y)
-        self.live_resp_line.set_data(x, resp)
-        self.live_status_line.set_data(x, list(self.status))
+        self.live_resp_line.set_data(visible_x, visible_resp_plot)
+        self.live_status_line.set_data(visible_x, visible_status)
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.set_xlim(left, right)
         if self.autoscale_var.get():
-            self.ax_live_ecg.set_ylim(*robust_ylim(ecg[visible]))
-            self.ax_live_resp.set_ylim(*robust_ylim(resp[visible]))
-            self.ax_live_status.set_ylim(-0.5, max(1.0, max(self.status or [0]) + 0.5))
+            self.ax_live_ecg.set_ylim(*robust_ylim(visible_ecg))
+            self.ax_live_resp.set_ylim(*robust_ylim(visible_resp))
+            self.ax_live_status.set_ylim(-0.5, max(1.0, float(visible_status.max()) + 0.5 if visible_status.size else 1.0))
         hr = heart_rate_summary(peaks, SAMPLE_RATE_HZ)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
-        mode = "filtered" if self.filter_var.get() else "raw"
+        mode = "filtered, display-smoothed" if self.filter_var.get() else "raw, display-smoothed"
         polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
         self._set_signal_axis_title(
             self.ax_live_ecg,
@@ -3076,24 +3068,22 @@ class App(tk.Tk):
         self.metrics_var.set(
             f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {ecg_label} | HR {hr.median_bpm:.0f} bpm"
         )
-        if should_update_live_quality(self.last_live_quality_sample_index, self.sample_index):
-            samples = tuple(self._current_samples())
-            metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
-            self.quality_var.set(self._quality_text(source, hr.valid_rr_count, samples, tuple(self.status), metrics=metrics))
-            self._apply_signal_quality_cards(
-                gui_signal_quality_cards(
-                    quality_label=metrics.quality_label,
-                    ecg_source=metrics.ecg_source,
-                    contact_ok_percent=metrics.contact_ok_percent,
-                    lead_off_bad_samples=metrics.lead_off_bad_samples,
-                    r_peaks=metrics.r_peaks,
-                    hr_median_bpm=metrics.hr_median_bpm,
-                    baseline_drift_counts=metrics.baseline_drift_counts,
-                    noise_rms_counts=metrics.noise_rms_counts,
-                    peak_to_peak_counts=metrics.peak_to_peak_counts,
-                )
+        samples = tuple(self._current_samples())
+        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
+        self.quality_var.set(self._quality_text(source, hr.valid_rr_count, samples, tuple(self.status), metrics=metrics))
+        self._apply_signal_quality_cards(
+            gui_signal_quality_cards(
+                quality_label=metrics.quality_label,
+                ecg_source=metrics.ecg_source,
+                contact_ok_percent=metrics.contact_ok_percent,
+                lead_off_bad_samples=metrics.lead_off_bad_samples,
+                r_peaks=metrics.r_peaks,
+                hr_median_bpm=metrics.hr_median_bpm,
+                baseline_drift_counts=metrics.baseline_drift_counts,
+                noise_rms_counts=metrics.noise_rms_counts,
+                peak_to_peak_counts=metrics.peak_to_peak_counts,
             )
-            self.last_live_quality_sample_index = self.sample_index
+        )
         self.live_canvas.draw_idle()
 
     def _show_recording(self, samples: tuple[StreamSample, ...]) -> None:
@@ -3110,18 +3100,19 @@ class App(tk.Tk):
         metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
         x = np.arange(ecg.size)
         status_arr = np.asarray(full_status_ints, dtype=float)
-        plot_x, plot_ecg = decimate_for_plot(x, ecg, MAX_POINTS)
-        _, plot_resp = decimate_for_plot(x, resp, MAX_POINTS)
+        plot_x, plot_ecg = decimate_for_plot(x, smooth_for_plot(ecg, window=DISPLAY_SMOOTHING_WINDOW), MAX_POINTS)
+        _, plot_resp = decimate_for_plot(x, smooth_for_plot(resp, window=DISPLAY_SMOOTHING_WINDOW), MAX_POINTS)
         _, plot_status = decimate_for_plot(x, status_arr, MAX_POINTS)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
         self.review_ecg_line.set_data(plot_x, plot_ecg)
         self.review_resp_line.set_data(plot_x, plot_resp)
         self.review_status_line.set_data(plot_x, plot_status)
         self.review_peak_line.set_data(list(result.peaks), ecg[list(result.peaks)] if result.peaks else [])
+        mode = "filtered, display-smoothed" if self.filter_var.get() else "raw, display-smoothed"
         polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
         self._set_signal_axis_title(
             self.ax_review_ecg,
-            f"Offline ECG: {ecg_label} | {'filtered' if self.filter_var.get() else 'raw'}{polarity} | "
+            f"Offline ECG: {ecg_label} | {mode}{polarity} | "
             f"HR {result.heart_rate.median_bpm:.1f} bpm | peaks {len(result.peaks)}",
         )
         self._set_signal_axis_title(self.ax_review_resp, resp_label)

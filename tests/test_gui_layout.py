@@ -570,9 +570,9 @@ def test_plot_trace_colors_distinguish_ecg_respiration_and_contact() -> None:
 
 def test_plot_trace_styles_keep_live_and_review_signals_readable() -> None:
     assert plot_trace_styles() == {
-        "ecg": {"linewidth": 1.25},
-        "respiration": {"linewidth": 0.95},
-        "contact": {"linewidth": 1.0, "drawstyle": "steps-post"},
+        "ecg": {"linewidth": 1.45, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
+        "respiration": {"linewidth": 1.05, "antialiased": True, "solid_capstyle": "round", "solid_joinstyle": "round"},
+        "contact": {"linewidth": 1.0, "drawstyle": "steps-post", "antialiased": True},
         "peak": {
             "linestyle": "None",
             "marker": "o",
@@ -587,7 +587,7 @@ def test_plot_trace_styles_returns_nested_copies() -> None:
     styles = plot_trace_styles()
     styles["ecg"]["linewidth"] = 99
 
-    assert plot_trace_styles()["ecg"]["linewidth"] == 1.25
+    assert plot_trace_styles()["ecg"]["linewidth"] == 1.45
 
 
 def test_pqrst_plot_style_keeps_morphology_review_readable() -> None:
