@@ -88,6 +88,7 @@ from ads1292_studio.gui_workers import (
     live_quality_worker_available,
 )
 from ads1292_studio.gui_plots import (
+    apply_live_render_frame,
     apply_ecg_paper_grid,
     build_live_plot_panel,
     build_log_panel,
@@ -185,7 +186,6 @@ from ads1292_studio.macos_stderr import install_macos_stderr_filter
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.plot_theme import APP_VISUAL_TOKENS
-from ads1292_studio.plots import robust_ylim, stable_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
 from ads1292_studio.report import export_review_report
@@ -1218,25 +1218,13 @@ class App(tk.Tk):
         if frame is None:
             return
 
-        self.live_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
-        self.live_peak_line.set_data(frame.peaks_x, frame.peaks_y)
-        self.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
-        self.live_status_line.set_data(frame.plot_status_x, frame.plot_status)
-        for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
-            ax.set_xlim(frame.left, frame.right)
-        if self.autoscale_var.get():
-            ecg_ylim = robust_ylim(frame.visible_ecg_plot, min_span=DISPLAY_MIN_ECG_SPAN_COUNTS * display_settings.gain)
-            resp_ylim = robust_ylim(frame.visible_resp_plot, min_span=DISPLAY_MIN_RESP_SPAN_COUNTS)
-            set_axis_ylim_if_changed(self.ax_live_ecg, stable_ylim(self.ax_live_ecg.get_ylim(), ecg_ylim))
-            set_axis_ylim_if_changed(self.ax_live_resp, stable_ylim(self.ax_live_resp.get_ylim(), resp_ylim))
-            status_top = float(frame.visible_status.max()) + 0.5 if frame.visible_status.size else 1.0
-            set_axis_ylim_if_changed(self.ax_live_status, (-0.5, max(1.0, status_top)))
-        apply_ecg_paper_grid(self.ax_live_ecg, display_settings, self.ecg_paper_grid_cache)
-        draw_calibration_pulse(
-            self.ax_live_ecg,
-            self.live_calibration_artists,
-            display_settings,
-            self.calibration_pulse_cache,
+        apply_live_render_frame(
+            self,
+            frame,
+            display_settings=display_settings,
+            autoscale=bool(self.autoscale_var.get()),
+            min_ecg_span_counts=DISPLAY_MIN_ECG_SPAN_COUNTS,
+            min_resp_span_counts=DISPLAY_MIN_RESP_SPAN_COUNTS,
         )
         ecg_label = ads1292r_plot_layout_labels()[0]
         self._apply_live_axis_titles(display_settings, filter_settings)
@@ -1254,7 +1242,6 @@ class App(tk.Tk):
             source=frame.source,
             valid_rr=frame.heart_rate.valid_rr_count,
         )
-        self.live_canvas.draw_idle()
 
     def _show_recording(self, samples: tuple[StreamSample, ...]) -> None:
         frame = build_review_render_frame(

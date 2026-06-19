@@ -10,7 +10,7 @@ from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 
 from ads1292_studio.display import EcgDisplaySettings, ecg_paper_grid_key, ecg_paper_grid_spec
-from ads1292_studio.gui_state import display_scale_reference_label
+from ads1292_studio.gui_state import display_scale_reference_label, set_axis_ylim_if_changed
 from ads1292_studio.gui_specs import (
     empty_plot_messages,
     empty_plot_style,
@@ -25,7 +25,9 @@ from ads1292_studio.gui_specs import (
     scrollbar_chrome_spec,
     status_axis_spec,
 )
+from ads1292_studio.live_render import LiveRenderFrame
 from ads1292_studio.models import PqrstReview
+from ads1292_studio.plots import robust_ylim, stable_ylim
 from ads1292_studio.plot_theme import APP_VISUAL_TOKENS, PLOT_TRACE_COLORS, apply_seaborn_plot_theme
 
 
@@ -111,6 +113,38 @@ def build_pqrst_plot_panel(app: Any) -> None:
     app.ax_pqrst.set_ylabel("Filtered counts")
     show_empty_plot_state(app.empty_plot_artists, "pqrst", (app.ax_pqrst,))
     app.pqrst_canvas = build_plot_canvas(app, app.pqrst_tab, fig, name="pqrst")
+
+
+def apply_live_render_frame(
+    app: Any,
+    frame: LiveRenderFrame,
+    *,
+    display_settings: EcgDisplaySettings,
+    autoscale: bool,
+    min_ecg_span_counts: float,
+    min_resp_span_counts: float,
+) -> None:
+    app.live_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
+    app.live_peak_line.set_data(frame.peaks_x, frame.peaks_y)
+    app.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
+    app.live_status_line.set_data(frame.plot_status_x, frame.plot_status)
+    for ax in (app.ax_live_ecg, app.ax_live_resp, app.ax_live_status):
+        ax.set_xlim(frame.left, frame.right)
+    if autoscale:
+        ecg_ylim = robust_ylim(frame.visible_ecg_plot, min_span=min_ecg_span_counts * display_settings.gain)
+        resp_ylim = robust_ylim(frame.visible_resp_plot, min_span=min_resp_span_counts)
+        set_axis_ylim_if_changed(app.ax_live_ecg, stable_ylim(app.ax_live_ecg.get_ylim(), ecg_ylim))
+        set_axis_ylim_if_changed(app.ax_live_resp, stable_ylim(app.ax_live_resp.get_ylim(), resp_ylim))
+        status_top = float(frame.visible_status.max()) + 0.5 if frame.visible_status.size else 1.0
+        set_axis_ylim_if_changed(app.ax_live_status, (-0.5, max(1.0, status_top)))
+    apply_ecg_paper_grid(app.ax_live_ecg, display_settings, app.ecg_paper_grid_cache)
+    draw_calibration_pulse(
+        app.ax_live_ecg,
+        app.live_calibration_artists,
+        display_settings,
+        app.calibration_pulse_cache,
+    )
+    app.live_canvas.draw_idle()
 
 
 def draw_pqrst_review(ax: object, canvas: object, review: PqrstReview) -> None:

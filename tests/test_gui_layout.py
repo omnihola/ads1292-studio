@@ -990,12 +990,15 @@ def test_live_and_review_ecg_axes_start_with_ecg_paper_grid() -> None:
 
 def test_live_and_review_runtime_grid_and_calibration_are_plot_helpers() -> None:
     from ads1292_studio.app import App
+    from ads1292_studio.gui_plots import apply_live_render_frame
 
-    source = inspect.getsource(App._redraw_live) + inspect.getsource(App._show_review_frame)
+    live_source = inspect.getsource(apply_live_render_frame)
+    review_source = inspect.getsource(App._show_review_frame)
 
-    assert "apply_ecg_paper_grid(self.ax_live_ecg" in source
-    assert "apply_ecg_paper_grid(self.ax_review_ecg" in source
-    assert "draw_calibration_pulse(" in source
+    assert "apply_live_render_frame(" in inspect.getsource(App._redraw_live)
+    assert "apply_ecg_paper_grid(app.ax_live_ecg" in live_source
+    assert "apply_ecg_paper_grid(self.ax_review_ecg" in review_source
+    assert "draw_calibration_pulse(" in live_source + review_source
     assert "def _apply_ecg_paper_grid" not in inspect.getsource(App)
     assert "def _draw_calibration_pulse" not in inspect.getsource(App)
 

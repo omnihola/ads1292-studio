@@ -1,7 +1,12 @@
+from types import SimpleNamespace
+
+import numpy as np
 from matplotlib.figure import Figure
 
-from ads1292_studio.gui_plots import draw_pqrst_review
-from ads1292_studio.models import PqrstReview
+from ads1292_studio.display import EcgDisplaySettings
+from ads1292_studio.gui_plots import apply_live_render_frame, draw_pqrst_review
+from ads1292_studio.live_render import LiveRenderFrame
+from ads1292_studio.models import HeartRateSummary, PqrstReview
 
 
 class FakeCanvas:
@@ -31,3 +36,65 @@ def test_draw_pqrst_review_renders_average_beat_and_refreshes_canvas() -> None:
     assert "PQRST review: QRS=True" in ax.get_title()
     assert len(ax.lines) == 2
     assert ax.get_xlabel() == "Time relative to R peak (ms)"
+
+
+def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
+    fig = Figure()
+    ax_ecg = fig.add_subplot(311)
+    ax_resp = fig.add_subplot(312)
+    ax_status = fig.add_subplot(313)
+    ecg_line, = ax_ecg.plot([], [])
+    peak_line, = ax_ecg.plot([], [])
+    resp_line, = ax_resp.plot([], [])
+    status_line, = ax_status.plot([], [])
+    canvas = FakeCanvas()
+    app = SimpleNamespace(
+        live_ecg_line=ecg_line,
+        live_peak_line=peak_line,
+        live_resp_line=resp_line,
+        live_status_line=status_line,
+        ax_live_ecg=ax_ecg,
+        ax_live_resp=ax_resp,
+        ax_live_status=ax_status,
+        ecg_paper_grid_cache={},
+        live_calibration_artists=[],
+        calibration_pulse_cache={},
+        live_canvas=canvas,
+    )
+    frame = LiveRenderFrame(
+        source="CH2",
+        left=1.0,
+        right=9.0,
+        visible_x=np.array([1.0, 2.0, 3.0]),
+        visible_ecg=np.array([0.0, 2.0, 0.0]),
+        visible_ecg_plot=np.array([0.0, 2.0, 0.0]),
+        visible_resp_plot=np.array([10.0, 11.0, 12.0]),
+        visible_status=np.array([0.0, 2.0, 2.0]),
+        peaks=(1,),
+        peaks_x=np.array([2.0]),
+        peaks_y=np.array([2.0]),
+        plot_ecg_x=np.array([1.0, 2.0, 3.0]),
+        plot_ecg=np.array([0.0, 2.0, 0.0]),
+        plot_resp_x=np.array([1.0, 2.0, 3.0]),
+        plot_resp=np.array([10.0, 11.0, 12.0]),
+        plot_status_x=np.array([1.0, 2.0, 3.0]),
+        plot_status=np.array([0.0, 2.0, 2.0]),
+        heart_rate=HeartRateSummary(0.0, 0.0, 0.0, 0),
+    )
+
+    apply_live_render_frame(
+        app,
+        frame,
+        display_settings=EcgDisplaySettings(time_window_seconds=8.0),
+        autoscale=True,
+        min_ecg_span_counts=8.0,
+        min_resp_span_counts=40.0,
+    )
+
+    assert ecg_line.get_xdata().tolist() == [1.0, 2.0, 3.0]
+    assert peak_line.get_ydata().tolist() == [2.0]
+    assert resp_line.get_ydata().tolist() == [10.0, 11.0, 12.0]
+    assert status_line.get_ydata().tolist() == [0.0, 2.0, 2.0]
+    assert ax_ecg.get_xlim() == (1.0, 9.0)
+    assert ax_status.get_ylim() == (-0.5, 2.5)
+    assert canvas.draw_idle_calls == 1

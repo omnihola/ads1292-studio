@@ -501,12 +501,15 @@ def test_live_redraw_skips_unchanged_y_axis_limit_writes() -> None:
     import inspect
 
     from ads1292_studio.app import App
+    from ads1292_studio.gui_plots import apply_live_render_frame
 
     redraw_source = inspect.getsource(App._redraw_live)
+    apply_source = inspect.getsource(apply_live_render_frame)
 
-    assert "set_axis_ylim_if_changed(self.ax_live_ecg" in redraw_source
-    assert "set_axis_ylim_if_changed(self.ax_live_resp" in redraw_source
-    assert "set_axis_ylim_if_changed(self.ax_live_status" in redraw_source
+    assert "apply_live_render_frame(" in redraw_source
+    assert "set_axis_ylim_if_changed(app.ax_live_ecg" in apply_source
+    assert "set_axis_ylim_if_changed(app.ax_live_resp" in apply_source
+    assert "set_axis_ylim_if_changed(app.ax_live_status" in apply_source
     assert "self.ax_live_ecg.set_ylim(" not in redraw_source
     assert "self.ax_live_resp.set_ylim(" not in redraw_source
     assert "self.ax_live_status.set_ylim(" not in redraw_source
