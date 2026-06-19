@@ -19,12 +19,11 @@ from ads1292_studio.calibration import Calibration, counts_to_microvolts, read_c
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.events import EventMarker, read_events_json, write_events_json
+from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
-from ads1292_studio.quality import compute_quality_metrics
-from ads1292_studio.quality_gate import evaluate_quality_gate
 from ads1292_studio.report import export_review_report
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import (
@@ -296,10 +295,10 @@ class App(tk.Tk):
             recording = read_recording_csv(Path(path))
             self.recording_path = Path(path)
             self.loaded_samples = recording.samples
-            self._show_recording(recording.samples)
             self._load_event_sidecar(Path(path))
             self._load_calibration_sidecar(Path(path))
             self._load_protocol_sidecar(Path(path))
+            self._show_recording(recording.samples)
             self.path_var.set(f"CSV: {path}")
             self._log(f"Loaded {path}")
         except Exception as exc:
@@ -610,13 +609,9 @@ class App(tk.Tk):
         self.metrics_var.set(
             f"samples {len(samples)} | duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | source {source}"
         )
-        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get())
-        gate = evaluate_quality_gate(metrics)
         self.quality_var.set(
-            f"Gate {gate.label} | "
+            f"{self._quality_text(source, result.heart_rate.valid_rr_count, samples)} | "
             f"QRS {'clear' if result.pqrst.qrs_clear else 'unclear'} | "
-            f"drift {metrics.baseline_drift_counts:.0f} ct | "
-            f"noise {metrics.noise_rms_counts:.1f} ct | "
             f"P {'tentative' if result.pqrst.p_tentative else 'not reliable'} | "
             f"T {'tentative' if result.pqrst.t_tentative else 'not reliable'}"
         )
@@ -640,14 +635,20 @@ class App(tk.Tk):
         self.pqrst_canvas.draw_idle()
 
     def _quality_text(self, source: str, valid_rr: int, samples: tuple[StreamSample, ...]) -> str:
-        lead_bad = sum(1 for value in self.status if value != 0)
-        contact = "OK" if lead_bad == 0 else f"{lead_bad} bad samples"
-        rhythm = "detecting" if valid_rr < 2 else "R peaks detected"
-        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get())
-        gate = evaluate_quality_gate(metrics)
-        return (
-            f"Gate {gate.label} | Contact {contact} | {rhythm} | source {source} | "
-            f"drift {metrics.baseline_drift_counts:.0f} ct | noise {metrics.noise_rms_counts:.1f} ct"
+        protocol = self._protocol()
+        should_evaluate_protocol = bool(self.loaded_samples) or protocol_ready_for_live_quality(
+            samples,
+            protocol,
+            SAMPLE_RATE_HZ,
+        )
+        return build_quality_text(
+            samples=samples,
+            status_values=tuple(self.status),
+            source=source,
+            selected_source=self.source_var.get(),
+            valid_rr=valid_rr,
+            protocol=protocol if should_evaluate_protocol else None,
+            sample_rate_hz=SAMPLE_RATE_HZ,
         )
 
     def _current_samples(self) -> tuple[StreamSample, ...]:

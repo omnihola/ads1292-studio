@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 19
+Phase 20
 
 ## Phases
 
@@ -170,6 +170,14 @@ Phase 19
 - [x] Add tests and real CSV report/package/CLI smoke tests.
 - **Status:** complete
 
+### Phase 20: GUI Protocol Segment Gate Visibility
+- [x] Add testable GUI quality text builder.
+- [x] Show protocol segment gate Pass/Fail in GUI quality text for offline protocol recordings.
+- [x] Suppress live protocol segment gate evaluation until the live buffer covers the full protocol window.
+- [x] Load event, calibration, and protocol sidecars before rendering loaded CSV data.
+- [x] Add tests and real CSV GUI-quality smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -201,6 +209,7 @@ Phase 19
 | Add protocol segment metrics | Baseline/motion/recovery material validation needs per-step evidence, not only whole-record summaries. |
 | Fix report segment analysis to the whole-record ECG source | Segment-to-segment comparisons are only meaningful when baseline, motion, and recovery use the same channel. |
 | Add protocol segment quality gates | Commercial-style validation needs explicit pass/fail calls for each protocol stage, not only descriptive segment metrics. |
+| Show segment gate in GUI quality text | A commercial-style desktop app should surface protocol pass/fail without requiring report export or CLI QC. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

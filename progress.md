@@ -312,6 +312,22 @@
   - `tests/test_cli.py`
   - `README.md`
 
+### Phase 20: GUI Protocol Segment Gate Visibility
+- **Status:** complete
+- Actions taken:
+  - Added `gui_quality.py` with a testable `build_quality_text()` function for GUI sidebar quality summaries.
+  - Added protocol segment gate status and failures to GUI quality text when a protocol is evaluated.
+  - Added `protocol_ready_for_live_quality()` so live recordings do not report future protocol steps as failed before the protocol window is covered.
+  - Updated GUI CSV load order to load event, calibration, and protocol sidecars before rendering the recording.
+  - Updated offline review quality text to reuse the same GUI quality builder as live display.
+  - Added tests for segment gate text, no-protocol text, and live protocol readiness.
+  - Verified against the real ADS1292 CSV/protocol pair with a direct GUI quality text smoke call.
+- Files created/modified:
+  - `src/ads1292_studio/gui_quality.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_gui_quality.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -401,6 +417,11 @@
 | Protocol segment gate real CSV QC smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv> --protocol reports/segment-gate-smoke/protocol.json --max-baseline-drift 500 --max-noise-rms 1000 --max-peak-to-peak 30000` | Overall and segment gates pass real CSV | `quality_gate=Pass`, `protocol_segment_gate=Pass`, baseline/motion/recovery Pass | Pass |
 | Protocol segment gate real CSV report smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --protocol reports/segment-gate-smoke/protocol.json --out reports/segment-gate-smoke` | Report includes Protocol Segment Gate | grep found `Protocol Segment Gate`, baseline, motion, recovery, Pass, CH2 | Pass |
 | Protocol segment gate real package smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package reports/segment-gate-package-smoke/package-source.csv --out packages/segment-gate-smoke` | Manifest and report include segment gate | grep found `segment_gate`, `segment_results`, `Protocol Segment Gate`, baseline, motion, recovery | Pass |
+| GUI quality TDD red check | `conda run -n sensor python -m pytest tests/test_gui_quality.py -q` before implementation | Missing GUI quality builder | `ModuleNotFoundError: ads1292_studio.gui_quality` | Pass |
+| GUI quality tests | `conda run -n sensor python -m pytest tests/test_gui_quality.py -q` | GUI quality text and live readiness tests pass | 3 passed | Pass |
+| GUI quality full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 49 passed | Pass |
+| GUI quality syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/gui_quality.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| GUI quality real CSV smoke | `PYTHONPATH=src conda run -n sensor python -c "... build_quality_text(...)"` | Real CSV quality text includes segment gate | `Gate Pass ... Segment Gate Pass` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -425,12 +446,14 @@
 | 2026-06-18 | Initial segment gate test used a fixed noise limit that did not fail the synthetic motion segment | 1 | Changed the test to derive the threshold between measured baseline and motion noise. |
 | 2026-06-18 | Empty segment gate emitted redundant contact/R-peak failures | 1 | Short-circuited no-data segment evaluation so the failure is specific. |
 | 2026-06-18 | `dataclasses.asdict()` omitted computed `label`/`status` properties from segment gate manifest output | 1 | Added an explicit manifest serializer for segment gate results. |
+| 2026-06-18 | GUI quality text did not expose protocol segment gate results | 1 | Added a testable GUI quality text builder and wired it into live/offline review. |
+| 2026-06-18 | Live GUI could mark future protocol steps as failed before enough data was collected | 1 | Added live protocol readiness gating before showing Segment Gate in the sidebar. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 19 complete; ready to commit and push protocol segment quality gates iteration. |
+| Where am I? | Phase 20 complete; ready to commit and push GUI protocol segment gate visibility iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, and protocol segment quality gates. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, and GUI segment gate visibility. |

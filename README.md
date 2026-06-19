@@ -83,6 +83,9 @@ by electrode label.
 - Protocol segment quality gates in reports, session package manifests, and
   CLI `qc --protocol` output, so baseline/motion/recovery failures are named
   explicitly.
+- GUI quality text shows protocol segment gate status for offline protocol
+  recordings, and live recordings wait until the protocol window is covered
+  before evaluating segment gates.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

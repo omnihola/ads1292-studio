@@ -45,6 +45,7 @@
 | Add protocol segment metrics | Baseline, motion, and recovery stages need separate contact, R-peak, HR, drift, noise, and peak-to-peak evidence. |
 | Keep report segment metrics on the whole-record ECG source | A report must not compare baseline CH2 against motion CH1 just because per-segment Auto changed channels. |
 | Add protocol segment quality gates | Reports, manifests, and CLI QC should name the failed protocol stage so motion/recovery problems are not hidden inside whole-record averages. |
+| Show segment gate in GUI quality text | Users reviewing a loaded protocol CSV need the same segment gate status in the app sidebar, not only in exported artifacts. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -64,6 +65,7 @@
 | Synthetic QC data can fail strict QRS checks | Keep default QC strict for real recordings, but allow `--allow-unclear-qrs` for debug fixtures. |
 | Protocol sidecar smoke setup briefly touched the parent `record/` folder | Removed the temporary file and reran smoke using ignored files inside `ads1292-studio/reports/`. |
 | Per-segment Auto source selected CH1 for the motion segment in real smoke | Fixed report segment analysis to reuse the whole-record ECG source, so all protocol stages compare the same channel. |
+| Loaded CSV rendered before protocol/calibration sidecars were loaded | Load sidecars before `_show_recording()` so GUI review uses the recording's saved protocol and calibration state. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -89,6 +91,7 @@
 - Protocol report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --protocol reports/protocol-template.json --out reports`
 - Protocol segment metrics are generated automatically when `--protocol` is supplied to `report` or when a `.protocol.json` sidecar is included in a session package.
 - Protocol segment gate command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv> --protocol reports/protocol-template.json`
+- GUI quality text builder smoke command: `PYTHONPATH=src conda run -n sensor python -c "..."` can call `ads1292_studio.gui_quality.build_quality_text(...)` against a real CSV/protocol pair.
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.
