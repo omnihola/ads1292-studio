@@ -3394,20 +3394,18 @@ class App(tk.Tk):
         display_settings = self._display_settings()
         filter_settings = self._software_filter_settings()
         source, ecg_raw, resp_raw = self._ads1292r_display_channels()
-        ecg = self._display_signal(ecg_raw, invert=DEFAULT_ECG_INVERTED, gain=display_settings.gain)
-        resp = self._display_signal(resp_raw)
         x = np.asarray(self.indices, dtype=float) / SAMPLE_RATE_HZ
         left = max(0.0, x[-1] - display_settings.time_window_seconds)
         right = max(display_settings.time_window_seconds, x[-1])
         visible = (x >= left) & (x <= right)
         visible_x = x[visible]
-        visible_ecg = ecg[visible]
-        visible_resp = resp[visible]
+        visible_ecg = self._display_signal(ecg_raw[visible], invert=DEFAULT_ECG_INVERTED, gain=display_settings.gain)
+        visible_resp = self._display_signal(resp_raw[visible])
         visible_ecg_plot = smooth_for_plot(visible_ecg, window=DISPLAY_SMOOTHING_WINDOW)
         visible_resp_plot = smooth_for_plot(visible_resp, window=DISPLAY_SMOOTHING_WINDOW)
         status_arr = np.asarray(self.status, dtype=float)
         visible_status = status_arr[visible]
-        peaks = detect_r_peaks(ecg[visible], SAMPLE_RATE_HZ)
+        peaks = detect_r_peaks(visible_ecg, SAMPLE_RATE_HZ)
         peaks_x = visible_x[list(peaks)] if peaks else []
         peaks_y = visible_ecg_plot[list(peaks)] if peaks else []
         plot_x, plot_ecg, plot_resp, plot_status = decimate_aligned_for_plot(
