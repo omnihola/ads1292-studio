@@ -681,7 +681,7 @@ def test_panel_chrome_spec_softens_repeated_card_borders() -> None:
         "background": "#FFFFFF",
         "border": "#D9E1EC",
         "borderwidth": 1,
-        "relief": "solid",
+        "relief": "flat",
     }
 
 

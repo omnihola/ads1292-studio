@@ -449,7 +449,7 @@ PANEL_CHROME_SPEC = {
     "background": "#FFFFFF",
     "border": "#D9E1EC",
     "borderwidth": 1,
-    "relief": "solid",
+    "relief": "flat",
 }
 PLOT_PANEL_SPEC = {
     "shell": "Main.TFrame",
