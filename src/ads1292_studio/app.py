@@ -116,7 +116,7 @@ BUTTON_CHROME_SPEC = {
 INPUT_CHROME_SPEC = {
     "label": {
         "font": ("Aptos", 10, "bold"),
-        "padding": (2, 1),
+        "padding": (2, 3),
         "background": "#F6F8FB",
         "foreground": "#657084",
     },
