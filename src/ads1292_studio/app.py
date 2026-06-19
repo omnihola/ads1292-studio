@@ -1279,10 +1279,27 @@ def _mousewheel_units(event: tk.Event) -> int:
     return -1 if delta > 0 else 1
 
 
+def _widget_exists(widget: tk.Widget) -> bool:
+    try:
+        return bool(widget.winfo_exists())
+    except tk.TclError:
+        return False
+
+
+def _unbind_mousewheel_events(widget: tk.Widget) -> None:
+    for sequence in ScrollableFrame._mousewheel_events:
+        try:
+            widget.unbind_all(sequence)
+        except tk.TclError:
+            pass
+
+
 class ScrollableFrame:
+    _mousewheel_events = ("<MouseWheel>", "<Button-4>", "<Button-5>")
     _instances: list["ScrollableFrame"] = []
     _active_frame: "ScrollableFrame | None" = None
     _global_mousewheel_bound = False
+    _global_mousewheel_widget: tk.Widget | None = None
 
     def __init__(self, parent: tk.Widget, width: int = 280) -> None:
         scrollbar_spec = scrollbar_chrome_spec()
@@ -1309,12 +1326,13 @@ class ScrollableFrame:
         self._bind_global_mousewheel()
 
     def _bind_global_mousewheel(self) -> None:
-        if ScrollableFrame._global_mousewheel_bound:
+        widget = ScrollableFrame._global_mousewheel_widget
+        if ScrollableFrame._global_mousewheel_bound and widget is not None and _widget_exists(widget):
             return
-        self.canvas.bind_all("<MouseWheel>", self._dispatch_mousewheel)
-        self.canvas.bind_all("<Button-4>", self._dispatch_mousewheel)
-        self.canvas.bind_all("<Button-5>", self._dispatch_mousewheel)
+        for sequence in ScrollableFrame._mousewheel_events:
+            self.canvas.bind_all(sequence, self._dispatch_mousewheel)
         ScrollableFrame._global_mousewheel_bound = True
+        ScrollableFrame._global_mousewheel_widget = self.canvas
 
     def _update_scroll_region(self, _event: tk.Event) -> None:
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -1335,6 +1353,15 @@ class ScrollableFrame:
         ScrollableFrame._instances = [instance for instance in ScrollableFrame._instances if instance is not self]
         if ScrollableFrame._active_frame is self:
             ScrollableFrame._active_frame = None
+        if ScrollableFrame._global_mousewheel_widget is self.canvas:
+            self._rebind_global_mousewheel()
+
+    def _rebind_global_mousewheel(self) -> None:
+        _unbind_mousewheel_events(self.canvas)
+        ScrollableFrame._global_mousewheel_bound = False
+        ScrollableFrame._global_mousewheel_widget = None
+        if ScrollableFrame._instances:
+            ScrollableFrame._instances[0]._bind_global_mousewheel()
 
     def _dispatch_mousewheel(self, event: tk.Event) -> None:
         target = self._mousewheel_target(event)
@@ -1389,6 +1416,8 @@ class App(tk.Tk):
         self.is_streaming = False
         self.is_loading_csv = False
         self.is_starting = False
+        self.is_closing = False
+        self.tick_after_id: str | None = None
 
         self.sample_index = 0
         self.ch1: deque[float] = deque(maxlen=MAX_POINTS)
@@ -1406,7 +1435,7 @@ class App(tk.Tk):
 
         self._build_ui()
         self.refresh_ports()
-        self.after(50, self._tick)
+        self._schedule_tick()
         self.protocol("WM_DELETE_WINDOW", self._close)
 
     def _build_ui(self) -> None:
@@ -3237,7 +3266,24 @@ class App(tk.Tk):
         write_protocol_json(self._protocol_path(self.recording_path), self._protocol())
         write_quality_gate_json(self._quality_gate_path(self.recording_path), self._quality_gate())
 
+    def _schedule_tick(self) -> None:
+        if self.is_closing or self.tick_after_id is not None:
+            return
+        self.tick_after_id = self.after(50, self._tick)
+
+    def _cancel_tick(self) -> None:
+        if self.tick_after_id is None:
+            return
+        try:
+            self.after_cancel(self.tick_after_id)
+        except tk.TclError:
+            pass
+        self.tick_after_id = None
+
     def _tick(self) -> None:
+        self.tick_after_id = None
+        if self.is_closing:
+            return
         self._drain_csv_load_results()
         self._drain_connect_results()
         self._drain_stream_start_results()
@@ -3258,7 +3304,7 @@ class App(tk.Tk):
             except queue.Empty:
                 break
         self._drain_live_quality_results()
-        self.after(50, self._tick)
+        self._schedule_tick()
 
     def _schedule_live_quality_update(
         self,
@@ -3681,11 +3727,18 @@ class App(tk.Tk):
         self.log_text.see(tk.END)
 
     def _close(self) -> None:
-        self.stop()
+        self.is_closing = True
+        self._cancel_tick()
+        self.worker.stop()
         if self.live_quality_future is not None and not self.live_quality_future.done():
             self.live_quality_future.cancel()
         self.live_quality_executor.shutdown(wait=False, cancel_futures=True)
         self.destroy()
+
+    def destroy(self) -> None:
+        self.is_closing = True
+        self._cancel_tick()
+        super().destroy()
 
 
 def main() -> None:
