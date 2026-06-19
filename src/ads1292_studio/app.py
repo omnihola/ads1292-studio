@@ -294,10 +294,10 @@ HEADER_CONNECTION_STYLES = {
 }
 HEADER_CONNECTION_PILL = {
     "styles": HEADER_CONNECTION_STYLES,
-    "padding": (10, 5),
+    "padding": (12, 5),
     "font": ("Aptos", 12, "bold"),
     "borderwidth": 1,
-    "relief": "solid",
+    "relief": "flat",
     "backgrounds": {
         "ready": "#E9F6EE",
         "running": "#EAF1FF",
