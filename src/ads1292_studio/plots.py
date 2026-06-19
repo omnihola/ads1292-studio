@@ -3,6 +3,15 @@ from __future__ import annotations
 import numpy as np
 
 
+def endpoint_indices(size: int, max_points: int) -> np.ndarray:
+    if size <= 0 or max_points <= 0:
+        return np.asarray([], dtype=int)
+    if size <= max_points:
+        return np.arange(size, dtype=int)
+    count = max(1, int(max_points))
+    return np.unique(np.linspace(0, size - 1, count, dtype=int))
+
+
 def smooth_for_plot(values, window: int = 5) -> np.ndarray:
     arr = np.asarray(values, dtype=float)
     if window <= 1 or arr.size < window:
@@ -18,10 +27,12 @@ def smooth_for_plot(values, window: int = 5) -> np.ndarray:
 def decimate_for_plot(x, y, max_points: int) -> tuple[np.ndarray, np.ndarray]:
     x_arr = np.asarray(x)
     y_arr = np.asarray(y)
+    if x_arr.size != y_arr.size:
+        raise ValueError("x and y must have the same length")
     if y_arr.size <= max_points:
         return x_arr, y_arr
-    step = int(np.ceil(y_arr.size / max_points))
-    return x_arr[::step], y_arr[::step]
+    indices = endpoint_indices(y_arr.size, max_points)
+    return x_arr[indices], y_arr[indices]
 
 
 def decimate_aligned_for_plot(x, *ys, max_points: int) -> tuple[np.ndarray, ...]:
@@ -29,8 +40,10 @@ def decimate_aligned_for_plot(x, *ys, max_points: int) -> tuple[np.ndarray, ...]
     y_arrays = tuple(np.asarray(y) for y in ys)
     if x_arr.size <= max_points:
         return (x_arr, *y_arrays)
-    step = int(np.ceil(x_arr.size / max_points))
-    return (x_arr[::step], *(y_arr[::step] for y_arr in y_arrays))
+    if any(y_arr.size != x_arr.size for y_arr in y_arrays):
+        raise ValueError("x and y arrays must have the same length")
+    indices = endpoint_indices(x_arr.size, max_points)
+    return (x_arr[indices], *(y_arr[indices] for y_arr in y_arrays))
 
 
 def decimate_extrema_for_plot(x, y, max_points: int) -> tuple[np.ndarray, np.ndarray]:
@@ -43,9 +56,9 @@ def decimate_extrema_for_plot(x, y, max_points: int) -> tuple[np.ndarray, np.nda
     if max_points < 4:
         return decimate_for_plot(x_arr, y_arr, max_points=max_points)
 
-    bin_count = max(1, max_points // 2)
+    bin_count = max(1, (max_points - 2) // 2)
     edges = np.linspace(0, y_arr.size, bin_count + 1, dtype=int)
-    keep: list[int] = []
+    keep: list[int] = [0, y_arr.size - 1]
     for start, stop in zip(edges[:-1], edges[1:]):
         if stop <= start:
             continue
@@ -53,7 +66,7 @@ def decimate_extrema_for_plot(x, y, max_points: int) -> tuple[np.ndarray, np.nda
         local_min = start + int(np.argmin(segment))
         local_max = start + int(np.argmax(segment))
         keep.extend(sorted({local_min, local_max}))
-    indices = np.asarray(keep, dtype=int)
+    indices = np.asarray(sorted(set(keep)), dtype=int)
     return x_arr[indices], y_arr[indices]
 
 

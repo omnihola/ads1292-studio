@@ -6,10 +6,19 @@ from ads1292_studio.plots import (
     decimate_aligned_for_plot,
     decimate_extrema_for_plot,
     decimate_for_plot,
+    endpoint_indices,
     robust_ylim,
     smooth_for_plot,
     stable_ylim,
 )
+
+
+def test_endpoint_indices_preserve_latest_sample_within_budget() -> None:
+    indices = endpoint_indices(1000, 100)
+
+    assert 0 < indices.size <= 100
+    assert indices[0] == 0
+    assert indices[-1] == 999
 
 
 def test_smooth_for_plot_returns_original_values_when_window_is_too_small() -> None:
@@ -72,6 +81,8 @@ def test_decimate_for_plot_decimates_large_arrays_to_budget() -> None:
     assert 0 < out_x.size <= 100
     assert out_x.size == out_y.size
     assert list(out_x) == [int(value) for value in out_y]
+    assert out_x[0] == x[0]
+    assert out_x[-1] == x[-1]
 
 
 def test_decimate_aligned_for_plot_uses_one_stride_for_all_traces() -> None:
@@ -84,6 +95,8 @@ def test_decimate_aligned_for_plot_uses_one_stride_for_all_traces() -> None:
 
     assert 0 < out_x.size <= 100
     assert out_x.size == out_ecg.size == out_resp.size == out_status.size
+    assert out_x[0] == x[0]
+    assert out_x[-1] == x[-1]
     np.testing.assert_array_equal(out_ecg, out_x + 10)
     np.testing.assert_array_equal(out_resp, out_x + 20)
     np.testing.assert_array_equal(out_status, out_x % 4)
@@ -98,6 +111,8 @@ def test_decimate_extrema_for_plot_preserves_narrow_spikes() -> None:
     out_x, out_y = decimate_extrema_for_plot(x, y, max_points=100)
 
     assert out_x.size <= 100
+    assert out_x[0] == x[0]
+    assert out_x[-1] == x[-1]
     assert 427 in set(out_x.tolist())
     assert 428 in set(out_x.tolist())
     assert 12.0 in set(out_y.tolist())
