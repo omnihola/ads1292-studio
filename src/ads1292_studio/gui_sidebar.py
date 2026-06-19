@@ -16,6 +16,7 @@ from ads1292_studio.gui_specs import (
     sidebar_field_styles,
     sidebar_layout_spec,
     sidebar_notebook_styles,
+    sidebar_tab_strip_styles,
     sidebar_text_card_spec,
     status_detail_styles,
     status_tone_color,
@@ -247,6 +248,16 @@ def _build_status_card_row(
 
 def build_sidebar(app: Any, parent: ttk.Frame) -> dict[str, ttk.Frame]:
     spec = sidebar_layout_spec()
+    tab_strip_style = sidebar_tab_strip_styles()
+    tab_strip = ttk.Frame(
+        parent,
+        padding=tab_strip_style["padding"],
+        style=str(tab_strip_style["frame"]),
+    )
+    tab_strip.pack(fill=tk.X)
+    app.sidebar_tab_strip = tab_strip
+    app.sidebar_tab_labels = {}
+
     app.sidebar_notebook = ttk.Notebook(parent, style=sidebar_notebook_styles()["notebook"])
     app.sidebar_notebook.pack(fill=tk.BOTH, expand=True)
     app.sidebar_scrolls: dict[str, ScrollableFrame] = {}
@@ -256,9 +267,36 @@ def build_sidebar(app: Any, parent: ttk.Frame) -> dict[str, ttk.Frame]:
         scroll = ScrollableFrame(tab, width=int(spec["scroll_width"]))
         scroll.frame.pack(fill=tk.BOTH, expand=True)
         app.sidebar_notebook.add(tab, text=label)
+        tab_label = ttk.Label(
+            tab_strip,
+            text=label,
+            style=str(tab_strip_style["tab"]),
+            cursor="hand2",
+        )
+        tab_label.pack(side=tk.LEFT, padx=tab_strip_style["tab_gap"])
+        tab_label.bind("<Button-1>", lambda _event, target=tab: _select_sidebar_tab(app, target))
+        tab_label.bind("<Return>", lambda _event, target=tab: _select_sidebar_tab(app, target))
+        tab_label.bind("<space>", lambda _event, target=tab: _select_sidebar_tab(app, target))
+        app.sidebar_tab_labels[str(tab)] = tab_label
         app.sidebar_scrolls[label] = scroll
         sections[label] = scroll.content
+    app.sidebar_notebook.bind("<<NotebookTabChanged>>", lambda _event: _sync_sidebar_tab_styles(app))
+    _sync_sidebar_tab_styles(app)
     return sections
+
+
+def _select_sidebar_tab(app: Any, target: ttk.Frame) -> str:
+    app.sidebar_notebook.select(target)
+    _sync_sidebar_tab_styles(app)
+    return "break"
+
+
+def _sync_sidebar_tab_styles(app: Any) -> None:
+    tab_strip_style = sidebar_tab_strip_styles()
+    selected = app.sidebar_notebook.select()
+    for tab_id, label in app.sidebar_tab_labels.items():
+        style = tab_strip_style["selected_tab"] if tab_id == selected else tab_strip_style["tab"]
+        label.configure(style=str(style))
 
 
 def metadata_entry(app: Any, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:

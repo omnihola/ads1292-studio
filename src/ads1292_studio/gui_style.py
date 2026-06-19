@@ -21,6 +21,7 @@ from ads1292_studio.gui_specs import (
     scrollbar_chrome_spec,
     section_heading_styles,
     sidebar_notebook_styles,
+    sidebar_tab_strip_styles,
     status_detail_styles,
     status_label_spec,
     toolbar_control_styles,
@@ -439,7 +440,9 @@ def configure_notebook_chrome(style: ttk.Style) -> None:
 
     _configure_named_notebook(style, "Sidebar.TNotebook", "Sidebar.TNotebook.Tab", sidebar_notebook_styles())
     _configure_named_notebook(style, "Workspace.TNotebook", "Workspace.TNotebook.Tab", workspace_notebook_styles())
-    _configure_workspace_tab_strip(style)
+    _configure_tab_strip(style, sidebar_tab_strip_styles())
+    _configure_tab_strip(style, workspace_tab_strip_styles())
+    style.layout("Sidebar.TNotebook.Tab", [])
     style.layout("Workspace.TNotebook.Tab", [])
 
 
@@ -476,8 +479,7 @@ def _configure_named_notebook(
     )
 
 
-def _configure_workspace_tab_strip(style: ttk.Style) -> None:
-    chrome = workspace_tab_strip_styles()
+def _configure_tab_strip(style: ttk.Style, chrome: dict[str, object]) -> None:
     style.configure(
         chrome["frame"],
         background=chrome["background"],

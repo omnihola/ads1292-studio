@@ -45,6 +45,7 @@ from ads1292_studio.app import (
     sidebar_layout_spec,
     sidebar_notebook_styles,
     sidebar_tab_labels,
+    sidebar_tab_strip_styles,
     sidebar_text_card_spec,
     status_axis_spec,
     status_detail_styles,
@@ -352,6 +353,34 @@ def test_sidebar_notebook_styles_make_navigation_compact() -> None:
     }
 
 
+def test_sidebar_tab_strip_styles_replace_native_tab_chrome() -> None:
+    assert sidebar_tab_strip_styles() == {
+        "frame": "SidebarTabStrip.TFrame",
+        "tab": "SidebarTab.TLabel",
+        "selected_tab": "Selected.SidebarTab.TLabel",
+        "background": "#F6F8FB",
+        "selected_background": "#FFFFFF",
+        "hover_background": "#EAF1FF",
+        "foreground": "#657084",
+        "selected_foreground": "#2F6FED",
+        "font": ("Aptos", 10, "bold"),
+        "padding": (0, 0, 0, 5),
+        "tab_padding": (7, 6),
+        "tab_gap": (0, 2),
+    }
+
+
+def test_sidebar_uses_custom_segmented_tab_strip() -> None:
+    from ads1292_studio.gui_sidebar import build_sidebar
+
+    source = inspect.getsource(build_sidebar)
+
+    assert "app.sidebar_tab_strip" in source
+    assert "app.sidebar_tab_labels" in source
+    assert "_select_sidebar_tab(app, target)" in source
+    assert "<<NotebookTabChanged>>" in source
+
+
 def test_sidebar_layout_spec_stabilizes_control_column() -> None:
     assert sidebar_layout_spec() == {
         "shell": "SidebarShell.TFrame",
@@ -489,6 +518,7 @@ def test_workspace_notebook_native_tabs_are_hidden() -> None:
 
     source = inspect.getsource(configure_notebook_chrome)
 
+    assert 'style.layout("Sidebar.TNotebook.Tab", [])' in source
     assert 'style.layout("Workspace.TNotebook.Tab", [])' in source
 
 

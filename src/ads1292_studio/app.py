@@ -160,6 +160,7 @@ from ads1292_studio.gui_specs import (
     sidebar_layout_spec,
     sidebar_notebook_styles,
     sidebar_tab_labels,
+    sidebar_tab_strip_styles,
     sidebar_text_card_spec,
     status_axis_spec,
     status_detail_styles,
