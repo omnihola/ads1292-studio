@@ -198,12 +198,17 @@ def test_input_chrome_spec_keeps_forms_readable() -> None:
             "fieldbackground": "#FFFFFF",
             "background": "#FFFFFF",
             "foreground": "#172033",
+            "border": "#D9E1EC",
+            "focus_border": "#2F6FED",
             "selectbackground": "#EEF3FA",
             "selectforeground": "#172033",
             "arrowcolor": "#657084",
             "active_arrowcolor": "#1F4FB2",
             "disabled_foreground": "#657084",
             "disabled_background": "#EEF3FA",
+            "borderwidth": 1,
+            "relief": "flat",
+            "arrowsize": 14,
         },
         "check": {
             "padding": (3, 5),
@@ -295,8 +300,10 @@ def test_base_notebook_styles_keep_tab_defaults_consistent() -> None:
         "tab": "TNotebook.Tab",
         "background": "#F6F8FB",
         "borderwidth": 0,
-        "tab_padding": (14, 7),
+        "tab_padding": (14, 6),
         "tab_font": ("Aptos", 12, "bold"),
+        "tab_borderwidth": 0,
+        "tab_relief": "flat",
     }
 
 
@@ -314,13 +321,15 @@ def test_sidebar_notebook_styles_make_navigation_compact() -> None:
         "tab": "Sidebar.TNotebook.Tab",
         "background": "#F6F8FB",
         "borderwidth": 0,
-        "tab_padding": (12, 7),
+        "tab_padding": (11, 6),
         "tab_font": ("Aptos", 10, "bold"),
         "tab_background": "#EEF3FA",
         "selected_foreground": "#2F6FED",
         "inactive_foreground": "#657084",
         "active_foreground": "#172033",
         "active_background": "#FFFFFF",
+        "tab_borderwidth": 0,
+        "tab_relief": "flat",
     }
 
 
@@ -416,13 +425,15 @@ def test_workspace_notebook_styles_make_selected_tabs_visible() -> None:
         "tab": "Workspace.TNotebook.Tab",
         "background": "#F6F8FB",
         "borderwidth": 0,
-        "tab_padding": (18, 9),
+        "tab_padding": (16, 8),
         "tab_font": ("Aptos", 12, "bold"),
         "tab_background": "#EEF3FA",
         "selected_foreground": "#2F6FED",
         "inactive_foreground": "#657084",
         "active_foreground": "#172033",
         "active_background": "#FFFFFF",
+        "tab_borderwidth": 0,
+        "tab_relief": "flat",
     }
 
 
@@ -716,29 +727,29 @@ def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
     messages = empty_plot_messages()
 
     assert messages["live"] == (
-        "CH2 ECG Lead I appears here",
-        "CH1 respiration appears here",
-        "Lead-off/contact status appears here",
+        "Waiting for CH2 ECG Lead I",
+        "Waiting for CH1 respiration",
+        "Waiting for contact status",
     )
     assert messages["review"] == (
-        "Load a CSV to review CH2 ECG",
-        "CH1 respiration appears here",
-        "Lead-off/contact status appears here",
+        "Load CSV for CH2 ECG review",
+        "Load CSV for CH1 respiration",
+        "Load CSV for contact status",
     )
-    assert messages["pqrst"] == ("Load or record data to review the averaged PQRST beat",)
+    assert messages["pqrst"] == ("Load or record ECG to review averaged PQRST",)
 
 
 def test_empty_plot_style_uses_muted_callouts() -> None:
     assert empty_plot_style() == {
-        "text_color": "#516070",
-        "box_face": "#F8FAFD",
-        "box_edge": "#D9E1EC",
+        "text_color": "#657084",
+        "box_face": "#FFFFFF",
+        "box_edge": "#EAF1FF",
         "font_size": 10,
-        "font_weight": "normal",
-        "alpha": 0.95,
-        "box_pad": 0.62,
+        "font_weight": "bold",
+        "alpha": 0.92,
+        "box_pad": 0.58,
         "rounding": 0.18,
-        "line_width": 0.6,
+        "line_width": 0.8,
     }
 
 
@@ -861,6 +872,18 @@ def test_live_and_review_status_axes_are_configured_as_status_tracks() -> None:
     assert "configure_status_axes((app.ax_review_status,))" in source
     assert "set_ylabel(str(spec[\"ylabel\"]))" in configure_source
     assert "MultipleLocator(float(spec[\"y_major_tick_bits\"]))" in configure_source
+
+
+def test_live_and_review_ecg_axes_start_with_ecg_paper_grid() -> None:
+    from ads1292_studio.gui_plots import build_live_plot_panel, build_review_plot_panel, configure_initial_ecg_paper_grid
+
+    source = inspect.getsource(build_live_plot_panel) + inspect.getsource(build_review_plot_panel)
+    configure_source = inspect.getsource(configure_initial_ecg_paper_grid)
+
+    assert "configure_initial_ecg_paper_grid((app.ax_live_ecg,))" in source
+    assert "configure_initial_ecg_paper_grid((app.ax_review_ecg,))" in source
+    assert "ecg_paper_grid_spec(settings)" in configure_source
+    assert "which=\"minor\"" in configure_source
 
 
 def test_live_and_review_display_reuse_filter_settings_snapshot() -> None:

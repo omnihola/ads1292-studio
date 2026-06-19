@@ -9,6 +9,7 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 
+from ads1292_studio.display import EcgDisplaySettings, ecg_paper_grid_key, ecg_paper_grid_spec
 from ads1292_studio.gui_specs import (
     empty_plot_messages,
     empty_plot_style,
@@ -40,6 +41,7 @@ def build_live_plot_panel(app: Any) -> None:
     app.ax_live_resp.set_ylabel("counts")
     app.ax_live_status.set_xlabel("Time (s)")
     configure_live_time_axis((app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
+    configure_initial_ecg_paper_grid((app.ax_live_ecg,))
     trace_styles = plot_trace_styles()
     app.live_ecg_line, = app.ax_live_ecg.plot([], [], color=PLOT_TRACE_COLORS["ecg"], **trace_styles["ecg"])
     app.live_peak_line, = app.ax_live_ecg.plot([], [], color=PLOT_TRACE_COLORS["peak"], **trace_styles["peak"])
@@ -69,6 +71,7 @@ def build_review_plot_panel(app: Any) -> None:
         ax.label_outer()
     style_signal_axes((app.ax_review_ecg, app.ax_review_resp, app.ax_review_status))
     configure_status_axes((app.ax_review_status,))
+    configure_initial_ecg_paper_grid((app.ax_review_ecg,))
     add_signal_reference_lines((app.ax_review_ecg, app.ax_review_resp))
     app.ax_review_status.set_xlabel("Time (s)")
     app.ax_review_ecg.set_ylabel("display counts")
@@ -227,6 +230,31 @@ def configure_status_axes(axes: tuple[object, ...]) -> None:
     for ax in axes:
         ax.yaxis.set_major_locator(MultipleLocator(float(spec["y_major_tick_bits"])))
         ax.set_ylabel(str(spec["ylabel"]))
+
+
+def configure_initial_ecg_paper_grid(axes: tuple[object, ...]) -> None:
+    settings = EcgDisplaySettings()
+    spec = ecg_paper_grid_spec(settings)
+    for ax in axes:
+        _, _, major_y, minor_y = ecg_paper_grid_key(settings, ax.get_ylim())
+        ax.xaxis.set_major_locator(MultipleLocator(float(spec["major_x_seconds"])))
+        ax.xaxis.set_minor_locator(MultipleLocator(float(spec["minor_x_seconds"])))
+        ax.yaxis.set_major_locator(MultipleLocator(major_y))
+        ax.yaxis.set_minor_locator(MultipleLocator(minor_y))
+        ax.grid(
+            True,
+            which="major",
+            color=spec["major_color"],
+            linewidth=spec["major_linewidth"],
+            alpha=spec["major_alpha"],
+        )
+        ax.grid(
+            True,
+            which="minor",
+            color=spec["minor_color"],
+            linewidth=spec["minor_linewidth"],
+            alpha=spec["minor_alpha"],
+        )
 
 
 def show_empty_plot_state(artists: list[object], key: str, axes: tuple[object, ...]) -> None:

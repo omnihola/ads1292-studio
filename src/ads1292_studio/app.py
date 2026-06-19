@@ -960,10 +960,16 @@ class App(tk.Tk):
             fieldbackground=combobox_chrome["fieldbackground"],
             background=combobox_chrome["background"],
             foreground=combobox_chrome["foreground"],
+            bordercolor=combobox_chrome["border"],
+            lightcolor=combobox_chrome["border"],
+            darkcolor=combobox_chrome["border"],
             selectbackground=combobox_chrome["selectbackground"],
             selectforeground=combobox_chrome["selectforeground"],
             arrowcolor=combobox_chrome["arrowcolor"],
             padding=combobox_chrome["padding"],
+            borderwidth=combobox_chrome["borderwidth"],
+            relief=combobox_chrome["relief"],
+            arrowsize=combobox_chrome["arrowsize"],
         )
         style.map(
             "Port.TCombobox",
@@ -976,6 +982,7 @@ class App(tk.Tk):
                 ("disabled", combobox_chrome["disabled_background"]),
                 ("readonly", combobox_chrome["background"]),
             ],
+            bordercolor=[("focus", combobox_chrome["focus_border"]), ("active", combobox_chrome["focus_border"])],
             arrowcolor=[("active", combobox_chrome["active_arrowcolor"])],
         )
         toolbar_toggle = input_chrome["toolbar_toggle"]
@@ -1268,6 +1275,8 @@ class App(tk.Tk):
             base_notebook["tab"],
             padding=base_notebook["tab_padding"],
             font=base_notebook["tab_font"],
+            borderwidth=base_notebook["tab_borderwidth"],
+            relief=base_notebook["tab_relief"],
         )
         sidebar_tabs = sidebar_notebook_styles()
         style.configure(
@@ -1281,6 +1290,8 @@ class App(tk.Tk):
             font=sidebar_tabs["tab_font"],
             foreground=sidebar_tabs["inactive_foreground"],
             background=sidebar_tabs["tab_background"],
+            borderwidth=sidebar_tabs["tab_borderwidth"],
+            relief=sidebar_tabs["tab_relief"],
         )
         style.map(
             "Sidebar.TNotebook.Tab",
@@ -1305,6 +1316,8 @@ class App(tk.Tk):
             font=workspace_tabs["tab_font"],
             foreground=workspace_tabs["inactive_foreground"],
             background=workspace_tabs["tab_background"],
+            borderwidth=workspace_tabs["tab_borderwidth"],
+            relief=workspace_tabs["tab_relief"],
         )
         style.map(
             "Workspace.TNotebook.Tab",
