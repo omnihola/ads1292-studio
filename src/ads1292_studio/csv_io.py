@@ -80,8 +80,9 @@ def write_recording_csv(path: Path | str, samples: Iterable[StreamSample]) -> No
 
 
 class CsvRecorder:
-    def __init__(self, path: Path | str) -> None:
+    def __init__(self, path: Path | str, *, flush_every_rows: int = 50) -> None:
         self.path = Path(path)
+        self.flush_every_rows = max(1, int(flush_every_rows))
         self._handle = None
         self._writer = None
         self.rows_written = 0
@@ -116,5 +117,5 @@ class CsvRecorder:
             ]
         )
         self.rows_written += 1
-        if self._handle is not None:
+        if self._handle is not None and self.rows_written % self.flush_every_rows == 0:
             self._handle.flush()

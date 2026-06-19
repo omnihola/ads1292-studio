@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ads1292_studio.csv_io import read_recording_csv, write_recording_csv
+from ads1292_studio.csv_io import CsvRecorder, read_recording_csv, write_recording_csv
 from ads1292_studio.models import StreamSample
 
 
@@ -61,3 +61,48 @@ def test_csv_reader_combines_canonical_lead_off_bits_when_status_byte_omits_them
 
     assert loaded.samples[0].status_byte == 21
     assert loaded.samples[0].lead_off_bits == 5
+
+
+def test_csv_recorder_flushes_in_batches_and_on_close(tmp_path: Path, monkeypatch) -> None:
+    path = tmp_path / "recording.csv"
+    samples = [
+        StreamSample(
+            timestamp=float(index),
+            ch1=index,
+            ch2=index + 100,
+            board_heart_rate=70,
+            board_respiration_rate=18,
+            status_byte=index,
+        )
+        for index in range(5)
+    ]
+
+    with CsvRecorder(path, flush_every_rows=3) as recorder:
+        flush_calls = 0
+        original_flush = recorder._handle.flush
+
+        def counted_flush() -> None:
+            nonlocal flush_calls
+            flush_calls += 1
+            original_flush()
+
+        monkeypatch.setattr(recorder._handle, "flush", counted_flush)
+        for sample in samples:
+            recorder.write(sample)
+        assert flush_calls == 1
+
+    loaded = read_recording_csv(path)
+
+    assert recorder.rows_written == 5
+    assert flush_calls == 3
+    assert len(loaded.samples) == 5
+    assert loaded.samples[-1].ch2 == 104
+    assert loaded.samples[-1].lead_off_bits == 4
+
+
+def test_csv_recorder_normalizes_flush_batch_size(tmp_path: Path) -> None:
+    path = tmp_path / "recording.csv"
+
+    recorder = CsvRecorder(path, flush_every_rows=0)
+
+    assert recorder.flush_every_rows == 1
