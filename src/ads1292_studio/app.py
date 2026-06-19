@@ -89,10 +89,16 @@ class GuiState:
     has_data: bool
     has_recording_path: bool
     loading_csv: bool = False
+    connecting: bool = False
+    starting: bool = False
+
+    @property
+    def busy(self) -> bool:
+        return self.loading_csv or self.connecting or self.starting
 
     @property
     def package_ready(self) -> bool:
-        return self.has_data and self.has_recording_path and not self.loading_csv
+        return self.has_data and self.has_recording_path and not self.busy
 
 
 @dataclass(frozen=True)
@@ -126,6 +132,8 @@ def _gui_state(
     has_data: bool = False,
     has_recording_path: bool = False,
     loading_csv: bool = False,
+    connecting: bool = False,
+    starting: bool = False,
 ) -> GuiState:
     if state is not None:
         return state
@@ -135,6 +143,8 @@ def _gui_state(
         has_data=has_data,
         has_recording_path=has_recording_path,
         loading_csv=loading_csv,
+        connecting=connecting,
+        starting=starting,
     )
 
 
@@ -165,12 +175,12 @@ def gui_control_states(
         has_data=has_data,
         has_recording_path=has_recording_path,
     )
-    if current.loading_csv:
+    if current.busy:
         return {
             "Refresh": tk.DISABLED,
             "Connect": tk.DISABLED,
             "Start": tk.DISABLED,
-            "Stop": tk.DISABLED,
+            "Stop": tk.NORMAL if current.streaming else tk.DISABLED,
             "Load CSV": tk.DISABLED,
             "Export Report": tk.DISABLED,
             "Export Package": tk.DISABLED,
@@ -207,6 +217,10 @@ def gui_workflow_hint(
         has_data=has_data,
         has_recording_path=has_recording_path,
     )
+    if current.connecting:
+        return "Connecting: probing the selected port."
+    if current.starting:
+        return "Starting stream: waiting for the device to confirm."
     if current.loading_csv:
         return "Loading CSV: keep the window open; review plots will update when parsing finishes."
     if current.streaming:
@@ -258,7 +272,13 @@ def gui_status_cards(
         value="connected" if current.connected else "disconnected",
         tone="ready" if current.connected else "warning",
     )
-    if current.loading_csv:
+    if current.connecting:
+        acquisition_value = "connecting"
+        acquisition_tone = "running"
+    elif current.starting:
+        acquisition_value = "starting stream"
+        acquisition_tone = "running"
+    elif current.loading_csv:
         acquisition_value = "loading CSV"
         acquisition_tone = "running"
     elif current.streaming:

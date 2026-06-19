@@ -57,6 +57,52 @@ def test_gui_control_states_disable_conflicting_actions_while_loading_csv() -> N
     assert gui_workflow_hint(state=state) == "Loading CSV: keep the window open; review plots will update when parsing finishes."
 
 
+def test_gui_state_busy_is_true_for_connecting_starting_or_loading() -> None:
+    assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, connecting=True).busy is True
+    assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, starting=True).busy is True
+    assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, loading_csv=True).busy is True
+    assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False).busy is False
+
+
+def test_gui_control_states_disable_everything_while_connecting() -> None:
+    state = GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, connecting=True)
+
+    states = gui_control_states(state=state)
+
+    assert states["Connect"] == "disabled"
+    assert states["Start"] == "disabled"
+    assert states["Load CSV"] == "disabled"
+
+
+def test_gui_control_states_disable_everything_while_starting() -> None:
+    state = GuiState(connected=True, streaming=False, has_data=False, has_recording_path=False, starting=True)
+
+    states = gui_control_states(state=state)
+
+    assert states["Start"] == "disabled"
+    assert states["Stop"] == "disabled"
+    assert states["Load CSV"] == "disabled"
+
+
+def test_gui_workflow_hint_explains_connecting_and_starting() -> None:
+    connecting = GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, connecting=True)
+    starting = GuiState(connected=True, streaming=False, has_data=False, has_recording_path=False, starting=True)
+
+    assert "Connecting" in gui_workflow_hint(state=connecting)
+    assert "Starting" in gui_workflow_hint(state=starting)
+
+
+def test_gui_status_cards_show_connecting_and_starting_acquisition_values() -> None:
+    connecting = GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, connecting=True)
+    starting = GuiState(connected=True, streaming=False, has_data=False, has_recording_path=False, starting=True)
+
+    connecting_cards = {card.label: card.value for card in gui_status_cards(state=connecting)}
+    starting_cards = {card.label: card.value for card in gui_status_cards(state=starting)}
+
+    assert connecting_cards["Acquisition"] == "connecting"
+    assert starting_cards["Acquisition"] == "starting stream"
+
+
 def test_gui_control_states_enable_acquisition_after_connection() -> None:
     states = gui_control_states(
         connected=True,
