@@ -479,7 +479,7 @@ PLOT_AXIS_STYLE = {
     "tick_length": 3.0,
     "tick_width": 0.7,
     "label_size": 10,
-    "label_pad": 6,
+    "label_pad": 7,
     "title_size": 11,
     "title_weight": "bold",
     "title_pad": 10,
