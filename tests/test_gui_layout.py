@@ -9,6 +9,7 @@ from ads1292_studio.app import (
     empty_plot_style,
     event_count_styles,
     header_connection_styles,
+    header_frame_spec,
     header_layout_spec,
     header_text_styles,
     input_chrome_spec,
@@ -304,6 +305,16 @@ def test_header_layout_spec_gives_top_bar_clear_structure() -> None:
         "padding": (20, 14, 20, 12),
         "subtitle_padding": (14, 0),
         "separator_height": 1,
+    }
+
+
+def test_header_frame_spec_keeps_app_title_bar_clean() -> None:
+    assert header_frame_spec() == {
+        "frame": "Header.TFrame",
+        "separator": "HeaderSeparator.TFrame",
+        "background": "#FFFFFF",
+        "separator_background": "#D9E1EC",
+        "borderwidth": 0,
     }
 
 

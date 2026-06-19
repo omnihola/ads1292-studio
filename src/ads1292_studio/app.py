@@ -272,6 +272,13 @@ HEADER_LAYOUT_SPEC = {
     "subtitle_padding": (14, 0),
     "separator_height": 1,
 }
+HEADER_FRAME_SPEC = {
+    "frame": "Header.TFrame",
+    "separator": "HeaderSeparator.TFrame",
+    "background": "#FFFFFF",
+    "separator_background": "#D9E1EC",
+    "borderwidth": 0,
+}
 HEADER_TEXT_STYLES = {
     "title": {
         "style": "AppTitle.TLabel",
@@ -564,6 +571,10 @@ def header_connection_styles() -> dict[str, object]:
 
 def header_layout_spec() -> dict[str, object]:
     return dict(HEADER_LAYOUT_SPEC)
+
+
+def header_frame_spec() -> dict[str, object]:
+    return dict(HEADER_FRAME_SPEC)
 
 
 def header_text_styles() -> dict[str, dict[str, object]]:
@@ -1431,8 +1442,17 @@ class App(tk.Tk):
         tokens = APP_VISUAL_TOKENS
         style.configure(".", font=("Aptos", 12), background=tokens["surface"], foreground=tokens["ink"])
         style.configure("TFrame", background=tokens["surface"])
-        style.configure("Header.TFrame", background=tokens["panel"], borderwidth=0)
-        style.configure("HeaderSeparator.TFrame", background=tokens["border"], borderwidth=0)
+        header_frame = header_frame_spec()
+        style.configure(
+            str(header_frame["frame"]),
+            background=header_frame["background"],
+            borderwidth=header_frame["borderwidth"],
+        )
+        style.configure(
+            str(header_frame["separator"]),
+            background=header_frame["separator_background"],
+            borderwidth=header_frame["borderwidth"],
+        )
         toolbar_frame = toolbar_frame_spec()
         style.configure(
             str(toolbar_frame["frame"]),
