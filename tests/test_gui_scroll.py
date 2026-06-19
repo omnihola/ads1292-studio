@@ -18,6 +18,13 @@ def test_scrollable_frame_uses_canvas_scrollbar_and_mousewheel() -> None:
     assert "<MouseWheel>" in source
 
 
+def test_app_imports_scrollable_frame_instead_of_defining_it_inline() -> None:
+    source = inspect.getsource(App)
+
+    assert "class ScrollableFrame" not in source
+    assert "self.sidebar_scrolls: dict[str, ScrollableFrame]" in source
+
+
 def test_scrollable_frame_uses_single_global_mousewheel_dispatcher() -> None:
     source = inspect.getsource(ScrollableFrame)
 
