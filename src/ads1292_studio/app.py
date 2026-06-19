@@ -514,6 +514,10 @@ STATUS_DETAIL_STYLES = {
     "stripe": "#D9E1EC",
 }
 CARD_LABEL_SPEC = {
+    "style": "CardLabel.TLabel",
+    "font": ("Aptos", 11),
+    "background": "#FFFFFF",
+    "foreground": "#657084",
     "width": 12,
     "content_padding": (10, 8),
     "signal_value_wrap": 170,
@@ -1724,7 +1728,13 @@ class App(tk.Tk):
             background=[("active", scrollbar_spec["active_background"])],
             arrowcolor=[("active", scrollbar_spec["active_background"])],
         )
-        style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
+        card_label = card_label_spec()
+        style.configure(
+            str(card_label["style"]),
+            background=card_label["background"],
+            foreground=card_label["foreground"],
+            font=card_label["font"],
+        )
         style.configure(
             "WorkflowHint.TLabel",
             background=tokens["panel"],
@@ -2064,7 +2074,7 @@ class App(tk.Tk):
             stripe.pack(side=tk.LEFT, fill=tk.Y)
             content = ttk.Frame(row, padding=card_label["content_padding"], style="Card.TFrame")
             content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            label_widget = ttk.Label(content, text=label, width=int(card_label["width"]), style="CardLabel.TLabel")
+            label_widget = ttk.Label(content, text=label, width=int(card_label["width"]), style=str(card_label["style"]))
             label_widget.pack(side=tk.LEFT)
             value_label = ttk.Label(
                 content,
@@ -2085,7 +2095,7 @@ class App(tk.Tk):
             stripe.pack(side=tk.LEFT, fill=tk.Y)
             content = ttk.Frame(row, padding=card_label["content_padding"], style="Card.TFrame")
             content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            label_widget = ttk.Label(content, text=label, width=int(card_label["width"]), style="CardLabel.TLabel")
+            label_widget = ttk.Label(content, text=label, width=int(card_label["width"]), style=str(card_label["style"]))
             label_widget.pack(side=tk.LEFT)
             value_label = ttk.Label(
                 content,

@@ -436,6 +436,10 @@ def test_status_detail_styles_frame_session_quality_and_storage() -> None:
 
 def test_card_label_spec_keeps_status_cards_scannable() -> None:
     assert card_label_spec() == {
+        "style": "CardLabel.TLabel",
+        "font": ("Aptos", 11),
+        "background": "#FFFFFF",
+        "foreground": "#657084",
         "width": 12,
         "content_padding": (10, 8),
         "signal_value_wrap": 170,
