@@ -665,7 +665,7 @@ def test_log_panel_spec_keeps_long_sessions_readable() -> None:
 def test_scrollbar_chrome_spec_keeps_scroll_surfaces_subtle() -> None:
     assert scrollbar_chrome_spec() == {
         "vertical": "App.Vertical.TScrollbar",
-        "width": 12,
+        "width": 13,
         "background": "#A9B4C3",
         "active_background": "#657084",
         "trough": "#EEF3FA",

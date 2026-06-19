@@ -436,7 +436,7 @@ LOG_PANEL_SPEC = {
 }
 SCROLLBAR_CHROME_SPEC = {
     "vertical": "App.Vertical.TScrollbar",
-    "width": 12,
+    "width": 13,
     "background": "#A9B4C3",
     "active_background": "#657084",
     "trough": "#EEF3FA",
