@@ -453,8 +453,8 @@ def test_safety_notice_styles_make_research_use_boundary_visible() -> None:
         "frame": "SafetyNotice.TFrame",
         "label": "SafetyNotice.TLabel",
         "stripe": "#A76400",
-        "background": "#FFFFFF",
-        "foreground": "#172033",
+        "background": "#FFF4E3",
+        "foreground": "#6B4700",
         "font": ("Aptos", 11, "bold"),
     }
 

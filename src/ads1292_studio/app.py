@@ -553,8 +553,8 @@ SAFETY_NOTICE_STYLES = {
     "frame": "SafetyNotice.TFrame",
     "label": "SafetyNotice.TLabel",
     "stripe": "#A76400",
-    "background": "#FFFFFF",
-    "foreground": "#172033",
+    "background": "#FFF4E3",
+    "foreground": "#6B4700",
     "font": ("Aptos", 11, "bold"),
 }
 SIDEBAR_TEXT_CARD_SPEC = {
@@ -1814,6 +1814,18 @@ class App(tk.Tk):
                 lightcolor=panel_chrome["border"],
                 darkcolor=panel_chrome["border"],
             )
+        workflow_hint = workflow_hint_styles()
+        safety_notice = safety_notice_styles()
+        for notice_style in (workflow_hint, safety_notice):
+            style.configure(
+                notice_style["frame"],
+                background=notice_style["background"],
+                borderwidth=panel_chrome["borderwidth"],
+                relief=panel_chrome["relief"],
+                bordercolor=panel_chrome["border"],
+                lightcolor=panel_chrome["border"],
+                darkcolor=panel_chrome["border"],
+            )
         scrollbar_spec = scrollbar_chrome_spec()
         style.configure(
             str(scrollbar_spec["vertical"]),
@@ -1837,14 +1849,12 @@ class App(tk.Tk):
             foreground=card_label["foreground"],
             font=card_label["font"],
         )
-        workflow_hint = workflow_hint_styles()
         style.configure(
             workflow_hint["label"],
             background=workflow_hint["background"],
             foreground=workflow_hint["foreground"],
             font=workflow_hint["font"],
         )
-        safety_notice = safety_notice_styles()
         style.configure(
             safety_notice["label"],
             background=safety_notice["background"],
