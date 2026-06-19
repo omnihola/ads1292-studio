@@ -468,6 +468,7 @@ PLOT_AXIS_STYLE = {
     "tick_length": 3.0,
     "tick_width": 0.7,
     "label_size": 10,
+    "label_pad": 6,
     "title_size": 11,
     "title_weight": "bold",
     "title_pad": 8,
@@ -2414,6 +2415,8 @@ class App(tk.Tk):
             )
             ax.xaxis.label.set_size(style["label_size"])
             ax.yaxis.label.set_size(style["label_size"])
+            ax.xaxis.labelpad = style["label_pad"]
+            ax.yaxis.labelpad = style["label_pad"]
             ax.xaxis.label.set_color(style["label"])
             ax.yaxis.label.set_color(style["label"])
             self._set_signal_axis_title(ax, ax.get_title())
