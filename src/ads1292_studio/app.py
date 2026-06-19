@@ -99,6 +99,19 @@ PLOT_TRACE_COLORS = {
     "contact": "#516070",
     "peak": "#E34A4A",
 }
+EMPTY_PLOT_MESSAGES = {
+    "live": (
+        "Connect an ADS1292 board, then press Start",
+        "CH1 respiration/contact context appears here",
+        "Lead-off status stays at 0 when contacts are good",
+    ),
+    "review": (
+        "Load a CSV to review recorded ECG",
+        "CH1 respiration/contact context appears here",
+        "Lead-off/contact status appears here",
+    ),
+    "pqrst": ("Load or record data to build the averaged PQRST beat",),
+}
 
 
 @dataclass(frozen=True)
@@ -151,6 +164,10 @@ def app_visual_tokens() -> dict[str, str]:
 
 def plot_trace_colors() -> dict[str, str]:
     return dict(PLOT_TRACE_COLORS)
+
+
+def empty_plot_messages() -> dict[str, tuple[str, ...]]:
+    return dict(EMPTY_PLOT_MESSAGES)
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -485,6 +502,7 @@ class App(tk.Tk):
         self.indices: deque[int] = deque(maxlen=MAX_POINTS)
         self.board_hr: deque[int] = deque(maxlen=MAX_POINTS)
         self.board_rr: deque[int] = deque(maxlen=MAX_POINTS)
+        self.empty_plot_artists: list[object] = []
 
         self._build_ui()
         self.refresh_ports()
@@ -786,6 +804,7 @@ class App(tk.Tk):
             drawstyle="steps-post",
             color=PLOT_TRACE_COLORS["contact"],
         )
+        self._show_empty_plot_state("live", (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
         self.live_canvas = FigureCanvasTkAgg(fig, master=self.live_tab)
         self.live_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
@@ -811,6 +830,7 @@ class App(tk.Tk):
             drawstyle="steps-post",
             color=PLOT_TRACE_COLORS["contact"],
         )
+        self._show_empty_plot_state("review", (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
         self.review_canvas = FigureCanvasTkAgg(fig, master=self.review_tab)
         self.review_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
@@ -820,6 +840,7 @@ class App(tk.Tk):
         self._style_signal_axes((self.ax_pqrst,))
         self.ax_pqrst.set_xlabel("Time relative to R peak (ms)")
         self.ax_pqrst.set_ylabel("Filtered counts")
+        self._show_empty_plot_state("pqrst", (self.ax_pqrst,))
         self.pqrst_canvas = FigureCanvasTkAgg(fig, master=self.pqrst_tab)
         self.pqrst_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
@@ -840,6 +861,30 @@ class App(tk.Tk):
                 ax.spines[side].set_visible(False)
             for side in ("left", "bottom"):
                 ax.spines[side].set_color(APP_VISUAL_TOKENS["border"])
+
+    def _show_empty_plot_state(self, key: str, axes: tuple[object, ...]) -> None:
+        for ax, message in zip(axes, EMPTY_PLOT_MESSAGES[key]):
+            artist = ax.text(
+                0.5,
+                0.5,
+                message,
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                color=APP_VISUAL_TOKENS["muted"],
+                fontsize=11,
+                fontweight="bold",
+                alpha=0.82,
+            )
+            self.empty_plot_artists.append(artist)
+
+    def _clear_empty_plot_state(self) -> None:
+        while self.empty_plot_artists:
+            artist = self.empty_plot_artists.pop()
+            try:
+                artist.remove()
+            except ValueError:
+                pass
 
     def refresh_ports(self) -> None:
         ports = list_ads_ports()
@@ -1365,6 +1410,7 @@ class App(tk.Tk):
     def _redraw_live(self) -> None:
         if not self.indices:
             return
+        self._clear_empty_plot_state()
         source, ecg_raw, resp_raw = self._ads1292r_display_channels()
         ecg = self._display_signal(ecg_raw, invert=DEFAULT_ECG_INVERTED)
         resp = self._display_signal(resp_raw)
@@ -1415,6 +1461,7 @@ class App(tk.Tk):
         self.live_canvas.draw_idle()
 
     def _show_recording(self, samples: tuple[StreamSample, ...]) -> None:
+        self._clear_empty_plot_state()
         self._clear_signal_buffers()
         self.sample_index = 0
         full_ch1 = np.asarray([sample.ch1 for sample in samples], dtype=float)

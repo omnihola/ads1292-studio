@@ -1,6 +1,7 @@
 from ads1292_studio.app import (
     ads1292r_plot_layout_labels,
     app_visual_tokens,
+    empty_plot_messages,
     plot_trace_colors,
     primary_toolbar_button_labels,
     secondary_action_button_labels,
@@ -54,3 +55,15 @@ def test_plot_trace_colors_distinguish_ecg_respiration_and_contact() -> None:
     assert colors["ecg"] != colors["respiration"]
     assert colors["contact"] != colors["ecg"]
     assert colors["peak"] == "#E34A4A"
+
+
+def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
+    messages = empty_plot_messages()
+
+    assert messages["live"] == (
+        "Connect an ADS1292 board, then press Start",
+        "CH1 respiration/contact context appears here",
+        "Lead-off status stays at 0 when contacts are good",
+    )
+    assert messages["review"][0] == "Load a CSV to review recorded ECG"
+    assert messages["pqrst"] == ("Load or record data to build the averaged PQRST beat",)
