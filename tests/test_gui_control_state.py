@@ -1,4 +1,4 @@
-from ads1292_studio.app import gui_control_states, gui_workflow_hint
+from ads1292_studio.app import gui_control_states, gui_status_overview, gui_workflow_hint
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:
@@ -109,3 +109,67 @@ def test_gui_workflow_hint_guides_packagable_data_state() -> None:
     )
 
     assert hint == "Data ready: export a report or package the recording with its sidecars."
+
+
+def test_gui_status_overview_summarizes_empty_disconnected_state() -> None:
+    overview = gui_status_overview(
+        connected=False,
+        streaming=False,
+        has_data=False,
+        has_recording_path=False,
+    )
+
+    assert overview == (
+        "Connection: disconnected\n"
+        "Acquisition: idle\n"
+        "Data: none loaded\n"
+        "Package: unavailable"
+    )
+
+
+def test_gui_status_overview_summarizes_connected_idle_state() -> None:
+    overview = gui_status_overview(
+        connected=True,
+        streaming=False,
+        has_data=False,
+        has_recording_path=False,
+    )
+
+    assert overview == (
+        "Connection: connected\n"
+        "Acquisition: ready to start\n"
+        "Data: none loaded\n"
+        "Package: unavailable"
+    )
+
+
+def test_gui_status_overview_summarizes_streaming_with_saved_data() -> None:
+    overview = gui_status_overview(
+        connected=True,
+        streaming=True,
+        has_data=True,
+        has_recording_path=True,
+    )
+
+    assert overview == (
+        "Connection: connected\n"
+        "Acquisition: streaming\n"
+        "Data: live or loaded\n"
+        "Package: ready"
+    )
+
+
+def test_gui_status_overview_summarizes_loaded_unsaved_data() -> None:
+    overview = gui_status_overview(
+        connected=False,
+        streaming=False,
+        has_data=True,
+        has_recording_path=False,
+    )
+
+    assert overview == (
+        "Connection: disconnected\n"
+        "Acquisition: idle\n"
+        "Data: live or loaded\n"
+        "Package: needs saved CSV"
+    )

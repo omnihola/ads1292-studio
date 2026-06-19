@@ -110,6 +110,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   instead of relying on error dialogs after invalid clicks.
 - Status tab includes a Next Step hint that translates connection, streaming,
   loaded-data, and packaging state into the next valid operator action.
+- Status tab includes a compact Overview with Connection, Acquisition, Data,
+  and Package readiness so the operator can scan the current state without
+  interpreting disabled buttons.
 - Session index export scans a recordings folder, ignores generated summary
   CSVs, and writes a CSV/HTML experiment library with ECG source, contact,
   R-peak, HR, quality, and usable/review status.

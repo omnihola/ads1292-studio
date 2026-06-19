@@ -628,6 +628,12 @@
 | GUI workflow hint syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
 | GUI workflow hint full tests | `conda run -n sensor python -m pytest -q` | All tests pass after Status-tab workflow hint | 78 passed | Pass |
 | GUI workflow hint final syntax/diff checks | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/app.py src/ads1292_studio/gui_quality.py src/ads1292_studio/gui_session_index.py`; `git diff --check` | No syntax errors and no whitespace errors | Passed | Pass |
+| GUI status overview TDD red check | `conda run -n sensor python -m pytest tests/test_gui_control_state.py -q` before implementation | Missing compact status overview helper | `ImportError: cannot import name 'gui_status_overview'` | Pass |
+| GUI status overview focused test | `conda run -n sensor python -m pytest tests/test_gui_control_state.py -q` | Control states, next-step hints, and Connection/Acquisition/Data/Package overview match disconnected, connected, streaming, loaded-data, and package-ready workflows | 13 passed | Pass |
+| GUI status overview related tests | `conda run -n sensor python -m pytest tests/test_gui_quality.py tests/test_gui_quality_gate_config.py tests/test_gui_session_index.py tests/test_gui_scroll.py tests/test_gui_layout.py tests/test_gui_control_state.py -q` | Existing GUI helper/layout tests pass after adding Status-tab Overview | 24 passed | Pass |
+| GUI status overview syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| GUI status overview full tests | `conda run -n sensor python -m pytest -q` | All tests pass after adding Status-tab Overview | 82 passed | Pass |
+| GUI status overview final syntax/diff checks | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/app.py src/ads1292_studio/gui_quality.py src/ads1292_studio/gui_session_index.py`; `git diff --check` | No syntax errors and no whitespace errors | Passed | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -680,12 +686,13 @@
 | 2026-06-18 | GUI was feature-rich but still too crowded for simple operation | 1 | Reorganized the sidebar into task tabs and moved secondary file/export/library actions out of the acquisition toolbar. |
 | 2026-06-18 | GUI exposed impossible actions as clickable buttons | 1 | Added `gui_control_states()` and `_apply_control_states()` so buttons enable only when their workflow prerequisites are met. |
 | 2026-06-18 | Disabled GUI controls did not explain the next valid action | 1 | Added `gui_workflow_hint()` and a Status-tab `Next Step` field updated with the same state model as the buttons. |
+| 2026-06-18 | Status tab still lacked a stable state snapshot separate from the next-action hint | 1 | Added `gui_status_overview()` and a Status-tab `Overview` field for Connection, Acquisition, Data, and Package readiness. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 36 complete; ready to run full verification, commit, and push the GUI workflow-hint iteration. |
+| Where am I? | Phase 37 complete; ready to commit and push the GUI status-overview iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, staged sidecar template bundle exports, sidecar plan template-path traceability, executable sidecar apply-script exports, mousewheel-scrollable left-sidebar controls, a task-based GUI sidebar with a focused acquisition toolbar, GUI button state gating, and Status-tab workflow hints. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, staged sidecar template bundle exports, sidecar plan template-path traceability, executable sidecar apply-script exports, mousewheel-scrollable left-sidebar controls, a task-based GUI sidebar with a focused acquisition toolbar, GUI button state gating, Status-tab workflow hints, and a Status-tab state overview. |

@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 36
+Phase 37
 
 ## Phases
 
@@ -315,6 +315,14 @@ Phase 36
 - [x] Add focused tests, full tests, syntax verification, and documentation.
 - **Status:** complete
 
+### Phase 37: GUI Status Overview
+- [x] Add failing tests for a compact GUI status overview helper.
+- [x] Show Connection, Acquisition, Data, and Package readiness in the Status tab.
+- [x] Drive the overview from the same state model as button gating and workflow hints.
+- [x] Update the overview after connection, start, stop, CSV load, buffer clear, and live sample arrival.
+- [x] Add focused tests, full tests, syntax verification, and documentation.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -363,6 +371,7 @@ Phase 36
 | Redesign GUI information architecture before adding more workflow automation | A mature desktop app must keep acquisition controls simple and move secondary review/export/library actions into clear task groups before more features are added. |
 | Add explicit GUI control-state gating | Mature software should prevent impossible actions up front instead of relying on error dialogs after users click disabled workflows. |
 | Add workflow hints after button gating | Disabled controls are safer, but mature GUI software should also tell users the next valid action instead of leaving them to infer it. |
+| Add a status overview after workflow hints | A mature GUI should show the stable state snapshot separately from the one-line next action, so users can scan connection, acquisition, data, and package readiness. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -404,6 +413,7 @@ Phase 36
 | GUI controls were technically reachable but still cognitively overloaded | 1 | Split the sidebar into task-based scrollable tabs and moved secondary file/export/library actions out of the acquisition toolbar. |
 | GUI allowed impossible actions until they produced error dialogs | 1 | Added deterministic button-state gating so unavailable workflows are disabled before the user clicks them. |
 | Disabled GUI actions could still leave the next step ambiguous | 1 | Added a Status-tab workflow hint that converts connection/data/streaming state into a concise next action. |
+| Status-tab next-step guidance still required users to infer the current state | 1 | Added a separate Status-tab overview for Connection, Acquisition, Data, and Package readiness. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.
