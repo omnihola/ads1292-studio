@@ -1042,6 +1042,25 @@ def gui_status_overview(
     return "\n".join(f"{card.label}: {card.value}" for card in cards)
 
 
+def live_ecg_axis_title(ecg_label: str, mode: str, *, inverted: bool) -> str:
+    polarity = ", inverted" if inverted else ""
+    return f"ECG display: {ecg_label} | {mode}{polarity}"
+
+
+def live_metrics_text(
+    *,
+    sample_index: int,
+    duration_seconds: float,
+    ecg_label: str,
+    heart_rate_bpm: float,
+    peak_count: int,
+) -> str:
+    return (
+        f"samples {sample_index} | duration {duration_seconds:.1f} s | "
+        f"source {ecg_label} | HR {heart_rate_bpm:.0f} bpm | R peaks {peak_count}"
+    )
+
+
 def header_connection_tone(
     *,
     state: GuiState | None = None,
@@ -3437,16 +3456,21 @@ class App(tk.Tk):
         hr = heart_rate_summary(peaks, SAMPLE_RATE_HZ)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
         mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
-        polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
         self._set_signal_axis_title(
             self.ax_live_ecg,
-            f"ECG display: {ecg_label} | {mode}{polarity} | R peaks {len(peaks)}",
+            live_ecg_axis_title(ecg_label, mode, inverted=DEFAULT_ECG_INVERTED),
         )
         self._set_signal_axis_title(self.ax_live_resp, resp_label)
         self._set_signal_axis_title(self.ax_live_status, contact_label)
         set_string_var_if_changed(
             self.metrics_var,
-            f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {ecg_label} | HR {hr.median_bpm:.0f} bpm",
+            live_metrics_text(
+                sample_index=self.sample_index,
+                duration_seconds=float(x[-1]),
+                ecg_label=ecg_label,
+                heart_rate_bpm=hr.median_bpm,
+                peak_count=len(peaks),
+            ),
         )
         self._schedule_live_quality_update(
             source=source,

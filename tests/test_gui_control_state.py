@@ -14,7 +14,9 @@ from ads1292_studio.app import (
     gui_workflow_hint,
     header_connection_style,
     header_connection_tone,
+    live_ecg_axis_title,
     live_quality_worker_available,
+    live_metrics_text,
     set_string_var_if_changed,
     should_apply_control_state,
     status_label_spec,
@@ -146,6 +148,26 @@ def test_should_apply_control_state_skips_unchanged_state() -> None:
         )
         is True
     )
+
+
+def test_live_ecg_axis_title_keeps_dynamic_counts_out_of_plot_title() -> None:
+    title = live_ecg_axis_title("CH2 ECG Lead I (LA-RA)", "raw | 1x | 8s | 25 mm/s", inverted=True)
+
+    assert title == "ECG display: CH2 ECG Lead I (LA-RA) | raw | 1x | 8s | 25 mm/s, inverted"
+    assert "R peaks" not in title
+    assert "samples" not in title
+
+
+def test_live_metrics_text_carries_dynamic_runtime_counts() -> None:
+    text = live_metrics_text(
+        sample_index=1234,
+        duration_seconds=2.468,
+        ecg_label="CH2 ECG Lead I (LA-RA)",
+        heart_rate_bpm=72.4,
+        peak_count=5,
+    )
+
+    assert text == "samples 1234 | duration 2.5 s | source CH2 ECG Lead I (LA-RA) | HR 72 bpm | R peaks 5"
 
 
 def test_live_quality_worker_available_skips_when_future_is_running() -> None:
