@@ -3,6 +3,7 @@ from ads1292_studio.app import (
     ads1292r_plot_layout_labels,
     app_visual_tokens,
     app_window_spec,
+    card_label_spec,
     empty_plot_messages,
     empty_plot_style,
     event_count_styles,
@@ -221,6 +222,14 @@ def test_status_detail_styles_frame_session_quality_and_storage() -> None:
         "label": "StatusDetailLabel.TLabel",
         "value": "StatusDetailValue.TLabel",
         "stripe": "#D9E1EC",
+    }
+
+
+def test_card_label_spec_keeps_status_cards_scannable() -> None:
+    assert card_label_spec() == {
+        "width": 12,
+        "content_padding": (10, 8),
+        "signal_value_wrap": 170,
     }
 
 
