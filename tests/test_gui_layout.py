@@ -11,6 +11,7 @@ from ads1292_studio.app import (
     main_tab_labels,
     plot_axis_style,
     plot_canvas_widget_style,
+    plot_figure_layouts,
     plot_panel_spec,
     plot_trace_colors,
     primary_toolbar_button_labels,
@@ -270,6 +271,31 @@ def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
         "spine_linewidth": 0.8,
         "tick_label_size": 9,
     }
+
+
+def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
+    assert plot_figure_layouts() == {
+        "three_panel": {
+            "left": 0.075,
+            "right": 0.985,
+            "top": 0.965,
+            "bottom": 0.075,
+            "hspace": 0.34,
+        },
+        "single_panel": {
+            "left": 0.08,
+            "right": 0.985,
+            "top": 0.955,
+            "bottom": 0.12,
+        },
+    }
+
+
+def test_plot_figure_layouts_returns_nested_copies() -> None:
+    layouts = plot_figure_layouts()
+    layouts["three_panel"]["hspace"] = 9.0
+
+    assert plot_figure_layouts()["three_panel"]["hspace"] == 0.34
 
 
 def test_plot_canvas_widget_style_removes_embedded_canvas_chrome() -> None:

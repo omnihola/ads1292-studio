@@ -180,6 +180,21 @@ PLOT_AXIS_STYLE = {
     "spine_linewidth": 0.8,
     "tick_label_size": 9,
 }
+PLOT_FIGURE_LAYOUTS = {
+    "three_panel": {
+        "left": 0.075,
+        "right": 0.985,
+        "top": 0.965,
+        "bottom": 0.075,
+        "hspace": 0.34,
+    },
+    "single_panel": {
+        "left": 0.08,
+        "right": 0.985,
+        "top": 0.955,
+        "bottom": 0.12,
+    },
+}
 PLOT_CANVAS_WIDGET_STYLE = {
     "background": "#FFFFFF",
     "borderwidth": 0,
@@ -330,6 +345,10 @@ def plot_panel_spec() -> dict[str, object]:
 
 def plot_axis_style() -> dict[str, object]:
     return dict(PLOT_AXIS_STYLE)
+
+
+def plot_figure_layouts() -> dict[str, dict[str, float]]:
+    return {name: dict(layout) for name, layout in PLOT_FIGURE_LAYOUTS.items()}
 
 
 def plot_canvas_widget_style() -> dict[str, object]:
@@ -1502,7 +1521,7 @@ class App(tk.Tk):
 
     def _build_live_plot(self) -> None:
         fig = self._new_plot_figure(figsize=(10, 7))
-        fig.subplots_adjust(hspace=0.55)
+        fig.subplots_adjust(**plot_figure_layouts()["three_panel"])
         self.ax_live_ecg = fig.add_subplot(311)
         self.ax_live_resp = fig.add_subplot(312, sharex=self.ax_live_ecg)
         self.ax_live_status = fig.add_subplot(313, sharex=self.ax_live_ecg)
@@ -1527,7 +1546,7 @@ class App(tk.Tk):
 
     def _build_review_plot(self) -> None:
         fig = self._new_plot_figure(figsize=(10, 7))
-        fig.subplots_adjust(hspace=0.55)
+        fig.subplots_adjust(**plot_figure_layouts()["three_panel"])
         self.ax_review_ecg = fig.add_subplot(311)
         self.ax_review_resp = fig.add_subplot(312, sharex=self.ax_review_ecg)
         self.ax_review_status = fig.add_subplot(313, sharex=self.ax_review_ecg)
@@ -1552,6 +1571,7 @@ class App(tk.Tk):
 
     def _build_pqrst_plot(self) -> None:
         fig = self._new_plot_figure(figsize=(10, 6))
+        fig.subplots_adjust(**plot_figure_layouts()["single_panel"])
         self.ax_pqrst = fig.add_subplot(111)
         self._style_signal_axes((self.ax_pqrst,))
         self.ax_pqrst.set_xlabel("Time relative to R peak (ms)")
