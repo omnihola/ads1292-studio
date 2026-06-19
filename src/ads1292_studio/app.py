@@ -70,8 +70,38 @@ class GuiStatusCard:
     tone: str
 
 
+@dataclass(frozen=True)
+class GuiState:
+    connected: bool
+    streaming: bool
+    has_data: bool
+    has_recording_path: bool
+
+    @property
+    def package_ready(self) -> bool:
+        return self.has_data and self.has_recording_path
+
+
 def status_tone_style(tone: str) -> str:
     return STATUS_TONE_STYLES.get(tone, STATUS_TONE_STYLES["neutral"])
+
+
+def _gui_state(
+    *,
+    state: GuiState | None = None,
+    connected: bool = False,
+    streaming: bool = False,
+    has_data: bool = False,
+    has_recording_path: bool = False,
+) -> GuiState:
+    if state is not None:
+        return state
+    return GuiState(
+        connected=connected,
+        streaming=streaming,
+        has_data=has_data,
+        has_recording_path=has_recording_path,
+    )
 
 
 def primary_toolbar_button_labels() -> tuple[str, ...]:
@@ -88,19 +118,27 @@ def sidebar_tab_labels() -> tuple[str, ...]:
 
 def gui_control_states(
     *,
-    connected: bool,
-    streaming: bool,
-    has_data: bool,
-    has_recording_path: bool,
+    state: GuiState | None = None,
+    connected: bool = False,
+    streaming: bool = False,
+    has_data: bool = False,
+    has_recording_path: bool = False,
 ) -> dict[str, str]:
+    current = _gui_state(
+        state=state,
+        connected=connected,
+        streaming=streaming,
+        has_data=has_data,
+        has_recording_path=has_recording_path,
+    )
     return {
         "Refresh": tk.NORMAL,
         "Connect": tk.NORMAL,
-        "Start": tk.NORMAL if connected and not streaming else tk.DISABLED,
-        "Stop": tk.NORMAL if streaming else tk.DISABLED,
+        "Start": tk.NORMAL if current.connected and not current.streaming else tk.DISABLED,
+        "Stop": tk.NORMAL if current.streaming else tk.DISABLED,
         "Load CSV": tk.NORMAL,
-        "Export Report": tk.NORMAL if has_data else tk.DISABLED,
-        "Export Package": tk.NORMAL if has_data and has_recording_path else tk.DISABLED,
+        "Export Report": tk.NORMAL if current.has_data else tk.DISABLED,
+        "Export Package": tk.NORMAL if current.package_ready else tk.DISABLED,
         "Verify Package": tk.NORMAL,
         "Batch Compare": tk.NORMAL,
         "Session Index": tk.NORMAL,
@@ -109,53 +147,72 @@ def gui_control_states(
 
 def gui_workflow_hint(
     *,
-    connected: bool,
-    streaming: bool,
-    has_data: bool,
-    has_recording_path: bool,
+    state: GuiState | None = None,
+    connected: bool = False,
+    streaming: bool = False,
+    has_data: bool = False,
+    has_recording_path: bool = False,
 ) -> str:
-    if streaming:
+    current = _gui_state(
+        state=state,
+        connected=connected,
+        streaming=streaming,
+        has_data=has_data,
+        has_recording_path=has_recording_path,
+    )
+    if current.streaming:
         return "Streaming: monitor signal quality, add events if needed, then press Stop."
-    if has_data and has_recording_path:
+    if current.package_ready:
         return "Data ready: export a report or package the recording with its sidecars."
-    if has_data:
+    if current.has_data:
         return "Data loaded: export a report; package export needs a saved CSV path."
-    if connected:
+    if current.connected:
         return "Next: press Start to begin acquisition, or load a CSV for offline review."
     return "Next: select an ADS1292 port and press Connect, or load an existing CSV."
 
 
 def gui_status_overview(
     *,
-    connected: bool,
-    streaming: bool,
-    has_data: bool,
-    has_recording_path: bool,
+    state: GuiState | None = None,
+    connected: bool = False,
+    streaming: bool = False,
+    has_data: bool = False,
+    has_recording_path: bool = False,
 ) -> str:
-    return "\n".join(f"{card.label}: {card.value}" for card in gui_status_cards(
+    cards = gui_status_cards(
+        state=state,
         connected=connected,
         streaming=streaming,
         has_data=has_data,
         has_recording_path=has_recording_path,
-    ))
+    )
+    return "\n".join(f"{card.label}: {card.value}" for card in cards)
 
 
 def gui_status_cards(
     *,
-    connected: bool,
-    streaming: bool,
-    has_data: bool,
-    has_recording_path: bool,
+    state: GuiState | None = None,
+    connected: bool = False,
+    streaming: bool = False,
+    has_data: bool = False,
+    has_recording_path: bool = False,
 ) -> tuple[GuiStatusCard, ...]:
+    current = _gui_state(
+        state=state,
+        connected=connected,
+        streaming=streaming,
+        has_data=has_data,
+        has_recording_path=has_recording_path,
+    )
     connection = GuiStatusCard(
         label="Connection",
-        value="connected" if connected else "disconnected",
-        tone="ready" if connected else "warning",
+        value="connected" if current.connected else "disconnected",
+        tone="ready" if current.connected else "warning",
     )
-    if streaming:
+    if current.streaming:
         acquisition_value = "streaming"
         acquisition_tone = "running"
-    elif connected:
+    elif current.connected:
         acquisition_value = "ready to start"
         acquisition_tone = "ready"
     else:
@@ -163,13 +220,13 @@ def gui_status_cards(
         acquisition_tone = "neutral"
     data = GuiStatusCard(
         label="Data",
-        value="live or loaded" if has_data else "none loaded",
-        tone="ready" if has_data else "neutral",
+        value="live or loaded" if current.has_data else "none loaded",
+        tone="ready" if current.has_data else "neutral",
     )
-    if has_data and has_recording_path:
+    if current.package_ready:
         package_value = "ready"
         package_tone = "ready"
-    elif has_data:
+    elif current.has_data:
         package_value = "needs saved CSV"
         package_tone = "warning"
     else:
@@ -746,38 +803,20 @@ class App(tk.Tk):
     def _apply_control_states(self) -> None:
         if not hasattr(self, "control_buttons"):
             return
-        connected = self.connected_port is not None
-        streaming = self.is_streaming
-        has_data = bool(self.loaded_samples or (self.ch1 and self.ch2))
-        has_recording_path = self.recording_path is not None
-        states = gui_control_states(
-            connected=connected,
-            streaming=streaming,
-            has_data=has_data,
-            has_recording_path=has_recording_path,
+        state = GuiState(
+            connected=self.connected_port is not None,
+            streaming=self.is_streaming,
+            has_data=bool(self.loaded_samples or (self.ch1 and self.ch2)),
+            has_recording_path=self.recording_path is not None,
         )
+        states = gui_control_states(state=state)
         self.workflow_hint_var.set(
-            gui_workflow_hint(
-                connected=connected,
-                streaming=streaming,
-                has_data=has_data,
-                has_recording_path=has_recording_path,
-            )
+            gui_workflow_hint(state=state)
         )
         self.status_overview_var.set(
-            gui_status_overview(
-                connected=connected,
-                streaming=streaming,
-                has_data=has_data,
-                has_recording_path=has_recording_path,
-            )
+            gui_status_overview(state=state)
         )
-        for card in gui_status_cards(
-            connected=connected,
-            streaming=streaming,
-            has_data=has_data,
-            has_recording_path=has_recording_path,
-        ):
+        for card in gui_status_cards(state=state):
             self.status_card_vars[card.label].set(card.value)
             self.status_card_value_labels[card.label].configure(
                 style=status_tone_style(card.tone)

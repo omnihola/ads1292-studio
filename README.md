@@ -108,6 +108,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - GUI buttons are state-gated: Start requires a confirmed connection, Stop
   requires streaming, and report/package export actions require available data
   instead of relying on error dialogs after invalid clicks.
+- GUI control gating, workflow hints, overview text, and status rows share one
+  immutable `GuiState` snapshot so the UI does not recompute the same state in
+  multiple places.
 - Status tab includes a Next Step hint that translates connection, streaming,
   loaded-data, and packaging state into the next valid operator action.
 - Status tab includes a compact Overview with Connection, Acquisition, Data,

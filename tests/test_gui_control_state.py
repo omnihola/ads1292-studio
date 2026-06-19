@@ -1,4 +1,5 @@
 from ads1292_studio.app import (
+    GuiState,
     gui_control_states,
     gui_status_cards,
     gui_status_overview,
@@ -233,3 +234,45 @@ def test_status_tone_style_maps_known_and_unknown_tones() -> None:
     assert status_tone_style("running") == "Running.Status.TLabel"
     assert status_tone_style("warning") == "Warning.Status.TLabel"
     assert status_tone_style("unexpected") == "Neutral.Status.TLabel"
+
+
+def test_gui_state_snapshot_drives_all_status_helpers() -> None:
+    state = GuiState(
+        connected=True,
+        streaming=True,
+        has_data=True,
+        has_recording_path=True,
+    )
+
+    assert gui_control_states(state=state)["Stop"] == "normal"
+    assert gui_workflow_hint(state=state) == "Streaming: monitor signal quality, add events if needed, then press Stop."
+    assert gui_status_overview(state=state) == (
+        "Connection: connected\n"
+        "Acquisition: streaming\n"
+        "Data: live or loaded\n"
+        "Package: ready"
+    )
+    assert [(card.label, card.value, card.tone) for card in gui_status_cards(state=state)] == [
+        ("Connection", "connected", "ready"),
+        ("Acquisition", "streaming", "running"),
+        ("Data", "live or loaded", "ready"),
+        ("Package", "ready", "ready"),
+    ]
+
+
+def test_gui_state_reports_package_readiness() -> None:
+    unsaved = GuiState(
+        connected=False,
+        streaming=False,
+        has_data=True,
+        has_recording_path=False,
+    )
+    saved = GuiState(
+        connected=False,
+        streaming=False,
+        has_data=True,
+        has_recording_path=True,
+    )
+
+    assert unsaved.package_ready is False
+    assert saved.package_ready is True

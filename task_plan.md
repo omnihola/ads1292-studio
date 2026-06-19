@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 38
+Phase 39
 
 ## Phases
 
@@ -331,6 +331,14 @@ Phase 38
 - [x] Add focused tests, full tests, syntax verification, and documentation.
 - **Status:** complete
 
+### Phase 39: Unified GUI State Snapshot
+- [x] Add failing tests for an immutable `GuiState` snapshot shared by control states, workflow hints, overview text, and status cards.
+- [x] Keep existing helper APIs compatible while allowing state-snapshot inputs.
+- [x] Refactor `_apply_control_states()` to compute the GUI state once and reuse it for every dependent UI update.
+- [x] Document the single-state-model decision for future GUI work.
+- [x] Add focused tests, full tests, syntax verification, and documentation.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -381,6 +389,7 @@ Phase 38
 | Add workflow hints after button gating | Disabled controls are safer, but mature GUI software should also tell users the next valid action instead of leaving them to infer it. |
 | Add a status overview after workflow hints | A mature GUI should show the stable state snapshot separately from the one-line next action, so users can scan connection, acquisition, data, and package readiness. |
 | Use structured status cards instead of only multiline status text | Commercial-style status panels need semantic labels and tones so the UI can show ready/running/warning/neutral states without parsing display text. |
+| Add a unified GUI state snapshot | Button gating, workflow hints, overview text, and status cards should share a single immutable state object rather than recomputing the same booleans in several places. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -424,6 +433,7 @@ Phase 38
 | Disabled GUI actions could still leave the next step ambiguous | 1 | Added a Status-tab workflow hint that converts connection/data/streaming state into a concise next action. |
 | Status-tab next-step guidance still required users to infer the current state | 1 | Added a separate Status-tab overview for Connection, Acquisition, Data, and Package readiness. |
 | Status-tab overview lacked semantic visual states | 1 | Added structured status cards and deterministic ready/running/warning/neutral Tk label styles. |
+| GUI state could drift because helpers recomputed booleans separately | 1 | Added immutable `GuiState`, state-compatible helper APIs, and single-snapshot `_apply_control_states()` refresh logic. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.
