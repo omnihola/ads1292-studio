@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 41
+Phase 42
 
 ## Phases
 
@@ -354,6 +354,15 @@ Phase 41
 - [x] Fix offline Review display to use the same three-panel synchronized layout.
 - [x] Fix GUI report/package export source to CH2 for ADS1292R recordings.
 - [x] Verify focused layout/control tests, real-recording smoke, full suite, syntax, and diff.
+- **Status:** complete
+
+### Phase 42: Background CSV Loading
+- [x] Move CSV parsing off the GUI thread so large recordings do not freeze the window while loading.
+- [x] Add `CsvLoadResult` and a `csv_load_results` queue drained from `_tick()`, mirroring the existing live-sample queue pattern.
+- [x] Add `loading_csv` to `GuiState` so controls, workflow hint, and status/data cards reflect an in-progress load.
+- [x] Disable conflicting actions (Start, Load CSV, export/package actions) while a CSV load is in flight.
+- [x] Add `offline_display_samples()` to cap the review plot to the most recent window for large recordings.
+- [x] Add tests for the new control-state and windowing helpers.
 - **Status:** complete
 
 ## Key Questions

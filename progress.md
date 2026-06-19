@@ -447,6 +447,18 @@
   - `tests/test_gui_session_index.py`
   - `README.md`
 
+### Phase 42: Background CSV Loading
+- **Status:** complete
+- Actions taken:
+  - Added `CsvLoadResult` and `App.csv_load_results` queue; `load_csv()` now starts a daemon thread that parses the CSV and posts the result instead of parsing inline.
+  - Added `_drain_csv_load_results()`/`_finish_csv_load()`, polled from `_tick()` alongside the existing live-sample queue.
+  - Added `loading_csv` to `GuiState`; `gui_control_states()`, `gui_workflow_hint()`, and `gui_status_cards()` all branch on it so the GUI cannot start streaming, start another load, or export while a load is in flight.
+  - Added `offline_display_samples()` to cap the Review tab to the most recent `MAX_POINTS` samples for very large recordings.
+  - Added tests for the new control-state branch and the windowing helper.
+- Files created/modified:
+  - `src/ads1292_studio/app.py`
+  - `tests/test_gui_control_state.py`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -656,6 +668,7 @@
 | ADS1292R synchronized three-panel GUI focused test | `conda run -n sensor python -m pytest tests/test_gui_layout.py tests/test_gui_control_state.py -q` | GUI layout contract and ADS1292R channel labels pass | 28 passed | Pass |
 | ADS1292R synchronized three-panel GUI real CSV smoke | `conda run -n sensor env PYTHONPATH=src python -c "..."` against `recordings/2026-06-18-221342-ads1292-studio.csv` | Layout is CH2 ECG, CH1 respiration, lead-off/contact; fixed source is CH2 with `Good ECG/QRS` | Passed; Matplotlib cache warning only | Pass |
 | ADS1292R synchronized three-panel GUI full verification | `conda run -n sensor python -m pytest -q`; `py_compile`; `git diff --check` | All tests pass after live/review three-panel layout and fixed CH2 GUI export source | 95 passed | Pass |
+| Background CSV loading full verification | `PYTHONPATH=src <sensor-env>/bin/python -m pytest -q`; `py_compile`; `git diff --check` | All tests pass after moving CSV parsing to a background thread | 97 passed | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -718,8 +731,8 @@
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 41 complete; the GUI now uses a synchronized ADS1292R three-panel display. |
+| Where am I? | Phase 42 complete; CSV loading runs on a background thread so the GUI no longer freezes while parsing large recordings. Starting a datasheet-driven correctness/bug-fix pass (Connect/Stop GUI-thread blocking, optimistic Start state, offline-review windowing, pending channel-label confirmation). |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
-| What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, staged sidecar template bundle exports, sidecar plan template-path traceability, executable sidecar apply-script exports, mousewheel-scrollable left-sidebar controls, a task-based GUI sidebar with a focused acquisition toolbar, GUI button state gating, Status-tab workflow hints, a Status-tab state overview, structured Status-tab status cards, a unified immutable GUI state snapshot, real-recording signal-quality cards, safer canonical lead-off CSV import, and the synchronized ADS1292R CH2 ECG / CH1 respiration / lead-off GUI. |
+| What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. The ADS1292R chip datasheet (SBAS502C) confirms respiration demodulation hardware exists only on Channel 1 and TI states Channel 1 cannot do ECG while respiration is enabled on it — this independently corroborates the existing CH1=respiration/CH2=ECG assignment that was originally reached empirically. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, package-ready session index status, session index readiness summary counts, per-record next-action guidance, next-action queue counts, GUI session index summary confirmation, session index sidecar completion-plan exports, staged sidecar template bundle exports, sidecar plan template-path traceability, executable sidecar apply-script exports, mousewheel-scrollable left-sidebar controls, a task-based GUI sidebar with a focused acquisition toolbar, GUI button state gating, Status-tab workflow hints, a Status-tab state overview, structured Status-tab status cards, a unified immutable GUI state snapshot, real-recording signal-quality cards, safer canonical lead-off CSV import, the synchronized ADS1292R CH2 ECG / CH1 respiration / lead-off GUI, and background-threaded CSV loading. |

@@ -110,6 +110,16 @@
 | Canonical CSV files include both `status_byte` and `lead_off_bits` | Offline import should combine the explicit low-nibble lead-off value with `status_byte` so contact flags are not lost when reloading exported data. |
 | ADS1292RECG-FE channel semantics are fixed by the TI board configuration | CH2 is ECG Lead I (LA-RA), while CH1 is the ADS1292R respiration raw channel; GUI labels should reflect this instead of calling CH1 a generic ECG source. |
 | ADS1292R GUI should synchronize ECG, respiration, and contact status instead of switching channels | The correct display contract is top CH2 ECG Lead I, middle CH1 respiration raw, bottom lead-off/contact status on the same time axis; report/package export from the GUI should use CH2 as ECG source. |
+| Load CSV on a background thread instead of the GUI thread | Large recordings were freezing the window during `read_recording_csv()`; added `CsvLoadResult`/queue draining via `_tick()` so parsing never blocks the Tk mainloop. |
+| Treat the ADS1292R chip datasheet (SBAS502C) as authoritative for the CH1=respiration/CH2=ECG question | TI states explicitly that Channel 1 with respiration enabled cannot acquire ECG, and the respiration demodulation hardware exists only on Channel 1 — this independently confirms the existing empirically-derived channel assignment rather than contradicting it. |
+
+## Datasheet Cross-Check (2026-06-19)
+- User provided TI SLAU384A (`ADS1x9xECG-FE Demonstration Kit User's Guide`) expecting it to be the chip datasheet; confirmed via full read that it is the EVM/board user's guide, not the chip register-level datasheet.
+- SLAU384A's live-streaming packet format (HR byte + RR byte + status byte + 14 x 16-bit samples) and fixed 500 SPS live rate both match `protocol.py`/`device.py` exactly.
+- Fetched the actual chip datasheet (TI SBAS502C, via `https://www.ti.com/lit/ds/symlink/ads1292.pdf`) for register-level detail. Confirmed register map addresses 0x00-0x0B match SLAU384A's GUI screenshot ordering (ID, CONFIG1, CONFIG2, LOFF, CH1SET, CH2SET, RLD_SENS, LOFF_SENS, LOFF_STAT, RESP1, RESP2, GPIO).
+- SBAS502C explicitly states (Section 9.2): "The ADS1292R channel 1 with respiration enabled mode cannot be used to acquire ECG signals" and shows respiration demodulation hardware wired only into the Channel 1 ADC path — this resolves the earlier concern (raised from SLAU384A's plain-ECG lead-off cabling table alone, which implied CH1=Lead I/CH2=Lead II) in favor of the codebase's existing CH1=respiration/CH2=ECG assignment, since `board_respiration_rate` being transmitted by this firmware implies respiration mode is active.
+- Remaining open, narrower question: which exact Einthoven lead CH2 represents (Lead I LA-RA vs Lead II LL-RA vs other) — not yet confirmed; user is running a physical electrode-disconnect test to settle this empirically.
+- Hypothesis pending confirmation: firmware `status_byte`'s low nibble (`lead_off_bits = status_byte & 0x0F`) likely mirrors the chip's LOFF_STAT register bits 3:0 directly (bit0=IN1P_OFF, bit1=IN1N_OFF, bit2=IN2P_OFF, bit3=IN2N_OFF) — SLAU384A's own lead-off table description ("status byte in the data-word after each conversion") supports this, but it is not directly confirmed for this custom firmware.
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 import queue
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -23,7 +24,7 @@ from ads1292_studio.events import EventMarker, read_events_json, write_events_js
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_session_index import build_session_index_message
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
-from ads1292_studio.models import StreamSample
+from ads1292_studio.models import Recording, StreamSample
 from ads1292_studio.plots import robust_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
@@ -87,10 +88,18 @@ class GuiState:
     streaming: bool
     has_data: bool
     has_recording_path: bool
+    loading_csv: bool = False
 
     @property
     def package_ready(self) -> bool:
-        return self.has_data and self.has_recording_path
+        return self.has_data and self.has_recording_path and not self.loading_csv
+
+
+@dataclass(frozen=True)
+class CsvLoadResult:
+    path: Path
+    recording: Recording | None = None
+    error: str | None = None
 
 
 def status_tone_style(tone: str) -> str:
@@ -116,6 +125,7 @@ def _gui_state(
     streaming: bool = False,
     has_data: bool = False,
     has_recording_path: bool = False,
+    loading_csv: bool = False,
 ) -> GuiState:
     if state is not None:
         return state
@@ -124,6 +134,7 @@ def _gui_state(
         streaming=streaming,
         has_data=has_data,
         has_recording_path=has_recording_path,
+        loading_csv=loading_csv,
     )
 
 
@@ -154,12 +165,25 @@ def gui_control_states(
         has_data=has_data,
         has_recording_path=has_recording_path,
     )
+    if current.loading_csv:
+        return {
+            "Refresh": tk.DISABLED,
+            "Connect": tk.DISABLED,
+            "Start": tk.DISABLED,
+            "Stop": tk.DISABLED,
+            "Load CSV": tk.DISABLED,
+            "Export Report": tk.DISABLED,
+            "Export Package": tk.DISABLED,
+            "Verify Package": tk.DISABLED,
+            "Batch Compare": tk.DISABLED,
+            "Session Index": tk.DISABLED,
+        }
     return {
         "Refresh": tk.NORMAL,
         "Connect": tk.NORMAL,
         "Start": tk.NORMAL if current.connected and not current.streaming else tk.DISABLED,
         "Stop": tk.NORMAL if current.streaming else tk.DISABLED,
-        "Load CSV": tk.NORMAL,
+        "Load CSV": tk.NORMAL if not current.streaming else tk.DISABLED,
         "Export Report": tk.NORMAL if current.has_data else tk.DISABLED,
         "Export Package": tk.NORMAL if current.package_ready else tk.DISABLED,
         "Verify Package": tk.NORMAL,
@@ -183,6 +207,8 @@ def gui_workflow_hint(
         has_data=has_data,
         has_recording_path=has_recording_path,
     )
+    if current.loading_csv:
+        return "Loading CSV: keep the window open; review plots will update when parsing finishes."
     if current.streaming:
         return "Streaming: monitor signal quality, add events if needed, then press Stop."
     if current.package_ready:
@@ -232,7 +258,10 @@ def gui_status_cards(
         value="connected" if current.connected else "disconnected",
         tone="ready" if current.connected else "warning",
     )
-    if current.streaming:
+    if current.loading_csv:
+        acquisition_value = "loading CSV"
+        acquisition_tone = "running"
+    elif current.streaming:
         acquisition_value = "streaming"
         acquisition_tone = "running"
     elif current.connected:
@@ -243,8 +272,8 @@ def gui_status_cards(
         acquisition_tone = "neutral"
     data = GuiStatusCard(
         label="Data",
-        value="live or loaded" if current.has_data else "none loaded",
-        tone="ready" if current.has_data else "neutral",
+        value="loading CSV" if current.loading_csv else ("live or loaded" if current.has_data else "none loaded"),
+        tone="running" if current.loading_csv else ("ready" if current.has_data else "neutral"),
     )
     if current.package_ready:
         package_value = "ready"
@@ -261,6 +290,12 @@ def gui_status_cards(
         data,
         GuiStatusCard("Package", package_value, package_tone),
     )
+
+
+def offline_display_samples(samples: tuple[StreamSample, ...], max_points: int = MAX_POINTS) -> tuple[StreamSample, ...]:
+    if len(samples) <= max_points:
+        return samples
+    return samples[-max_points:]
 
 
 def gui_signal_quality_cards(
@@ -363,12 +398,14 @@ class App(tk.Tk):
 
         self.samples: queue.Queue[StreamSample] = queue.Queue()
         self.logs: queue.Queue[str] = queue.Queue()
+        self.csv_load_results: queue.Queue[CsvLoadResult] = queue.Queue()
         self.worker = LiveWorker(self.samples, self.logs)
         self.connected_port: str | None = None
         self.recording_path: Path | None = None
         self.loaded_samples: tuple[StreamSample, ...] = tuple()
         self.event_markers: list[EventMarker] = []
         self.is_streaming = False
+        self.is_loading_csv = False
 
         self.sample_index = 0
         self.ch1: deque[float] = deque(maxlen=MAX_POINTS)
@@ -721,26 +758,67 @@ class App(tk.Tk):
         self._apply_control_states()
 
     def load_csv(self) -> None:
+        if self.is_loading_csv:
+            self._log("CSV load already in progress")
+            return
         path = filedialog.askopenfilename(
             title="Load ADS1292 CSV",
             filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
         )
         if not path:
             return
+        csv_path = Path(path)
+        self.is_loading_csv = True
+        self.path_var.set(f"Loading CSV: {csv_path}")
+        self.metrics_var.set("Loading CSV...")
+        self.quality_var.set("Quality: waiting for CSV parse")
+        self._log(f"Loading CSV in background: {csv_path}")
+        self._apply_control_states()
+        threading.Thread(
+            target=self._read_csv_in_background,
+            args=(csv_path,),
+            daemon=True,
+        ).start()
+
+    def _read_csv_in_background(self, path: Path) -> None:
         try:
-            recording = read_recording_csv(Path(path))
-            self.recording_path = Path(path)
-            self.loaded_samples = recording.samples
-            self._load_event_sidecar(Path(path))
-            self._load_calibration_sidecar(Path(path))
-            self._load_protocol_sidecar(Path(path))
-            self._load_quality_gate_sidecar(Path(path))
-            self._show_recording(recording.samples)
-            self.path_var.set(f"CSV: {path}")
-            self._log(f"Loaded {path}")
-            self._apply_control_states()
+            recording = read_recording_csv(path)
+            self.csv_load_results.put(CsvLoadResult(path=path, recording=recording))
         except Exception as exc:
+            self.csv_load_results.put(CsvLoadResult(path=path, error=str(exc)))
+
+    def _drain_csv_load_results(self) -> None:
+        while True:
+            try:
+                result = self.csv_load_results.get_nowait()
+            except queue.Empty:
+                return
+            self._finish_csv_load(result)
+
+    def _finish_csv_load(self, result: CsvLoadResult) -> None:
+        self.is_loading_csv = False
+        if result.error or result.recording is None:
+            self.path_var.set(f"CSV load failed: {result.path}")
+            self._log(f"Load failed for {result.path}: {result.error}")
+            self._apply_control_states()
+            messagebox.showerror("Load failed", result.error or "Unknown CSV load error")
+            return
+        try:
+            self.recording_path = result.path
+            self.loaded_samples = result.recording.samples
+            self._load_event_sidecar(result.path)
+            self._load_calibration_sidecar(result.path)
+            self._load_protocol_sidecar(result.path)
+            self._load_quality_gate_sidecar(result.path)
+            self._show_recording(result.recording.samples)
+            self.path_var.set(f"CSV: {result.path}")
+            self._log(f"Loaded {result.path}")
+        except Exception as exc:
+            self.path_var.set(f"CSV load failed: {result.path}")
+            self._log(f"Load failed after parsing {result.path}: {exc}")
             messagebox.showerror("Load failed", str(exc))
+        finally:
+            self._apply_control_states()
 
     def add_event(self) -> None:
         marker = EventMarker(
@@ -875,9 +953,12 @@ class App(tk.Tk):
         self.loaded_samples = tuple()
         self.event_markers = []
         self._set_event_count()
+        self._clear_signal_buffers()
+        self._apply_control_states()
+
+    def _clear_signal_buffers(self) -> None:
         for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
             buffer.clear()
-        self._apply_control_states()
 
     def _apply_control_states(self) -> None:
         if not hasattr(self, "control_buttons"):
@@ -887,6 +968,7 @@ class App(tk.Tk):
             streaming=self.is_streaming,
             has_data=bool(self.loaded_samples or (self.ch1 and self.ch2)),
             has_recording_path=self.recording_path is not None,
+            loading_csv=self.is_loading_csv,
         )
         states = gui_control_states(state=state)
         self.workflow_hint_var.set(
@@ -1038,6 +1120,7 @@ class App(tk.Tk):
         write_quality_gate_json(self._quality_gate_path(self.recording_path), self._quality_gate())
 
     def _tick(self) -> None:
+        self._drain_csv_load_results()
         latest = None
         while True:
             try:
@@ -1124,8 +1207,10 @@ class App(tk.Tk):
         self.live_canvas.draw_idle()
 
     def _show_recording(self, samples: tuple[StreamSample, ...]) -> None:
-        self._clear_buffers()
-        for sample in samples:
+        display_samples = offline_display_samples(samples)
+        self._clear_signal_buffers()
+        self.sample_index = 0
+        for sample in display_samples:
             self._append_sample(sample)
         source, ecg_raw, resp_raw = self._ads1292r_display_channels()
         ecg = self._display_signal(ecg_raw)
@@ -1133,7 +1218,7 @@ class App(tk.Tk):
         raw_ch1 = np.asarray(self.ch1, dtype=float)
         raw_ch2 = np.asarray(self.ch2, dtype=float)
         result = review_channels(raw_ch1, raw_ch2, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
-        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
+        metrics = compute_quality_metrics(display_samples, SAMPLE_RATE_HZ, ADS1292R_ECG_SOURCE)
         x = np.arange(ecg.size)
         status = np.asarray(self.status, dtype=float)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
@@ -1155,11 +1240,11 @@ class App(tk.Tk):
         self.review_canvas.draw_idle()
         self._draw_pqrst(ecg, result.peaks)
         self.metrics_var.set(
-            f"samples {len(samples)} | duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | "
-            f"source {ecg_label}"
+            f"samples {len(samples)} | displayed {len(display_samples)} | "
+            f"duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | source {ecg_label}"
         )
         self.quality_var.set(
-            f"{self._quality_text(source, result.heart_rate.valid_rr_count, samples, metrics=metrics)} | "
+            f"{self._quality_text(source, result.heart_rate.valid_rr_count, display_samples, metrics=metrics)} | "
             f"QRS {'clear' if result.pqrst.qrs_clear else 'unclear'} | "
             f"P {'tentative' if result.pqrst.p_tentative else 'not reliable'} | "
             f"T {'tentative' if result.pqrst.t_tentative else 'not reliable'}"
