@@ -12,6 +12,7 @@ from ads1292_studio.app import (
     gui_workflow_hint,
     header_connection_style,
     header_connection_tone,
+    status_label_spec,
     status_tone_color,
     status_tone_style,
 )
@@ -333,6 +334,13 @@ def test_status_tone_style_maps_known_and_unknown_tones() -> None:
     assert status_tone_style("running") == "Running.Status.TLabel"
     assert status_tone_style("warning") == "Warning.Status.TLabel"
     assert status_tone_style("unexpected") == "Neutral.Status.TLabel"
+
+
+def test_status_label_spec_makes_card_values_easy_to_scan() -> None:
+    assert status_label_spec() == {
+        "font": ("Aptos", 12, "bold"),
+        "padding": (6, 3),
+    }
 
 
 def test_header_connection_style_maps_known_and_unknown_tones() -> None:

@@ -128,6 +128,10 @@ STATUS_TONE_STYLES = {
     "warning": "Warning.Status.TLabel",
     "neutral": "Neutral.Status.TLabel",
 }
+STATUS_LABEL_SPEC = {
+    "font": ("Aptos", 12, "bold"),
+    "padding": (6, 3),
+}
 HEADER_CONNECTION_STYLES = {
     "ready": "Ready.Connection.TLabel",
     "running": "Running.Connection.TLabel",
@@ -345,6 +349,10 @@ class ConnectResult:
 
 def status_tone_style(tone: str) -> str:
     return STATUS_TONE_STYLES.get(tone, STATUS_TONE_STYLES["neutral"])
+
+
+def status_label_spec() -> dict[str, object]:
+    return dict(STATUS_LABEL_SPEC)
 
 
 def header_connection_style(tone: str) -> str:
@@ -1431,10 +1439,35 @@ class App(tk.Tk):
                 ("active", tokens["panel"]),
             ],
         )
-        style.configure("Ready.Status.TLabel", background=tokens["panel"], foreground=tokens["success"], font=("Aptos", 12, "bold"))
-        style.configure("Running.Status.TLabel", background=tokens["panel"], foreground=tokens["accent"], font=("Aptos", 12, "bold"))
-        style.configure("Warning.Status.TLabel", background=tokens["panel"], foreground=tokens["warning"], font=("Aptos", 12, "bold"))
-        style.configure("Neutral.Status.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12, "bold"))
+        status_label = status_label_spec()
+        style.configure(
+            "Ready.Status.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["success"],
+            font=status_label["font"],
+            padding=status_label["padding"],
+        )
+        style.configure(
+            "Running.Status.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["accent"],
+            font=status_label["font"],
+            padding=status_label["padding"],
+        )
+        style.configure(
+            "Warning.Status.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["warning"],
+            font=status_label["font"],
+            padding=status_label["padding"],
+        )
+        style.configure(
+            "Neutral.Status.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["muted"],
+            font=status_label["font"],
+            padding=status_label["padding"],
+        )
 
     def _build_workflow_hint(self, parent: ttk.Frame) -> None:
         styles = workflow_hint_styles()
