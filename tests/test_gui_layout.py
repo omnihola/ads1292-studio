@@ -1,5 +1,7 @@
 from ads1292_studio.app import (
     ads1292r_plot_layout_labels,
+    app_visual_tokens,
+    plot_trace_colors,
     primary_toolbar_button_labels,
     secondary_action_button_labels,
     sidebar_tab_labels,
@@ -34,3 +36,21 @@ def test_gui_layout_uses_ads1292r_synchronized_three_panel_view() -> None:
         "CH1 Respiration raw",
         "Lead-off / contact status",
     )
+
+
+def test_gui_visual_tokens_define_a_complete_light_theme() -> None:
+    tokens = app_visual_tokens()
+
+    assert tokens["surface"] == "#F6F8FB"
+    assert tokens["panel"] == "#FFFFFF"
+    assert tokens["ink"] == "#172033"
+    assert tokens["accent"] == "#2F6FED"
+    assert set(tokens) >= {"surface", "panel", "panel_alt", "ink", "muted", "border", "accent", "success", "warning"}
+
+
+def test_plot_trace_colors_distinguish_ecg_respiration_and_contact() -> None:
+    colors = plot_trace_colors()
+
+    assert colors["ecg"] != colors["respiration"]
+    assert colors["contact"] != colors["ecg"]
+    assert colors["peak"] == "#E34A4A"

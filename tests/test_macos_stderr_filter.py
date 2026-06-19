@@ -11,3 +11,16 @@ def test_keeps_unrelated_stderr_lines_visible() -> None:
     line = "Traceback (most recent call last): RuntimeError: device disconnected\n"
 
     assert should_suppress_stderr_line(line) is False
+
+
+def test_suppresses_known_macos_tk_input_service_noise() -> None:
+    noisy_lines = (
+        "2026-06-19 03:31:23.797 python[24389:3055412] TISFileInterrogator updateSystemInputSources false but old data invalid\n",
+        "2026-06-19 03:31:23.803 python[24389:3055568] Connection Invalid error for service com.apple.hiservices-xpcservice.\n",
+        "2026-06-19 03:31:23.803 python[24389:3055412] Error received in message reply handler: Connection invalid\n",
+        "Keyboard Layouts: duplicate keyboard layout identifier -17410.\n",
+        "Keyboard Layouts: keyboard layout identifier -17410 has been replaced with -28673.\n",
+        "2026-06-19 03:31:23.868 python[24389:3055412] Failure on line 688 in function id scheduleApplicationNotification(LSNotificationCode, NSWorkspaceNotificationCenter *): noErr == _LSModifyNotification(notificationID, 1, &code, 0, NULL, NULL, NULL)\n",
+    )
+
+    assert all(should_suppress_stderr_line(line) for line in noisy_lines)

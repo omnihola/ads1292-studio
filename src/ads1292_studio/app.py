@@ -3,11 +3,15 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
+import os
 from pathlib import Path
 import queue
 import threading
 import tkinter as tk
+import tempfile
 from tkinter import filedialog, messagebox, ttk
+
+os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "ads1292-studio-matplotlib"))
 
 import matplotlib
 import numpy as np
@@ -76,6 +80,25 @@ STATUS_TONE_STYLES = {
     "warning": "Warning.Status.TLabel",
     "neutral": "Neutral.Status.TLabel",
 }
+APP_VISUAL_TOKENS = {
+    "surface": "#F6F8FB",
+    "panel": "#FFFFFF",
+    "panel_alt": "#EEF3FA",
+    "ink": "#172033",
+    "muted": "#657084",
+    "border": "#D9E1EC",
+    "accent": "#2F6FED",
+    "accent_dark": "#1F4FB2",
+    "success": "#1E7A46",
+    "warning": "#A76400",
+    "danger": "#B3261E",
+}
+PLOT_TRACE_COLORS = {
+    "ecg": "#2F6FED",
+    "respiration": "#7A5CDB",
+    "contact": "#516070",
+    "peak": "#E34A4A",
+}
 
 
 @dataclass(frozen=True)
@@ -120,6 +143,14 @@ class ConnectResult:
 
 def status_tone_style(tone: str) -> str:
     return STATUS_TONE_STYLES.get(tone, STATUS_TONE_STYLES["neutral"])
+
+
+def app_visual_tokens() -> dict[str, str]:
+    return dict(APP_VISUAL_TOKENS)
+
+
+def plot_trace_colors() -> dict[str, str]:
+    return dict(PLOT_TRACE_COLORS)
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -462,10 +493,19 @@ class App(tk.Tk):
 
     def _build_ui(self) -> None:
         self._configure_status_styles()
-        toolbar = ttk.Frame(self, padding=8)
+        self.connection_var = tk.StringVar(value="Not connected")
+        self.configure(bg=APP_VISUAL_TOKENS["surface"])
+
+        header = ttk.Frame(self, padding=(18, 12, 18, 10), style="Header.TFrame")
+        header.pack(side=tk.TOP, fill=tk.X)
+        ttk.Label(header, text="ADS1292 Studio", style="AppTitle.TLabel").pack(side=tk.LEFT)
+        ttk.Label(header, text="MOTAC ECG validation", style="AppSubtitle.TLabel").pack(side=tk.LEFT, padx=(14, 0))
+        ttk.Label(header, textvariable=self.connection_var, style="Connection.TLabel").pack(side=tk.RIGHT)
+
+        toolbar = ttk.Frame(self, padding=(14, 10), style="Toolbar.TFrame")
         toolbar.pack(side=tk.TOP, fill=tk.X)
 
-        ttk.Label(toolbar, text="Port").pack(side=tk.LEFT)
+        ttk.Label(toolbar, text="Port", style="ToolbarLabel.TLabel").pack(side=tk.LEFT)
         self.port_var = tk.StringVar()
         self.port_combo = ttk.Combobox(toolbar, textvariable=self.port_var, width=34)
         self.port_combo.pack(side=tk.LEFT, padx=6)
@@ -485,14 +525,11 @@ class App(tk.Tk):
         self.filter_var = tk.BooleanVar(value=DEFAULT_FILTER_ENABLED)
         ttk.Checkbutton(toolbar, text="Filter", variable=self.filter_var).pack(side=tk.LEFT, padx=4)
         self.source_var = tk.StringVar(value=ADS1292R_ECG_SOURCE)
-        ttk.Label(toolbar, text="Layout: CH2 ECG / CH1 Resp").pack(side=tk.LEFT, padx=(12, 2))
-
-        self.connection_var = tk.StringVar(value="Not connected")
-        ttk.Label(toolbar, textvariable=self.connection_var).pack(side=tk.RIGHT)
+        ttk.Label(toolbar, text="CH2 ECG / CH1 Resp / Contact", style="ToolbarHint.TLabel").pack(side=tk.LEFT, padx=(12, 2))
 
         body = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        side_shell = ttk.Frame(body, width=340)
+        side_shell = ttk.Frame(body, width=340, padding=(10, 10), style="SidebarShell.TFrame")
         body.add(side_shell, weight=0)
         sidebar = self._build_sidebar(side_shell)
         status_side = sidebar["Status"]
@@ -500,7 +537,7 @@ class App(tk.Tk):
         validation_side = sidebar["Validation"]
         protocol_side = sidebar["Protocol"]
         actions_side = sidebar["Actions"]
-        main = ttk.Frame(body)
+        main = ttk.Frame(body, padding=(8, 10, 12, 10), style="Main.TFrame")
         body.add(main, weight=1)
 
         self.metrics_var = tk.StringVar(value="No session")
@@ -538,38 +575,38 @@ class App(tk.Tk):
         self.protocol_objective_var = tk.StringVar(value=protocol.objective)
         self.protocol_steps_var = tk.StringVar(value=_format_protocol_steps(protocol.steps))
         self.protocol_acceptance_var = tk.StringVar(value=protocol.acceptance_notes)
-        ttk.Label(status_side, text="Next Step", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
-        ttk.Label(status_side, textvariable=self.workflow_hint_var, wraplength=260, justify=tk.LEFT).pack(anchor=tk.W)
-        ttk.Label(status_side, text="Overview", font=("", 12, "bold")).pack(anchor=tk.W, pady=(12, 4))
+        ttk.Label(status_side, text="Next Step", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
+        ttk.Label(status_side, textvariable=self.workflow_hint_var, wraplength=260, justify=tk.LEFT, style="Muted.TLabel").pack(anchor=tk.W)
+        ttk.Label(status_side, text="Overview", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
         self._build_status_cards(status_side)
-        ttk.Label(status_side, text="Signal Quality", font=("", 12, "bold")).pack(anchor=tk.W, pady=(12, 4))
+        ttk.Label(status_side, text="Signal Quality", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
         self._build_signal_quality_cards(status_side)
         for label, var in (
             ("Session", self.metrics_var),
             ("Quality", self.quality_var),
             ("Storage", self.path_var),
         ):
-            ttk.Label(status_side, text=label, font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
-            ttk.Label(status_side, textvariable=var, wraplength=260, justify=tk.LEFT).pack(anchor=tk.W)
+            ttk.Label(status_side, text=label, style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(10, 2))
+            ttk.Label(status_side, textvariable=var, wraplength=260, justify=tk.LEFT, style="Muted.TLabel").pack(anchor=tk.W)
 
-        ttk.Label(session_side, text="Recording Notes", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
+        ttk.Label(session_side, text="Recording Notes", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
         self._metadata_entry(session_side, "Session ID", self.session_id_var)
         self._metadata_entry(session_side, "Subject", self.subject_id_var)
         self._metadata_entry(session_side, "Electrode", self.electrode_var)
         self._metadata_entry(session_side, "Montage", self.montage_var)
         self._metadata_entry(session_side, "Operator", self.operator_var)
         self._metadata_entry(session_side, "Notes", self.notes_var)
-        ttk.Label(session_side, text="Events", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        ttk.Label(session_side, text="Events", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
         self._metadata_entry(session_side, "Event label", self.event_label_var)
         self._metadata_entry(session_side, "Event notes", self.event_notes_var)
         ttk.Button(session_side, text="Add Event", command=self.add_event).pack(anchor=tk.W, fill=tk.X, pady=(6, 2))
         ttk.Label(session_side, textvariable=self.event_count_var, wraplength=260, justify=tk.LEFT).pack(anchor=tk.W)
 
-        ttk.Label(validation_side, text="Calibration", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
+        ttk.Label(validation_side, text="Calibration", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
         self._metadata_entry(validation_side, "Label", self.calibration_label_var)
         self._metadata_entry(validation_side, "Vref mV", self.vref_mv_var)
         self._metadata_entry(validation_side, "PGA gain", self.pga_gain_var)
-        ttk.Label(validation_side, text="Quality Gate", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        ttk.Label(validation_side, text="Quality Gate", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
         self._metadata_entry(validation_side, "Min duration s", self.gate_min_duration_var)
         self._metadata_entry(validation_side, "Min contact %", self.gate_min_contact_var)
         self._metadata_entry(validation_side, "Min R peaks", self.gate_min_r_peaks_var)
@@ -580,33 +617,34 @@ class App(tk.Tk):
         self._metadata_entry(validation_side, "Max noise RMS", self.gate_max_noise_var)
         self._metadata_entry(validation_side, "Max peak-to-peak", self.gate_max_ptp_var)
 
-        ttk.Label(protocol_side, text="Protocol", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
+        ttk.Label(protocol_side, text="Protocol", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
         self._metadata_entry(protocol_side, "Name", self.protocol_name_var)
         self._metadata_entry(protocol_side, "Objective", self.protocol_objective_var)
         self._metadata_entry(protocol_side, "Steps", self.protocol_steps_var)
         self._metadata_entry(protocol_side, "Acceptance", self.protocol_acceptance_var)
 
-        ttk.Label(actions_side, text="Review", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
+        ttk.Label(actions_side, text="Review", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
         self.load_csv_button = ttk.Button(actions_side, text="Load CSV", command=self.load_csv)
         self.load_csv_button.pack(anchor=tk.W, fill=tk.X, pady=2)
         self.export_report_button = ttk.Button(actions_side, text="Export Report", command=self.export_report)
         self.export_report_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        ttk.Label(actions_side, text="Package", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        ttk.Label(actions_side, text="Package", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
         self.export_package_button = ttk.Button(actions_side, text="Export Package", command=self.export_package)
         self.export_package_button.pack(anchor=tk.W, fill=tk.X, pady=2)
         self.verify_package_button = ttk.Button(actions_side, text="Verify Package", command=self.verify_package)
         self.verify_package_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        ttk.Label(actions_side, text="Library", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        ttk.Label(actions_side, text="Library", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
         self.batch_compare_button = ttk.Button(actions_side, text="Batch Compare", command=self.batch_compare)
         self.batch_compare_button.pack(anchor=tk.W, fill=tk.X, pady=2)
         self.session_index_button = ttk.Button(actions_side, text="Session Index", command=self.session_index)
         self.session_index_button.pack(anchor=tk.W, fill=tk.X, pady=2)
-        ttk.Label(actions_side, text="Safety", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        ttk.Label(actions_side, text="Safety", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
         ttk.Label(
             actions_side,
             text="Research use only. Use battery power during human-subject measurements.",
             wraplength=260,
             justify=tk.LEFT,
+            style="Muted.TLabel",
         ).pack(anchor=tk.W)
 
         self.notebook = ttk.Notebook(main)
@@ -623,7 +661,16 @@ class App(tk.Tk):
         self._build_live_plot()
         self._build_review_plot()
         self._build_pqrst_plot()
-        self.log_text = tk.Text(self.log_tab, height=12)
+        self.log_text = tk.Text(
+            self.log_tab,
+            height=12,
+            bg=APP_VISUAL_TOKENS["panel"],
+            fg=APP_VISUAL_TOKENS["ink"],
+            insertbackground=APP_VISUAL_TOKENS["accent"],
+            relief=tk.FLAT,
+            padx=12,
+            pady=10,
+        )
         self.log_text.pack(fill=tk.BOTH, expand=True)
         self.control_buttons = {
             "Refresh": self.refresh_button,
@@ -641,16 +688,41 @@ class App(tk.Tk):
 
     def _configure_status_styles(self) -> None:
         style = ttk.Style(self)
-        style.configure("Ready.Status.TLabel", foreground="#116329")
-        style.configure("Running.Status.TLabel", foreground="#0B5CAD")
-        style.configure("Warning.Status.TLabel", foreground="#9A4D00")
-        style.configure("Neutral.Status.TLabel", foreground="#555555")
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        tokens = APP_VISUAL_TOKENS
+        style.configure(".", font=("Aptos", 12), background=tokens["surface"], foreground=tokens["ink"])
+        style.configure("TFrame", background=tokens["surface"])
+        style.configure("Header.TFrame", background=tokens["panel"], borderwidth=0)
+        style.configure("Toolbar.TFrame", background=tokens["panel_alt"], borderwidth=1, relief=tk.FLAT)
+        style.configure("SidebarShell.TFrame", background=tokens["surface"])
+        style.configure("Main.TFrame", background=tokens["surface"])
+        style.configure("TLabel", background=tokens["surface"], foreground=tokens["ink"])
+        style.configure("AppTitle.TLabel", background=tokens["panel"], foreground=tokens["ink"], font=("Aptos", 20, "bold"))
+        style.configure("AppSubtitle.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12))
+        style.configure("Connection.TLabel", background=tokens["panel"], foreground=tokens["accent"], font=("Aptos", 12, "bold"))
+        style.configure("ToolbarLabel.TLabel", background=tokens["panel_alt"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
+        style.configure("ToolbarHint.TLabel", background=tokens["panel_alt"], foreground=tokens["muted"])
+        style.configure("SectionHeading.TLabel", background=tokens["surface"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
+        style.configure("Muted.TLabel", background=tokens["surface"], foreground=tokens["muted"])
+        style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
+        style.configure("TButton", padding=(10, 6), font=("Aptos", 12))
+        style.configure("TCheckbutton", background=tokens["panel_alt"], foreground=tokens["ink"])
+        style.configure("TNotebook", background=tokens["surface"], borderwidth=0)
+        style.configure("TNotebook.Tab", padding=(14, 7), font=("Aptos", 12, "bold"))
+        style.configure("Ready.Status.TLabel", background=tokens["panel"], foreground=tokens["success"], font=("Aptos", 12, "bold"))
+        style.configure("Running.Status.TLabel", background=tokens["panel"], foreground=tokens["accent"], font=("Aptos", 12, "bold"))
+        style.configure("Warning.Status.TLabel", background=tokens["panel"], foreground=tokens["warning"], font=("Aptos", 12, "bold"))
+        style.configure("Neutral.Status.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12, "bold"))
 
     def _build_status_cards(self, parent: ttk.Frame) -> None:
         for label in STATUS_CARD_LABELS:
-            row = ttk.Frame(parent)
-            row.pack(anchor=tk.W, fill=tk.X, pady=1)
-            ttk.Label(row, text=label, width=12).pack(side=tk.LEFT)
+            row = ttk.Frame(parent, padding=(10, 8), style="Card.TFrame")
+            row.pack(anchor=tk.W, fill=tk.X, pady=3)
+            ttk.Label(row, text=label, width=12, style="CardLabel.TLabel").pack(side=tk.LEFT)
             value_label = ttk.Label(
                 row,
                 textvariable=self.status_card_vars[label],
@@ -661,9 +733,9 @@ class App(tk.Tk):
 
     def _build_signal_quality_cards(self, parent: ttk.Frame) -> None:
         for label in SIGNAL_CARD_LABELS:
-            row = ttk.Frame(parent)
-            row.pack(anchor=tk.W, fill=tk.X, pady=1)
-            ttk.Label(row, text=label, width=12).pack(side=tk.LEFT)
+            row = ttk.Frame(parent, padding=(10, 8), style="Card.TFrame")
+            row.pack(anchor=tk.W, fill=tk.X, pady=3)
+            ttk.Label(row, text=label, width=12, style="CardLabel.TLabel").pack(side=tk.LEFT)
             value_label = ttk.Label(
                 row,
                 textvariable=self.signal_card_vars[label],
@@ -689,52 +761,85 @@ class App(tk.Tk):
         return sections
 
     def _metadata_entry(self, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:
-        ttk.Label(parent, text=label).pack(anchor=tk.W, pady=(4, 0))
+        ttk.Label(parent, text=label, style="Muted.TLabel").pack(anchor=tk.W, pady=(6, 0))
         ttk.Entry(parent, textvariable=variable).pack(anchor=tk.W, fill=tk.X)
 
     def _build_live_plot(self) -> None:
-        fig = Figure(figsize=(10, 7), dpi=100)
+        fig = self._new_plot_figure(figsize=(10, 7))
         fig.subplots_adjust(hspace=0.55)
         self.ax_live_ecg = fig.add_subplot(311)
         self.ax_live_resp = fig.add_subplot(312, sharex=self.ax_live_ecg)
         self.ax_live_status = fig.add_subplot(313, sharex=self.ax_live_ecg)
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.label_outer()
+        self._style_signal_axes((self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
         self.ax_live_ecg.set_ylabel("counts")
         self.ax_live_resp.set_ylabel("counts")
         self.ax_live_status.set_xlabel("Time (s)")
-        self.live_ecg_line, = self.ax_live_ecg.plot([], [], lw=1.0)
-        self.live_peak_line, = self.ax_live_ecg.plot([], [], "r.", ms=5)
-        self.live_resp_line, = self.ax_live_resp.plot([], [], lw=0.8)
-        self.live_status_line, = self.ax_live_status.plot([], [], lw=0.8, drawstyle="steps-post")
+        self.live_ecg_line, = self.ax_live_ecg.plot([], [], lw=1.1, color=PLOT_TRACE_COLORS["ecg"])
+        self.live_peak_line, = self.ax_live_ecg.plot([], [], ".", ms=5, color=PLOT_TRACE_COLORS["peak"])
+        self.live_resp_line, = self.ax_live_resp.plot([], [], lw=0.9, color=PLOT_TRACE_COLORS["respiration"])
+        self.live_status_line, = self.ax_live_status.plot(
+            [],
+            [],
+            lw=0.9,
+            drawstyle="steps-post",
+            color=PLOT_TRACE_COLORS["contact"],
+        )
         self.live_canvas = FigureCanvasTkAgg(fig, master=self.live_tab)
         self.live_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def _build_review_plot(self) -> None:
-        fig = Figure(figsize=(10, 7), dpi=100)
+        fig = self._new_plot_figure(figsize=(10, 7))
         fig.subplots_adjust(hspace=0.55)
         self.ax_review_ecg = fig.add_subplot(311)
         self.ax_review_resp = fig.add_subplot(312, sharex=self.ax_review_ecg)
         self.ax_review_status = fig.add_subplot(313, sharex=self.ax_review_ecg)
         for ax in (self.ax_review_ecg, self.ax_review_resp, self.ax_review_status):
             ax.label_outer()
+        self._style_signal_axes((self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
         self.ax_review_status.set_xlabel("Samples")
         self.ax_review_ecg.set_ylabel("counts")
         self.ax_review_resp.set_ylabel("counts")
-        self.review_ecg_line, = self.ax_review_ecg.plot([], [], lw=0.9)
-        self.review_peak_line, = self.ax_review_ecg.plot([], [], "r.", ms=5)
-        self.review_resp_line, = self.ax_review_resp.plot([], [], lw=0.8)
-        self.review_status_line, = self.ax_review_status.plot([], [], lw=0.8, drawstyle="steps-post")
+        self.review_ecg_line, = self.ax_review_ecg.plot([], [], lw=1.0, color=PLOT_TRACE_COLORS["ecg"])
+        self.review_peak_line, = self.ax_review_ecg.plot([], [], ".", ms=5, color=PLOT_TRACE_COLORS["peak"])
+        self.review_resp_line, = self.ax_review_resp.plot([], [], lw=0.9, color=PLOT_TRACE_COLORS["respiration"])
+        self.review_status_line, = self.ax_review_status.plot(
+            [],
+            [],
+            lw=0.9,
+            drawstyle="steps-post",
+            color=PLOT_TRACE_COLORS["contact"],
+        )
         self.review_canvas = FigureCanvasTkAgg(fig, master=self.review_tab)
         self.review_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def _build_pqrst_plot(self) -> None:
-        fig = Figure(figsize=(10, 6), dpi=100)
+        fig = self._new_plot_figure(figsize=(10, 6))
         self.ax_pqrst = fig.add_subplot(111)
+        self._style_signal_axes((self.ax_pqrst,))
         self.ax_pqrst.set_xlabel("Time relative to R peak (ms)")
         self.ax_pqrst.set_ylabel("Filtered counts")
         self.pqrst_canvas = FigureCanvasTkAgg(fig, master=self.pqrst_tab)
         self.pqrst_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+    def _new_plot_figure(self, *, figsize: tuple[float, float]) -> Figure:
+        fig = Figure(figsize=figsize, dpi=100)
+        fig.patch.set_facecolor(APP_VISUAL_TOKENS["surface"])
+        return fig
+
+    def _style_signal_axes(self, axes: tuple[object, ...]) -> None:
+        for ax in axes:
+            ax.set_facecolor(APP_VISUAL_TOKENS["panel"])
+            ax.grid(True, color=APP_VISUAL_TOKENS["border"], linewidth=0.8, alpha=0.65)
+            ax.tick_params(colors=APP_VISUAL_TOKENS["muted"], labelsize=9)
+            ax.xaxis.label.set_color(APP_VISUAL_TOKENS["ink"])
+            ax.yaxis.label.set_color(APP_VISUAL_TOKENS["ink"])
+            ax.title.set_color(APP_VISUAL_TOKENS["ink"])
+            for side in ("top", "right"):
+                ax.spines[side].set_visible(False)
+            for side in ("left", "bottom"):
+                ax.spines[side].set_color(APP_VISUAL_TOKENS["border"])
 
     def refresh_ports(self) -> None:
         ports = list_ads_ports()
@@ -1370,19 +1475,25 @@ class App(tk.Tk):
     def _draw_pqrst(self, ecg: np.ndarray, peaks: tuple[int, ...]) -> None:
         review = pqrst_review(ecg, peaks, SAMPLE_RATE_HZ)
         self.ax_pqrst.clear()
+        self._style_signal_axes((self.ax_pqrst,))
         self.ax_pqrst.set_xlabel("Time relative to R peak (ms)")
         self.ax_pqrst.set_ylabel("Filtered counts")
         if review.average_beat:
-            self.ax_pqrst.plot(review.time_ms, review.average_beat, lw=2.0, label="average beat")
-            self.ax_pqrst.axvline(0, color="r", linestyle="--", lw=1, label="R")
-            self.ax_pqrst.axvspan(-220, -80, color="green", alpha=0.08, label="P search")
-            self.ax_pqrst.axvspan(120, 380, color="orange", alpha=0.08, label="T search")
+            self.ax_pqrst.plot(
+                review.time_ms,
+                review.average_beat,
+                lw=2.0,
+                color=PLOT_TRACE_COLORS["ecg"],
+                label="average beat",
+            )
+            self.ax_pqrst.axvline(0, color=PLOT_TRACE_COLORS["peak"], linestyle="--", lw=1, label="R")
+            self.ax_pqrst.axvspan(-220, -80, color=APP_VISUAL_TOKENS["success"], alpha=0.08, label="P search")
+            self.ax_pqrst.axvspan(120, 380, color=APP_VISUAL_TOKENS["warning"], alpha=0.08, label="T search")
             self.ax_pqrst.legend(loc="upper right")
         self.ax_pqrst.set_title(
             f"PQRST review: QRS={review.qrs_clear}, P tentative={review.p_tentative}, "
             f"T tentative={review.t_tentative}, beats={review.beats_used}"
         )
-        self.ax_pqrst.grid(True, alpha=0.25)
         self.pqrst_canvas.draw_idle()
 
     def _quality_text(

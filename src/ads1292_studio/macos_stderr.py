@@ -7,14 +7,22 @@ import sys
 import threading
 
 
-IMK_WAKEUP_MARKER = "IMKCFRunLoopWakeUpReliable"
+MACOS_GUI_NOISE_MARKERS = (
+    "IMKCFRunLoopWakeUpReliable",
+    "TISFileInterrogator updateSystemInputSources",
+    "com.apple.hiservices-xpcservice",
+    "Error received in message reply handler: Connection invalid",
+    "Keyboard Layouts: duplicate keyboard layout identifier",
+    "Keyboard Layouts: keyboard layout identifier",
+    "scheduleApplicationNotification(LSNotificationCode, NSWorkspaceNotificationCenter *)",
+)
 SHOW_IMK_WARNINGS_ENV = "ADS1292_STUDIO_SHOW_IMK_WARNINGS"
 
 _active_filter: StderrLineFilter | None = None
 
 
 def should_suppress_stderr_line(line: str) -> bool:
-    return IMK_WAKEUP_MARKER in line
+    return any(marker in line for marker in MACOS_GUI_NOISE_MARKERS)
 
 
 def install_macos_stderr_filter() -> StderrLineFilter | None:
