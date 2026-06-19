@@ -1474,6 +1474,7 @@ class ScrollableFrame:
 
 class App(tk.Tk):
     def __init__(self) -> None:
+        install_macos_stderr_filter()
         super().__init__()
         self.title("ADS1292 Studio")
         window_spec = app_window_spec()
