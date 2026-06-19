@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 17
+Phase 18
 
 ## Phases
 
@@ -153,6 +153,15 @@ Phase 17
 - [x] Add tests and real CSV pass/fail smoke tests.
 - **Status:** complete
 
+### Phase 18: Protocol Segment Metrics
+- [x] Add protocol-step segment analysis for baseline, motion, and recovery windows.
+- [x] Compute per-segment contact, R peaks, HR, baseline drift, noise RMS, and peak-to-peak values.
+- [x] Include protocol segment metrics in HTML reports.
+- [x] Include protocol segment metrics in session package manifests.
+- [x] Keep report segment analysis on the whole-record ECG source so Auto does not switch channels between protocol steps.
+- [x] Add tests and real CSV report/package smoke tests.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -181,6 +190,8 @@ Phase 17
 | Add batch group statistics | MOTAC vs commercial comparisons need electrode-level summaries, not only one row per recording. |
 | Add artifact metrics | ECG electrode validation needs baseline drift and noise evidence, not only R peaks and contact flags. |
 | Add artifact threshold gates | Once drift/noise are measured, QC needs explicit failure criteria for material comparison. |
+| Add protocol segment metrics | Baseline/motion/recovery material validation needs per-step evidence, not only whole-record summaries. |
+| Fix report segment analysis to the whole-record ECG source | Segment-to-segment comparisons are only meaningful when baseline, motion, and recovery use the same channel. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

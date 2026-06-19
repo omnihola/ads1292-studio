@@ -42,6 +42,8 @@
 | Add batch group statistics | Material comparisons need electrode-level summaries before claiming MOTAC vs commercial performance. |
 | Add artifact metrics | Baseline drift and noise are core electrode-quality evidence for MOTAC vs commercial ECG tests. |
 | Add artifact threshold gates | Drift/noise metrics need configurable pass/fail limits for repeatable material validation. |
+| Add protocol segment metrics | Baseline, motion, and recovery stages need separate contact, R-peak, HR, drift, noise, and peak-to-peak evidence. |
+| Keep report segment metrics on the whole-record ECG source | A report must not compare baseline CH2 against motion CH1 just because per-segment Auto changed channels. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -60,6 +62,7 @@
 | Package verify was missing after manifest export | Added a verifier so modified/missing files are detected instead of silently trusted. |
 | Synthetic QC data can fail strict QRS checks | Keep default QC strict for real recordings, but allow `--allow-unclear-qrs` for debug fixtures. |
 | Protocol sidecar smoke setup briefly touched the parent `record/` folder | Removed the temporary file and reran smoke using ignored files inside `ads1292-studio/reports/`. |
+| Per-segment Auto source selected CH1 for the motion segment in real smoke | Fixed report segment analysis to reuse the whole-record ECG source, so all protocol stages compare the same channel. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -83,6 +86,7 @@
 - Artifact gate command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv> --max-baseline-drift <counts> --max-noise-rms <counts> --max-peak-to-peak <counts>`
 - Protocol template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-protocol-template reports/protocol-template.json`
 - Protocol report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --protocol reports/protocol-template.json --out reports`
+- Protocol segment metrics are generated automatically when `--protocol` is supplied to `report` or when a `.protocol.json` sidecar is included in a session package.
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

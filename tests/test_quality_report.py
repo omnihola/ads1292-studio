@@ -88,13 +88,17 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
         protocol=TestProtocol(
             name="Gel comparison protocol",
             objective="Compare MOTAC gel to commercial Ag/AgCl.",
-            steps=(ProtocolStep(start_seconds=0.0, duration_seconds=7.0, label="baseline", instruction="Sit still."),),
+            steps=(
+                ProtocolStep(start_seconds=0.0, duration_seconds=3.0, label="baseline", instruction="Sit still."),
+                ProtocolStep(start_seconds=3.0, duration_seconds=2.0, label="motion", instruction="Move arm."),
+            ),
         ),
     )
 
     assert result.html_path.exists()
     assert result.ecg_png_path.exists()
     assert result.pqrst_png_path.exists()
+    assert all(segment.ecg_source == result.metrics.ecg_source for segment in result.segment_metrics)
     html = result.html_path.read_text()
     assert "Synthetic ADS1292 Review" in html
     assert "ECG source" in html
@@ -113,6 +117,8 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "Test Protocol" in html
     assert "Gel comparison protocol" in html
     assert "baseline" in html
+    assert "Protocol Segment Metrics" in html
+    assert "motion" in html
     assert "Baseline drift" in html
     assert "Noise RMS" in html
     assert "Peak-to-peak" in html

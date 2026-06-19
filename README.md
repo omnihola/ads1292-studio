@@ -76,6 +76,9 @@ by electrode label.
   and peak-to-peak counts.
 - Test protocol sidecars for baseline, motion, and recovery steps; protocol
   templates can be included in reports and session packages.
+- Protocol segment metrics in reports and package manifests, including
+  per-step contact, R peaks, HR, baseline drift, noise RMS, and peak-to-peak
+  values for baseline/motion/recovery validation.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

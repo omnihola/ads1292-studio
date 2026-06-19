@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 import hashlib
 import json
@@ -106,6 +106,7 @@ def export_session_package(
             "baseline_drift_counts": report.metrics.baseline_drift_counts,
             "noise_rms_counts": report.metrics.noise_rms_counts,
             "peak_to_peak_counts": report.metrics.peak_to_peak_counts,
+            "segment_metrics": tuple(asdict(segment) for segment in report.segment_metrics),
         },
         "files": files,
     }
