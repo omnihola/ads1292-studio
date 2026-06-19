@@ -339,7 +339,13 @@ def test_status_tone_style_maps_known_and_unknown_tones() -> None:
 def test_status_label_spec_makes_card_values_easy_to_scan() -> None:
     assert status_label_spec() == {
         "font": ("Aptos", 12, "bold"),
-        "padding": (6, 3),
+        "padding": (8, 4),
+        "backgrounds": {
+            "ready": "#E9F6EE",
+            "running": "#EAF1FF",
+            "warning": "#FFF4E3",
+            "neutral": "#EEF3FA",
+        },
     }
 
 
