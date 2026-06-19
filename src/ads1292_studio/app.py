@@ -155,6 +155,12 @@ TOOLBAR_CONTROL_STYLES = {
     "port": "Port.TCombobox",
     "toggle": "ToolbarToggle.TCheckbutton",
 }
+TOOLBAR_LABEL_SPEC = {
+    "style": "ToolbarLabel.TLabel",
+    "font": ("Aptos", 12, "bold"),
+    "background": "#EEF3FA",
+    "foreground": "#172033",
+}
 TOOLBAR_HINT_STYLES = {
     "frame": "ToolbarHint.TFrame",
     "label": "ToolbarHint.TLabel",
@@ -706,6 +712,10 @@ def toolbar_control_styles() -> dict[str, str]:
     return dict(TOOLBAR_CONTROL_STYLES)
 
 
+def toolbar_label_spec() -> dict[str, object]:
+    return dict(TOOLBAR_LABEL_SPEC)
+
+
 def toolbar_hint_styles() -> dict[str, str]:
     return dict(TOOLBAR_HINT_STYLES)
 
@@ -1088,7 +1098,7 @@ class App(tk.Tk):
         toolbar.pack(side=tk.TOP, fill=tk.X)
         self.toolbar_frame = toolbar
 
-        ttk.Label(toolbar, text="Port", style="ToolbarLabel.TLabel").pack(side=tk.LEFT)
+        ttk.Label(toolbar, text="Port", style=str(toolbar_label_spec()["style"])).pack(side=tk.LEFT)
         self.port_var = tk.StringVar()
         toolbar_styles = toolbar_control_styles()
         self.port_combo = ttk.Combobox(
@@ -1442,7 +1452,13 @@ class App(tk.Tk):
             borderwidth=connection_pill["borderwidth"],
             relief=connection_pill["relief"],
         )
-        style.configure("ToolbarLabel.TLabel", background=tokens["panel_alt"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
+        toolbar_label = toolbar_label_spec()
+        style.configure(
+            str(toolbar_label["style"]),
+            background=toolbar_label["background"],
+            foreground=toolbar_label["foreground"],
+            font=toolbar_label["font"],
+        )
         toolbar_hint = toolbar_hint_styles()
         style.configure(
             "ToolbarHint.TFrame",

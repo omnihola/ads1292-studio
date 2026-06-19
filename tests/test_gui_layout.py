@@ -36,6 +36,7 @@ from ads1292_studio.app import (
     toolbar_control_styles,
     toolbar_group_padding,
     toolbar_hint_styles,
+    toolbar_label_spec,
     toolbar_layout_spec,
     workflow_hint_styles,
     workspace_layout_spec,
@@ -122,6 +123,15 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
     assert toolbar_control_styles() == {
         "port": "Port.TCombobox",
         "toggle": "ToolbarToggle.TCheckbutton",
+    }
+
+
+def test_toolbar_label_spec_keeps_toolbar_labels_consistent() -> None:
+    assert toolbar_label_spec() == {
+        "style": "ToolbarLabel.TLabel",
+        "font": ("Aptos", 12, "bold"),
+        "background": "#EEF3FA",
+        "foreground": "#172033",
     }
 
 
