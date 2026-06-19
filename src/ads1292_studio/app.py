@@ -420,7 +420,8 @@ PLOT_AXIS_STYLE = {
     "grid": "#D9E1EC",
     "spine": "#D9E1EC",
     "tick": "#657084",
-    "label": "#172033",
+    "label": "#293247",
+    "title": "#172033",
     "grid_linewidth": 0.7,
     "grid_alpha": 0.45,
     "spine_linewidth": 0.8,
@@ -2308,7 +2309,7 @@ class App(tk.Tk):
         style = plot_axis_style()
         ax.set_title(
             title,
-            color=style["label"],
+            color=style["title"],
             fontsize=style["title_size"],
             fontweight=style["title_weight"],
             pad=style["title_pad"],
