@@ -10,6 +10,7 @@ from ads1292_studio.app import (
     ads1292r_secondary_channel_label,
     build_live_quality_samples,
     compute_live_quality_result,
+    display_scale_reference_label,
     display_signal_values,
     display_refresh_key,
     drain_queue_items,
@@ -270,6 +271,13 @@ def test_toolbar_display_hint_text_summarizes_channel_and_display_mode() -> None
     )
 
     assert hint == "CH2 Lead I | CH1 Resp | Contact | HP+notch | 2x | 12s | 50 mm/s"
+
+
+def test_display_scale_reference_label_does_not_claim_voltage_calibration() -> None:
+    label = display_scale_reference_label(EcgDisplaySettings(gain=4.0))
+
+    assert label == "Scale ref | 5x"
+    assert "mV" not in label
 
 
 def test_tick_queue_limits_are_above_normal_streaming_rate() -> None:

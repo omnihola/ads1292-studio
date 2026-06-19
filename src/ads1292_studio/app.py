@@ -1096,6 +1096,10 @@ def toolbar_display_hint_text(settings: EcgDisplaySettings, filters: SoftwareFil
     return f"CH2 Lead I | CH1 Resp | Contact | {display_mode_label(settings, filters)}"
 
 
+def display_scale_reference_label(settings: EcgDisplaySettings) -> str:
+    return f"Scale ref | {settings.normalized().gain:g}x"
+
+
 def drain_queue_items(item_queue: queue.Queue[_T], max_items: int) -> tuple[_T, ...]:
     items: list[_T] = []
     for _ in range(max(0, max_items)):
@@ -3549,7 +3553,7 @@ class App(tk.Tk):
         settings: EcgDisplaySettings,
     ) -> None:
         axis_id = id(ax)
-        label_text = f"1 mV | {settings.gain:g}x"
+        label_text = display_scale_reference_label(settings)
         if artists and self.calibration_pulse_cache.get(axis_id) == label_text:
             return
         if len(artists) >= 2 and hasattr(artists[1], "set_text"):
