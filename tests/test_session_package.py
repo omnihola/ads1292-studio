@@ -63,6 +63,9 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
         "report_pqrst_png",
     } <= roles
     assert manifest["metrics"]["ecg_source"] == "CH2"
+    assert "baseline_drift_counts" in manifest["metrics"]
+    assert "noise_rms_counts" in manifest["metrics"]
+    assert "peak_to_peak_counts" in manifest["metrics"]
     raw_entry = next(file_info for file_info in manifest["files"] if file_info["role"] == "raw_csv")
     copied_csv = export.package_dir / raw_entry["path"]
     expected_sha = hashlib.sha256(copied_csv.read_bytes()).hexdigest()

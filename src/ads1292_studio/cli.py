@@ -172,6 +172,9 @@ def cmd_qc(args: argparse.Namespace) -> int:
         min_hr_bpm=args.min_hr,
         max_hr_bpm=args.max_hr,
         require_qrs_clear=not args.allow_unclear_qrs,
+        max_baseline_drift_counts=args.max_baseline_drift,
+        max_noise_rms_counts=args.max_noise_rms,
+        max_peak_to_peak_counts=args.max_peak_to_peak,
     )
     result = evaluate_quality_gate(metrics, gate)
     print(f"quality_gate={result.label}")
@@ -237,6 +240,9 @@ def build_parser() -> argparse.ArgumentParser:
     qc.add_argument("--min-r-peaks", type=int, default=5)
     qc.add_argument("--min-hr", type=float, default=35.0)
     qc.add_argument("--max-hr", type=float, default=180.0)
+    qc.add_argument("--max-baseline-drift", type=float)
+    qc.add_argument("--max-noise-rms", type=float)
+    qc.add_argument("--max-peak-to-peak", type=float)
     qc.add_argument("--allow-unclear-qrs", action="store_true")
     qc.set_defaults(func=cmd_qc)
     return parser

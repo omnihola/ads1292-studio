@@ -103,6 +103,9 @@ def export_session_package(
             "samples": report.metrics.sample_count,
             "duration_seconds": report.metrics.duration_seconds,
             "median_hr_bpm": report.metrics.hr_median_bpm,
+            "baseline_drift_counts": report.metrics.baseline_drift_counts,
+            "noise_rms_counts": report.metrics.noise_rms_counts,
+            "peak_to_peak_counts": report.metrics.peak_to_peak_counts,
         },
         "files": files,
     }

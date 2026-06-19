@@ -254,6 +254,23 @@
   - `tests/test_cli.py`
   - `README.md`
 
+### Phase 17: Artifact Threshold Quality Gates
+- **Status:** complete
+- Actions taken:
+  - Added optional `QualityGate` limits for baseline drift, noise RMS, and peak-to-peak counts.
+  - Added artifact threshold failure messages to quality gate evaluation.
+  - Added CLI `qc` flags: `--max-baseline-drift`, `--max-noise-rms`, and `--max-peak-to-peak`.
+  - Added artifact metrics to session package manifest.
+  - Added tests for direct quality-gate failures, CLI QC artifact failures, and package manifest metrics.
+- Files created/modified:
+  - `src/ads1292_studio/quality_gate.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/session_package.py`
+  - `tests/test_quality_gate.py`
+  - `tests/test_cli.py`
+  - `tests/test_session_package.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -322,6 +339,12 @@
 | Artifact metrics syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/quality.py src/ads1292_studio/report.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
 | Artifact metrics real CSV review smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli review <csv>` | Real ADS1292 CSV prints artifact metrics | `baseline_drift_counts=138.0`, `noise_rms_counts=497.2`, `peak_to_peak_counts=19179.0`, `ecg_source=CH2` | Pass |
 | Artifact metrics real CSV report smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --out reports/artifact-smoke` | HTML contains artifact metrics | grep found `Baseline drift`, `Noise RMS`, `Peak-to-peak`, `CH2`, `Good ECG/QRS` | Pass |
+| Artifact gate TDD red check | `conda run -n sensor python -m pytest tests/test_quality_gate.py tests/test_cli.py tests/test_session_package.py -q` before implementation | Missing artifact gate args and manifest metrics | 3 failed: unexpected gate kwargs, unrecognized CLI args, missing manifest fields | Pass |
+| Artifact gate related tests | `conda run -n sensor python -m pytest tests/test_quality_gate.py tests/test_cli.py tests/test_session_package.py -q` | Quality gate, CLI, and package tests pass | 15 passed | Pass |
+| Full tests after artifact gates | `conda run -n sensor python -m pytest -q` | All tests pass | 41 passed | Pass |
+| Artifact gate syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/quality_gate.py src/ads1292_studio/cli.py src/ads1292_studio/session_package.py` | No syntax errors | Passed | Pass |
+| Artifact gate real CSV fail smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv> --max-baseline-drift 100 --max-noise-rms 300 --max-peak-to-peak 10000` | Real ADS1292 CSV fails strict artifact gates | exit 2, failures for baseline drift, noise RMS, and peak-to-peak | Pass |
+| Artifact gate real CSV pass smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv> --max-baseline-drift 500 --max-noise-rms 1000 --max-peak-to-peak 30000` | Real ADS1292 CSV passes loose artifact gates | `quality_gate=Pass`, `ecg_source=CH2` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -341,12 +364,13 @@
 | 2026-06-18 | Synthetic QC fixture failed default QRS gate | 1 | Added explicit `--allow-unclear-qrs` option for synthetic/debug records and kept default real-data gate strict. |
 | 2026-06-18 | Pytest warned that `TestProtocol` looked like a test class | 1 | Added `__test__ = False` to the dataclass. |
 | 2026-06-18 | Temporary protocol sidecar was copied outside `ads1292-studio/` during smoke setup | 1 | Removed it immediately and reran package smoke with ignored files inside `reports/`. |
+| 2026-06-18 | `conda run` reports nonzero QC failure smoke as a command failure | 1 | Treated exit code 2 as the expected strict-threshold result and verified a loose-threshold pass path separately. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 16 complete; ready to commit and push artifact metrics iteration. |
+| Where am I? | Phase 17 complete; ready to commit and push artifact threshold gate iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, and artifact metrics. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, and artifact threshold gates. |

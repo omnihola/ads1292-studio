@@ -39,6 +39,7 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ../record
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package ../record/ads1292/2026-06-18-164923-ads1292-live.csv --out packages
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/<session>/manifest.json
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ../record/ads1292/2026-06-18-164923-ads1292-live.csv
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ../record/ads1292/2026-06-18-164923-ads1292-live.csv --max-baseline-drift 500 --max-noise-rms 1000 --max-peak-to-peak 30000
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch recording-a.csv recording-b.csv --out reports/batch
 ```
 
@@ -71,6 +72,8 @@ by electrode label.
   clarity, R-peak count, and heart-rate bounds.
 - Artifact metrics for baseline drift, noise RMS, and peak-to-peak counts in
   CLI review, GUI quality text, and HTML reports.
+- Artifact threshold checks in CLI QC for maximum baseline drift, noise RMS,
+  and peak-to-peak counts.
 - Test protocol sidecars for baseline, motion, and recovery steps; protocol
   templates can be included in reports and session packages.
 - Testable signal-analysis core independent of live hardware.

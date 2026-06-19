@@ -41,6 +41,7 @@
 | Add protocol sidecars | Commercial-quality gel validation needs the planned baseline, motion, and recovery steps saved with each recording. |
 | Add batch group statistics | Material comparisons need electrode-level summaries before claiming MOTAC vs commercial performance. |
 | Add artifact metrics | Baseline drift and noise are core electrode-quality evidence for MOTAC vs commercial ECG tests. |
+| Add artifact threshold gates | Drift/noise metrics need configurable pass/fail limits for repeatable material validation. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -79,6 +80,7 @@
 - Session package verify command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/<session>/manifest.json`
 - Quality gate command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv>`
 - Artifact metrics command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli review <csv>`
+- Artifact gate command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv> --max-baseline-drift <counts> --max-noise-rms <counts> --max-peak-to-peak <counts>`
 - Protocol template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-protocol-template reports/protocol-template.json`
 - Protocol report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --protocol reports/protocol-template.json --out reports`
 

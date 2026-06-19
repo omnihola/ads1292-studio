@@ -18,6 +18,9 @@ def _metrics(**overrides) -> QualityMetrics:
         "t_tentative": False,
         "score_ch1": 1.0,
         "score_ch2": 10.0,
+        "baseline_drift_counts": 5.0,
+        "noise_rms_counts": 2.0,
+        "peak_to_peak_counts": 700.0,
     }
     values.update(overrides)
     return QualityMetrics(**values)
@@ -42,3 +45,15 @@ def test_quality_gate_fails_contact_qrs_and_duration() -> None:
     assert "contact 80.00% < 95.00%" in result.failures
     assert "QRS not clear" in result.failures
     assert "R peaks 2 < 5" in result.failures
+
+
+def test_quality_gate_fails_artifact_thresholds() -> None:
+    result = evaluate_quality_gate(
+        _metrics(baseline_drift_counts=250.0, noise_rms_counts=60.0, peak_to_peak_counts=5000.0),
+        QualityGate(max_baseline_drift_counts=100.0, max_noise_rms_counts=25.0, max_peak_to_peak_counts=2500.0),
+    )
+
+    assert result.passed is False
+    assert "baseline drift 250.0 counts > 100.0 counts" in result.failures
+    assert "noise RMS 60.0 counts > 25.0 counts" in result.failures
+    assert "peak-to-peak 5000.0 counts > 2500.0 counts" in result.failures

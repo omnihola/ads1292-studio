@@ -13,6 +13,9 @@ class QualityGate:
     min_hr_bpm: float = 35.0
     max_hr_bpm: float = 180.0
     require_qrs_clear: bool = True
+    max_baseline_drift_counts: float | None = None
+    max_noise_rms_counts: float | None = None
+    max_peak_to_peak_counts: float | None = None
 
 
 @dataclass(frozen=True)
@@ -40,4 +43,14 @@ def evaluate_quality_gate(metrics: QualityMetrics, gate: QualityGate | None = No
         failures.append(f"median HR {metrics.hr_median_bpm:.1f} bpm < {gate.min_hr_bpm:.1f} bpm")
     if metrics.hr_median_bpm > gate.max_hr_bpm:
         failures.append(f"median HR {metrics.hr_median_bpm:.1f} bpm > {gate.max_hr_bpm:.1f} bpm")
+    if gate.max_baseline_drift_counts is not None and metrics.baseline_drift_counts > gate.max_baseline_drift_counts:
+        failures.append(
+            f"baseline drift {metrics.baseline_drift_counts:.1f} counts > {gate.max_baseline_drift_counts:.1f} counts"
+        )
+    if gate.max_noise_rms_counts is not None and metrics.noise_rms_counts > gate.max_noise_rms_counts:
+        failures.append(f"noise RMS {metrics.noise_rms_counts:.1f} counts > {gate.max_noise_rms_counts:.1f} counts")
+    if gate.max_peak_to_peak_counts is not None and metrics.peak_to_peak_counts > gate.max_peak_to_peak_counts:
+        failures.append(
+            f"peak-to-peak {metrics.peak_to_peak_counts:.1f} counts > {gate.max_peak_to_peak_counts:.1f} counts"
+        )
     return QualityGateResult(passed=not failures, failures=tuple(failures))
