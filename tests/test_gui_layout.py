@@ -256,6 +256,15 @@ def test_header_connection_styles_make_status_a_pill() -> None:
             "neutral": "Neutral.Connection.TLabel",
         },
         "padding": (10, 5),
+        "font": ("Aptos", 12, "bold"),
+        "borderwidth": 1,
+        "relief": "solid",
+        "backgrounds": {
+            "ready": "#E9F6EE",
+            "running": "#EAF1FF",
+            "warning": "#FFF4E3",
+            "neutral": "#EEF3FA",
+        },
     }
 
 
