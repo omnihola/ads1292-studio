@@ -11,6 +11,7 @@ from ads1292_studio.app import (
     sidebar_field_styles,
     sidebar_tab_labels,
     toolbar_button_style,
+    toolbar_control_styles,
     workspace_notebook_styles,
 )
 
@@ -28,6 +29,13 @@ def test_gui_layout_assigns_toolbar_action_hierarchy() -> None:
     assert toolbar_button_style("Start") == "Primary.TButton"
     assert toolbar_button_style("Stop") == "Stop.TButton"
     assert toolbar_button_style("Unknown") == "TButton"
+
+
+def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
+    assert toolbar_control_styles() == {
+        "port": "Port.TCombobox",
+        "toggle": "ToolbarToggle.TCheckbutton",
+    }
 
 
 def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:

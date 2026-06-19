@@ -59,6 +59,10 @@ TOOLBAR_BUTTON_STYLES = {
     "Start": "Primary.TButton",
     "Stop": "Stop.TButton",
 }
+TOOLBAR_CONTROL_STYLES = {
+    "port": "Port.TCombobox",
+    "toggle": "ToolbarToggle.TCheckbutton",
+}
 SECONDARY_ACTION_BUTTONS = (
     "Load CSV",
     "Export Report",
@@ -271,6 +275,10 @@ def primary_toolbar_button_labels() -> tuple[str, ...]:
 
 def toolbar_button_style(label: str) -> str:
     return TOOLBAR_BUTTON_STYLES.get(label, "TButton")
+
+
+def toolbar_control_styles() -> dict[str, str]:
+    return dict(TOOLBAR_CONTROL_STYLES)
 
 
 def secondary_action_button_labels() -> tuple[str, ...]:
@@ -625,7 +633,13 @@ class App(tk.Tk):
 
         ttk.Label(toolbar, text="Port", style="ToolbarLabel.TLabel").pack(side=tk.LEFT)
         self.port_var = tk.StringVar()
-        self.port_combo = ttk.Combobox(toolbar, textvariable=self.port_var, width=34)
+        toolbar_styles = toolbar_control_styles()
+        self.port_combo = ttk.Combobox(
+            toolbar,
+            textvariable=self.port_var,
+            width=34,
+            style=toolbar_styles["port"],
+        )
         self.port_combo.pack(side=tk.LEFT, padx=6)
         self.refresh_button = ttk.Button(
             toolbar,
@@ -657,11 +671,29 @@ class App(tk.Tk):
         self.stop_button.pack(side=tk.LEFT)
 
         self.save_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(toolbar, text="Save CSV", variable=self.save_var).pack(side=tk.LEFT, padx=8)
+        self.save_check = ttk.Checkbutton(
+            toolbar,
+            text="Save CSV",
+            variable=self.save_var,
+            style=toolbar_styles["toggle"],
+        )
+        self.save_check.pack(side=tk.LEFT, padx=8)
         self.autoscale_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(toolbar, text="Auto scale", variable=self.autoscale_var).pack(side=tk.LEFT, padx=4)
+        self.autoscale_check = ttk.Checkbutton(
+            toolbar,
+            text="Auto scale",
+            variable=self.autoscale_var,
+            style=toolbar_styles["toggle"],
+        )
+        self.autoscale_check.pack(side=tk.LEFT, padx=4)
         self.filter_var = tk.BooleanVar(value=DEFAULT_FILTER_ENABLED)
-        ttk.Checkbutton(toolbar, text="Filter", variable=self.filter_var).pack(side=tk.LEFT, padx=4)
+        self.filter_check = ttk.Checkbutton(
+            toolbar,
+            text="Filter",
+            variable=self.filter_var,
+            style=toolbar_styles["toggle"],
+        )
+        self.filter_check.pack(side=tk.LEFT, padx=4)
         self.source_var = tk.StringVar(value=ADS1292R_ECG_SOURCE)
         ttk.Label(toolbar, text="CH2 ECG / CH1 Resp / Contact", style="ToolbarHint.TLabel").pack(side=tk.LEFT, padx=(12, 2))
 
@@ -876,6 +908,26 @@ class App(tk.Tk):
         style.configure("Neutral.Connection.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12, "bold"))
         style.configure("ToolbarLabel.TLabel", background=tokens["panel_alt"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
         style.configure("ToolbarHint.TLabel", background=tokens["panel_alt"], foreground=tokens["muted"])
+        style.configure(
+            "Port.TCombobox",
+            fieldbackground=tokens["panel"],
+            foreground=tokens["ink"],
+            selectbackground=tokens["panel"],
+            selectforeground=tokens["ink"],
+            padding=(6, 4),
+        )
+        style.configure(
+            "ToolbarToggle.TCheckbutton",
+            background=tokens["panel_alt"],
+            foreground=tokens["ink"],
+            font=("Aptos", 11),
+            padding=(4, 2),
+        )
+        style.map(
+            "ToolbarToggle.TCheckbutton",
+            foreground=[("disabled", tokens["muted"]), ("active", tokens["accent_dark"])],
+            background=[("active", tokens["panel_alt"])],
+        )
         style.configure("SectionHeading.TLabel", background=tokens["surface"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
         style.configure("Muted.TLabel", background=tokens["surface"], foreground=tokens["muted"])
         style.configure("FieldLabel.TLabel", background=tokens["surface"], foreground=tokens["muted"], font=("Aptos", 10, "bold"))
