@@ -40,11 +40,25 @@ class BatchRow:
 
 
 @dataclass(frozen=True)
+class BatchGroupSummary:
+    electrode: str
+    recordings: int
+    usable_recordings: int
+    usable_percent: float
+    mean_duration_seconds: float
+    mean_contact_ok_percent: float
+    mean_r_peaks: float
+    mean_hr_median_bpm: float
+
+
+@dataclass(frozen=True)
 class BatchExport:
     csv_path: Path
+    group_csv_path: Path
     html_path: Path
     png_path: Path
     rows: tuple[BatchRow, ...]
+    group_summaries: tuple[BatchGroupSummary, ...]
 
 
 def aggregate_recordings(paths: list[Path] | tuple[Path, ...]) -> tuple[BatchRow, ...]:
@@ -76,23 +90,50 @@ def aggregate_recordings(paths: list[Path] | tuple[Path, ...]) -> tuple[BatchRow
     return tuple(rows)
 
 
+def group_recordings_by_electrode(rows: tuple[BatchRow, ...] | list[BatchRow]) -> tuple[BatchGroupSummary, ...]:
+    grouped: dict[str, list[BatchRow]] = {}
+    for row in rows:
+        grouped.setdefault(row.electrode, []).append(row)
+    summaries: list[BatchGroupSummary] = []
+    for electrode in sorted(grouped):
+        items = grouped[electrode]
+        recordings = len(items)
+        usable = sum(1 for item in items if item.quality_label in {"Good ECG/QRS", "Usable ECG/QRS"})
+        summaries.append(
+            BatchGroupSummary(
+                electrode=electrode,
+                recordings=recordings,
+                usable_recordings=usable,
+                usable_percent=round(100.0 * usable / recordings, 2),
+                mean_duration_seconds=_mean(item.duration_seconds for item in items),
+                mean_contact_ok_percent=_mean(item.contact_ok_percent for item in items),
+                mean_r_peaks=_mean(item.r_peaks for item in items),
+                mean_hr_median_bpm=_mean(item.hr_median_bpm for item in items),
+            )
+        )
+    return tuple(summaries)
+
+
 def export_batch_summary(
     paths: list[Path] | tuple[Path, ...],
     out_dir: Path | str,
     title: str = "ADS1292 Batch Summary",
 ) -> BatchExport:
     rows = aggregate_recordings(tuple(Path(path) for path in paths))
+    group_summaries = group_recordings_by_electrode(rows)
     output = Path(out_dir)
     output.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
     slug = _slugify(title)
     csv_path = output / f"{stamp}-{slug}.csv"
+    group_csv_path = output / f"{stamp}-{slug}-groups.csv"
     html_path = output / f"{stamp}-{slug}.html"
     png_path = output / f"{stamp}-{slug}.png"
     _write_csv(csv_path, rows)
+    _write_group_csv(group_csv_path, group_summaries)
     _write_png(png_path, rows, title)
-    html_path.write_text(_html(title, rows, png_path.name))
-    return BatchExport(csv_path, html_path, png_path, rows)
+    html_path.write_text(_html(title, rows, group_summaries, png_path.name))
+    return BatchExport(csv_path, group_csv_path, html_path, png_path, rows, group_summaries)
 
 
 def _metadata_for(csv_path: Path) -> SessionMetadata:
@@ -132,6 +173,24 @@ def _write_csv(path: Path, rows: tuple[BatchRow, ...]) -> None:
             writer.writerow({column: getattr(row, column) for column in columns})
 
 
+def _write_group_csv(path: Path, groups: tuple[BatchGroupSummary, ...]) -> None:
+    columns = [
+        "electrode",
+        "recordings",
+        "usable_recordings",
+        "usable_percent",
+        "mean_duration_seconds",
+        "mean_contact_ok_percent",
+        "mean_r_peaks",
+        "mean_hr_median_bpm",
+    ]
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=columns)
+        writer.writeheader()
+        for group in groups:
+            writer.writerow({column: getattr(group, column) for column in columns})
+
+
 def _write_png(path: Path, rows: tuple[BatchRow, ...], title: str) -> None:
     fig = Figure(figsize=(11, 6), dpi=160)
     ax_hr = fig.add_subplot(211)
@@ -154,7 +213,36 @@ def _write_png(path: Path, rows: tuple[BatchRow, ...], title: str) -> None:
     fig.savefig(path)
 
 
-def _html(title: str, rows: tuple[BatchRow, ...], png_name: str) -> str:
+def _html(
+    title: str,
+    rows: tuple[BatchRow, ...],
+    group_summaries: tuple[BatchGroupSummary, ...],
+    png_name: str,
+) -> str:
+    group_header = [
+        "Electrode",
+        "Recordings",
+        "Usable",
+        "Usable %",
+        "Mean Contact OK",
+        "Mean R peaks",
+        "Mean HR",
+        "Mean Duration",
+    ]
+    group_body = []
+    for group in group_summaries:
+        values = [
+            group.electrode,
+            str(group.recordings),
+            str(group.usable_recordings),
+            f"{group.usable_percent:.1f}%",
+            f"{group.mean_contact_ok_percent:.2f}%",
+            f"{group.mean_r_peaks:.1f}",
+            f"{group.mean_hr_median_bpm:.1f}",
+            f"{group.mean_duration_seconds:.2f} s",
+        ]
+        group_body.append("<tr>" + "".join(f"<td>{escape(value)}</td>" for value in values) + "</tr>")
+    group_head = "".join(f"<th>{escape(item)}</th>" for item in group_header)
     header = [
         "Session",
         "Subject",
@@ -206,7 +294,17 @@ def _html(title: str, rows: tuple[BatchRow, ...], png_name: str) -> str:
   <h1>{escape(title)}</h1>
   <p>Generated by ADS1292 Studio. Research use only; not diagnostic medical software.</p>
   <img src=\"{escape(png_name)}\" alt=\"Batch summary chart\">
+  <h2>Group Summary</h2>
+  <table><thead><tr>{group_head}</tr></thead><tbody>{''.join(group_body)}</tbody></table>
+  <h2>Recording Details</h2>
   <table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>
 </body>
 </html>
 """
+
+
+def _mean(values) -> float:
+    items = [float(value) for value in values]
+    if not items:
+        return 0.0
+    return round(sum(items) / len(items), 2)

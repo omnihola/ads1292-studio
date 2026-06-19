@@ -39,6 +39,7 @@
 | Add package verification | The package manifest should not only record hashes; the app must verify them after transfer or archive. |
 | Add quality gate | Electrode validation needs explicit pass/fail gates for contact, duration, QRS, R peaks, and HR bounds. |
 | Add protocol sidecars | Commercial-quality gel validation needs the planned baseline, motion, and recovery steps saved with each recording. |
+| Add batch group statistics | Material comparisons need electrode-level summaries before claiming MOTAC vs commercial performance. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -68,6 +69,7 @@
 - Report export command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --out reports`
 - Metadata template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-meta-template reports/session-template.json`
 - Batch command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch file1.csv file2.csv --out reports/batch`
+- Batch group output: batch export writes both per-recording CSV and `*-groups.csv`
 - Events template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-events-template reports/events-template.json`
 - Event report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --events reports/events-template.json --out reports`
 - Calibration template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-calibration-template reports/calibration-template.json`

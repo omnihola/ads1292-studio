@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 14
+Phase 15
 
 ## Phases
 
@@ -125,6 +125,15 @@ Phase 14
 - [x] Add tests and real CSV smoke test.
 - **Status:** complete
 
+### Phase 15: Batch Group Statistics
+- [x] Add electrode-level group summaries for batch rows.
+- [x] Compute recordings, usable recordings, usable percent, mean duration, mean contact, mean R peaks, and mean HR.
+- [x] Export grouped statistics to `*-groups.csv`.
+- [x] Include Group Summary table in batch HTML reports.
+- [x] Print grouped output path/count from CLI `batch`.
+- [x] Add tests and real CSV smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -150,6 +159,7 @@ Phase 14
 | Add package verification | Auditable records must be re-checkable after transfer or Dropbox/GitHub storage. |
 | Add quality gate | MOTAC vs commercial electrode tests need explicit pass/fail criteria instead of only descriptive metrics. |
 | Add protocol sidecars | Commercial-style gel validation needs repeatable baseline, motion, and recovery steps attached to each recording. |
+| Add batch group statistics | MOTAC vs commercial comparisons need electrode-level summaries, not only one row per recording. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

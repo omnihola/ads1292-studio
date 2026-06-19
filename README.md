@@ -42,6 +42,9 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ../record/ads
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch recording-a.csv recording-b.csv --out reports/batch
 ```
 
+Batch export writes both a per-recording CSV and a `*-groups.csv` summary grouped
+by electrode label.
+
 ## Features in V1
 
 - Explicit Refresh / Connect / Start / Stop flow.
@@ -54,7 +57,7 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch recording-
 - Session metadata JSON for anonymous subject ID, electrode type, montage,
   operator, and notes; metadata is included in exported reports.
 - Batch comparison export for multiple recordings, including CSV, HTML, and PNG
-  summary outputs.
+  summary outputs plus grouped electrode-level statistics.
 - Event markers for motion, deep breathing, electrode touch, or other protocol
   annotations; events can be saved as `.events.json` sidecars and included in
   exported reports.

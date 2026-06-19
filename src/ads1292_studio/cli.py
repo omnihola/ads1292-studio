@@ -132,9 +132,11 @@ def cmd_report(args: argparse.Namespace) -> int:
 def cmd_batch(args: argparse.Namespace) -> int:
     export = export_batch_summary(paths=args.csvs, out_dir=args.out, title=args.title)
     print(f"csv={export.csv_path}")
+    print(f"group_csv={export.group_csv_path}")
     print(f"html={export.html_path}")
     print(f"png={export.png_path}")
     print(f"rows={len(export.rows)}")
+    print(f"groups={len(export.group_summaries)}")
     return 0
 
 

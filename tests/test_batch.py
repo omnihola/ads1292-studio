@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ads1292_studio.batch import aggregate_recordings, export_batch_summary
+from ads1292_studio.batch import aggregate_recordings, group_recordings_by_electrode, export_batch_summary
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
@@ -65,3 +65,38 @@ def test_export_batch_summary_writes_csv_html_and_png(tmp_path: Path) -> None:
     assert "commercial Ag/AgCl" in csv_text
     assert "MOTAC gel + Ag/AgCl" in html
     assert "MOTAC batch comparison" in html
+
+
+def test_group_recordings_by_electrode_summarizes_quality(tmp_path: Path) -> None:
+    control_one = write_recording(tmp_path, "control-1", "commercial Ag/AgCl", 420)
+    control_two = write_recording(tmp_path, "control-2", "commercial Ag/AgCl", 410)
+    motac = write_recording(tmp_path, "motac-1", "MOTAC gel + Ag/AgCl", 380)
+    rows = aggregate_recordings([control_one, control_two, motac])
+
+    summaries = group_recordings_by_electrode(rows)
+
+    assert [summary.electrode for summary in summaries] == ["MOTAC gel + Ag/AgCl", "commercial Ag/AgCl"]
+    control = next(summary for summary in summaries if summary.electrode == "commercial Ag/AgCl")
+    assert control.recordings == 2
+    assert control.usable_recordings == 2
+    assert control.usable_percent == 100.0
+    assert control.mean_contact_ok_percent == 100.0
+    assert 95 <= control.mean_hr_median_bpm <= 110
+    assert control.mean_r_peaks >= 10
+
+
+def test_export_batch_summary_writes_group_summary_csv_and_html(tmp_path: Path) -> None:
+    control_one = write_recording(tmp_path, "control-1", "commercial Ag/AgCl", 420)
+    control_two = write_recording(tmp_path, "control-2", "commercial Ag/AgCl", 410)
+    motac = write_recording(tmp_path, "motac-1", "MOTAC gel + Ag/AgCl", 380)
+    out_dir = tmp_path / "batch"
+
+    result = export_batch_summary([control_one, control_two, motac], out_dir=out_dir, title="MOTAC batch comparison")
+
+    assert result.group_csv_path.exists()
+    group_csv = result.group_csv_path.read_text()
+    html = result.html_path.read_text()
+    assert "electrode,recordings,usable_recordings,usable_percent" in group_csv
+    assert "commercial Ag/AgCl,2,2,100.0" in group_csv
+    assert "Group Summary" in html
+    assert "Usable %" in html

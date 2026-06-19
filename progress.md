@@ -220,6 +220,22 @@
   - `tests/test_session_package.py`
   - `README.md`
 
+### Phase 15: Batch Group Statistics
+- **Status:** complete
+- Actions taken:
+  - Added `BatchGroupSummary` model.
+  - Added `group_recordings_by_electrode()` for electrode-level batch statistics.
+  - Added grouped statistics for recordings, usable recordings, usable percent, mean duration, contact, R peaks, and HR.
+  - Added `*-groups.csv` export.
+  - Added Group Summary table to batch HTML.
+  - Added CLI output for `group_csv` and group count.
+  - Added tests for group aggregation and grouped export.
+- Files created/modified:
+  - `src/ads1292_studio/batch.py`
+  - `src/ads1292_studio/cli.py`
+  - `tests/test_batch.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -277,6 +293,11 @@
 | Protocol template smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-protocol-template reports/protocol-smoke/protocol.json` | Template JSON generated | `protocol_template=reports/protocol-smoke/protocol.json` | Pass |
 | Protocol report real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --protocol reports/protocol-smoke/protocol.json --out reports/protocol-smoke` | Report includes protocol and CH2 quality | grep found `Test Protocol`, `MOTAC ECG validation`, `baseline`, `motion`, `recovery`, `CH2`, `Good ECG/QRS` | Pass |
 | Protocol package real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package reports/protocol-smoke/package-source.csv --out packages/protocol-smoke` | Manifest and package report include protocol | grep found `"role": "protocol"`, `Test Protocol`, `CH2`, `Good ECG/QRS` | Pass |
+| Batch group TDD red check | `conda run -n sensor python -m pytest tests/test_batch.py -q` before implementation | Missing group API | `ImportError: cannot import name 'group_recordings_by_electrode'` | Pass |
+| Batch group tests | `conda run -n sensor python -m pytest tests/test_batch.py -q` | Batch group tests pass | 4 passed | Pass |
+| Full tests after batch groups | `conda run -n sensor python -m pytest -q` | All tests pass | 37 passed | Pass |
+| Batch group syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/batch.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| Batch group real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch reports/batch-groups-smoke/commercial.csv reports/batch-groups-smoke/motac.csv --out reports/batch-groups-smoke/out` | Per-recording and grouped outputs generated | `rows=2`, `groups=2`, grep found `Group Summary`, `Usable %`, `CH2`, `Good ECG/QRS` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -300,8 +321,8 @@
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 14 complete; ready to commit and push protocol sidecar iteration. |
+| Where am I? | Phase 15 complete; ready to commit and push batch group statistics iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, and protocol sidecars. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, and batch group statistics. |
