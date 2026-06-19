@@ -36,6 +36,7 @@ from ads1292_studio.app import (
     live_ecg_axis_title,
     live_quality_worker_available,
     live_metrics_text,
+    live_render_refresh_key,
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
     should_apply_control_state,
@@ -333,6 +334,50 @@ def test_display_refresh_key_changes_only_when_visible_display_state_changes() -
     )
 
 
+def test_live_render_refresh_key_skips_duplicate_live_frames_only() -> None:
+    base = live_render_refresh_key(
+        sample_index=100,
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(),
+        autoscale=True,
+        source="CH2",
+        ecg_inverted=False,
+    )
+
+    assert base == live_render_refresh_key(
+        sample_index=100,
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(),
+        autoscale=True,
+        source="CH2",
+        ecg_inverted=False,
+    )
+    assert base != live_render_refresh_key(
+        sample_index=101,
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(),
+        autoscale=True,
+        source="CH2",
+        ecg_inverted=False,
+    )
+    assert base != live_render_refresh_key(
+        sample_index=100,
+        display_settings=EcgDisplaySettings(gain=2.0),
+        filter_settings=SoftwareFilterSettings(),
+        autoscale=True,
+        source="CH2",
+        ecg_inverted=False,
+    )
+    assert base != live_render_refresh_key(
+        sample_index=100,
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(notch_enabled=True),
+        autoscale=True,
+        source="CH2",
+        ecg_inverted=False,
+    )
+
+
 def test_axis_limits_changed_uses_small_float_tolerance() -> None:
     assert axis_limits_changed((0.0, 1.0), (0.0, 1.0)) is False
     assert axis_limits_changed((0.0, 1.0), (0.0, 1.0 + 5e-10)) is False
@@ -434,6 +479,22 @@ def test_live_redraw_caches_axis_title_updates() -> None:
     assert "if self.last_live_axis_titles == titles:" in apply_source
     assert "return" in apply_source
     assert "self.last_live_axis_titles = titles" in apply_source
+
+
+def test_live_redraw_skips_duplicate_render_keys() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    redraw_source = inspect.getsource(App._redraw_live)
+    clear_source = inspect.getsource(App._clear_signal_buffers)
+    init_source = inspect.getsource(App.__init__)
+
+    assert "self.last_live_render_key: tuple[object, ...] | None = None" in init_source
+    assert "render_key = live_render_refresh_key(" in redraw_source
+    assert "if self.last_live_render_key == render_key:" in redraw_source
+    assert "self.last_live_render_key = render_key" in redraw_source
+    assert "self.last_live_render_key = None" in clear_source
 
 
 def test_live_redraw_skips_unchanged_y_axis_limit_writes() -> None:

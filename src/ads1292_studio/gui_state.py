@@ -240,6 +240,25 @@ def display_refresh_key(
     )
 
 
+def live_render_refresh_key(
+    *,
+    sample_index: int,
+    display_settings: object,
+    filter_settings: object,
+    autoscale: bool,
+    source: str,
+    ecg_inverted: bool,
+) -> tuple[object, ...]:
+    return (
+        int(sample_index),
+        display_settings,
+        filter_settings,
+        bool(autoscale),
+        source,
+        bool(ecg_inverted),
+    )
+
+
 def axis_limits_changed(
     current: tuple[float, float],
     target: tuple[float, float],

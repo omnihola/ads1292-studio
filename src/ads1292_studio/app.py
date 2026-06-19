@@ -64,6 +64,7 @@ from ads1292_studio.gui_state import (
     live_axis_titles,
     live_ecg_axis_title,
     live_metrics_text,
+    live_render_refresh_key,
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
     should_apply_control_state,
@@ -271,6 +272,7 @@ class App(tk.Tk):
         self.calibration_pulse_cache: dict[int, str] = {}
         self.last_control_state: GuiState | None = None
         self.last_display_refresh_key: tuple[object, ...] | None = None
+        self.last_live_render_key: tuple[object, ...] | None = None
         self.last_live_axis_titles: tuple[str, str, str] | None = None
 
         self._build_ui()
@@ -1126,6 +1128,7 @@ class App(tk.Tk):
         for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
             buffer.clear()
         self.last_display_refresh_key = None
+        self.last_live_render_key = None
         self.live_quality_generation += 1
         self.review_render_generation += 1
         self.pending_review_render_samples = None
@@ -1701,6 +1704,17 @@ class App(tk.Tk):
         self._clear_empty_plot_state()
         display_settings = self._display_settings()
         filter_settings = self._software_filter_settings()
+        render_key = live_render_refresh_key(
+            sample_index=self.sample_index,
+            display_settings=display_settings,
+            filter_settings=filter_settings,
+            autoscale=bool(self.autoscale_var.get()),
+            source=ADS1292R_ECG_SOURCE,
+            ecg_inverted=DEFAULT_ECG_INVERTED,
+        )
+        if self.last_live_render_key == render_key:
+            return
+        self.last_live_render_key = render_key
         frame = build_live_render_frame(
             indices=self.indices,
             ch1=self.ch1,
