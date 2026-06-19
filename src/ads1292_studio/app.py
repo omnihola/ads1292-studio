@@ -161,6 +161,11 @@ WORKSPACE_NOTEBOOK_STYLES = {
     "selected_foreground": "#2F6FED",
     "inactive_foreground": "#657084",
 }
+WORKFLOW_HINT_STYLES = {
+    "frame": "WorkflowHint.TFrame",
+    "label": "WorkflowHint.TLabel",
+    "stripe": "#2F6FED",
+}
 
 
 @dataclass(frozen=True)
@@ -245,6 +250,10 @@ def sidebar_notebook_styles() -> dict[str, str]:
 
 def workspace_notebook_styles() -> dict[str, str]:
     return dict(WORKSPACE_NOTEBOOK_STYLES)
+
+
+def workflow_hint_styles() -> dict[str, str]:
+    return dict(WORKFLOW_HINT_STYLES)
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -785,8 +794,8 @@ class App(tk.Tk):
         self.protocol_objective_var = tk.StringVar(value=protocol.objective)
         self.protocol_steps_var = tk.StringVar(value=_format_protocol_steps(protocol.steps))
         self.protocol_acceptance_var = tk.StringVar(value=protocol.acceptance_notes)
-        ttk.Label(status_side, text="Next Step", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
-        ttk.Label(status_side, textvariable=self.workflow_hint_var, wraplength=260, justify=tk.LEFT, style="Muted.TLabel").pack(anchor=tk.W)
+        ttk.Label(status_side, text="Next Step", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 6))
+        self._build_workflow_hint(status_side)
         ttk.Label(status_side, text="Overview", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
         self._build_status_cards(status_side)
         ttk.Label(status_side, text="Signal Quality", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
@@ -979,6 +988,13 @@ class App(tk.Tk):
         )
         style.configure("Card.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
         style.configure("CardLabel.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 11))
+        style.configure("WorkflowHint.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        style.configure(
+            "WorkflowHint.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["ink"],
+            font=("Aptos", 11, "bold"),
+        )
         style.configure("TButton", padding=(10, 6), font=("Aptos", 12))
         style.configure(
             "SidebarAction.TButton",
@@ -1061,6 +1077,27 @@ class App(tk.Tk):
         style.configure("Running.Status.TLabel", background=tokens["panel"], foreground=tokens["accent"], font=("Aptos", 12, "bold"))
         style.configure("Warning.Status.TLabel", background=tokens["panel"], foreground=tokens["warning"], font=("Aptos", 12, "bold"))
         style.configure("Neutral.Status.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12, "bold"))
+
+    def _build_workflow_hint(self, parent: ttk.Frame) -> None:
+        styles = workflow_hint_styles()
+        self.workflow_hint_frame = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
+        self.workflow_hint_frame.pack(anchor=tk.W, fill=tk.X, pady=(0, 4))
+        self.workflow_hint_stripe = tk.Frame(
+            self.workflow_hint_frame,
+            width=4,
+            bg=styles["stripe"],
+            highlightthickness=0,
+        )
+        self.workflow_hint_stripe.pack(side=tk.LEFT, fill=tk.Y)
+        self.workflow_hint_label = ttk.Label(
+            self.workflow_hint_frame,
+            textvariable=self.workflow_hint_var,
+            wraplength=240,
+            justify=tk.LEFT,
+            style=styles["label"],
+            padding=(10, 8),
+        )
+        self.workflow_hint_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
     def _build_status_cards(self, parent: ttk.Frame) -> None:
         for label in STATUS_CARD_LABELS:

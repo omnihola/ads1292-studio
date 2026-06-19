@@ -14,6 +14,7 @@ from ads1292_studio.app import (
     toolbar_button_style,
     toolbar_control_styles,
     toolbar_group_padding,
+    workflow_hint_styles,
     workspace_notebook_styles,
 )
 
@@ -93,6 +94,14 @@ def test_sidebar_field_styles_make_forms_consistent() -> None:
 
 def test_sidebar_action_button_style_keeps_secondary_actions_consistent() -> None:
     assert sidebar_action_button_style() == "SidebarAction.TButton"
+
+
+def test_workflow_hint_styles_make_next_step_prominent() -> None:
+    assert workflow_hint_styles() == {
+        "frame": "WorkflowHint.TFrame",
+        "label": "WorkflowHint.TLabel",
+        "stripe": "#2F6FED",
+    }
 
 
 def test_gui_layout_uses_ads1292r_synchronized_three_panel_view() -> None:
