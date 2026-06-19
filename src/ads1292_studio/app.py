@@ -113,6 +113,13 @@ HEADER_CONNECTION_PILL = {
     "styles": HEADER_CONNECTION_STYLES,
     "padding": (10, 5),
 }
+HEADER_LAYOUT_SPEC = {
+    "frame": "Header.TFrame",
+    "separator": "HeaderSeparator.TFrame",
+    "padding": (20, 14, 20, 12),
+    "subtitle_padding": (14, 0),
+    "separator_height": 1,
+}
 STATUS_TONE_COLORS = {
     "ready": "#1E7A46",
     "running": "#2F6FED",
@@ -324,6 +331,10 @@ def header_connection_styles() -> dict[str, object]:
         "styles": dict(HEADER_CONNECTION_STYLES),
         "padding": HEADER_CONNECTION_PILL["padding"],
     }
+
+
+def header_layout_spec() -> dict[str, object]:
+    return dict(HEADER_LAYOUT_SPEC)
 
 
 def status_tone_color(tone: str) -> str:
@@ -808,16 +819,26 @@ class App(tk.Tk):
         self.connection_var = tk.StringVar(value="Not connected")
         self.configure(bg=APP_VISUAL_TOKENS["surface"])
 
-        header = ttk.Frame(self, padding=(18, 12, 18, 10), style="Header.TFrame")
+        header_spec = header_layout_spec()
+        header = ttk.Frame(self, padding=header_spec["padding"], style=str(header_spec["frame"]))
         header.pack(side=tk.TOP, fill=tk.X)
-        ttk.Label(header, text="ADS1292 Studio", style="AppTitle.TLabel").pack(side=tk.LEFT)
-        ttk.Label(header, text="MOTAC ECG validation", style="AppSubtitle.TLabel").pack(side=tk.LEFT, padx=(14, 0))
+        self.header_frame = header
+        self.header_title_label = ttk.Label(header, text="ADS1292 Studio", style="AppTitle.TLabel")
+        self.header_title_label.pack(side=tk.LEFT)
+        self.header_subtitle_label = ttk.Label(header, text="MOTAC ECG validation", style="AppSubtitle.TLabel")
+        self.header_subtitle_label.pack(side=tk.LEFT, padx=header_spec["subtitle_padding"])
         self.connection_label = ttk.Label(
             header,
             textvariable=self.connection_var,
             style=header_connection_style("warning"),
         )
         self.connection_label.pack(side=tk.RIGHT)
+        self.header_separator = ttk.Frame(
+            self,
+            height=header_spec["separator_height"],
+            style=str(header_spec["separator"]),
+        )
+        self.header_separator.pack(side=tk.TOP, fill=tk.X)
 
         toolbar = ttk.Frame(self, padding=(14, 10), style="Toolbar.TFrame")
         toolbar.pack(side=tk.TOP, fill=tk.X)
@@ -1109,6 +1130,7 @@ class App(tk.Tk):
         style.configure(".", font=("Aptos", 12), background=tokens["surface"], foreground=tokens["ink"])
         style.configure("TFrame", background=tokens["surface"])
         style.configure("Header.TFrame", background=tokens["panel"], borderwidth=0)
+        style.configure("HeaderSeparator.TFrame", background=tokens["border"], borderwidth=0)
         style.configure("Toolbar.TFrame", background=tokens["panel_alt"], borderwidth=1, relief=tk.FLAT)
         style.configure("ToolbarSeparator.TFrame", background=tokens["border"])
         style.configure("SidebarShell.TFrame", background=tokens["surface"])

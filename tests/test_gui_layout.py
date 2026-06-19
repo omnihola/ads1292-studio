@@ -7,6 +7,7 @@ from ads1292_studio.app import (
     empty_plot_style,
     event_count_styles,
     header_connection_styles,
+    header_layout_spec,
     log_panel_spec,
     main_tab_labels,
     plot_axis_style,
@@ -113,6 +114,16 @@ def test_header_connection_styles_make_status_a_pill() -> None:
             "neutral": "Neutral.Connection.TLabel",
         },
         "padding": (10, 5),
+    }
+
+
+def test_header_layout_spec_gives_top_bar_clear_structure() -> None:
+    assert header_layout_spec() == {
+        "frame": "Header.TFrame",
+        "separator": "HeaderSeparator.TFrame",
+        "padding": (20, 14, 20, 12),
+        "subtitle_padding": (14, 0),
+        "separator_height": 1,
     }
 
 
