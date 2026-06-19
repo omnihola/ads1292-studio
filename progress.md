@@ -31,7 +31,7 @@
   - Added Python package metadata and CLI/GUI entry points.
   - Added immutable data models, ADS1x9x device protocol, CSV IO, signal processing, live worker, plotting helper, and Tk desktop app.
   - Added Live, Review, PQRST, and Log tabs.
-  - Added ECG source Auto/CH1/CH2 selection and status-byte/lead-off-bit handling.
+  - Added ADS1292R-aware channel handling: CH2 is ECG Lead I (LA-RA), CH1 is respiration raw; status-byte/lead-off-bit handling remains explicit.
   - Added offline CSV review path.
 - Files created/modified:
   - `pyproject.toml`

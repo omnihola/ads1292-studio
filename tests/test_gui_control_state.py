@@ -1,5 +1,7 @@
 from ads1292_studio.app import (
     GuiState,
+    ads1292r_channel_label,
+    ads1292r_secondary_channel_label,
     gui_control_states,
     gui_signal_quality_cards,
     gui_status_cards,
@@ -7,6 +9,17 @@ from ads1292_studio.app import (
     gui_workflow_hint,
     status_tone_style,
 )
+
+
+def test_ads1292r_channel_labels_name_ti_board_semantics() -> None:
+    assert ads1292r_channel_label("CH2") == "CH2 ECG Lead I (LA-RA)"
+    assert ads1292r_channel_label("CH1") == "CH1 Respiration raw"
+    assert ads1292r_channel_label("UNKNOWN") == "UNKNOWN"
+
+
+def test_ads1292r_secondary_channel_label_names_remaining_plot() -> None:
+    assert ads1292r_secondary_channel_label("CH2") == "CH1 Respiration raw"
+    assert ads1292r_secondary_channel_label("CH1") == "CH2 ECG Lead I (LA-RA)"
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:
@@ -293,7 +306,7 @@ def test_gui_signal_quality_cards_expose_real_recording_summary() -> None:
     )
 
     assert [(card.label, card.value, card.tone) for card in cards] == [
-        ("Signal", "Good ECG/QRS on CH2", "ready"),
+        ("Signal", "Good ECG/QRS on CH2 ECG Lead I (LA-RA)", "ready"),
         ("Contact", "99.9% OK, 28 bad", "ready"),
         ("Heart rate", "86.7 bpm, 129 R", "ready"),
         ("Artifacts", "drift 44 ct, noise 50.5 ct, p2p 8709 ct", "neutral"),
@@ -314,7 +327,7 @@ def test_gui_signal_quality_cards_warn_when_loaded_signal_needs_review() -> None
     )
 
     assert [(card.label, card.value, card.tone) for card in cards] == [
-        ("Signal", "Needs review on CH1", "warning"),
+        ("Signal", "Needs review on CH1 Respiration raw", "warning"),
         ("Contact", "88.0% OK, 1200 bad", "warning"),
         ("Heart rate", "-- bpm, 1 R", "warning"),
         ("Artifacts", "drift 300 ct, noise 220.0 ct, p2p 7000 ct", "warning"),

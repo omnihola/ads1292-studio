@@ -358,7 +358,7 @@ Phase 40
 | Use new subfolder `ads1292-studio/` | User explicitly requested a subfolder and GitHub limited to that subfolder. |
 | Keep Tk/Matplotlib for V1 | Existing sensor env already supports it; fastest path to working live hardware capture on macOS. |
 | Separate live protocol from signal analysis and GUI | Makes testing possible without hardware and prevents GUI-only debugging. |
-| Default ECG source to Auto with CH1/CH2 override | Saved data proves CH2 can contain clearer ECG-like QRS than the first streamed field. |
+| Label ADS1292R channels by board function | TI's ADS1292RECG-FE configuration uses CH2 as ECG Lead I (LA-RA) and CH1 as respiration raw; the GUI should not imply CH1 is a second ECG lead. |
 | Save both raw channels and derived metadata | Avoids losing evidence and allows later correction of display assumptions. |
 | Combine QRS sharpness with valid R-R count for Auto source | Prevents sparse CH1 transients from beating a regular CH2 ECG signal. |
 | Use GitHub CLI for upload when auth is fixed | `gh` is installed, but sandboxed auth checks can be misleading. |

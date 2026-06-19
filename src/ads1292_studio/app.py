@@ -57,6 +57,10 @@ SECONDARY_ACTION_BUTTONS = (
 SIDEBAR_TABS = ("Status", "Session", "Validation", "Protocol", "Actions")
 STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
 SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
+ADS1292R_CHANNEL_LABELS = {
+    "CH2": "CH2 ECG Lead I (LA-RA)",
+    "CH1": "CH1 Respiration raw",
+}
 STATUS_TONE_STYLES = {
     "ready": "Ready.Status.TLabel",
     "running": "Running.Status.TLabel",
@@ -86,6 +90,14 @@ class GuiState:
 
 def status_tone_style(tone: str) -> str:
     return STATUS_TONE_STYLES.get(tone, STATUS_TONE_STYLES["neutral"])
+
+
+def ads1292r_channel_label(channel: str) -> str:
+    return ADS1292R_CHANNEL_LABELS.get(channel.upper(), channel)
+
+
+def ads1292r_secondary_channel_label(ecg_source: str) -> str:
+    return "CH1 Respiration raw" if ecg_source.upper() == "CH2" else "CH2 ECG Lead I (LA-RA)"
 
 
 def _gui_state(
@@ -262,7 +274,7 @@ def gui_signal_quality_cards(
             GuiStatusCard("Artifacts", "--", "neutral"),
         )
 
-    source = ecg_source or "--"
+    source = ads1292r_channel_label(ecg_source) if ecg_source else "--"
     contact = 0.0 if contact_ok_percent is None else contact_ok_percent
     bad_samples = 0 if lead_off_bad_samples is None else lead_off_bad_samples
     peak_count = 0 if r_peaks is None else r_peaks
@@ -1085,11 +1097,13 @@ class App(tk.Tk):
             self.ax_live_other.set_ylim(*robust_ylim(other[visible]))
             self.ax_live_status.set_ylim(-0.5, max(1.0, max(self.status or [0]) + 0.5))
         hr = heart_rate_summary(peaks, SAMPLE_RATE_HZ)
-        self.ax_live_ecg.set_title(f"ECG display: {source} | R peaks {len(peaks)}")
-        self.ax_live_other.set_title("Other channel")
+        ecg_label = ads1292r_channel_label(source)
+        other_label = ads1292r_secondary_channel_label(source)
+        self.ax_live_ecg.set_title(f"ECG display: {ecg_label} | R peaks {len(peaks)}")
+        self.ax_live_other.set_title(other_label)
         self.ax_live_status.set_title("Lead-off bits")
         self.metrics_var.set(
-            f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {source} | HR {hr.median_bpm:.0f} bpm"
+            f"samples {self.sample_index} | duration {x[-1]:.1f} s | source {ecg_label} | HR {hr.median_bpm:.0f} bpm"
         )
         samples = tuple(self._current_samples())
         metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get())
@@ -1125,16 +1139,18 @@ class App(tk.Tk):
         self.review_other_line.set_data(x, other)
         self.review_peak_line.set_data(list(result.peaks), ecg[list(result.peaks)] if result.peaks else [])
         self.ax_review_ecg.set_title(
-            f"Offline ECG: {source} | HR {result.heart_rate.median_bpm:.1f} bpm | peaks {len(result.peaks)}"
+            f"Offline ECG: {ads1292r_channel_label(source)} | "
+            f"HR {result.heart_rate.median_bpm:.1f} bpm | peaks {len(result.peaks)}"
         )
-        self.ax_review_other.set_title("Other channel")
+        self.ax_review_other.set_title(ads1292r_secondary_channel_label(source))
         for ax, values in ((self.ax_review_ecg, ecg), (self.ax_review_other, other)):
             ax.set_xlim(0, max(1, x[-1] if x.size else 1))
             ax.set_ylim(*robust_ylim(values))
         self.review_canvas.draw_idle()
         self._draw_pqrst(ecg, result.peaks)
         self.metrics_var.set(
-            f"samples {len(samples)} | duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | source {source}"
+            f"samples {len(samples)} | duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | "
+            f"source {ads1292r_channel_label(source)}"
         )
         self.quality_var.set(
             f"{self._quality_text(source, result.heart_rate.valid_rr_count, samples, metrics=metrics)} | "
