@@ -14,6 +14,7 @@ from ads1292_studio.app import (
     sidebar_field_styles,
     sidebar_notebook_styles,
     sidebar_tab_labels,
+    status_detail_styles,
     toolbar_button_style,
     toolbar_control_styles,
     toolbar_group_padding,
@@ -112,6 +113,15 @@ def test_safety_notice_styles_make_research_use_boundary_visible() -> None:
         "frame": "SafetyNotice.TFrame",
         "label": "SafetyNotice.TLabel",
         "stripe": "#A76400",
+    }
+
+
+def test_status_detail_styles_frame_session_quality_and_storage() -> None:
+    assert status_detail_styles() == {
+        "frame": "StatusDetail.TFrame",
+        "label": "StatusDetailLabel.TLabel",
+        "value": "StatusDetailValue.TLabel",
+        "stripe": "#D9E1EC",
     }
 
 

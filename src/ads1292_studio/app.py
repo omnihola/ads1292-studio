@@ -183,6 +183,12 @@ SAFETY_NOTICE_STYLES = {
     "label": "SafetyNotice.TLabel",
     "stripe": "#A76400",
 }
+STATUS_DETAIL_STYLES = {
+    "frame": "StatusDetail.TFrame",
+    "label": "StatusDetailLabel.TLabel",
+    "value": "StatusDetailValue.TLabel",
+    "stripe": "#D9E1EC",
+}
 
 
 @dataclass(frozen=True)
@@ -283,6 +289,10 @@ def workflow_hint_styles() -> dict[str, str]:
 
 def safety_notice_styles() -> dict[str, str]:
     return dict(SAFETY_NOTICE_STYLES)
+
+
+def status_detail_styles() -> dict[str, str]:
+    return dict(STATUS_DETAIL_STYLES)
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -794,6 +804,7 @@ class App(tk.Tk):
         self.status_card_vars = {label: tk.StringVar(value="") for label in STATUS_CARD_LABELS}
         self.status_card_value_labels: dict[str, ttk.Label] = {}
         self.status_card_tone_stripes: dict[str, tk.Frame] = {}
+        self.status_detail_value_labels: dict[str, ttk.Label] = {}
         self.signal_card_vars = {label: tk.StringVar(value="") for label in SIGNAL_CARD_LABELS}
         self.signal_card_value_labels: dict[str, ttk.Label] = {}
         self.signal_card_tone_stripes: dict[str, tk.Frame] = {}
@@ -834,8 +845,7 @@ class App(tk.Tk):
             ("Quality", self.quality_var),
             ("Storage", self.path_var),
         ):
-            ttk.Label(status_side, text=label, style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(10, 2))
-            ttk.Label(status_side, textvariable=var, wraplength=260, justify=tk.LEFT, style="Muted.TLabel").pack(anchor=tk.W)
+            self._build_status_detail_card(status_side, label, var)
 
         ttk.Label(session_side, text="Recording Notes", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
         self._metadata_entry(session_side, "Session ID", self.session_id_var)
@@ -1025,6 +1035,19 @@ class App(tk.Tk):
             foreground=tokens["ink"],
             font=("Aptos", 11, "bold"),
         )
+        style.configure("StatusDetail.TFrame", background=tokens["panel"], borderwidth=1, relief=tk.SOLID)
+        style.configure(
+            "StatusDetailLabel.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["muted"],
+            font=("Aptos", 10, "bold"),
+        )
+        style.configure(
+            "StatusDetailValue.TLabel",
+            background=tokens["panel"],
+            foreground=tokens["ink"],
+            font=("Aptos", 11),
+        )
         style.configure("TButton", padding=(10, 6), font=("Aptos", 12))
         style.configure(
             "SidebarAction.TButton",
@@ -1149,6 +1172,25 @@ class App(tk.Tk):
             padding=(10, 8),
         )
         self.safety_notice_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+    def _build_status_detail_card(self, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:
+        styles = status_detail_styles()
+        row = ttk.Frame(parent, padding=(0, 0), style=styles["frame"])
+        row.pack(anchor=tk.W, fill=tk.X, pady=3)
+        stripe = tk.Frame(row, width=4, bg=styles["stripe"], highlightthickness=0)
+        stripe.pack(side=tk.LEFT, fill=tk.Y)
+        content = ttk.Frame(row, padding=(10, 8), style=styles["frame"])
+        content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        ttk.Label(content, text=label, style=styles["label"]).pack(anchor=tk.W)
+        value_label = ttk.Label(
+            content,
+            textvariable=variable,
+            wraplength=230,
+            justify=tk.LEFT,
+            style=styles["value"],
+        )
+        value_label.pack(anchor=tk.W, fill=tk.X, pady=(3, 0))
+        self.status_detail_value_labels[label] = value_label
 
     def _build_status_cards(self, parent: ttk.Frame) -> None:
         for label in STATUS_CARD_LABELS:
