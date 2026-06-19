@@ -2,6 +2,7 @@ from ads1292_studio.app import (
     action_section_styles,
     ads1292r_plot_layout_labels,
     app_visual_tokens,
+    app_window_spec,
     empty_plot_messages,
     empty_plot_style,
     event_count_styles,
@@ -34,6 +35,13 @@ def test_gui_layout_keeps_primary_toolbar_focused_on_acquisition() -> None:
     assert "Load CSV" not in primary_toolbar_button_labels()
     assert "Export Report" not in primary_toolbar_button_labels()
     assert "Session Index" not in primary_toolbar_button_labels()
+
+
+def test_app_window_spec_prevents_cramped_signal_views() -> None:
+    assert app_window_spec() == {
+        "geometry": "1320x860",
+        "min_size": (1120, 740),
+    }
 
 
 def test_gui_layout_assigns_toolbar_action_hierarchy() -> None:

@@ -52,6 +52,10 @@ VISIBLE_SECONDS = 8.0
 SAMPLE_RATE_HZ = 500.0
 DEFAULT_FILTER_ENABLED = False
 DEFAULT_ECG_INVERTED = False
+APP_WINDOW_SPEC = {
+    "geometry": "1320x860",
+    "min_size": (1120, 740),
+}
 PRIMARY_TOOLBAR_BUTTONS = ("Refresh", "Connect", "Start", "Stop")
 TOOLBAR_BUTTON_STYLES = {
     "Refresh": "TButton",
@@ -281,6 +285,10 @@ def status_tone_color(tone: str) -> str:
 
 def app_visual_tokens() -> dict[str, str]:
     return dict(APP_VISUAL_TOKENS)
+
+
+def app_window_spec() -> dict[str, object]:
+    return dict(APP_WINDOW_SPEC)
 
 
 def plot_trace_colors() -> dict[str, str]:
@@ -703,7 +711,9 @@ class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("ADS1292 Studio")
-        self.geometry("1320x860")
+        window_spec = app_window_spec()
+        self.geometry(str(window_spec["geometry"]))
+        self.minsize(*window_spec["min_size"])
 
         self.samples: queue.Queue[StreamSample] = queue.Queue()
         self.logs: queue.Queue[str] = queue.Queue()
