@@ -69,6 +69,12 @@ from ads1292_studio.gui_state import (
     should_apply_control_state,
     toolbar_display_hint_text,
 )
+from ads1292_studio.gui_style import (
+    configure_button_chrome,
+    configure_form_chrome,
+    configure_notebook_chrome,
+    configure_toolbar_chrome,
+)
 from ads1292_studio.gui_workers import (
     LiveQualityResult,
     ReviewRenderResult,
@@ -327,14 +333,7 @@ class App(tk.Tk):
             background=header_frame["separator_background"],
             borderwidth=header_frame["borderwidth"],
         )
-        toolbar_frame = toolbar_frame_spec()
-        style.configure(
-            str(toolbar_frame["frame"]),
-            background=toolbar_frame["background"],
-            borderwidth=toolbar_frame["borderwidth"],
-            relief=toolbar_frame["relief"],
-        )
-        style.configure(str(toolbar_frame["separator"]), background=toolbar_frame["separator_background"])
+        configure_toolbar_chrome(style)
         style.configure(str(base_chrome["sidebar"]), background=base_chrome["background"])
         style.configure(str(base_chrome["main"]), background=base_chrome["background"])
         style.configure(
@@ -398,152 +397,7 @@ class App(tk.Tk):
             borderwidth=connection_pill["borderwidth"],
             relief=connection_pill["relief"],
         )
-        toolbar_label = toolbar_label_spec()
-        style.configure(
-            str(toolbar_label["style"]),
-            background=toolbar_label["background"],
-            foreground=toolbar_label["foreground"],
-            font=toolbar_label["font"],
-        )
-        toolbar_group_label = toolbar_group_label_spec()
-        style.configure(
-            str(toolbar_group_label["style"]),
-            background=toolbar_group_label["background"],
-            foreground=toolbar_group_label["foreground"],
-            font=toolbar_group_label["font"],
-            padding=toolbar_group_label["padding"],
-        )
-        toolbar_hint = toolbar_hint_styles()
-        style.configure(
-            "ToolbarHint.TFrame",
-            background=toolbar_hint["background"],
-            borderwidth=toolbar_hint["borderwidth"],
-            relief=toolbar_hint["relief"],
-            bordercolor=toolbar_hint["border"],
-            lightcolor=toolbar_hint["border"],
-            darkcolor=toolbar_hint["border"],
-        )
-        style.configure(
-            "ToolbarHint.TLabel",
-            background=toolbar_hint["background"],
-            foreground=toolbar_hint["foreground"],
-            font=toolbar_hint["font"],
-        )
-        input_chrome = input_chrome_spec()
-        combobox_chrome = input_chrome["combobox"]
-        style.configure(
-            "Port.TCombobox",
-            fieldbackground=combobox_chrome["fieldbackground"],
-            background=combobox_chrome["background"],
-            foreground=combobox_chrome["foreground"],
-            bordercolor=combobox_chrome["border"],
-            lightcolor=combobox_chrome["border"],
-            darkcolor=combobox_chrome["border"],
-            selectbackground=combobox_chrome["selectbackground"],
-            selectforeground=combobox_chrome["selectforeground"],
-            arrowcolor=combobox_chrome["arrowcolor"],
-            padding=combobox_chrome["padding"],
-            borderwidth=combobox_chrome["borderwidth"],
-            relief=combobox_chrome["relief"],
-            arrowsize=combobox_chrome["arrowsize"],
-        )
-        style.map(
-            "Port.TCombobox",
-            foreground=[("disabled", combobox_chrome["disabled_foreground"])],
-            fieldbackground=[
-                ("disabled", combobox_chrome["disabled_background"]),
-                ("readonly", combobox_chrome["fieldbackground"]),
-            ],
-            background=[
-                ("disabled", combobox_chrome["disabled_background"]),
-                ("readonly", combobox_chrome["background"]),
-            ],
-            bordercolor=[("focus", combobox_chrome["focus_border"]), ("active", combobox_chrome["focus_border"])],
-            arrowcolor=[("active", combobox_chrome["active_arrowcolor"])],
-        )
-        toolbar_toggle = input_chrome["toolbar_toggle"]
-        toolbar_toggle_style = toolbar_control_styles()["toggle"]
-        style.configure(
-            toolbar_toggle_style,
-            background=toolbar_toggle["background"],
-            foreground=toolbar_toggle["foreground"],
-            font=toolbar_toggle["font"],
-            padding=toolbar_toggle["padding"],
-        )
-        style.map(
-            toolbar_toggle_style,
-            foreground=[
-                ("disabled", toolbar_toggle["disabled_foreground"]),
-                ("active", toolbar_toggle["active_foreground"]),
-            ],
-            background=[("active", toolbar_toggle["active_background"])],
-        )
-        section_heading = section_heading_styles()
-        style.configure(
-            "SectionHeading.TLabel",
-            background=section_heading["background"],
-            foreground=section_heading["foreground"],
-            font=section_heading["font"],
-            padding=section_heading["padding"],
-        )
-        muted_label = muted_label_spec()
-        style.configure(
-            str(muted_label["style"]),
-            background=muted_label["background"],
-            foreground=muted_label["foreground"],
-            font=muted_label["font"],
-        )
-        label_chrome = input_chrome["label"]
-        style.configure(
-            "FieldLabel.TLabel",
-            background=label_chrome["background"],
-            foreground=label_chrome["foreground"],
-            font=label_chrome["font"],
-            padding=label_chrome["padding"],
-        )
-        action_section = action_section_styles()
-        style.configure("ActionSection.TFrame", background=action_section["background"], borderwidth=0)
-        style.configure(
-            "ActionSection.TLabel",
-            background=action_section["background"],
-            foreground=action_section["foreground"],
-            font=action_section["font"],
-            padding=action_section["padding"],
-        )
-        entry_chrome = input_chrome["entry"]
-        style.configure(
-            "Field.TEntry",
-            fieldbackground=entry_chrome["fieldbackground"],
-            foreground=entry_chrome["foreground"],
-            insertcolor=entry_chrome["insert"],
-            padding=entry_chrome["padding"],
-            borderwidth=entry_chrome["borderwidth"],
-            relief=entry_chrome["relief"],
-        )
-        style.map(
-            "Field.TEntry",
-            foreground=[("disabled", entry_chrome["disabled_foreground"])],
-            fieldbackground=[
-                ("disabled", entry_chrome["disabled_background"]),
-                ("focus", entry_chrome["focus_background"]),
-            ],
-        )
-        check_chrome = input_chrome["check"]
-        style.configure(
-            "FieldCheck.TCheckbutton",
-            background=check_chrome["background"],
-            foreground=check_chrome["foreground"],
-            padding=check_chrome["padding"],
-            font=check_chrome["font"],
-        )
-        style.map(
-            "FieldCheck.TCheckbutton",
-            foreground=[
-                ("disabled", check_chrome["disabled_foreground"]),
-                ("active", check_chrome["active_foreground"]),
-            ],
-            background=[("active", check_chrome["active_background"])],
-        )
+        configure_form_chrome(style)
         panel_chrome = panel_chrome_spec()
         for panel_style in (
             "Card.TFrame",
@@ -650,162 +504,8 @@ class App(tk.Tk):
             foreground=protocol_note["value_foreground"],
             font=protocol_note["value_font"],
         )
-        button_chrome = button_chrome_spec()
-        default_button = button_chrome["default"]
-        style.configure(
-            "TButton",
-            padding=default_button["padding"],
-            font=default_button["font"],
-            foreground=default_button["foreground"],
-            background=default_button["background"],
-            borderwidth=default_button["borderwidth"],
-            relief=default_button["relief"],
-        )
-        style.map(
-            "TButton",
-            foreground=[
-                ("disabled", default_button["disabled_foreground"]),
-                ("active", default_button["active_foreground"]),
-            ],
-            background=[
-                ("disabled", default_button["disabled_background"]),
-                ("active", default_button["active_background"]),
-            ],
-        )
-        sidebar_button = button_chrome["sidebar"]
-        style.configure(
-            "SidebarAction.TButton",
-            padding=sidebar_button["padding"],
-            font=sidebar_button["font"],
-            foreground=sidebar_button["foreground"],
-            background=sidebar_button["background"],
-            borderwidth=sidebar_button["borderwidth"],
-            relief=sidebar_button["relief"],
-        )
-        style.map(
-            "SidebarAction.TButton",
-            foreground=[
-                ("disabled", sidebar_button["disabled_foreground"]),
-                ("active", sidebar_button["active_foreground"]),
-            ],
-            background=[
-                ("disabled", sidebar_button["disabled_background"]),
-                ("active", sidebar_button["active_background"]),
-            ],
-        )
-        primary_button = button_chrome["primary"]
-        style.configure(
-            "Primary.TButton",
-            padding=primary_button["padding"],
-            font=primary_button["font"],
-            foreground=primary_button["foreground"],
-            background=primary_button["background"],
-            borderwidth=primary_button["borderwidth"],
-            relief=primary_button["relief"],
-        )
-        style.map(
-            "Primary.TButton",
-            foreground=[
-                ("disabled", primary_button["disabled_foreground"]),
-                ("active", primary_button["active_foreground"]),
-            ],
-            background=[
-                ("disabled", primary_button["disabled_background"]),
-                ("active", primary_button["active_background"]),
-            ],
-        )
-        stop_button = button_chrome["stop"]
-        style.configure(
-            "Stop.TButton",
-            padding=stop_button["padding"],
-            font=stop_button["font"],
-            foreground=stop_button["foreground"],
-            background=stop_button["background"],
-            borderwidth=stop_button["borderwidth"],
-            relief=stop_button["relief"],
-        )
-        style.map(
-            "Stop.TButton",
-            foreground=[
-                ("disabled", stop_button["disabled_foreground"]),
-                ("active", stop_button["active_foreground"]),
-            ],
-            background=[
-                ("disabled", stop_button["disabled_background"]),
-                ("active", stop_button["active_background"]),
-            ],
-        )
-        base_checkbutton = base_checkbutton_style()
-        style.configure(
-            base_checkbutton["style"],
-            background=base_checkbutton["background"],
-            foreground=base_checkbutton["foreground"],
-        )
-        base_notebook = base_notebook_styles()
-        style.configure(
-            base_notebook["notebook"],
-            background=base_notebook["background"],
-            borderwidth=base_notebook["borderwidth"],
-        )
-        style.configure(
-            base_notebook["tab"],
-            padding=base_notebook["tab_padding"],
-            font=base_notebook["tab_font"],
-            borderwidth=base_notebook["tab_borderwidth"],
-            relief=base_notebook["tab_relief"],
-        )
-        sidebar_tabs = sidebar_notebook_styles()
-        style.configure(
-            "Sidebar.TNotebook",
-            background=sidebar_tabs["background"],
-            borderwidth=sidebar_tabs["borderwidth"],
-        )
-        style.configure(
-            "Sidebar.TNotebook.Tab",
-            padding=sidebar_tabs["tab_padding"],
-            font=sidebar_tabs["tab_font"],
-            foreground=sidebar_tabs["inactive_foreground"],
-            background=sidebar_tabs["tab_background"],
-            borderwidth=sidebar_tabs["tab_borderwidth"],
-            relief=sidebar_tabs["tab_relief"],
-        )
-        style.map(
-            "Sidebar.TNotebook.Tab",
-            foreground=[
-                ("selected", sidebar_tabs["selected_foreground"]),
-                ("active", sidebar_tabs["active_foreground"]),
-            ],
-            background=[
-                ("selected", sidebar_tabs["active_background"]),
-                ("active", sidebar_tabs["active_background"]),
-            ],
-        )
-        workspace_tabs = workspace_notebook_styles()
-        style.configure(
-            "Workspace.TNotebook",
-            background=workspace_tabs["background"],
-            borderwidth=workspace_tabs["borderwidth"],
-        )
-        style.configure(
-            "Workspace.TNotebook.Tab",
-            padding=workspace_tabs["tab_padding"],
-            font=workspace_tabs["tab_font"],
-            foreground=workspace_tabs["inactive_foreground"],
-            background=workspace_tabs["tab_background"],
-            borderwidth=workspace_tabs["tab_borderwidth"],
-            relief=workspace_tabs["tab_relief"],
-        )
-        style.map(
-            "Workspace.TNotebook.Tab",
-            foreground=[
-                ("selected", workspace_tabs["selected_foreground"]),
-                ("active", workspace_tabs["active_foreground"]),
-            ],
-            background=[
-                ("selected", workspace_tabs["active_background"]),
-                ("active", workspace_tabs["active_background"]),
-            ],
-        )
+        configure_button_chrome(style)
+        configure_notebook_chrome(style)
         status_label = status_label_spec()
         status_backgrounds = status_label["backgrounds"]
         status_foregrounds = status_label["foregrounds"]

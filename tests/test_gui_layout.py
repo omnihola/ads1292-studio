@@ -145,12 +145,23 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
     }
 
 
+def test_app_delegates_interaction_chrome_to_style_helpers() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._configure_status_styles)
+
+    assert "configure_toolbar_chrome(style)" in source
+    assert "configure_form_chrome(style)" in source
+    assert "configure_button_chrome(style)" in source
+    assert "configure_notebook_chrome(style)" in source
+
+
 def test_toolbar_frame_spec_groups_acquisition_controls_as_one_surface() -> None:
     assert toolbar_frame_spec() == {
         "frame": "Toolbar.TFrame",
         "separator": "ToolbarSeparator.TFrame",
-        "background": "#EEF3FA",
-        "separator_background": "#D9E1EC",
+        "background": "#FFFFFF",
+        "separator_background": "#E5EAF2",
         "borderwidth": 1,
         "relief": "flat",
     }
@@ -160,7 +171,7 @@ def test_toolbar_label_spec_keeps_toolbar_labels_consistent() -> None:
     assert toolbar_label_spec() == {
         "style": "ToolbarLabel.TLabel",
         "font": ("Aptos", 11, "bold"),
-        "background": "#EEF3FA",
+        "background": "#FFFFFF",
         "foreground": "#172033",
     }
 
@@ -169,7 +180,7 @@ def test_toolbar_group_label_spec_adds_scanable_control_groups() -> None:
     assert toolbar_group_label_spec() == {
         "style": "ToolbarGroupLabel.TLabel",
         "font": ("Aptos", 9, "bold"),
-        "background": "#EEF3FA",
+        "background": "#FFFFFF",
         "foreground": "#657084",
         "padding": (2, 2),
     }
@@ -221,9 +232,9 @@ def test_input_chrome_spec_keeps_forms_readable() -> None:
             "active_background": "#F6F8FB",
         },
         "toolbar_toggle": {
-            "padding": (4, 3),
+            "padding": (5, 3),
             "font": ("Aptos", 10, "bold"),
-            "background": "#EEF3FA",
+            "background": "#FFFFFF",
             "foreground": "#293247",
             "active_foreground": "#1F4FB2",
             "disabled_foreground": "#657084",
@@ -264,7 +275,7 @@ def test_gui_layout_spaces_toolbar_groups() -> None:
 def test_toolbar_layout_spec_keeps_acquisition_controls_ordered() -> None:
     assert toolbar_layout_spec() == {
         "frame": "Toolbar.TFrame",
-        "padding": (12, 6, 12, 6),
+        "padding": (12, 8, 12, 8),
         "port_width": 36,
         "port_padding": (6, 6),
         "refresh_padding": (0, 3),

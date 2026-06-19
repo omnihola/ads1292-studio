@@ -115,9 +115,9 @@ INPUT_CHROME_SPEC = {
         "active_background": "#F6F8FB",
     },
     "toolbar_toggle": {
-        "padding": (4, 3),
+        "padding": (5, 3),
         "font": ("Aptos", 10, "bold"),
-        "background": "#EEF3FA",
+        "background": "#FFFFFF",
         "foreground": "#293247",
         "active_foreground": "#1F4FB2",
         "disabled_foreground": "#657084",
@@ -131,21 +131,21 @@ TOOLBAR_CONTROL_STYLES = {
 TOOLBAR_FRAME_SPEC = {
     "frame": "Toolbar.TFrame",
     "separator": "ToolbarSeparator.TFrame",
-    "background": "#EEF3FA",
-    "separator_background": "#D9E1EC",
+    "background": "#FFFFFF",
+    "separator_background": "#E5EAF2",
     "borderwidth": 1,
     "relief": "flat",
 }
 TOOLBAR_LABEL_SPEC = {
     "style": "ToolbarLabel.TLabel",
     "font": ("Aptos", 11, "bold"),
-    "background": "#EEF3FA",
+    "background": "#FFFFFF",
     "foreground": "#172033",
 }
 TOOLBAR_GROUP_LABEL_SPEC = {
     "style": "ToolbarGroupLabel.TLabel",
     "font": ("Aptos", 9, "bold"),
-    "background": "#EEF3FA",
+    "background": "#FFFFFF",
     "foreground": "#657084",
     "padding": (2, 2),
 }
@@ -165,7 +165,7 @@ TOOLBAR_GROUP_PADDING = {
 }
 TOOLBAR_LAYOUT_SPEC = {
     "frame": "Toolbar.TFrame",
-    "padding": (12, 6, 12, 6),
+    "padding": (12, 8, 12, 8),
     "port_width": 36,
     "port_padding": (6, 6),
     "refresh_padding": (0, 3),
