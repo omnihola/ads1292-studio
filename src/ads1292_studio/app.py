@@ -63,6 +63,56 @@ TOOLBAR_BUTTON_STYLES = {
     "Start": "Primary.TButton",
     "Stop": "Stop.TButton",
 }
+BUTTON_CHROME_SPEC = {
+    "default": {
+        "padding": (10, 6),
+        "font": ("Aptos", 12),
+        "foreground": "#172033",
+        "background": "#FFFFFF",
+        "active_foreground": "#1F4FB2",
+        "active_background": "#EEF3FA",
+        "disabled_foreground": "#657084",
+        "disabled_background": "#D9E1EC",
+        "borderwidth": 1,
+        "relief": "flat",
+    },
+    "primary": {
+        "padding": (12, 6),
+        "font": ("Aptos", 12, "bold"),
+        "foreground": "#FFFFFF",
+        "background": "#2F6FED",
+        "active_foreground": "#FFFFFF",
+        "active_background": "#1F4FB2",
+        "disabled_foreground": "#657084",
+        "disabled_background": "#D9E1EC",
+        "borderwidth": 1,
+        "relief": "flat",
+    },
+    "stop": {
+        "padding": (12, 6),
+        "font": ("Aptos", 12, "bold"),
+        "foreground": "#B3261E",
+        "background": "#FFFFFF",
+        "active_foreground": "#FFFFFF",
+        "active_background": "#B3261E",
+        "disabled_foreground": "#657084",
+        "disabled_background": "#D9E1EC",
+        "borderwidth": 1,
+        "relief": "flat",
+    },
+    "sidebar": {
+        "padding": (10, 7),
+        "font": ("Aptos", 11, "bold"),
+        "foreground": "#172033",
+        "background": "#FFFFFF",
+        "active_foreground": "#1F4FB2",
+        "active_background": "#EEF3FA",
+        "disabled_foreground": "#657084",
+        "disabled_background": "#D9E1EC",
+        "borderwidth": 1,
+        "relief": "flat",
+    },
+}
 TOOLBAR_CONTROL_STYLES = {
     "port": "Port.TCombobox",
     "toggle": "ToolbarToggle.TCheckbutton",
@@ -539,6 +589,10 @@ def primary_toolbar_button_labels() -> tuple[str, ...]:
 
 def toolbar_button_style(label: str) -> str:
     return TOOLBAR_BUTTON_STYLES.get(label, "TButton")
+
+
+def button_chrome_spec() -> dict[str, dict[str, object]]:
+    return {name: dict(values) for name, values in BUTTON_CHROME_SPEC.items()}
 
 
 def toolbar_control_styles() -> dict[str, str]:
@@ -1394,42 +1448,90 @@ class App(tk.Tk):
             foreground=tokens["ink"],
             font=("Aptos", 11),
         )
-        style.configure("TButton", padding=(10, 6), font=("Aptos", 12))
+        button_chrome = button_chrome_spec()
+        default_button = button_chrome["default"]
+        style.configure(
+            "TButton",
+            padding=default_button["padding"],
+            font=default_button["font"],
+            foreground=default_button["foreground"],
+            background=default_button["background"],
+            borderwidth=default_button["borderwidth"],
+            relief=default_button["relief"],
+        )
+        style.map(
+            "TButton",
+            foreground=[
+                ("disabled", default_button["disabled_foreground"]),
+                ("active", default_button["active_foreground"]),
+            ],
+            background=[
+                ("disabled", default_button["disabled_background"]),
+                ("active", default_button["active_background"]),
+            ],
+        )
+        sidebar_button = button_chrome["sidebar"]
         style.configure(
             "SidebarAction.TButton",
-            padding=(10, 7),
-            font=("Aptos", 11, "bold"),
-            foreground=tokens["ink"],
-            background=tokens["panel"],
+            padding=sidebar_button["padding"],
+            font=sidebar_button["font"],
+            foreground=sidebar_button["foreground"],
+            background=sidebar_button["background"],
+            borderwidth=sidebar_button["borderwidth"],
+            relief=sidebar_button["relief"],
         )
         style.map(
             "SidebarAction.TButton",
-            foreground=[("disabled", tokens["muted"]), ("active", tokens["accent_dark"])],
-            background=[("disabled", tokens["border"]), ("active", tokens["panel_alt"])],
+            foreground=[
+                ("disabled", sidebar_button["disabled_foreground"]),
+                ("active", sidebar_button["active_foreground"]),
+            ],
+            background=[
+                ("disabled", sidebar_button["disabled_background"]),
+                ("active", sidebar_button["active_background"]),
+            ],
         )
+        primary_button = button_chrome["primary"]
         style.configure(
             "Primary.TButton",
-            padding=(12, 6),
-            font=("Aptos", 12, "bold"),
-            foreground="#FFFFFF",
-            background=tokens["accent"],
+            padding=primary_button["padding"],
+            font=primary_button["font"],
+            foreground=primary_button["foreground"],
+            background=primary_button["background"],
+            borderwidth=primary_button["borderwidth"],
+            relief=primary_button["relief"],
         )
         style.map(
             "Primary.TButton",
-            foreground=[("disabled", tokens["muted"]), ("active", "#FFFFFF")],
-            background=[("disabled", tokens["border"]), ("active", tokens["accent_dark"])],
+            foreground=[
+                ("disabled", primary_button["disabled_foreground"]),
+                ("active", primary_button["active_foreground"]),
+            ],
+            background=[
+                ("disabled", primary_button["disabled_background"]),
+                ("active", primary_button["active_background"]),
+            ],
         )
+        stop_button = button_chrome["stop"]
         style.configure(
             "Stop.TButton",
-            padding=(12, 6),
-            font=("Aptos", 12, "bold"),
-            foreground=tokens["danger"],
-            background=tokens["panel"],
+            padding=stop_button["padding"],
+            font=stop_button["font"],
+            foreground=stop_button["foreground"],
+            background=stop_button["background"],
+            borderwidth=stop_button["borderwidth"],
+            relief=stop_button["relief"],
         )
         style.map(
             "Stop.TButton",
-            foreground=[("disabled", tokens["muted"]), ("active", "#FFFFFF")],
-            background=[("disabled", tokens["border"]), ("active", tokens["danger"])],
+            foreground=[
+                ("disabled", stop_button["disabled_foreground"]),
+                ("active", stop_button["active_foreground"]),
+            ],
+            background=[
+                ("disabled", stop_button["disabled_background"]),
+                ("active", stop_button["active_background"]),
+            ],
         )
         style.configure("TCheckbutton", background=tokens["panel_alt"], foreground=tokens["ink"])
         style.configure("TNotebook", background=tokens["surface"], borderwidth=0)

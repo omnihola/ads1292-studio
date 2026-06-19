@@ -3,6 +3,7 @@ from ads1292_studio.app import (
     ads1292r_plot_layout_labels,
     app_visual_tokens,
     app_window_spec,
+    button_chrome_spec,
     card_label_spec,
     empty_plot_messages,
     empty_plot_style,
@@ -59,6 +60,59 @@ def test_gui_layout_assigns_toolbar_action_hierarchy() -> None:
     assert toolbar_button_style("Start") == "Primary.TButton"
     assert toolbar_button_style("Stop") == "Stop.TButton"
     assert toolbar_button_style("Unknown") == "TButton"
+
+
+def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
+    assert button_chrome_spec() == {
+        "default": {
+            "padding": (10, 6),
+            "font": ("Aptos", 12),
+            "foreground": "#172033",
+            "background": "#FFFFFF",
+            "active_foreground": "#1F4FB2",
+            "active_background": "#EEF3FA",
+            "disabled_foreground": "#657084",
+            "disabled_background": "#D9E1EC",
+            "borderwidth": 1,
+            "relief": "flat",
+        },
+        "primary": {
+            "padding": (12, 6),
+            "font": ("Aptos", 12, "bold"),
+            "foreground": "#FFFFFF",
+            "background": "#2F6FED",
+            "active_foreground": "#FFFFFF",
+            "active_background": "#1F4FB2",
+            "disabled_foreground": "#657084",
+            "disabled_background": "#D9E1EC",
+            "borderwidth": 1,
+            "relief": "flat",
+        },
+        "stop": {
+            "padding": (12, 6),
+            "font": ("Aptos", 12, "bold"),
+            "foreground": "#B3261E",
+            "background": "#FFFFFF",
+            "active_foreground": "#FFFFFF",
+            "active_background": "#B3261E",
+            "disabled_foreground": "#657084",
+            "disabled_background": "#D9E1EC",
+            "borderwidth": 1,
+            "relief": "flat",
+        },
+        "sidebar": {
+            "padding": (10, 7),
+            "font": ("Aptos", 11, "bold"),
+            "foreground": "#172033",
+            "background": "#FFFFFF",
+            "active_foreground": "#1F4FB2",
+            "active_background": "#EEF3FA",
+            "disabled_foreground": "#657084",
+            "disabled_background": "#D9E1EC",
+            "borderwidth": 1,
+            "relief": "flat",
+        },
+    }
 
 
 def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
