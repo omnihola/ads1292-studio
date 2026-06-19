@@ -135,6 +135,12 @@ SIDEBAR_FIELD_STYLES = {
     "entry": "Field.TEntry",
 }
 SIDEBAR_ACTION_BUTTON_STYLE = "SidebarAction.TButton"
+WORKSPACE_NOTEBOOK_STYLES = {
+    "notebook": "Workspace.TNotebook",
+    "tab": "Workspace.TNotebook.Tab",
+    "selected_foreground": "#2F6FED",
+    "inactive_foreground": "#657084",
+}
 
 
 @dataclass(frozen=True)
@@ -207,6 +213,10 @@ def sidebar_field_styles() -> dict[str, str]:
 
 def sidebar_action_button_style() -> str:
     return SIDEBAR_ACTION_BUTTON_STYLE
+
+
+def workspace_notebook_styles() -> dict[str, str]:
+    return dict(WORKSPACE_NOTEBOOK_STYLES)
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -770,7 +780,7 @@ class App(tk.Tk):
             style="Muted.TLabel",
         ).pack(anchor=tk.W)
 
-        self.notebook = ttk.Notebook(main)
+        self.notebook = ttk.Notebook(main, style=workspace_notebook_styles()["notebook"])
         self.notebook.pack(fill=tk.BOTH, expand=True)
         self.live_tab = ttk.Frame(self.notebook)
         self.review_tab = ttk.Frame(self.notebook)
@@ -871,6 +881,25 @@ class App(tk.Tk):
         style.configure("TCheckbutton", background=tokens["panel_alt"], foreground=tokens["ink"])
         style.configure("TNotebook", background=tokens["surface"], borderwidth=0)
         style.configure("TNotebook.Tab", padding=(14, 7), font=("Aptos", 12, "bold"))
+        style.configure("Workspace.TNotebook", background=tokens["surface"], borderwidth=0)
+        style.configure(
+            "Workspace.TNotebook.Tab",
+            padding=(16, 8),
+            font=("Aptos", 12, "bold"),
+            foreground=tokens["muted"],
+            background=tokens["panel_alt"],
+        )
+        style.map(
+            "Workspace.TNotebook.Tab",
+            foreground=[
+                ("selected", WORKSPACE_NOTEBOOK_STYLES["selected_foreground"]),
+                ("active", tokens["ink"]),
+            ],
+            background=[
+                ("selected", tokens["panel"]),
+                ("active", tokens["panel"]),
+            ],
+        )
         style.configure("Ready.Status.TLabel", background=tokens["panel"], foreground=tokens["success"], font=("Aptos", 12, "bold"))
         style.configure("Running.Status.TLabel", background=tokens["panel"], foreground=tokens["accent"], font=("Aptos", 12, "bold"))
         style.configure("Warning.Status.TLabel", background=tokens["panel"], foreground=tokens["warning"], font=("Aptos", 12, "bold"))

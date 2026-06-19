@@ -11,6 +11,7 @@ from ads1292_studio.app import (
     sidebar_field_styles,
     sidebar_tab_labels,
     toolbar_button_style,
+    workspace_notebook_styles,
 )
 
 
@@ -46,6 +47,15 @@ def test_gui_layout_uses_task_based_sidebar_tabs() -> None:
 
 def test_gui_layout_names_main_workspaces_clearly() -> None:
     assert main_tab_labels() == ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
+
+
+def test_workspace_notebook_styles_make_selected_tabs_visible() -> None:
+    assert workspace_notebook_styles() == {
+        "notebook": "Workspace.TNotebook",
+        "tab": "Workspace.TNotebook.Tab",
+        "selected_foreground": "#2F6FED",
+        "inactive_foreground": "#657084",
+    }
 
 
 def test_sidebar_field_styles_make_forms_consistent() -> None:
