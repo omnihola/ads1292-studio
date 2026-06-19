@@ -176,6 +176,9 @@ def _html(
         ("QRS clear", str(metrics.qrs_clear)),
         ("P wave", "tentative" if metrics.p_tentative else "not reliable"),
         ("T wave", "tentative" if metrics.t_tentative else "not reliable"),
+        ("Baseline drift", f"{metrics.baseline_drift_counts:.1f} counts"),
+        ("Noise RMS", f"{metrics.noise_rms_counts:.1f} counts"),
+        ("Peak-to-peak", f"{metrics.peak_to_peak_counts:.1f} counts"),
         ("CH1 score", f"{metrics.score_ch1:.2f}"),
         ("CH2 score", f"{metrics.score_ch2:.2f}"),
     ]

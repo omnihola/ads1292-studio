@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 15
+Phase 16
 
 ## Phases
 
@@ -134,6 +134,16 @@ Phase 15
 - [x] Add tests and real CSV smoke test.
 - **Status:** complete
 
+### Phase 16: Artifact & Baseline Drift Metrics
+- [x] Add baseline drift metric from selected ECG channel.
+- [x] Add noise RMS metric from selected ECG channel.
+- [x] Add peak-to-peak metric from selected ECG channel.
+- [x] Include artifact metrics in HTML reports.
+- [x] Print artifact metrics in CLI `review` and `qc`.
+- [x] Display drift/noise summary in GUI quality text.
+- [x] Add tests and real CSV smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -160,6 +170,7 @@ Phase 15
 | Add quality gate | MOTAC vs commercial electrode tests need explicit pass/fail criteria instead of only descriptive metrics. |
 | Add protocol sidecars | Commercial-style gel validation needs repeatable baseline, motion, and recovery steps attached to each recording. |
 | Add batch group statistics | MOTAC vs commercial comparisons need electrode-level summaries, not only one row per recording. |
+| Add artifact metrics | ECG electrode validation needs baseline drift and noise evidence, not only R peaks and contact flags. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

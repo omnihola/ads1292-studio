@@ -73,6 +73,7 @@ def cmd_review(args: argparse.Namespace) -> int:
     ch1 = np.array([sample.ch1 for sample in recording.samples], dtype=float)
     ch2 = np.array([sample.ch2 for sample in recording.samples], dtype=float)
     result = review_channels(ch1, ch2, sample_rate_hz=recording.sample_rate_hz, source=args.source)
+    metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz, source=args.source)
     print(f"samples={len(recording.samples)}")
     print(f"duration_s={recording.duration_seconds:.3f}")
     print(f"ecg_source={result.source.channel}")
@@ -83,6 +84,9 @@ def cmd_review(args: argparse.Namespace) -> int:
     print(f"qrs_clear={result.pqrst.qrs_clear}")
     print(f"p_tentative={result.pqrst.p_tentative}")
     print(f"t_tentative={result.pqrst.t_tentative}")
+    print(f"baseline_drift_counts={metrics.baseline_drift_counts:.1f}")
+    print(f"noise_rms_counts={metrics.noise_rms_counts:.1f}")
+    print(f"peak_to_peak_counts={metrics.peak_to_peak_counts:.1f}")
     return 0
 
 
@@ -173,6 +177,9 @@ def cmd_qc(args: argparse.Namespace) -> int:
     print(f"quality_gate={result.label}")
     print(f"ecg_source={metrics.ecg_source}")
     print(f"quality={metrics.quality_label}")
+    print(f"baseline_drift_counts={metrics.baseline_drift_counts:.1f}")
+    print(f"noise_rms_counts={metrics.noise_rms_counts:.1f}")
+    print(f"peak_to_peak_counts={metrics.peak_to_peak_counts:.1f}")
     for failure in result.failures:
         print(f"failure={failure}")
     return 0 if result.passed else 2

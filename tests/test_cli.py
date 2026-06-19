@@ -119,3 +119,15 @@ def test_cli_qc_returns_success_for_good_recording(tmp_path: Path) -> None:
     _write_small_csv(csv_path)
 
     assert main(["qc", str(csv_path), "--min-duration", "0.5", "--min-r-peaks", "1", "--allow-unclear-qrs"]) == 0
+
+
+def test_cli_review_prints_artifact_metrics(tmp_path: Path, capsys) -> None:
+    csv_path = tmp_path / "recording.csv"
+    _write_small_csv(csv_path)
+
+    assert main(["review", str(csv_path), "--source", "CH2"]) == 0
+
+    output = capsys.readouterr().out
+    assert "baseline_drift_counts=" in output
+    assert "noise_rms_counts=" in output
+    assert "peak_to_peak_counts=" in output

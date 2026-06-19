@@ -236,6 +236,24 @@
   - `tests/test_batch.py`
   - `README.md`
 
+### Phase 16: Artifact & Baseline Drift Metrics
+- **Status:** complete
+- Actions taken:
+  - Added `baseline_drift_counts`, `noise_rms_counts`, and `peak_to_peak_counts` to `QualityMetrics`.
+  - Computed artifact metrics from the selected ECG channel.
+  - Added artifact metric rows to HTML review reports.
+  - Added artifact metric output to CLI `review` and `qc`.
+  - Added drift/noise summary to GUI quality text.
+  - Added tests for synthetic drift/noise metrics, report output, and CLI review output.
+- Files created/modified:
+  - `src/ads1292_studio/quality.py`
+  - `src/ads1292_studio/report.py`
+  - `src/ads1292_studio/cli.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_quality_report.py`
+  - `tests/test_cli.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -298,6 +316,12 @@
 | Full tests after batch groups | `conda run -n sensor python -m pytest -q` | All tests pass | 37 passed | Pass |
 | Batch group syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/batch.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
 | Batch group real CSV smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch reports/batch-groups-smoke/commercial.csv reports/batch-groups-smoke/motac.csv --out reports/batch-groups-smoke/out` | Per-recording and grouped outputs generated | `rows=2`, `groups=2`, grep found `Group Summary`, `Usable %`, `CH2`, `Good ECG/QRS` | Pass |
+| Artifact metrics TDD red check | `conda run -n sensor python -m pytest tests/test_quality_report.py tests/test_cli.py -q` before implementation | Missing artifact metric fields/report/CLI output | 3 failed with missing `baseline_drift_counts`, missing report row, missing CLI output | Pass |
+| Artifact metrics related tests | `conda run -n sensor python -m pytest tests/test_quality_report.py tests/test_cli.py -q` | Quality/report/CLI tests pass | 11 passed | Pass |
+| Full tests after artifact metrics | `conda run -n sensor python -m pytest -q` | All tests pass | 39 passed | Pass |
+| Artifact metrics syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/quality.py src/ads1292_studio/report.py src/ads1292_studio/cli.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
+| Artifact metrics real CSV review smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli review <csv>` | Real ADS1292 CSV prints artifact metrics | `baseline_drift_counts=138.0`, `noise_rms_counts=497.2`, `peak_to_peak_counts=19179.0`, `ecg_source=CH2` | Pass |
+| Artifact metrics real CSV report smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --out reports/artifact-smoke` | HTML contains artifact metrics | grep found `Baseline drift`, `Noise RMS`, `Peak-to-peak`, `CH2`, `Good ECG/QRS` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -321,8 +345,8 @@
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 15 complete; ready to commit and push batch group statistics iteration. |
+| Where am I? | Phase 16 complete; ready to commit and push artifact metrics iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, and batch group statistics. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, and artifact metrics. |

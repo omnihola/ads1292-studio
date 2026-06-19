@@ -33,6 +33,25 @@ def synthetic_samples(sample_rate_hz: float = 500.0) -> tuple[StreamSample, ...]
     return tuple(samples)
 
 
+def drifting_samples(sample_rate_hz: float = 500.0) -> tuple[StreamSample, ...]:
+    t = np.arange(0, 8, 1 / sample_rate_hz)
+    drift = 100 * (t / t[-1])
+    ch2 = drift + 8 * np.sin(2 * np.pi * 1.0 * t)
+    for peak in np.arange(0.5, 7.8, 0.62):
+        ch2 += 450 * np.exp(-0.5 * ((t - peak) / 0.012) ** 2)
+    return tuple(
+        StreamSample(
+            timestamp=index / sample_rate_hz,
+            ch1=0,
+            ch2=int(round(value)),
+            board_heart_rate=0,
+            board_respiration_rate=0,
+            status_byte=0,
+        )
+        for index, value in enumerate(ch2)
+    )
+
+
 def test_quality_metrics_include_contact_hr_and_source() -> None:
     metrics = compute_quality_metrics(synthetic_samples())
 
@@ -41,6 +60,14 @@ def test_quality_metrics_include_contact_hr_and_source() -> None:
     assert 95 <= metrics.hr_median_bpm <= 110
     assert metrics.qrs_clear is True
     assert metrics.r_peaks >= 10
+
+
+def test_quality_metrics_include_artifact_and_drift_values() -> None:
+    metrics = compute_quality_metrics(drifting_samples())
+
+    assert metrics.baseline_drift_counts >= 80
+    assert metrics.noise_rms_counts > 0
+    assert metrics.peak_to_peak_counts > 400
 
 
 def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
@@ -86,3 +113,6 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "Test Protocol" in html
     assert "Gel comparison protocol" in html
     assert "baseline" in html
+    assert "Baseline drift" in html
+    assert "Noise RMS" in html
+    assert "Peak-to-peak" in html

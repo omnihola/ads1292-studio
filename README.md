@@ -69,6 +69,8 @@ by electrode label.
   package manifest.
 - Quality gate pass/fail checks for minimum duration, contact percentage, QRS
   clarity, R-peak count, and heart-rate bounds.
+- Artifact metrics for baseline drift, noise RMS, and peak-to-peak counts in
+  CLI review, GUI quality text, and HTML reports.
 - Test protocol sidecars for baseline, motion, and recovery steps; protocol
   templates can be included in reports and session packages.
 - Testable signal-analysis core independent of live hardware.

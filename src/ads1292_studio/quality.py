@@ -24,6 +24,9 @@ class QualityMetrics:
     t_tentative: bool
     score_ch1: float
     score_ch2: float
+    baseline_drift_counts: float = 0.0
+    noise_rms_counts: float = 0.0
+    peak_to_peak_counts: float = 0.0
 
     @property
     def quality_label(self) -> str:
@@ -46,8 +49,12 @@ def compute_quality_metrics(
     ch1 = np.array([sample.ch1 for sample in samples], dtype=float)
     ch2 = np.array([sample.ch2 for sample in samples], dtype=float)
     result = review_channels(ch1, ch2, sample_rate_hz=sample_rate_hz, source=source)
+    ecg = ch2 if result.source.channel == "CH2" else ch1
     lead_bad = sum(1 for sample in samples if sample.lead_off_bits != 0)
     duration = (len(samples) - 1) / sample_rate_hz if len(samples) > 1 else 0.0
+    baseline_drift = _baseline_drift(ecg, sample_rate_hz)
+    noise_rms = _noise_rms(ecg)
+    peak_to_peak = float(np.max(ecg) - np.min(ecg)) if ecg.size else 0.0
     return QualityMetrics(
         sample_count=len(samples),
         duration_seconds=float(duration),
@@ -63,4 +70,24 @@ def compute_quality_metrics(
         t_tentative=result.pqrst.t_tentative,
         score_ch1=result.source.score_ch1,
         score_ch2=result.source.score_ch2,
+        baseline_drift_counts=baseline_drift,
+        noise_rms_counts=noise_rms,
+        peak_to_peak_counts=peak_to_peak,
     )
+
+
+def _baseline_drift(values: np.ndarray, sample_rate_hz: float) -> float:
+    if values.size < 2:
+        return 0.0
+    window = max(1, min(int(sample_rate_hz), values.size // 2))
+    start = float(np.median(values[:window]))
+    end = float(np.median(values[-window:]))
+    return abs(end - start)
+
+
+def _noise_rms(values: np.ndarray) -> float:
+    if values.size < 3:
+        return 0.0
+    diff = np.diff(values.astype(float))
+    centered = diff - float(np.median(diff))
+    return float(np.sqrt(np.mean(centered * centered)))

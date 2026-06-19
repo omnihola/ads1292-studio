@@ -40,6 +40,7 @@
 | Add quality gate | Electrode validation needs explicit pass/fail gates for contact, duration, QRS, R peaks, and HR bounds. |
 | Add protocol sidecars | Commercial-quality gel validation needs the planned baseline, motion, and recovery steps saved with each recording. |
 | Add batch group statistics | Material comparisons need electrode-level summaries before claiming MOTAC vs commercial performance. |
+| Add artifact metrics | Baseline drift and noise are core electrode-quality evidence for MOTAC vs commercial ECG tests. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -77,6 +78,7 @@
 - Session package command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package <csv> --out packages`
 - Session package verify command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/<session>/manifest.json`
 - Quality gate command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv>`
+- Artifact metrics command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli review <csv>`
 - Protocol template command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-protocol-template reports/protocol-template.json`
 - Protocol report command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report <csv> --protocol reports/protocol-template.json --out reports`
 

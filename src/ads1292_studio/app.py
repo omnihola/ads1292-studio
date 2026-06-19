@@ -610,10 +610,13 @@ class App(tk.Tk):
         self.metrics_var.set(
             f"samples {len(samples)} | duration {len(samples) / SAMPLE_RATE_HZ:.1f} s | source {source}"
         )
-        gate = evaluate_quality_gate(compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get()))
+        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get())
+        gate = evaluate_quality_gate(metrics)
         self.quality_var.set(
             f"Gate {gate.label} | "
             f"QRS {'clear' if result.pqrst.qrs_clear else 'unclear'} | "
+            f"drift {metrics.baseline_drift_counts:.0f} ct | "
+            f"noise {metrics.noise_rms_counts:.1f} ct | "
             f"P {'tentative' if result.pqrst.p_tentative else 'not reliable'} | "
             f"T {'tentative' if result.pqrst.t_tentative else 'not reliable'}"
         )
@@ -640,8 +643,12 @@ class App(tk.Tk):
         lead_bad = sum(1 for value in self.status if value != 0)
         contact = "OK" if lead_bad == 0 else f"{lead_bad} bad samples"
         rhythm = "detecting" if valid_rr < 2 else "R peaks detected"
-        gate = evaluate_quality_gate(compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get()))
-        return f"Gate {gate.label} | Contact {contact} | {rhythm} | source {source}"
+        metrics = compute_quality_metrics(samples, SAMPLE_RATE_HZ, self.source_var.get())
+        gate = evaluate_quality_gate(metrics)
+        return (
+            f"Gate {gate.label} | Contact {contact} | {rhythm} | source {source} | "
+            f"drift {metrics.baseline_drift_counts:.0f} ct | noise {metrics.noise_rms_counts:.1f} ct"
+        )
 
     def _current_samples(self) -> tuple[StreamSample, ...]:
         return tuple(
