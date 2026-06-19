@@ -55,3 +55,13 @@ def test_app_tick_callback_is_cancellable_on_window_destroy() -> None:
     assert "self.after_cancel(self.tick_after_id)" in source
     assert "def destroy" in source
     assert "self._cancel_tick()" in source
+
+
+def test_app_batches_queued_log_messages_to_reduce_text_widget_churn() -> None:
+    source = inspect.getsource(App)
+
+    assert "def _append_log_messages" in source
+    assert "format_log_entries(messages, stamp)" in source
+    assert "self._trim_log_text()" in source
+    assert "log_messages.append(self.logs.get_nowait())" in source
+    assert "self._append_log_messages(tuple(log_messages))" in source

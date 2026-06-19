@@ -427,6 +427,7 @@ LOG_PANEL_SPEC = {
     "borderwidth": 0,
     "highlightthickness": 0,
     "relief": "flat",
+    "max_lines": 1200,
 }
 SCROLLBAR_CHROME_SPEC = {
     "vertical": "App.Vertical.TScrollbar",
@@ -1059,6 +1060,10 @@ def live_metrics_text(
         f"samples {sample_index} | duration {duration_seconds:.1f} s | "
         f"source {ecg_label} | HR {heart_rate_bpm:.0f} bpm | R peaks {peak_count}"
     )
+
+
+def format_log_entries(messages: tuple[str, ...], stamp: str) -> str:
+    return "".join(f"[{stamp}] {message}\n" for message in messages)
 
 
 def header_connection_tone(
@@ -3298,11 +3303,13 @@ class App(tk.Tk):
         if latest is not None:
             self._redraw_live()
             self._apply_control_states()
+        log_messages: list[str] = []
         while True:
             try:
-                self._log(self.logs.get_nowait())
+                log_messages.append(self.logs.get_nowait())
             except queue.Empty:
                 break
+        self._append_log_messages(tuple(log_messages))
         self._drain_live_quality_results()
         self._schedule_tick()
 
@@ -3722,9 +3729,22 @@ class App(tk.Tk):
         )
 
     def _log(self, message: str) -> None:
+        self._append_log_messages((message,))
+
+    def _append_log_messages(self, messages: tuple[str, ...]) -> None:
+        if not messages:
+            return
         stamp = datetime.now().strftime("%H:%M:%S")
-        self.log_text.insert(tk.END, f"[{stamp}] {message}\n")
+        self.log_text.insert(tk.END, format_log_entries(messages, stamp))
+        self._trim_log_text()
         self.log_text.see(tk.END)
+
+    def _trim_log_text(self) -> None:
+        max_lines = int(log_panel_spec()["max_lines"])
+        line_count = int(self.log_text.index("end-1c").split(".", maxsplit=1)[0])
+        if line_count <= max_lines:
+            return
+        self.log_text.delete("1.0", f"{line_count - max_lines + 1}.0")
 
     def _close(self) -> None:
         self.is_closing = True

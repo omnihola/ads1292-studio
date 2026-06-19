@@ -11,6 +11,7 @@ from ads1292_studio.app import (
     empty_plot_messages,
     empty_plot_style,
     event_count_styles,
+    format_log_entries,
     header_connection_styles,
     header_frame_spec,
     header_layout_spec,
@@ -701,7 +702,15 @@ def test_log_panel_spec_keeps_long_sessions_readable() -> None:
         "borderwidth": 0,
         "highlightthickness": 0,
         "relief": "flat",
+        "max_lines": 1200,
     }
+
+
+def test_format_log_entries_batches_messages_with_one_timestamp() -> None:
+    assert format_log_entries(("connected", "streaming"), "12:34:56") == (
+        "[12:34:56] connected\n"
+        "[12:34:56] streaming\n"
+    )
 
 
 def test_scrollbar_chrome_spec_keeps_scroll_surfaces_subtle() -> None:
