@@ -124,6 +124,11 @@ EMPTY_PLOT_MESSAGES = {
     ),
     "pqrst": ("Load or record data to build the averaged PQRST beat",),
 }
+LOG_PANEL_SPEC = {
+    "wrap": "word",
+    "scrollbar": "vertical",
+    "font": "Aptos 12",
+}
 
 
 @dataclass(frozen=True)
@@ -184,6 +189,10 @@ def plot_trace_colors() -> dict[str, str]:
 
 def empty_plot_messages() -> dict[str, tuple[str, ...]]:
     return dict(EMPTY_PLOT_MESSAGES)
+
+
+def log_panel_spec() -> dict[str, str]:
+    return dict(LOG_PANEL_SPEC)
 
 
 def ads1292r_channel_label(channel: str) -> str:
@@ -721,17 +730,7 @@ class App(tk.Tk):
         self._build_live_plot()
         self._build_review_plot()
         self._build_pqrst_plot()
-        self.log_text = tk.Text(
-            self.log_tab,
-            height=12,
-            bg=APP_VISUAL_TOKENS["panel"],
-            fg=APP_VISUAL_TOKENS["ink"],
-            insertbackground=APP_VISUAL_TOKENS["accent"],
-            relief=tk.FLAT,
-            padx=12,
-            pady=10,
-        )
-        self.log_text.pack(fill=tk.BOTH, expand=True)
+        self._build_log_panel()
         self.control_buttons = {
             "Refresh": self.refresh_button,
             "Connect": self.connect_button,
@@ -919,6 +918,29 @@ class App(tk.Tk):
         self._show_empty_plot_state("pqrst", (self.ax_pqrst,))
         self.pqrst_canvas = FigureCanvasTkAgg(fig, master=self.pqrst_tab)
         self.pqrst_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+    def _build_log_panel(self) -> None:
+        shell = ttk.Frame(self.log_tab, padding=(12, 12), style="Main.TFrame")
+        shell.pack(fill=tk.BOTH, expand=True)
+        panel = ttk.Frame(shell, padding=(0, 0), style="Card.TFrame")
+        panel.pack(fill=tk.BOTH, expand=True)
+        self.log_scrollbar = ttk.Scrollbar(panel, orient=tk.VERTICAL)
+        self.log_text = tk.Text(
+            panel,
+            height=12,
+            bg=APP_VISUAL_TOKENS["panel"],
+            fg=APP_VISUAL_TOKENS["ink"],
+            insertbackground=APP_VISUAL_TOKENS["accent"],
+            relief=tk.FLAT,
+            padx=12,
+            pady=10,
+            wrap=tk.WORD,
+            font=("Aptos", 12),
+            yscrollcommand=self.log_scrollbar.set,
+        )
+        self.log_scrollbar.configure(command=self.log_text.yview)
+        self.log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     def _new_plot_figure(self, *, figsize: tuple[float, float]) -> Figure:
         fig = Figure(figsize=figsize, dpi=100)

@@ -2,6 +2,7 @@ from ads1292_studio.app import (
     ads1292r_plot_layout_labels,
     app_visual_tokens,
     empty_plot_messages,
+    log_panel_spec,
     plot_trace_colors,
     primary_toolbar_button_labels,
     secondary_action_button_labels,
@@ -76,3 +77,11 @@ def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
     )
     assert messages["review"][0] == "Load a CSV to review recorded ECG"
     assert messages["pqrst"] == ("Load or record data to build the averaged PQRST beat",)
+
+
+def test_log_panel_spec_keeps_long_sessions_readable() -> None:
+    spec = log_panel_spec()
+
+    assert spec["wrap"] == "word"
+    assert spec["scrollbar"] == "vertical"
+    assert spec["font"] == "Aptos 12"
