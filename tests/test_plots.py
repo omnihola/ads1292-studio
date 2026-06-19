@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from ads1292_studio.plots import decimate_aligned_for_plot, decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
+from ads1292_studio.plots import (
+    decimate_aligned_for_plot,
+    decimate_extrema_for_plot,
+    decimate_for_plot,
+    robust_ylim,
+    smooth_for_plot,
+    stable_ylim,
+)
 
 
 def test_smooth_for_plot_returns_original_values_when_window_is_too_small() -> None:
@@ -80,3 +87,28 @@ def test_decimate_aligned_for_plot_uses_one_stride_for_all_traces() -> None:
     np.testing.assert_array_equal(out_ecg, out_x + 10)
     np.testing.assert_array_equal(out_resp, out_x + 20)
     np.testing.assert_array_equal(out_status, out_x % 4)
+
+
+def test_decimate_extrema_for_plot_preserves_narrow_spikes() -> None:
+    x = np.arange(1000)
+    y = np.zeros(1000)
+    y[427] = 12.0
+    y[428] = -5.0
+
+    out_x, out_y = decimate_extrema_for_plot(x, y, max_points=100)
+
+    assert out_x.size <= 100
+    assert 427 in set(out_x.tolist())
+    assert 428 in set(out_x.tolist())
+    assert 12.0 in set(out_y.tolist())
+    assert -5.0 in set(out_y.tolist())
+
+
+def test_decimate_extrema_for_plot_returns_unchanged_arrays_within_budget() -> None:
+    x = np.arange(8)
+    y = np.linspace(-1, 1, 8)
+
+    out_x, out_y = decimate_extrema_for_plot(x, y, max_points=20)
+
+    np.testing.assert_array_equal(out_x, x)
+    np.testing.assert_array_equal(out_y, y)

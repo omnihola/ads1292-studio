@@ -57,7 +57,7 @@ from ads1292_studio.plot_theme import (
     pqrst_plot_style as base_pqrst_plot_style,
     seaborn_plot_theme as base_seaborn_plot_theme,
 )
-from ads1292_studio.plots import decimate_aligned_for_plot, decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
+from ads1292_studio.plots import decimate_extrema_for_plot, decimate_for_plot, robust_ylim, smooth_for_plot, stable_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
@@ -3408,18 +3408,22 @@ class App(tk.Tk):
         peaks = detect_r_peaks(visible_ecg, SAMPLE_RATE_HZ)
         peaks_x = visible_x[list(peaks)] if peaks else []
         peaks_y = visible_ecg_plot[list(peaks)] if peaks else []
-        plot_x, plot_ecg, plot_resp, plot_status = decimate_aligned_for_plot(
+        plot_ecg_x, plot_ecg = decimate_extrema_for_plot(
             visible_x,
             visible_ecg_plot,
-            visible_resp_plot,
-            visible_status,
-            max_points=LIVE_MAX_RENDER_POINTS,
+            LIVE_MAX_RENDER_POINTS,
         )
+        plot_resp_x, plot_resp = decimate_extrema_for_plot(
+            visible_x,
+            visible_resp_plot,
+            LIVE_MAX_RENDER_POINTS,
+        )
+        plot_status_x, plot_status = decimate_for_plot(visible_x, visible_status, LIVE_MAX_RENDER_POINTS)
 
-        self.live_ecg_line.set_data(plot_x, plot_ecg)
+        self.live_ecg_line.set_data(plot_ecg_x, plot_ecg)
         self.live_peak_line.set_data(peaks_x, peaks_y)
-        self.live_resp_line.set_data(plot_x, plot_resp)
-        self.live_status_line.set_data(plot_x, plot_status)
+        self.live_resp_line.set_data(plot_resp_x, plot_resp)
+        self.live_status_line.set_data(plot_status_x, plot_status)
         for ax in (self.ax_live_ecg, self.ax_live_resp, self.ax_live_status):
             ax.set_xlim(left, right)
         if self.autoscale_var.get():
@@ -3468,13 +3472,13 @@ class App(tk.Tk):
         status_arr = np.asarray(full_status_ints, dtype=float)
         display_ecg = smooth_for_plot(ecg, window=DISPLAY_SMOOTHING_WINDOW)
         display_resp = smooth_for_plot(resp, window=DISPLAY_SMOOTHING_WINDOW)
-        plot_x, plot_ecg = decimate_for_plot(x, display_ecg, MAX_POINTS)
-        _, plot_resp = decimate_for_plot(x, display_resp, MAX_POINTS)
-        _, plot_status = decimate_for_plot(x, status_arr, MAX_POINTS)
+        plot_ecg_x, plot_ecg = decimate_extrema_for_plot(x, display_ecg, MAX_POINTS)
+        plot_resp_x, plot_resp = decimate_extrema_for_plot(x, display_resp, MAX_POINTS)
+        plot_status_x, plot_status = decimate_for_plot(x, status_arr, MAX_POINTS)
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
-        self.review_ecg_line.set_data(plot_x, plot_ecg)
-        self.review_resp_line.set_data(plot_x, plot_resp)
-        self.review_status_line.set_data(plot_x, plot_status)
+        self.review_ecg_line.set_data(plot_ecg_x, plot_ecg)
+        self.review_resp_line.set_data(plot_resp_x, plot_resp)
+        self.review_status_line.set_data(plot_status_x, plot_status)
         peak_x = np.asarray(result.peaks, dtype=float) / SAMPLE_RATE_HZ if result.peaks else []
         self.review_peak_line.set_data(peak_x, ecg[list(result.peaks)] if result.peaks else [])
         mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
