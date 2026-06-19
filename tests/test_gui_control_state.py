@@ -1,4 +1,10 @@
-from ads1292_studio.app import gui_control_states, gui_status_overview, gui_workflow_hint
+from ads1292_studio.app import (
+    gui_control_states,
+    gui_status_cards,
+    gui_status_overview,
+    gui_workflow_hint,
+    status_tone_style,
+)
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:
@@ -173,3 +179,57 @@ def test_gui_status_overview_summarizes_loaded_unsaved_data() -> None:
         "Data: live or loaded\n"
         "Package: needs saved CSV"
     )
+
+
+def test_gui_status_cards_expose_scan_friendly_disconnected_state() -> None:
+    cards = gui_status_cards(
+        connected=False,
+        streaming=False,
+        has_data=False,
+        has_recording_path=False,
+    )
+
+    assert [(card.label, card.value, card.tone) for card in cards] == [
+        ("Connection", "disconnected", "warning"),
+        ("Acquisition", "idle", "neutral"),
+        ("Data", "none loaded", "neutral"),
+        ("Package", "unavailable", "neutral"),
+    ]
+
+
+def test_gui_status_cards_expose_scan_friendly_streaming_state() -> None:
+    cards = gui_status_cards(
+        connected=True,
+        streaming=True,
+        has_data=True,
+        has_recording_path=True,
+    )
+
+    assert [(card.label, card.value, card.tone) for card in cards] == [
+        ("Connection", "connected", "ready"),
+        ("Acquisition", "streaming", "running"),
+        ("Data", "live or loaded", "ready"),
+        ("Package", "ready", "ready"),
+    ]
+
+
+def test_gui_status_cards_mark_unsaved_loaded_data_as_package_warning() -> None:
+    cards = gui_status_cards(
+        connected=False,
+        streaming=False,
+        has_data=True,
+        has_recording_path=False,
+    )
+
+    assert cards[2].label == "Data"
+    assert cards[2].tone == "ready"
+    assert cards[3].label == "Package"
+    assert cards[3].value == "needs saved CSV"
+    assert cards[3].tone == "warning"
+
+
+def test_status_tone_style_maps_known_and_unknown_tones() -> None:
+    assert status_tone_style("ready") == "Ready.Status.TLabel"
+    assert status_tone_style("running") == "Running.Status.TLabel"
+    assert status_tone_style("warning") == "Warning.Status.TLabel"
+    assert status_tone_style("unexpected") == "Neutral.Status.TLabel"

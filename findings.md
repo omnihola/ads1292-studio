@@ -63,6 +63,7 @@
 | Gate impossible GUI actions by state | Commercial-style software should disable Start before connection, Stop before streaming, and export/package actions before data exists, while keeping file/library workflows available. |
 | Pair disabled controls with next-step hints | Button gating prevents mistakes, but the Status tab should also say whether the next valid action is Connect, Start, Stop, Report, or Package. |
 | Separate next action from state overview | The Status tab should expose both a one-line workflow hint and a stable Connection/Acquisition/Data/Package snapshot so users do not have to infer state from buttons. |
+| Use status cards for scan-friendly GUI state | The Status tab should render Connection, Acquisition, Data, and Package as structured status rows with ready/running/warning/neutral tones instead of requiring users to parse a multiline string. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -102,6 +103,7 @@
 | The GUI still relied on error dialogs for impossible actions | Added a pure `gui_control_states()` model and wired buttons to it after connect/start/stop/load/sample updates. |
 | Disabled controls did not explain the workflow | Added `gui_workflow_hint()` and a Status-tab `Next Step` field so users can read the intended next action without trial-and-error. |
 | Workflow hints did not provide a stable state snapshot | Added a Status-tab `Overview` field driven by the same connection/streaming/data/recording-path state as button gating and workflow hints. |
+| Status overview still lacked visual state semantics | Added `gui_status_cards()` plus deterministic tone-to-style mapping, then rendered Overview as styled status rows in the sidebar. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`

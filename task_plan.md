@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 37
+Phase 38
 
 ## Phases
 
@@ -323,6 +323,14 @@ Phase 37
 - [x] Add focused tests, full tests, syntax verification, and documentation.
 - **Status:** complete
 
+### Phase 38: GUI Status Cards
+- [x] Add failing tests for structured status cards with labels, values, and tones.
+- [x] Convert the Status-tab overview from one multiline label into scan-friendly status rows.
+- [x] Apply deterministic visual styles for ready, running, warning, and neutral states.
+- [x] Drive status card values and styles from the same state model as button gating, workflow hints, and overview text.
+- [x] Add focused tests, full tests, syntax verification, and documentation.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -372,6 +380,7 @@ Phase 37
 | Add explicit GUI control-state gating | Mature software should prevent impossible actions up front instead of relying on error dialogs after users click disabled workflows. |
 | Add workflow hints after button gating | Disabled controls are safer, but mature GUI software should also tell users the next valid action instead of leaving them to infer it. |
 | Add a status overview after workflow hints | A mature GUI should show the stable state snapshot separately from the one-line next action, so users can scan connection, acquisition, data, and package readiness. |
+| Use structured status cards instead of only multiline status text | Commercial-style status panels need semantic labels and tones so the UI can show ready/running/warning/neutral states without parsing display text. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -414,6 +423,7 @@ Phase 37
 | GUI allowed impossible actions until they produced error dialogs | 1 | Added deterministic button-state gating so unavailable workflows are disabled before the user clicks them. |
 | Disabled GUI actions could still leave the next step ambiguous | 1 | Added a Status-tab workflow hint that converts connection/data/streaming state into a concise next action. |
 | Status-tab next-step guidance still required users to infer the current state | 1 | Added a separate Status-tab overview for Connection, Acquisition, Data, and Package readiness. |
+| Status-tab overview lacked semantic visual states | 1 | Added structured status cards and deterministic ready/running/warning/neutral Tk label styles. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 import queue
@@ -53,6 +54,24 @@ SECONDARY_ACTION_BUTTONS = (
     "Session Index",
 )
 SIDEBAR_TABS = ("Status", "Session", "Validation", "Protocol", "Actions")
+STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
+STATUS_TONE_STYLES = {
+    "ready": "Ready.Status.TLabel",
+    "running": "Running.Status.TLabel",
+    "warning": "Warning.Status.TLabel",
+    "neutral": "Neutral.Status.TLabel",
+}
+
+
+@dataclass(frozen=True)
+class GuiStatusCard:
+    label: str
+    value: str
+    tone: str
+
+
+def status_tone_style(tone: str) -> str:
+    return STATUS_TONE_STYLES.get(tone, STATUS_TONE_STYLES["neutral"])
 
 
 def primary_toolbar_button_labels() -> tuple[str, ...]:
@@ -113,27 +132,54 @@ def gui_status_overview(
     has_data: bool,
     has_recording_path: bool,
 ) -> str:
-    connection = "connected" if connected else "disconnected"
+    return "\n".join(f"{card.label}: {card.value}" for card in gui_status_cards(
+        connected=connected,
+        streaming=streaming,
+        has_data=has_data,
+        has_recording_path=has_recording_path,
+    ))
+
+
+def gui_status_cards(
+    *,
+    connected: bool,
+    streaming: bool,
+    has_data: bool,
+    has_recording_path: bool,
+) -> tuple[GuiStatusCard, ...]:
+    connection = GuiStatusCard(
+        label="Connection",
+        value="connected" if connected else "disconnected",
+        tone="ready" if connected else "warning",
+    )
     if streaming:
-        acquisition = "streaming"
+        acquisition_value = "streaming"
+        acquisition_tone = "running"
     elif connected:
-        acquisition = "ready to start"
+        acquisition_value = "ready to start"
+        acquisition_tone = "ready"
     else:
-        acquisition = "idle"
-    data = "live or loaded" if has_data else "none loaded"
+        acquisition_value = "idle"
+        acquisition_tone = "neutral"
+    data = GuiStatusCard(
+        label="Data",
+        value="live or loaded" if has_data else "none loaded",
+        tone="ready" if has_data else "neutral",
+    )
     if has_data and has_recording_path:
-        package = "ready"
+        package_value = "ready"
+        package_tone = "ready"
     elif has_data:
-        package = "needs saved CSV"
+        package_value = "needs saved CSV"
+        package_tone = "warning"
     else:
-        package = "unavailable"
-    return "\n".join(
-        (
-            f"Connection: {connection}",
-            f"Acquisition: {acquisition}",
-            f"Data: {data}",
-            f"Package: {package}",
-        )
+        package_value = "unavailable"
+        package_tone = "neutral"
+    return (
+        connection,
+        GuiStatusCard("Acquisition", acquisition_value, acquisition_tone),
+        data,
+        GuiStatusCard("Package", package_value, package_tone),
     )
 
 
@@ -216,6 +262,7 @@ class App(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._close)
 
     def _build_ui(self) -> None:
+        self._configure_status_styles()
         toolbar = ttk.Frame(self, padding=8)
         toolbar.pack(side=tk.TOP, fill=tk.X)
 
@@ -269,6 +316,8 @@ class App(tk.Tk):
         self.path_var = tk.StringVar(value="CSV: --")
         self.workflow_hint_var = tk.StringVar(value="")
         self.status_overview_var = tk.StringVar(value="")
+        self.status_card_vars = {label: tk.StringVar(value="") for label in STATUS_CARD_LABELS}
+        self.status_card_value_labels: dict[str, ttk.Label] = {}
         self.session_id_var = tk.StringVar(value="untitled-session")
         self.subject_id_var = tk.StringVar(value="anonymous")
         self.electrode_var = tk.StringVar(value="commercial Ag/AgCl control")
@@ -295,9 +344,11 @@ class App(tk.Tk):
         self.protocol_objective_var = tk.StringVar(value=protocol.objective)
         self.protocol_steps_var = tk.StringVar(value=_format_protocol_steps(protocol.steps))
         self.protocol_acceptance_var = tk.StringVar(value=protocol.acceptance_notes)
+        ttk.Label(status_side, text="Next Step", font=("", 12, "bold")).pack(anchor=tk.W, pady=(8, 2))
+        ttk.Label(status_side, textvariable=self.workflow_hint_var, wraplength=260, justify=tk.LEFT).pack(anchor=tk.W)
+        ttk.Label(status_side, text="Overview", font=("", 12, "bold")).pack(anchor=tk.W, pady=(12, 4))
+        self._build_status_cards(status_side)
         for label, var in (
-            ("Next Step", self.workflow_hint_var),
-            ("Overview", self.status_overview_var),
             ("Session", self.metrics_var),
             ("Quality", self.quality_var),
             ("Storage", self.path_var),
@@ -391,6 +442,26 @@ class App(tk.Tk):
             "Session Index": self.session_index_button,
         }
         self._apply_control_states()
+
+    def _configure_status_styles(self) -> None:
+        style = ttk.Style(self)
+        style.configure("Ready.Status.TLabel", foreground="#116329")
+        style.configure("Running.Status.TLabel", foreground="#0B5CAD")
+        style.configure("Warning.Status.TLabel", foreground="#9A4D00")
+        style.configure("Neutral.Status.TLabel", foreground="#555555")
+
+    def _build_status_cards(self, parent: ttk.Frame) -> None:
+        for label in STATUS_CARD_LABELS:
+            row = ttk.Frame(parent)
+            row.pack(anchor=tk.W, fill=tk.X, pady=1)
+            ttk.Label(row, text=label, width=12).pack(side=tk.LEFT)
+            value_label = ttk.Label(
+                row,
+                textvariable=self.status_card_vars[label],
+                style=status_tone_style("neutral"),
+            )
+            value_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            self.status_card_value_labels[label] = value_label
 
     def _build_sidebar(self, parent: ttk.Frame) -> dict[str, ttk.Frame]:
         self.sidebar_notebook = ttk.Notebook(parent)
@@ -701,6 +772,16 @@ class App(tk.Tk):
                 has_recording_path=has_recording_path,
             )
         )
+        for card in gui_status_cards(
+            connected=connected,
+            streaming=streaming,
+            has_data=has_data,
+            has_recording_path=has_recording_path,
+        ):
+            self.status_card_vars[card.label].set(card.value)
+            self.status_card_value_labels[card.label].configure(
+                style=status_tone_style(card.tone)
+            )
         for label, button in self.control_buttons.items():
             button.configure(state=states[label])
 
