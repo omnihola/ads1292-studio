@@ -376,6 +376,19 @@
   - `tests/test_session_index.py`
   - `README.md`
 
+### Phase 24: Session Index Package Readiness
+- **Status:** complete
+- Actions taken:
+  - Added `package_ready_status` to each session index row.
+  - Classified rows as `package_ready`, `incomplete_record`, or `needs_signal_review`.
+  - Added package-ready status to CSV and HTML index exports.
+  - Added tests for complete usable recordings, incomplete sidecar records, and complete-but-review-needed signals.
+  - Verified against the real `../record/ads1292` folder; two `Good ECG/QRS` recordings are still correctly marked `incomplete_record` because older records lack required sidecars.
+- Files created/modified:
+  - `src/ads1292_studio/session_index.py`
+  - `tests/test_session_index.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -486,6 +499,11 @@
 | Session index sidecar CLI/smoke tests | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library -q` plus real `index ../record/ads1292` smoke | CSV/HTML include sidecar status and missing sidecars | 4 passed; grep found `sidecar_status`, `Missing Sidecars`, and missing sidecar lists | Pass |
 | Session index sidecar full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 57 passed | Pass |
 | Session index sidecar syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_index.py` | No syntax errors | Passed | Pass |
+| Session index package-ready TDD red check | `conda run -n sensor python -m pytest tests/test_session_index.py -q` before implementation | Missing package-ready status fields | `AttributeError: 'SessionIndexRow' object has no attribute 'package_ready_status'` and missing CSV column | Pass |
+| Session index package-ready focused tests | `conda run -n sensor python -m pytest tests/test_session_index.py -q` | Package-ready status tests pass | 4 passed | Pass |
+| Session index package-ready CLI/smoke tests | `conda run -n sensor python -m pytest tests/test_session_index.py tests/test_cli.py::test_cli_index_writes_session_library -q` plus real `index ../record/ads1292` smoke | CSV/HTML include package-ready status and real folder exports | 5 passed; real smoke wrote 9 rows with `Package Ready`, `package_ready_status`, `Good ECG/QRS`, and `incomplete_record` | Pass |
+| Session index package-ready full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 58 passed | Pass |
+| Session index package-ready syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/session_index.py` | No syntax errors | Passed | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -517,12 +535,13 @@
 | 2026-06-18 | Session index module was missing during TDD red check | 1 | Added recursive session index export plus CLI and GUI entry points. |
 | 2026-06-18 | Initial session index fixture was too short/sparse to be classified usable | 1 | Reused the established 7-second ECG-like synthetic waveform from batch tests. |
 | 2026-06-18 | Session index sidecar fields were missing during TDD red check | 1 | Added sidecar status and missing sidecar fields to row, CSV, and HTML output. |
+| 2026-06-18 | Session index package-ready field was missing during TDD red check | 1 | Added package-ready status to row model, CSV export, and HTML export. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 23 complete; ready to run full verification, commit, and push session index sidecar audit iteration. |
+| Where am I? | Phase 24 complete; ready to commit and push session index package-readiness iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, and session sidecar completeness audit. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, GUI quality gate sidecars, session index export, session sidecar completeness audit, and package-ready session index status. |

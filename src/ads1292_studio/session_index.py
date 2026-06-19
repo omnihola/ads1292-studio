@@ -31,6 +31,7 @@ class SessionIndexRow:
     status: str
     sidecar_status: str
     missing_sidecars: str
+    package_ready_status: str
 
 
 @dataclass(frozen=True)
@@ -91,6 +92,7 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
     metadata = _metadata_for(path)
     metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz)
     sidecar_status, missing_sidecars = _sidecar_status(path)
+    waveform_status = _status_for_quality(metrics.quality_label)
     return SessionIndexRow(
         path=path,
         relative_path=path.relative_to(root).as_posix(),
@@ -107,9 +109,10 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
         hr_median_bpm=metrics.hr_median_bpm,
         qrs_clear=metrics.qrs_clear,
         quality_label=metrics.quality_label,
-        status=_status_for_quality(metrics.quality_label),
+        status=waveform_status,
         sidecar_status=sidecar_status,
         missing_sidecars=missing_sidecars,
+        package_ready_status=_package_ready_status(waveform_status, sidecar_status),
     )
 
 
@@ -138,6 +141,14 @@ def _sidecar_status(csv_path: Path) -> tuple[str, str]:
     return ("complete", "") if not missing else ("missing", ";".join(missing))
 
 
+def _package_ready_status(waveform_status: str, sidecar_status: str) -> str:
+    if sidecar_status != "complete":
+        return "incomplete_record"
+    if waveform_status != "usable":
+        return "needs_signal_review"
+    return "package_ready"
+
+
 def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
     columns = [
         "relative_path",
@@ -157,6 +168,7 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
         "status",
         "sidecar_status",
         "missing_sidecars",
+        "package_ready_status",
     ]
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
@@ -180,6 +192,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...]) -> str:
         "Status",
         "Sidecars",
         "Missing Sidecars",
+        "Package Ready",
     ]
     body = []
     for row in rows:
@@ -196,6 +209,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...]) -> str:
             row.status,
             row.sidecar_status,
             row.missing_sidecars,
+            row.package_ready_status,
         ]
         body.append("<tr>" + "".join(f"<td>{escape(value)}</td>" for value in values) + "</tr>")
     return f"""<!doctype html>

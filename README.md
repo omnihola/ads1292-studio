@@ -96,6 +96,9 @@ by electrode label.
 - Session index also audits sidecar completeness for metadata, events,
   calibration, protocol, and quality-gate files so incomplete experiment
   records are visible before reporting or packaging.
+- Session index combines waveform usability and sidecar completeness into
+  package-ready status: `package_ready`, `incomplete_record`, or
+  `needs_signal_review`.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

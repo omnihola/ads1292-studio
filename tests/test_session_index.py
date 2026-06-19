@@ -32,9 +32,28 @@ def _samples() -> tuple[StreamSample, ...]:
     )
 
 
-def _write_recording(root: Path, relative: str, electrode: str) -> Path:
+def _review_samples() -> tuple[StreamSample, ...]:
+    return tuple(
+        StreamSample(
+            timestamp=index / 500.0,
+            ch1=0,
+            ch2=0,
+            board_heart_rate=0,
+            board_respiration_rate=0,
+            status_byte=0x0F,
+        )
+        for index in range(1500)
+    )
+
+
+def _write_recording(
+    root: Path,
+    relative: str,
+    electrode: str,
+    samples: tuple[StreamSample, ...] | None = None,
+) -> Path:
     path = root / relative
-    write_recording_csv(path, _samples())
+    write_recording_csv(path, samples or _samples())
     write_metadata_json(
         path.with_suffix(".json"),
         SessionMetadata(
@@ -87,6 +106,20 @@ def test_scan_recording_directory_reports_sidecar_completeness(tmp_path: Path) -
     assert rows["partial"].missing_sidecars == "events;calibration;protocol;quality_gate"
 
 
+def test_scan_recording_directory_reports_package_ready_status(tmp_path: Path) -> None:
+    ready = _write_recording(tmp_path, "ready.csv", "MOTAC gel + Ag/AgCl")
+    incomplete = _write_recording(tmp_path, "incomplete.csv", "MOTAC gel + Ag/AgCl")
+    review = _write_recording(tmp_path, "review.csv", "MOTAC gel + Ag/AgCl", samples=_review_samples())
+    _write_complete_sidecars(ready)
+    _write_complete_sidecars(review)
+
+    rows = {row.session_id: row for row in scan_recording_directory(tmp_path)}
+
+    assert rows["ready"].package_ready_status == "package_ready"
+    assert rows["incomplete"].package_ready_status == "incomplete_record"
+    assert rows["review"].package_ready_status == "needs_signal_review"
+
+
 def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     _write_recording(tmp_path, "control.csv", "commercial Ag/AgCl")
     motac = _write_recording(tmp_path, "motac.csv", "MOTAC gel + Ag/AgCl")
@@ -103,7 +136,10 @@ def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     assert "relative_path,session_id,subject_id,electrode" in csv_text
     assert "commercial Ag/AgCl" in csv_text
     assert "sidecar_status,missing_sidecars" in csv_text
+    assert "package_ready_status" in csv_text
+    assert "package_ready" in csv_text
     assert "complete," in csv_text
     assert "MOTAC Session Library" in html
     assert "Usable recordings" in html
     assert "Sidecars" in html
+    assert "Package Ready" in html

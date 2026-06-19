@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 23
+Phase 24
 
 ## Phases
 
@@ -204,6 +204,14 @@ Phase 23
 - [x] Verify against the real `../record/ads1292` folder.
 - **Status:** complete
 
+### Phase 24: Session Index Package Readiness
+- [x] Add package-ready status to session index rows.
+- [x] Classify `package_ready`, `incomplete_record`, and `needs_signal_review`.
+- [x] Export package-ready status in CSV and HTML outputs.
+- [x] Add tests for ready, incomplete, and signal-review records.
+- [x] Verify against the real `../record/ads1292` folder.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -239,6 +247,7 @@ Phase 23
 | Add GUI quality gate sidecars | Pass/fail standards must be saved with the recording so a later report/package uses the same validation thresholds. |
 | Add session index export | A commercial-style app needs an experiment library view, not only one-file report/package actions. |
 | Add sidecar completeness audit | Good waveform data is not a complete experiment record unless metadata, event, calibration, protocol, and quality-gate context are present. |
+| Add package-ready status | A recording should only be called package-ready when waveform quality is usable and required sidecars are complete. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -260,6 +269,7 @@ Phase 23
 | GUI quality gate parser was missing | 1 | Added explicit GUI value parsing/formatting helpers for required and optional threshold fields. |
 | Session index module was missing during TDD red check | 1 | Added `session_index.py`, CLI `index`, and GUI Session Index action. |
 | Session index sidecar fields were missing during TDD red check | 1 | Added sidecar status and missing sidecar columns to rows, CSV, and HTML. |
+| Session index package-ready field was missing during TDD red check | 1 | Added package-ready status to rows, CSV exports, and HTML exports. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

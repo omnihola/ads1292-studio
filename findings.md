@@ -49,6 +49,7 @@
 | Add quality gate sidecars | GUI-selected validation thresholds must travel with recordings so live review, exported reports, and packages use the same pass/fail standard. |
 | Add session index export | Commercial-style experiment software needs a browsable library of recordings with quality/status fields, not only single-file actions. |
 | Add sidecar completeness audit | A usable ECG waveform can still be incomplete as an experiment record when metadata, events, calibration, protocol, or quality-gate sidecars are missing. |
+| Add package-ready status | Library rows should combine waveform usability and sidecar completeness before a recording is treated as ready for reporting or packaging. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -72,6 +73,7 @@
 | GUI quality gate settings were not persisted | Added `.quality-gate.json` sidecars, GUI save/load wiring, report export wiring, and package manifest metrics. |
 | Recording folders were not indexable as a library | Added recursive raw CSV discovery, CSV/HTML session index export, CLI command, and GUI action. |
 | Session index did not show whether records were auditable | Added sidecar status and missing sidecar columns for metadata, events, calibration, protocol, and quality gate files. |
+| Session index could show usable ECG while the record was still incomplete | Added `package_ready_status` so usable waveform, missing sidecars, and signal-review cases are separated. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -103,6 +105,7 @@
 - Session index command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index <recordings-folder> --out reports/session-index`
 - Real session index smoke found 9 rows in `../record/ads1292`, with two usable `Good ECG/QRS` CH2 recordings including `2026-06-18-164923-ads1292-live.csv`.
 - Session index sidecar audit marks records as `complete` only when `.json`, `.events.json`, `.calibration.json`, `.protocol.json`, and `.quality-gate.json` files are all present.
+- Package-ready session index smoke found the real `Good ECG/QRS` recordings are still `incomplete_record` because the older CSV files are missing required sidecars.
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.
