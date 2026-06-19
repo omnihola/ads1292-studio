@@ -10,6 +10,8 @@ from ads1292_studio.app import (
     gui_status_cards,
     gui_status_overview,
     gui_workflow_hint,
+    header_connection_style,
+    header_connection_tone,
     status_tone_color,
     status_tone_style,
 )
@@ -331,6 +333,25 @@ def test_status_tone_style_maps_known_and_unknown_tones() -> None:
     assert status_tone_style("running") == "Running.Status.TLabel"
     assert status_tone_style("warning") == "Warning.Status.TLabel"
     assert status_tone_style("unexpected") == "Neutral.Status.TLabel"
+
+
+def test_header_connection_style_maps_known_and_unknown_tones() -> None:
+    assert header_connection_style("ready") == "Ready.Connection.TLabel"
+    assert header_connection_style("running") == "Running.Connection.TLabel"
+    assert header_connection_style("warning") == "Warning.Connection.TLabel"
+    assert header_connection_style("unexpected") == "Neutral.Connection.TLabel"
+
+
+def test_header_connection_tone_tracks_acquisition_state() -> None:
+    assert header_connection_tone(connected=False, streaming=False) == "warning"
+    assert header_connection_tone(connected=True, streaming=False) == "ready"
+    assert header_connection_tone(connected=True, streaming=True) == "running"
+    assert header_connection_tone(
+        state=GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, connecting=True)
+    ) == "running"
+    assert header_connection_tone(
+        state=GuiState(connected=True, streaming=False, has_data=False, has_recording_path=False, starting=True)
+    ) == "running"
 
 
 def test_status_tone_color_maps_card_stripe_colors() -> None:

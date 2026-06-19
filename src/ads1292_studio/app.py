@@ -87,6 +87,12 @@ STATUS_TONE_STYLES = {
     "warning": "Warning.Status.TLabel",
     "neutral": "Neutral.Status.TLabel",
 }
+HEADER_CONNECTION_STYLES = {
+    "ready": "Ready.Connection.TLabel",
+    "running": "Running.Connection.TLabel",
+    "warning": "Warning.Connection.TLabel",
+    "neutral": "Neutral.Connection.TLabel",
+}
 STATUS_TONE_COLORS = {
     "ready": "#1E7A46",
     "running": "#2F6FED",
@@ -185,6 +191,10 @@ class ConnectResult:
 
 def status_tone_style(tone: str) -> str:
     return STATUS_TONE_STYLES.get(tone, STATUS_TONE_STYLES["neutral"])
+
+
+def header_connection_style(tone: str) -> str:
+    return HEADER_CONNECTION_STYLES.get(tone, HEADER_CONNECTION_STYLES["neutral"])
 
 
 def status_tone_color(tone: str) -> str:
@@ -365,6 +375,34 @@ def gui_status_overview(
         has_recording_path=has_recording_path,
     )
     return "\n".join(f"{card.label}: {card.value}" for card in cards)
+
+
+def header_connection_tone(
+    *,
+    state: GuiState | None = None,
+    connected: bool = False,
+    streaming: bool = False,
+    has_data: bool = False,
+    has_recording_path: bool = False,
+    loading_csv: bool = False,
+    connecting: bool = False,
+    starting: bool = False,
+) -> str:
+    current = _gui_state(
+        state=state,
+        connected=connected,
+        streaming=streaming,
+        has_data=has_data,
+        has_recording_path=has_recording_path,
+        loading_csv=loading_csv,
+        connecting=connecting,
+        starting=starting,
+    )
+    if current.connecting or current.starting or current.streaming or current.loading_csv:
+        return "running"
+    if current.connected:
+        return "ready"
+    return "warning"
 
 
 def gui_status_cards(
@@ -575,7 +613,12 @@ class App(tk.Tk):
         header.pack(side=tk.TOP, fill=tk.X)
         ttk.Label(header, text="ADS1292 Studio", style="AppTitle.TLabel").pack(side=tk.LEFT)
         ttk.Label(header, text="MOTAC ECG validation", style="AppSubtitle.TLabel").pack(side=tk.LEFT, padx=(14, 0))
-        ttk.Label(header, textvariable=self.connection_var, style="Connection.TLabel").pack(side=tk.RIGHT)
+        self.connection_label = ttk.Label(
+            header,
+            textvariable=self.connection_var,
+            style=header_connection_style("warning"),
+        )
+        self.connection_label.pack(side=tk.RIGHT)
 
         toolbar = ttk.Frame(self, padding=(14, 10), style="Toolbar.TFrame")
         toolbar.pack(side=tk.TOP, fill=tk.X)
@@ -827,6 +870,10 @@ class App(tk.Tk):
         style.configure("AppTitle.TLabel", background=tokens["panel"], foreground=tokens["ink"], font=("Aptos", 20, "bold"))
         style.configure("AppSubtitle.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12))
         style.configure("Connection.TLabel", background=tokens["panel"], foreground=tokens["accent"], font=("Aptos", 12, "bold"))
+        style.configure("Ready.Connection.TLabel", background=tokens["panel"], foreground=tokens["success"], font=("Aptos", 12, "bold"))
+        style.configure("Running.Connection.TLabel", background=tokens["panel"], foreground=tokens["accent"], font=("Aptos", 12, "bold"))
+        style.configure("Warning.Connection.TLabel", background=tokens["panel"], foreground=tokens["warning"], font=("Aptos", 12, "bold"))
+        style.configure("Neutral.Connection.TLabel", background=tokens["panel"], foreground=tokens["muted"], font=("Aptos", 12, "bold"))
         style.configure("ToolbarLabel.TLabel", background=tokens["panel_alt"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
         style.configure("ToolbarHint.TLabel", background=tokens["panel_alt"], foreground=tokens["muted"])
         style.configure("SectionHeading.TLabel", background=tokens["surface"], foreground=tokens["ink"], font=("Aptos", 12, "bold"))
@@ -1424,6 +1471,9 @@ class App(tk.Tk):
         )
         self.status_overview_var.set(
             gui_status_overview(state=state)
+        )
+        self.connection_label.configure(
+            style=header_connection_style(header_connection_tone(state=state))
         )
         for card in gui_status_cards(state=state):
             self.status_card_vars[card.label].set(card.value)
