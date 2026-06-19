@@ -1249,6 +1249,25 @@ def set_string_var_if_changed(variable: tk.StringVar, value: str) -> bool:
     return True
 
 
+def apply_status_card_if_changed(
+    *,
+    variable: tk.StringVar,
+    value_label: object,
+    stripe: object,
+    card: GuiStatusCard,
+) -> bool:
+    changed = set_string_var_if_changed(variable, card.value)
+    style = status_tone_style(card.tone)
+    if value_label.cget("style") != style:
+        value_label.configure(style=style)
+        changed = True
+    color = status_tone_color(card.tone)
+    if stripe.cget("bg") != color:
+        stripe.configure(bg=color)
+        changed = True
+    return changed
+
+
 def _mousewheel_units(event: tk.Event) -> int:
     if getattr(event, "num", None) == 4:
         return -1
@@ -3034,12 +3053,11 @@ class App(tk.Tk):
             style=header_connection_style(header_connection_tone(state=state))
         )
         for card in gui_status_cards(state=state):
-            self.status_card_vars[card.label].set(card.value)
-            self.status_card_value_labels[card.label].configure(
-                style=status_tone_style(card.tone)
-            )
-            self.status_card_tone_stripes[card.label].configure(
-                bg=status_tone_color(card.tone)
+            apply_status_card_if_changed(
+                variable=self.status_card_vars[card.label],
+                value_label=self.status_card_value_labels[card.label],
+                stripe=self.status_card_tone_stripes[card.label],
+                card=card,
             )
         if not state.has_data:
             self._apply_signal_quality_cards(gui_signal_quality_cards())
@@ -3048,12 +3066,11 @@ class App(tk.Tk):
 
     def _apply_signal_quality_cards(self, cards: tuple[GuiStatusCard, ...]) -> None:
         for card in cards:
-            self.signal_card_vars[card.label].set(card.value)
-            self.signal_card_value_labels[card.label].configure(
-                style=status_tone_style(card.tone)
-            )
-            self.signal_card_tone_stripes[card.label].configure(
-                bg=status_tone_color(card.tone)
+            apply_status_card_if_changed(
+                variable=self.signal_card_vars[card.label],
+                value_label=self.signal_card_value_labels[card.label],
+                stripe=self.signal_card_tone_stripes[card.label],
+                card=card,
             )
 
     def _metadata(self) -> SessionMetadata:

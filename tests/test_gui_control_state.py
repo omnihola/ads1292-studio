@@ -2,7 +2,9 @@ from ads1292_studio.app import (
     DEFAULT_ECG_INVERTED,
     DEFAULT_FILTER_ENABLED,
     GuiState,
+    GuiStatusCard,
     ads1292r_channel_label,
+    apply_status_card_if_changed,
     ads1292r_secondary_channel_label,
     build_live_quality_samples,
     compute_live_quality_result,
@@ -39,6 +41,19 @@ class _FakeStringVar:
     def set(self, value: str) -> None:
         self.value = value
         self.set_calls += 1
+
+
+class _FakeWidget:
+    def __init__(self, **values: str) -> None:
+        self.values = dict(values)
+        self.configure_calls = 0
+
+    def cget(self, key: str) -> str:
+        return self.values[key]
+
+    def configure(self, **values: str) -> None:
+        self.values = {**self.values, **values}
+        self.configure_calls += 1
 
 
 class _FakeFuture:
@@ -133,6 +148,47 @@ def test_set_string_var_if_changed_skips_redundant_tk_updates() -> None:
     assert set_string_var_if_changed(var, "running") is True
     assert var.value == "running"
     assert var.set_calls == 1
+
+
+def test_apply_status_card_if_changed_skips_redundant_tk_updates() -> None:
+    card = GuiStatusCard("Signal", "Good ECG/QRS", "ready")
+    variable = _FakeStringVar("Good ECG/QRS")
+    value_label = _FakeWidget(style=status_tone_style("ready"))
+    stripe = _FakeWidget(bg=status_tone_color("ready"))
+
+    changed = apply_status_card_if_changed(
+        variable=variable,
+        value_label=value_label,
+        stripe=stripe,
+        card=card,
+    )
+
+    assert changed is False
+    assert variable.set_calls == 0
+    assert value_label.configure_calls == 0
+    assert stripe.configure_calls == 0
+
+
+def test_apply_status_card_if_changed_updates_only_changed_fields() -> None:
+    card = GuiStatusCard("Signal", "Needs review", "warning")
+    variable = _FakeStringVar("Good ECG/QRS")
+    value_label = _FakeWidget(style=status_tone_style("ready"))
+    stripe = _FakeWidget(bg=status_tone_color("ready"))
+
+    changed = apply_status_card_if_changed(
+        variable=variable,
+        value_label=value_label,
+        stripe=stripe,
+        card=card,
+    )
+
+    assert changed is True
+    assert variable.value == "Needs review"
+    assert variable.set_calls == 1
+    assert value_label.values["style"] == status_tone_style("warning")
+    assert value_label.configure_calls == 1
+    assert stripe.values["bg"] == status_tone_color("warning")
+    assert stripe.configure_calls == 1
 
 
 def test_should_apply_control_state_skips_unchanged_state() -> None:
