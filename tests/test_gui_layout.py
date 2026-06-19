@@ -696,6 +696,7 @@ def test_plot_axis_style_keeps_signal_charts_quiet_and_readable() -> None:
         "title": "#172033",
         "grid_linewidth": 0.7,
         "grid_alpha": 0.45,
+        "axisbelow": True,
         "spine_linewidth": 0.8,
         "tick_label_size": 9,
         "label_size": 10,

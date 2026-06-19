@@ -461,6 +461,7 @@ PLOT_AXIS_STYLE = {
     "title": "#172033",
     "grid_linewidth": 0.7,
     "grid_alpha": 0.45,
+    "axisbelow": True,
     "spine_linewidth": 0.8,
     "tick_label_size": 9,
     "label_size": 10,
@@ -2399,6 +2400,7 @@ class App(tk.Tk):
         style = plot_axis_style()
         for ax in axes:
             ax.set_facecolor(style["face"])
+            ax.set_axisbelow(style["axisbelow"])
             ax.grid(True, color=style["grid"], linewidth=style["grid_linewidth"], alpha=style["grid_alpha"])
             ax.tick_params(colors=style["tick"], labelsize=style["tick_label_size"])
             ax.xaxis.label.set_size(style["label_size"])
