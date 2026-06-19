@@ -391,16 +391,16 @@ LIVE_AXIS_SPEC = {
 }
 EMPTY_PLOT_MESSAGES = {
     "live": (
-        "Connect an ADS1292 board, then press Start",
-        "CH1 respiration/contact context appears here",
-        "Lead-off status stays at 0 when contacts are good",
-    ),
-    "review": (
-        "Load a CSV to review recorded ECG",
-        "CH1 respiration/contact context appears here",
+        "CH2 ECG Lead I appears here",
+        "CH1 respiration appears here",
         "Lead-off/contact status appears here",
     ),
-    "pqrst": ("Load or record data to build the averaged PQRST beat",),
+    "review": (
+        "Load a CSV to review CH2 ECG",
+        "CH1 respiration appears here",
+        "Lead-off/contact status appears here",
+    ),
+    "pqrst": ("Load or record data to review the averaged PQRST beat",),
 }
 EMPTY_PLOT_STYLE = {
     "text_color": "#516070",

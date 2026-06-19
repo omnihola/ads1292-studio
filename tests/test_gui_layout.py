@@ -671,12 +671,16 @@ def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
     messages = empty_plot_messages()
 
     assert messages["live"] == (
-        "Connect an ADS1292 board, then press Start",
-        "CH1 respiration/contact context appears here",
-        "Lead-off status stays at 0 when contacts are good",
+        "CH2 ECG Lead I appears here",
+        "CH1 respiration appears here",
+        "Lead-off/contact status appears here",
     )
-    assert messages["review"][0] == "Load a CSV to review recorded ECG"
-    assert messages["pqrst"] == ("Load or record data to build the averaged PQRST beat",)
+    assert messages["review"] == (
+        "Load a CSV to review CH2 ECG",
+        "CH1 respiration appears here",
+        "Lead-off/contact status appears here",
+    )
+    assert messages["pqrst"] == ("Load or record data to review the averaged PQRST beat",)
 
 
 def test_empty_plot_style_uses_muted_callouts() -> None:
