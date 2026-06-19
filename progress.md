@@ -328,6 +328,24 @@
   - `tests/test_gui_quality.py`
   - `README.md`
 
+### Phase 21: GUI Quality Gate Presets & Sidecars
+- **Status:** complete
+- Actions taken:
+  - Added normalized quality gate JSON template/read/write helpers for `.quality-gate.json` sidecars.
+  - Added GUI controls for minimum duration, contact percentage, R peaks, HR range, QRS clarity, and optional artifact limits.
+  - Saved the current GUI quality gate beside new recordings and loaded it before rendering existing CSV files.
+  - Reused the GUI-selected gate for live quality text, offline quality text, and report export.
+  - Included quality gate sidecars in session packages and wrote normalized gate settings into package manifest metrics.
+  - Verified with a real ADS1292 CSV package smoke test that the package manifest and report include the quality gate, protocol segment gate, CH2 source, and `Good ECG/QRS` quality label.
+- Files created/modified:
+  - `src/ads1292_studio/quality_gate.py`
+  - `src/ads1292_studio/session_package.py`
+  - `src/ads1292_studio/app.py`
+  - `tests/test_quality_gate.py`
+  - `tests/test_session_package.py`
+  - `tests/test_gui_quality_gate_config.py`
+  - `README.md`
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -422,6 +440,12 @@
 | GUI quality full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 49 passed | Pass |
 | GUI quality syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/gui_quality.py src/ads1292_studio/app.py` | No syntax errors | Passed | Pass |
 | GUI quality real CSV smoke | `PYTHONPATH=src conda run -n sensor python -c "... build_quality_text(...)"` | Real CSV quality text includes segment gate | `Gate Pass ... Segment Gate Pass` | Pass |
+| Quality gate sidecar TDD red check | `conda run -n sensor python -m pytest tests/test_quality_gate.py tests/test_session_package.py -q` before implementation | Missing quality gate sidecar helpers | Import failures for JSON helper functions | Pass |
+| GUI quality gate config red check | `conda run -n sensor python -m pytest tests/test_gui_quality_gate_config.py -q` before implementation | Missing GUI quality gate parser | Import failure for `_quality_gate_from_values` | Pass |
+| Quality gate sidecar tests | `conda run -n sensor python -m pytest tests/test_gui_quality_gate_config.py tests/test_quality_gate.py tests/test_session_package.py -q` | GUI/gate/package tests pass | 10 passed | Pass |
+| Quality gate full tests | `conda run -n sensor python -m pytest -q` | All tests pass | 53 passed | Pass |
+| Quality gate syntax compile | `PYTHONPATH=src conda run -n sensor python -m py_compile src/ads1292_studio/app.py src/ads1292_studio/quality_gate.py src/ads1292_studio/session_package.py` | No syntax errors | Passed | Pass |
+| Quality gate real package smoke | `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package reports/quality-gate-package-smoke/package-source.csv --out packages/quality-gate-smoke --title ADS1292-Quality-Gate-Package-Smoke` | Manifest and report include quality gate sidecar/settings and real CSV quality | grep found `quality_gate`, `"role": "quality_gate"`, `max_noise_rms_counts`, `Quality Gate`, `Protocol Segment Gate`, `CH2`, and `Good ECG/QRS` | Pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -448,12 +472,14 @@
 | 2026-06-18 | `dataclasses.asdict()` omitted computed `label`/`status` properties from segment gate manifest output | 1 | Added an explicit manifest serializer for segment gate results. |
 | 2026-06-18 | GUI quality text did not expose protocol segment gate results | 1 | Added a testable GUI quality text builder and wired it into live/offline review. |
 | 2026-06-18 | Live GUI could mark future protocol steps as failed before enough data was collected | 1 | Added live protocol readiness gating before showing Segment Gate in the sidebar. |
+| 2026-06-18 | Quality gate JSON helper imports were missing during TDD red check | 1 | Added normalized sidecar template/read/write helpers and package support. |
+| 2026-06-18 | GUI quality gate parser helper was missing during TDD red check | 1 | Added explicit parser/formatter helpers for GUI gate fields. |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 20 complete; ready to commit and push GUI protocol segment gate visibility iteration. |
+| Where am I? | Phase 21 complete; ready to commit and push GUI quality gate sidecar iteration. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. |
-| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, and GUI segment gate visibility. |
+| What have I done? | Built, tested, locally committed, and pushed V1 app; added report export, metadata audit trail, batch comparison, event markers, calibration/uV display, session packages, package verification, quality gates, protocol sidecars, batch group statistics, artifact metrics, artifact threshold gates, protocol segment metrics, protocol segment quality gates, GUI segment gate visibility, and GUI quality gate sidecars. |

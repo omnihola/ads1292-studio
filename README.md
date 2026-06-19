@@ -86,6 +86,9 @@ by electrode label.
 - GUI quality text shows protocol segment gate status for offline protocol
   recordings, and live recordings wait until the protocol window is covered
   before evaluating segment gates.
+- GUI-configurable quality gate thresholds can be saved and loaded as
+  `.quality-gate.json` sidecars; live/offline quality text, reports, and
+  session packages use the same pass/fail settings.
 - Testable signal-analysis core independent of live hardware.
 
 ## Safety

@@ -12,6 +12,7 @@ from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.events import read_events_json
 from ads1292_studio.metadata import read_metadata_json
 from ads1292_studio.protocol import read_protocol_json
+from ads1292_studio.quality_gate import quality_gate_template, read_quality_gate_json
 from ads1292_studio.report import export_review_report
 
 
@@ -49,11 +50,13 @@ def export_session_package(
     events = tuple()
     calibration = calibration_template()
     protocol = None
+    quality_gate = quality_gate_template()
     sidecars = (
         ("metadata", source_csv.with_suffix(".json")),
         ("events", source_csv.with_suffix(".events.json")),
         ("calibration", source_csv.with_suffix(".calibration.json")),
         ("protocol", source_csv.with_suffix(".protocol.json")),
+        ("quality_gate", source_csv.with_suffix(".quality-gate.json")),
     )
     for role, sidecar in sidecars:
         if not sidecar.exists():
@@ -69,6 +72,8 @@ def export_session_package(
             calibration = read_calibration_json(copied)
         elif role == "protocol":
             protocol = read_protocol_json(copied)
+        elif role == "quality_gate":
+            quality_gate = read_quality_gate_json(copied)
 
     recording = read_recording_csv(copied_csv)
     report_dir = package_dir / "report"
@@ -81,6 +86,7 @@ def export_session_package(
         metadata=metadata,
         events=events,
         calibration=calibration,
+        quality_gate=quality_gate,
         protocol=protocol,
     )
     files.extend(
@@ -106,6 +112,7 @@ def export_session_package(
             "baseline_drift_counts": report.metrics.baseline_drift_counts,
             "noise_rms_counts": report.metrics.noise_rms_counts,
             "peak_to_peak_counts": report.metrics.peak_to_peak_counts,
+            "quality_gate": asdict(quality_gate.normalized()),
             "segment_metrics": tuple(asdict(segment) for segment in report.segment_metrics),
             "segment_gate": _segment_gate_entry(report.segment_gate_result),
         },

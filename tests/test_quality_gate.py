@@ -1,5 +1,13 @@
 from ads1292_studio.quality import QualityMetrics
-from ads1292_studio.quality_gate import QualityGate, evaluate_quality_gate
+from pathlib import Path
+
+from ads1292_studio.quality_gate import (
+    QualityGate,
+    evaluate_quality_gate,
+    quality_gate_template,
+    read_quality_gate_json,
+    write_quality_gate_json,
+)
 
 
 def _metrics(**overrides) -> QualityMetrics:
@@ -57,3 +65,27 @@ def test_quality_gate_fails_artifact_thresholds() -> None:
     assert "baseline drift 250.0 counts > 100.0 counts" in result.failures
     assert "noise RMS 60.0 counts > 25.0 counts" in result.failures
     assert "peak-to-peak 5000.0 counts > 2500.0 counts" in result.failures
+
+
+def test_quality_gate_json_round_trip_preserves_optional_artifact_limits(tmp_path: Path) -> None:
+    path = tmp_path / "gate.quality-gate.json"
+    gate = QualityGate(
+        min_duration_seconds=30.0,
+        min_contact_ok_percent=98.0,
+        min_r_peaks=20,
+        min_hr_bpm=45.0,
+        max_hr_bpm=150.0,
+        require_qrs_clear=False,
+        max_baseline_drift_counts=500.0,
+        max_noise_rms_counts=1200.0,
+        max_peak_to_peak_counts=None,
+    )
+
+    write_quality_gate_json(path, gate)
+    loaded = read_quality_gate_json(path)
+
+    assert loaded == gate
+
+
+def test_quality_gate_template_is_default_gate() -> None:
+    assert quality_gate_template() == QualityGate()

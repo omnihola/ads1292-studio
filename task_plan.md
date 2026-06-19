@@ -178,6 +178,15 @@ Phase 20
 - [x] Add tests and real CSV GUI-quality smoke test.
 - **Status:** complete
 
+### Phase 21: GUI Quality Gate Presets & Sidecars
+- [x] Add quality gate JSON template/read/write helpers.
+- [x] Add GUI fields for duration, contact, R peaks, HR, QRS clarity, and artifact thresholds.
+- [x] Save and load `.quality-gate.json` sidecars with recordings and loaded CSVs.
+- [x] Use the GUI quality gate for live/offline quality text and report export.
+- [x] Include quality gate sidecars in session packages and manifest metrics.
+- [x] Add tests and real CSV package smoke test.
+- **Status:** complete
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? Auto-detect by QRS-like score, with manual CH1/CH2 override. The 2026-06-18 16:49 run shows ECG-like QRS mainly on CH2.
@@ -210,6 +219,7 @@ Phase 20
 | Fix report segment analysis to the whole-record ECG source | Segment-to-segment comparisons are only meaningful when baseline, motion, and recovery use the same channel. |
 | Add protocol segment quality gates | Commercial-style validation needs explicit pass/fail calls for each protocol stage, not only descriptive segment metrics. |
 | Show segment gate in GUI quality text | A commercial-style desktop app should surface protocol pass/fail without requiring report export or CLI QC. |
+| Add GUI quality gate sidecars | Pass/fail standards must be saved with the recording so a later report/package uses the same validation thresholds. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -227,6 +237,8 @@ Phase 20
 | Package verification function was missing | 1 | Added TDD tests, `verify_session_package`, CLI `verify-package`, and GUI Verify Package. |
 | Initial quality gate test used short synthetic data | 1 | Made the test threshold explicit and added CLI `--allow-unclear-qrs` for debug/synthetic data. |
 | Temporary protocol sidecar was copied outside the subfolder during smoke setup | 1 | Removed the file immediately and reran package smoke using only ignored files inside `ads1292-studio/`. |
+| Quality gate sidecar helpers were missing | 1 | Added normalized `QualityGate` JSON read/write/template helpers and package integration. |
+| GUI quality gate parser was missing | 1 | Added explicit GUI value parsing/formatting helpers for required and optional threshold fields. |
 
 ## Notes
 - Do not touch unrelated project files except existing `tools/ads1292_mac` as read-only reference.

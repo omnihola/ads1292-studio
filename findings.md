@@ -46,6 +46,7 @@
 | Keep report segment metrics on the whole-record ECG source | A report must not compare baseline CH2 against motion CH1 just because per-segment Auto changed channels. |
 | Add protocol segment quality gates | Reports, manifests, and CLI QC should name the failed protocol stage so motion/recovery problems are not hidden inside whole-record averages. |
 | Show segment gate in GUI quality text | Users reviewing a loaded protocol CSV need the same segment gate status in the app sidebar, not only in exported artifacts. |
+| Add quality gate sidecars | GUI-selected validation thresholds must travel with recordings so live review, exported reports, and packages use the same pass/fail standard. |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -66,6 +67,7 @@
 | Protocol sidecar smoke setup briefly touched the parent `record/` folder | Removed the temporary file and reran smoke using ignored files inside `ads1292-studio/reports/`. |
 | Per-segment Auto source selected CH1 for the motion segment in real smoke | Fixed report segment analysis to reuse the whole-record ECG source, so all protocol stages compare the same channel. |
 | Loaded CSV rendered before protocol/calibration sidecars were loaded | Load sidecars before `_show_recording()` so GUI review uses the recording's saved protocol and calibration state. |
+| GUI quality gate settings were not persisted | Added `.quality-gate.json` sidecars, GUI save/load wiring, report export wiring, and package manifest metrics. |
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
@@ -92,6 +94,8 @@
 - Protocol segment metrics are generated automatically when `--protocol` is supplied to `report` or when a `.protocol.json` sidecar is included in a session package.
 - Protocol segment gate command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc <csv> --protocol reports/protocol-template.json`
 - GUI quality text builder smoke command: `PYTHONPATH=src conda run -n sensor python -c "..."` can call `ads1292_studio.gui_quality.build_quality_text(...)` against a real CSV/protocol pair.
+- Quality gate sidecars are saved as `<recording>.quality-gate.json` and are copied into session packages with manifest role `quality_gate`.
+- Quality gate package smoke command: `PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package reports/quality-gate-package-smoke/package-source.csv --out packages/quality-gate-smoke --title ADS1292-Quality-Gate-Package-Smoke`
 
 ## Visual/Browser Findings
 - The user-provided ECG reference image shows repeated sharp R/QRS spikes around a slowly varying baseline.

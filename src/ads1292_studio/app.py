@@ -24,6 +24,7 @@ from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.plots import robust_ylim
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
+from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
 from ads1292_studio.report import export_review_report
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import (
@@ -129,6 +130,15 @@ class App(tk.Tk):
         self.calibration_label_var = tk.StringVar(value="ADS1292 default")
         self.vref_mv_var = tk.StringVar(value="2420")
         self.pga_gain_var = tk.StringVar(value="6")
+        self.gate_min_duration_var = tk.StringVar(value="8")
+        self.gate_min_contact_var = tk.StringVar(value="95")
+        self.gate_min_r_peaks_var = tk.StringVar(value="5")
+        self.gate_min_hr_var = tk.StringVar(value="35")
+        self.gate_max_hr_var = tk.StringVar(value="180")
+        self.gate_require_qrs_var = tk.BooleanVar(value=True)
+        self.gate_max_drift_var = tk.StringVar(value="")
+        self.gate_max_noise_var = tk.StringVar(value="")
+        self.gate_max_ptp_var = tk.StringVar(value="")
         protocol = protocol_template()
         self.protocol_name_var = tk.StringVar(value=protocol.name)
         self.protocol_objective_var = tk.StringVar(value=protocol.objective)
@@ -158,6 +168,16 @@ class App(tk.Tk):
         self._metadata_entry(side, "Label", self.calibration_label_var)
         self._metadata_entry(side, "Vref mV", self.vref_mv_var)
         self._metadata_entry(side, "PGA gain", self.pga_gain_var)
+        ttk.Label(side, text="Quality Gate", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
+        self._metadata_entry(side, "Min duration s", self.gate_min_duration_var)
+        self._metadata_entry(side, "Min contact %", self.gate_min_contact_var)
+        self._metadata_entry(side, "Min R peaks", self.gate_min_r_peaks_var)
+        self._metadata_entry(side, "HR min bpm", self.gate_min_hr_var)
+        self._metadata_entry(side, "HR max bpm", self.gate_max_hr_var)
+        ttk.Checkbutton(side, text="Require QRS clear", variable=self.gate_require_qrs_var).pack(anchor=tk.W)
+        self._metadata_entry(side, "Max drift counts", self.gate_max_drift_var)
+        self._metadata_entry(side, "Max noise RMS", self.gate_max_noise_var)
+        self._metadata_entry(side, "Max peak-to-peak", self.gate_max_ptp_var)
         ttk.Label(side, text="Protocol", font=("", 12, "bold")).pack(anchor=tk.W, pady=(14, 2))
         self._metadata_entry(side, "Name", self.protocol_name_var)
         self._metadata_entry(side, "Objective", self.protocol_objective_var)
@@ -274,6 +294,7 @@ class App(tk.Tk):
             write_events_json(self._events_path(csv_path), self.event_markers)
             write_calibration_json(self._calibration_path(csv_path), self._calibration())
             write_protocol_json(self._protocol_path(csv_path), self._protocol())
+            write_quality_gate_json(self._quality_gate_path(csv_path), self._quality_gate())
             self.path_var.set(f"CSV: {csv_path}")
         self.worker.start(port, csv_path)
         self.start_button.configure(state=tk.DISABLED)
@@ -298,6 +319,7 @@ class App(tk.Tk):
             self._load_event_sidecar(Path(path))
             self._load_calibration_sidecar(Path(path))
             self._load_protocol_sidecar(Path(path))
+            self._load_quality_gate_sidecar(Path(path))
             self._show_recording(recording.samples)
             self.path_var.set(f"CSV: {path}")
             self._log(f"Loaded {path}")
@@ -346,6 +368,7 @@ class App(tk.Tk):
                 metadata=self._metadata(),
                 events=tuple(self.event_markers),
                 calibration=self._calibration(),
+                quality_gate=self._quality_gate(),
                 protocol=self._protocol(),
             )
             self._log(f"Exported report: {export.html_path}")
@@ -447,6 +470,9 @@ class App(tk.Tk):
     def _protocol_path(self, csv_path: Path) -> Path:
         return csv_path.with_suffix(".protocol.json")
 
+    def _quality_gate_path(self, csv_path: Path) -> Path:
+        return csv_path.with_suffix(".quality-gate.json")
+
     def _load_event_sidecar(self, csv_path: Path) -> None:
         path = self._events_path(csv_path)
         if not path.exists():
@@ -482,6 +508,21 @@ class App(tk.Tk):
             acceptance_notes=self.protocol_acceptance_var.get(),
         ).normalized()
 
+    def _quality_gate(self) -> QualityGate:
+        return _quality_gate_from_values(
+            {
+                "min_duration_seconds": self.gate_min_duration_var.get(),
+                "min_contact_ok_percent": self.gate_min_contact_var.get(),
+                "min_r_peaks": self.gate_min_r_peaks_var.get(),
+                "min_hr_bpm": self.gate_min_hr_var.get(),
+                "max_hr_bpm": self.gate_max_hr_var.get(),
+                "require_qrs_clear": self.gate_require_qrs_var.get(),
+                "max_baseline_drift_counts": self.gate_max_drift_var.get(),
+                "max_noise_rms_counts": self.gate_max_noise_var.get(),
+                "max_peak_to_peak_counts": self.gate_max_ptp_var.get(),
+            }
+        )
+
     def _load_calibration_sidecar(self, csv_path: Path) -> None:
         path = self._calibration_path(csv_path)
         if not path.exists():
@@ -503,6 +544,22 @@ class App(tk.Tk):
         self.protocol_acceptance_var.set(protocol.acceptance_notes)
         self._log(f"Loaded protocol: {path}")
 
+    def _load_quality_gate_sidecar(self, csv_path: Path) -> None:
+        path = self._quality_gate_path(csv_path)
+        if not path.exists():
+            return
+        values = _quality_gate_to_values(read_quality_gate_json(path))
+        self.gate_min_duration_var.set(str(values["min_duration_seconds"]))
+        self.gate_min_contact_var.set(str(values["min_contact_ok_percent"]))
+        self.gate_min_r_peaks_var.set(str(values["min_r_peaks"]))
+        self.gate_min_hr_var.set(str(values["min_hr_bpm"]))
+        self.gate_max_hr_var.set(str(values["max_hr_bpm"]))
+        self.gate_require_qrs_var.set(bool(values["require_qrs_clear"]))
+        self.gate_max_drift_var.set(str(values["max_baseline_drift_counts"]))
+        self.gate_max_noise_var.set(str(values["max_noise_rms_counts"]))
+        self.gate_max_ptp_var.set(str(values["max_peak_to_peak_counts"]))
+        self._log(f"Loaded quality gate: {path}")
+
     def _write_current_sidecars(self) -> None:
         if self.recording_path is None:
             return
@@ -510,6 +567,7 @@ class App(tk.Tk):
         write_events_json(self._events_path(self.recording_path), self.event_markers)
         write_calibration_json(self._calibration_path(self.recording_path), self._calibration())
         write_protocol_json(self._protocol_path(self.recording_path), self._protocol())
+        write_quality_gate_json(self._quality_gate_path(self.recording_path), self._quality_gate())
 
     def _tick(self) -> None:
         latest = None
@@ -649,6 +707,7 @@ class App(tk.Tk):
             valid_rr=valid_rr,
             protocol=protocol if should_evaluate_protocol else None,
             sample_rate_hz=SAMPLE_RATE_HZ,
+            gate=self._quality_gate(),
         )
 
     def _current_samples(self) -> tuple[StreamSample, ...]:
@@ -683,6 +742,66 @@ def _float_from_var(variable: tk.StringVar, fallback: float) -> float:
         return float(variable.get())
     except ValueError:
         return fallback
+
+
+def _quality_gate_from_values(values: dict[str, object]) -> QualityGate:
+    return QualityGate(
+        min_duration_seconds=_float_value(values.get("min_duration_seconds"), 8.0),
+        min_contact_ok_percent=_float_value(values.get("min_contact_ok_percent"), 95.0),
+        min_r_peaks=_int_value(values.get("min_r_peaks"), 5),
+        min_hr_bpm=_float_value(values.get("min_hr_bpm"), 35.0),
+        max_hr_bpm=_float_value(values.get("max_hr_bpm"), 180.0),
+        require_qrs_clear=bool(values.get("require_qrs_clear", True)),
+        max_baseline_drift_counts=_optional_float_value(values.get("max_baseline_drift_counts")),
+        max_noise_rms_counts=_optional_float_value(values.get("max_noise_rms_counts")),
+        max_peak_to_peak_counts=_optional_float_value(values.get("max_peak_to_peak_counts")),
+    ).normalized()
+
+
+def _quality_gate_to_values(gate: QualityGate) -> dict[str, object]:
+    normalized = gate.normalized()
+    return {
+        "min_duration_seconds": _format_number(normalized.min_duration_seconds),
+        "min_contact_ok_percent": _format_number(normalized.min_contact_ok_percent),
+        "min_r_peaks": str(normalized.min_r_peaks),
+        "min_hr_bpm": _format_number(normalized.min_hr_bpm),
+        "max_hr_bpm": _format_number(normalized.max_hr_bpm),
+        "require_qrs_clear": normalized.require_qrs_clear,
+        "max_baseline_drift_counts": _format_optional_number(normalized.max_baseline_drift_counts),
+        "max_noise_rms_counts": _format_optional_number(normalized.max_noise_rms_counts),
+        "max_peak_to_peak_counts": _format_optional_number(normalized.max_peak_to_peak_counts),
+    }
+
+
+def _float_value(value: object, fallback: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _int_value(value: object, fallback: int) -> int:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _optional_float_value(value: object) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _format_number(value: float) -> str:
+    return f"{value:g}"
+
+
+def _format_optional_number(value: float | None) -> str:
+    return "" if value is None else _format_number(value)
 
 
 def _format_protocol_steps(steps: tuple[ProtocolStep, ...]) -> str:

@@ -8,6 +8,7 @@ from ads1292_studio.events import EventMarker, write_events_json
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, write_protocol_json
+from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
 from ads1292_studio.session_package import export_session_package, verify_session_package
 
 
@@ -38,6 +39,10 @@ def _write_session_files(path: Path) -> None:
             steps=(ProtocolStep(0.0, 1.0, "baseline", "Sit still."),),
         ),
     )
+    write_quality_gate_json(
+        path.with_suffix(".quality-gate.json"),
+        QualityGate(min_duration_seconds=0.5, min_r_peaks=1, require_qrs_clear=False),
+    )
 
 
 def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Path) -> None:
@@ -58,6 +63,7 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
         "events",
         "calibration",
         "protocol",
+        "quality_gate",
         "report_html",
         "report_ecg_png",
         "report_pqrst_png",
@@ -70,6 +76,8 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert manifest["metrics"]["segment_metrics"][0]["sample_count"] > 0
     assert manifest["metrics"]["segment_gate"]["label"] in {"Pass", "Fail"}
     assert manifest["metrics"]["segment_gate"]["segment_results"][0]["label"] == "baseline"
+    assert manifest["metrics"]["quality_gate"]["min_duration_seconds"] == 0.5
+    assert manifest["metrics"]["quality_gate"]["require_qrs_clear"] is False
     raw_entry = next(file_info for file_info in manifest["files"] if file_info["role"] == "raw_csv")
     copied_csv = export.package_dir / raw_entry["path"]
     expected_sha = hashlib.sha256(copied_csv.read_bytes()).hexdigest()
