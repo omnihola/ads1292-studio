@@ -138,7 +138,7 @@ def gui_control_states(
     return {
         "Port": tk.DISABLED if current.streaming else tk.NORMAL,
         "Refresh": tk.NORMAL,
-        "Connect": tk.NORMAL if not current.connected and not current.streaming else tk.DISABLED,
+        "Connect": tk.NORMAL if current.port_available and not current.connected and not current.streaming else tk.DISABLED,
         "Start": tk.NORMAL if current.connected and not current.streaming else tk.DISABLED,
         "Stop": tk.NORMAL if current.streaming else tk.DISABLED,
         "Save CSV": tk.NORMAL if not current.streaming else tk.DISABLED,
@@ -238,18 +238,18 @@ def gui_workflow_hint(
     if current.starting:
         return "Starting stream: waiting for the device to confirm."
     if current.loading_csv:
-        return "Loading CSV: keep the window open; review plots will update when parsing finishes."
+        return "Loading CSV: review updates when parsing finishes."
     if current.streaming:
-        return "Streaming: monitor signal quality, add events if needed, then press Stop."
+        return "Streaming: monitor quality, then press Stop."
     if current.package_ready:
-        return "Data ready: export a report or package the recording with its sidecars."
+        return "Data ready: export report or package."
     if current.has_data:
-        return "Data loaded: export a report; package export needs a saved CSV path."
+        return "Data loaded: export report; package needs saved CSV."
     if current.connected:
-        return "Next: press Start to begin acquisition, or load a CSV for offline review."
+        return "Press Start, or load CSV for review."
     if not current.port_available:
-        return "No ADS1292 port detected: plug in the board, press Refresh, or load an existing CSV."
-    return "Next: select an ADS1292 port and press Connect, or load an existing CSV."
+        return "Plug in board, press Refresh, or load CSV."
+    return "Select a port, press Connect, or load CSV."
 
 
 def gui_status_overview(

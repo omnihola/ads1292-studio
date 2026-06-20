@@ -828,7 +828,7 @@ def test_gui_control_states_start_with_safe_disabled_defaults() -> None:
     assert states["Session Index"] == "normal"
 
 
-def test_gui_control_states_keep_connect_available_for_manual_port_entry() -> None:
+def test_gui_control_states_disable_connect_until_a_port_is_selected() -> None:
     state = GuiState(
         connected=False,
         streaming=False,
@@ -840,9 +840,26 @@ def test_gui_control_states_keep_connect_available_for_manual_port_entry() -> No
     states = gui_control_states(state=state)
 
     assert states["Refresh"] == "normal"
-    assert states["Connect"] == "normal"
+    assert states["Connect"] == "disabled"
     assert states["Start"] == "disabled"
     assert states["Load CSV"] == "normal"
+
+
+def test_gui_control_states_enable_connect_for_manual_port_entry() -> None:
+    state = GuiState(
+        connected=False,
+        streaming=False,
+        has_data=False,
+        has_recording_path=False,
+        has_port=False,
+        selected_port="/dev/cu.usbmodem214301",
+    )
+
+    states = gui_control_states(state=state)
+
+    assert states["Connect"] == "normal"
+    assert states["Start"] == "disabled"
+    assert states["Port"] == "normal"
 
 
 def test_gui_control_cursors_track_enabled_button_states() -> None:
@@ -997,7 +1014,7 @@ def test_gui_control_states_disable_conflicting_actions_while_loading_csv() -> N
     assert states["Load CSV"] == "disabled"
     assert states["Start"] == "disabled"
     assert states["Export Report"] == "disabled"
-    assert gui_workflow_hint(state=state) == "Loading CSV: keep the window open; review plots will update when parsing finishes."
+    assert gui_workflow_hint(state=state) == "Loading CSV: review updates when parsing finishes."
 
 
 def test_gui_state_busy_is_true_for_connecting_starting_or_loading() -> None:
@@ -1165,7 +1182,7 @@ def test_gui_workflow_hint_guides_disconnected_state() -> None:
         has_recording_path=False,
     )
 
-    assert hint == "Next: select an ADS1292 port and press Connect, or load an existing CSV."
+    assert hint == "Select a port, press Connect, or load CSV."
 
 
 def test_gui_workflow_hint_guides_missing_port_state() -> None:
@@ -1179,7 +1196,7 @@ def test_gui_workflow_hint_guides_missing_port_state() -> None:
         )
     )
 
-    assert hint == "No ADS1292 port detected: plug in the board, press Refresh, or load an existing CSV."
+    assert hint == "Plug in board, press Refresh, or load CSV."
 
 
 def test_gui_workflow_hint_treats_manual_port_text_as_available() -> None:
@@ -1194,7 +1211,7 @@ def test_gui_workflow_hint_treats_manual_port_text_as_available() -> None:
         )
     )
 
-    assert hint == "Next: select an ADS1292 port and press Connect, or load an existing CSV."
+    assert hint == "Select a port, press Connect, or load CSV."
 
 
 def test_gui_workflow_hint_guides_ready_to_start_state() -> None:
@@ -1205,7 +1222,7 @@ def test_gui_workflow_hint_guides_ready_to_start_state() -> None:
         has_recording_path=False,
     )
 
-    assert hint == "Next: press Start to begin acquisition, or load a CSV for offline review."
+    assert hint == "Press Start, or load CSV for review."
 
 
 def test_gui_workflow_hint_guides_streaming_state() -> None:
@@ -1216,7 +1233,7 @@ def test_gui_workflow_hint_guides_streaming_state() -> None:
         has_recording_path=True,
     )
 
-    assert hint == "Streaming: monitor signal quality, add events if needed, then press Stop."
+    assert hint == "Streaming: monitor quality, then press Stop."
 
 
 def test_gui_workflow_hint_guides_unsaved_loaded_data_state() -> None:
@@ -1227,7 +1244,7 @@ def test_gui_workflow_hint_guides_unsaved_loaded_data_state() -> None:
         has_recording_path=False,
     )
 
-    assert hint == "Data loaded: export a report; package export needs a saved CSV path."
+    assert hint == "Data loaded: export report; package needs saved CSV."
 
 
 def test_gui_workflow_hint_guides_packagable_data_state() -> None:
@@ -1238,7 +1255,7 @@ def test_gui_workflow_hint_guides_packagable_data_state() -> None:
         has_recording_path=True,
     )
 
-    assert hint == "Data ready: export a report or package the recording with its sidecars."
+    assert hint == "Data ready: export report or package."
 
 
 def test_gui_status_overview_summarizes_empty_disconnected_state() -> None:
@@ -1475,7 +1492,7 @@ def test_gui_state_snapshot_drives_all_status_helpers() -> None:
     )
 
     assert gui_control_states(state=state)["Stop"] == "normal"
-    assert gui_workflow_hint(state=state) == "Streaming: monitor signal quality, add events if needed, then press Stop."
+    assert gui_workflow_hint(state=state) == "Streaming: monitor quality, then press Stop."
     assert gui_status_overview(state=state) == (
         "Connection: connected\n"
         "Port: none\n"
