@@ -107,14 +107,11 @@ from ads1292_studio.gui_workers import (
 )
 from ads1292_studio.gui_plots import (
     apply_live_render_frame,
-    apply_ecg_paper_grid,
+    apply_review_render_frame,
     build_live_plot_panel,
     build_log_panel,
     build_pqrst_plot_panel,
     build_review_plot_panel,
-    draw_calibration_pulse,
-    draw_pqrst_review,
-    restore_data_axis_chrome,
     set_signal_axis_title,
 )
 from ads1292_studio.gui_layout import (
@@ -1286,39 +1283,19 @@ class App(tk.Tk):
 
     def _show_review_frame(self, samples: tuple[StreamSample, ...], frame: ReviewRenderFrame) -> None:
         self._clear_empty_plot_state()
-        restore_data_axis_chrome((self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
         self._clear_signal_buffers()
         self.sample_index = 0
         display_settings = self._display_settings()
         ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
-        self.review_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
-        self.review_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
-        self.review_status_line.set_data(frame.plot_status_x, frame.plot_status)
-        self.review_peak_line.set_data(frame.peak_x, frame.peak_y)
-        polarity = ", inverted" if DEFAULT_ECG_INVERTED else ""
-        set_signal_axis_title(
-            self.ax_review_ecg,
-            f"Offline ECG: {ecg_label} | {frame.mode}{polarity} | "
-            f"HR {frame.review.heart_rate.median_bpm:.1f} bpm | peaks {len(frame.review.peaks)}",
+        apply_review_render_frame(
+            self,
+            frame,
+            display_settings=display_settings,
+            ecg_label=ecg_label,
+            resp_label=resp_label,
+            contact_label=contact_label,
+            ecg_inverted=DEFAULT_ECG_INVERTED,
         )
-        set_signal_axis_title(self.ax_review_resp, resp_label)
-        set_signal_axis_title(self.ax_review_status, contact_label)
-        set_axis_xlim_if_changed(self.ax_review_ecg, (0, frame.x_right))
-        set_axis_ylim_if_changed(self.ax_review_ecg, frame.ecg_ylim)
-        set_axis_xlim_if_changed(self.ax_review_resp, (0, frame.x_right))
-        set_axis_ylim_if_changed(self.ax_review_resp, frame.resp_ylim)
-        set_axis_xlim_if_changed(self.ax_review_status, (0, frame.x_right))
-        set_axis_ylim_if_changed(self.ax_review_status, frame.status_ylim)
-        self.ax_review_status.set_xlabel("Time (s)")
-        apply_ecg_paper_grid(self.ax_review_ecg, display_settings, self.ecg_paper_grid_cache)
-        draw_calibration_pulse(
-            self.ax_review_ecg,
-            self.review_calibration_artists,
-            display_settings,
-            self.calibration_pulse_cache,
-        )
-        self.review_canvas.draw_idle()
-        draw_pqrst_review(self.ax_pqrst, self.pqrst_canvas, frame.pqrst)
         set_string_var_if_changed(
             self.metrics_var,
             f"samples {frame.sample_count} | duration {frame.duration_seconds:.1f} s | source {ecg_label}",

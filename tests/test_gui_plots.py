@@ -6,6 +6,7 @@ from matplotlib.figure import Figure
 from ads1292_studio.display import EcgDisplaySettings
 from ads1292_studio.gui_plots import (
     apply_live_render_frame,
+    apply_review_render_frame,
     calibration_pulse_needs_update,
     draw_calibration_pulse,
     draw_pqrst_review,
@@ -194,3 +195,80 @@ def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
     assert ax_ecg.get_xlim() == (1.0, 9.0)
     assert ax_status.get_ylim() == (-0.5, 2.5)
     assert canvas.draw_idle_calls == 1
+
+
+def test_apply_review_render_frame_updates_review_lines_axes_and_pqrst() -> None:
+    fig = Figure()
+    ax_ecg = fig.add_subplot(311)
+    ax_resp = fig.add_subplot(312)
+    ax_status = fig.add_subplot(313)
+    ax_pqrst = Figure().add_subplot(111)
+    ecg_line, = ax_ecg.plot([], [])
+    peak_line, = ax_ecg.plot([], [])
+    resp_line, = ax_resp.plot([], [])
+    status_line, = ax_status.plot([], [])
+    review_canvas = FakeCanvas()
+    pqrst_canvas = FakeCanvas()
+    app = SimpleNamespace(
+        review_ecg_line=ecg_line,
+        review_peak_line=peak_line,
+        review_resp_line=resp_line,
+        review_status_line=status_line,
+        ax_review_ecg=ax_ecg,
+        ax_review_resp=ax_resp,
+        ax_review_status=ax_status,
+        ax_pqrst=ax_pqrst,
+        ecg_paper_grid_cache={},
+        review_calibration_artists=[],
+        calibration_pulse_cache={},
+        review_canvas=review_canvas,
+        pqrst_canvas=pqrst_canvas,
+    )
+    frame = SimpleNamespace(
+        mode="raw, display-smoothed",
+        plot_ecg_x=np.array([0.0, 1.0, 2.0]),
+        plot_ecg=np.array([0.0, 2.0, 0.0]),
+        plot_resp_x=np.array([0.0, 1.0, 2.0]),
+        plot_resp=np.array([10.0, 11.0, 12.0]),
+        plot_status_x=np.array([0.0, 1.0, 2.0]),
+        plot_status=np.array([0.0, 1.0, 1.0]),
+        peak_x=np.array([1.0]),
+        peak_y=np.array([2.0]),
+        x_right=2.0,
+        ecg_ylim=(-3.0, 3.0),
+        resp_ylim=(8.0, 14.0),
+        status_ylim=(-0.5, 1.5),
+        review=SimpleNamespace(
+            heart_rate=HeartRateSummary(72.0, 0.0, 0.0, 1),
+            peaks=(1,),
+        ),
+        pqrst=PqrstReview(
+            qrs_clear=True,
+            p_tentative=True,
+            t_tentative=False,
+            beats_used=1,
+            average_beat=(0.0, 1.0, 0.0),
+            time_ms=(-10.0, 0.0, 10.0),
+        ),
+    )
+
+    apply_review_render_frame(
+        app,
+        frame,
+        display_settings=EcgDisplaySettings(time_window_seconds=8.0),
+        ecg_label="CH2 ECG Lead I",
+        resp_label="CH1 respiration",
+        contact_label="lead-off bits",
+        ecg_inverted=False,
+    )
+
+    assert ecg_line.get_ydata().tolist() == [0.0, 2.0, 0.0]
+    assert peak_line.get_xdata().tolist() == [1.0]
+    assert resp_line.get_ydata().tolist() == [10.0, 11.0, 12.0]
+    assert status_line.get_ydata().tolist() == [0.0, 1.0, 1.0]
+    assert ax_ecg.get_xlim() == (0.0, 2.0)
+    assert ax_ecg.get_ylim() == (-3.0, 3.0)
+    assert ax_status.get_xlabel() == "Time (s)"
+    assert "Offline ECG: CH2 ECG Lead I" in ax_ecg.get_title()
+    assert review_canvas.draw_idle_calls == 1
+    assert pqrst_canvas.draw_idle_calls == 1

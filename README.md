@@ -166,6 +166,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep live R-peak detection to one `find_peaks` pass by selecting the dominant
   ECG polarity before peak search; this preserves inverted-lead support without
   doubling GUI-tick peak detection work.
+- Keep both live and offline review Matplotlib line/axis/grid/calibration
+  application in `gui_plots.py`; `app.py` should queue frames, clear state, and
+  update text/cards instead of owning plot mutation details.
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs; wait
   for at least one second of samples before starting live quality snapshots.

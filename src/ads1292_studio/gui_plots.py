@@ -29,6 +29,7 @@ from ads1292_studio.live_render import LiveRenderFrame
 from ads1292_studio.models import PqrstReview
 from ads1292_studio.plots import robust_ylim, stable_ylim
 from ads1292_studio.plot_theme import APP_VISUAL_TOKENS, PLOT_TRACE_COLORS, apply_seaborn_plot_theme
+from ads1292_studio.review_render import ReviewRenderFrame
 
 
 def build_live_plot_panel(app: Any) -> None:
@@ -152,6 +153,47 @@ def apply_live_render_frame(
             app.calibration_pulse_cache,
         )
     app.live_canvas.draw_idle()
+
+
+def apply_review_render_frame(
+    app: Any,
+    frame: ReviewRenderFrame,
+    *,
+    display_settings: EcgDisplaySettings,
+    ecg_label: str,
+    resp_label: str,
+    contact_label: str,
+    ecg_inverted: bool,
+) -> None:
+    restore_data_axis_chrome((app.ax_review_ecg, app.ax_review_resp, app.ax_review_status))
+    app.review_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
+    app.review_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
+    app.review_status_line.set_data(frame.plot_status_x, frame.plot_status)
+    app.review_peak_line.set_data(frame.peak_x, frame.peak_y)
+    polarity = ", inverted" if ecg_inverted else ""
+    set_signal_axis_title(
+        app.ax_review_ecg,
+        f"Offline ECG: {ecg_label} | {frame.mode}{polarity} | "
+        f"HR {frame.review.heart_rate.median_bpm:.1f} bpm | peaks {len(frame.review.peaks)}",
+    )
+    set_signal_axis_title(app.ax_review_resp, resp_label)
+    set_signal_axis_title(app.ax_review_status, contact_label)
+    set_axis_xlim_if_changed(app.ax_review_ecg, (0, frame.x_right))
+    set_axis_ylim_if_changed(app.ax_review_ecg, frame.ecg_ylim)
+    set_axis_xlim_if_changed(app.ax_review_resp, (0, frame.x_right))
+    set_axis_ylim_if_changed(app.ax_review_resp, frame.resp_ylim)
+    set_axis_xlim_if_changed(app.ax_review_status, (0, frame.x_right))
+    set_axis_ylim_if_changed(app.ax_review_status, frame.status_ylim)
+    app.ax_review_status.set_xlabel("Time (s)")
+    apply_ecg_paper_grid(app.ax_review_ecg, display_settings, app.ecg_paper_grid_cache)
+    draw_calibration_pulse(
+        app.ax_review_ecg,
+        app.review_calibration_artists,
+        display_settings,
+        app.calibration_pulse_cache,
+    )
+    app.review_canvas.draw_idle()
+    draw_pqrst_review(app.ax_pqrst, app.pqrst_canvas, frame.pqrst)
 
 
 def draw_pqrst_review(ax: object, canvas: object, review: PqrstReview) -> None:
