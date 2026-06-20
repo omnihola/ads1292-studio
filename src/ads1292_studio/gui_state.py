@@ -249,6 +249,8 @@ def gui_workflow_hint(
         return "Press Start, or load CSV for review."
     if not current.port_available:
         return "Plug in board, press Refresh, or load CSV."
+    if current.selected_port.strip():
+        return "Press Connect, or load CSV."
     return "Select a port, press Connect, or load CSV."
 
 

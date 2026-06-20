@@ -1211,7 +1211,7 @@ def test_gui_workflow_hint_treats_manual_port_text_as_available() -> None:
         )
     )
 
-    assert hint == "Select a port, press Connect, or load CSV."
+    assert hint == "Press Connect, or load CSV."
 
 
 def test_gui_workflow_hint_guides_ready_to_start_state() -> None:
