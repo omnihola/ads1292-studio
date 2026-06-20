@@ -102,8 +102,11 @@ from ads1292_studio.gui_workers import (
     build_live_quality_samples,
     compute_live_quality_result,
     compute_review_render_result,
+    drain_latest_review_render_result,
     live_quality_sample_count_ready,
     live_quality_worker_available,
+    review_render_pending_ready,
+    review_render_update_plan,
 )
 from ads1292_studio.gui_plots import (
     apply_live_render_frame,
@@ -991,18 +994,20 @@ class App(tk.Tk):
         self.live_quality_results.put(result)
 
     def _schedule_review_render_update(self, samples: tuple[StreamSample, ...]) -> bool:
-        if self.review_render_future is not None and not self.review_render_future.done():
-            self.review_render_generation += 1
-            self.pending_review_render_samples = samples
+        plan = review_render_update_plan(
+            future=self.review_render_future,
+            generation=self.review_render_generation,
+            samples=samples,
+        )
+        self.review_render_generation = plan.generation
+        self.pending_review_render_samples = plan.pending_samples
+        if not plan.should_submit:
             return False
-        self.review_render_generation += 1
-        generation = self.review_render_generation
-        self.pending_review_render_samples = None
         display_settings = self._display_settings()
         filter_settings = self._software_filter_settings()
         future = self.review_render_executor.submit(
             compute_review_render_result,
-            generation=generation,
+            generation=plan.generation,
             samples=samples,
             display_settings=display_settings,
             filter_settings=filter_settings,
@@ -1028,14 +1033,10 @@ class App(tk.Tk):
         self.review_render_results.put(result)
 
     def _drain_review_render_results(self) -> None:
-        latest: ReviewRenderResult | None = None
-        while True:
-            try:
-                result = self.review_render_results.get_nowait()
-            except queue.Empty:
-                break
-            if result.generation == self.review_render_generation:
-                latest = result
+        latest = drain_latest_review_render_result(
+            self.review_render_results,
+            generation=self.review_render_generation,
+        )
         if latest is None:
             self._schedule_pending_review_render()
             return
@@ -1052,11 +1053,12 @@ class App(tk.Tk):
         self._schedule_pending_review_render()
 
     def _schedule_pending_review_render(self) -> None:
-        if self.pending_review_render_samples is None:
+        samples = review_render_pending_ready(
+            future=self.review_render_future,
+            pending_samples=self.pending_review_render_samples,
+        )
+        if samples is None:
             return
-        if self.review_render_future is not None and not self.review_render_future.done():
-            return
-        samples = self.pending_review_render_samples
         self.pending_review_render_samples = None
         self._schedule_review_render_update(samples)
 

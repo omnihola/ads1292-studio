@@ -175,6 +175,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep background result dataclasses and worker helpers in `gui_workers.py`,
   with `app.py` importing them for compatibility, so App remains focused on UI
   orchestration rather than owning worker data models.
+- Keep offline review redraw scheduling as a single-flight worker flow in
+  `gui_workers.py`: when a redraw is running, store only the newest pending
+  samples and submit that latest request after the current future finishes.
 - Keep GUI form parsing/formatting for metadata, protocol steps, calibration
   numbers, and quality-gate thresholds in `gui_forms.py`; `app.py` may
   re-export these helpers for compatibility but should not own the conversion

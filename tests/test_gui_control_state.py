@@ -25,6 +25,7 @@ from ads1292_studio.app import (
     display_scale_reference_label,
     display_signal_values,
     display_refresh_key,
+    drain_latest_review_render_result,
     drain_queue_items,
     effective_port_text,
     gui_control_cursors,
@@ -43,6 +44,8 @@ from ads1292_studio.app import (
     live_metrics_text,
     live_render_refresh_key,
     port_entry_connection_message,
+    review_render_pending_ready,
+    review_render_update_plan,
     selected_port_is_connected,
     set_axis_xlim_if_changed,
     set_axis_ylim_if_changed,
@@ -112,6 +115,17 @@ class _FakeFuture:
 
     def done(self) -> bool:
         return self._done
+
+
+def _sample(index: int) -> StreamSample:
+    return StreamSample(
+        timestamp=index / 500.0,
+        ch1=index,
+        ch2=index * 2,
+        board_heart_rate=0,
+        board_respiration_rate=0,
+        status_byte=0,
+    )
 
 
 def test_ads1292r_channel_labels_name_ti_board_semantics() -> None:
@@ -197,8 +211,63 @@ def test_worker_helpers_live_outside_app_module() -> None:
     assert compute_review_render_result.__module__ == "ads1292_studio.gui_workers"
     assert build_live_quality_samples.__module__ == "ads1292_studio.gui_workers"
     assert live_quality_sample_count_ready.__module__ == "ads1292_studio.gui_workers"
+    assert review_render_update_plan.__module__ == "ads1292_studio.gui_workers"
+    assert review_render_pending_ready.__module__ == "ads1292_studio.gui_workers"
+    assert drain_latest_review_render_result.__module__ == "ads1292_studio.gui_workers"
     assert "class ConnectResult" not in app_source
     assert "class CsvLoadResult" not in app_source
+
+
+def test_review_render_update_plan_keeps_single_flight_and_latest_pending_samples() -> None:
+    first_samples = (_sample(1),)
+    next_samples = (_sample(2),)
+
+    busy_plan = review_render_update_plan(
+        future=_FakeFuture(done=False),
+        generation=3,
+        samples=next_samples,
+    )
+    ready_plan = review_render_update_plan(
+        future=_FakeFuture(done=True),
+        generation=4,
+        samples=first_samples,
+    )
+
+    assert busy_plan.should_submit is False
+    assert busy_plan.generation == 4
+    assert busy_plan.pending_samples == next_samples
+    assert ready_plan.should_submit is True
+    assert ready_plan.generation == 5
+    assert ready_plan.pending_samples is None
+
+
+def test_review_render_pending_ready_waits_for_running_future() -> None:
+    samples = (_sample(1),)
+
+    assert review_render_pending_ready(future=_FakeFuture(done=False), pending_samples=samples) is None
+    assert review_render_pending_ready(future=_FakeFuture(done=True), pending_samples=samples) == samples
+    assert review_render_pending_ready(future=None, pending_samples=None) is None
+
+
+def test_drain_latest_review_render_result_ignores_stale_generations() -> None:
+    results: queue.Queue = queue.Queue()
+    stale = compute_review_render_result(
+        generation=2,
+        samples=(_sample(1),),
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(),
+    )
+    latest = compute_review_render_result(
+        generation=3,
+        samples=(_sample(2), _sample(3)),
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(),
+    )
+    results.put(stale)
+    results.put(latest)
+
+    assert drain_latest_review_render_result(results, generation=3) == latest
+    assert results.empty()
 
 
 def test_compute_review_render_result_prepares_offline_frame() -> None:

@@ -1211,26 +1211,37 @@ def test_csv_loader_precomputes_review_render_frame_off_the_tk_thread() -> None:
 
 def test_loaded_csv_display_refresh_schedules_single_flight_review_render() -> None:
     from ads1292_studio.app import App
+    from ads1292_studio.gui_workers import review_render_update_plan
 
     source = inspect.getsource(App._refresh_display_plots) + inspect.getsource(App._schedule_review_render_update)
+    helper_source = inspect.getsource(review_render_update_plan)
 
     assert "if self.loaded_samples:" in source
     assert "self._schedule_review_render_update(self.loaded_samples)" in source
-    assert "self.review_render_future is not None and not self.review_render_future.done()" in source
-    assert "self.pending_review_render_samples = samples" in source
-    assert "self.review_render_generation += 1" in source
+    assert "review_render_update_plan(" in source
+    assert "self.review_render_generation = plan.generation" in source
+    assert "self.pending_review_render_samples = plan.pending_samples" in source
+    assert "future is not None and not future.done()" in helper_source
+    assert "pending_samples=samples" in helper_source
     assert "self.review_render_executor.submit(" in source
     assert "_show_recording(self.loaded_samples)" not in inspect.getsource(App._refresh_display_plots)
 
 
 def test_review_render_results_reschedule_pending_latest_settings() -> None:
     from ads1292_studio.app import App
+    from ads1292_studio.gui_workers import drain_latest_review_render_result, review_render_pending_ready
 
     source = inspect.getsource(App._drain_review_render_results) + inspect.getsource(App._schedule_pending_review_render)
+    drain_source = inspect.getsource(drain_latest_review_render_result)
+    pending_source = inspect.getsource(review_render_pending_ready)
 
     assert "if latest is None:" in source
     assert "self._schedule_pending_review_render()" in source
-    assert "samples = self.pending_review_render_samples" in source
+    assert "drain_latest_review_render_result(" in source
+    assert "review_render_pending_ready(" in source
+    assert "if result.generation == generation:" in drain_source
+    assert "pending_samples is None" in pending_source
+    assert "future is not None and not future.done()" in pending_source
     assert "self._schedule_review_render_update(samples)" in source
 
 

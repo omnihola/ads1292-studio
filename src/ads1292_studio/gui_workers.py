@@ -3,6 +3,7 @@ from __future__ import annotations
 from concurrent.futures import Future
 from dataclasses import dataclass
 from pathlib import Path
+import queue
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
 from ads1292_studio.gui_specs import ADS1292R_ECG_SOURCE
@@ -55,12 +56,67 @@ class ReviewRenderResult:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class ReviewRenderUpdatePlan:
+    generation: int
+    pending_samples: tuple[StreamSample, ...] | None
+    should_submit: bool
+
+
 def live_quality_worker_available(future: Future[LiveQualityResult] | None) -> bool:
     return future is None or future.done()
 
 
 def live_quality_sample_count_ready(sample_count: int, sample_rate_hz: float) -> bool:
     return sample_rate_hz > 0 and int(sample_count) >= int(sample_rate_hz)
+
+
+def review_render_update_plan(
+    *,
+    future: Future[ReviewRenderResult] | None,
+    generation: int,
+    samples: tuple[StreamSample, ...],
+) -> ReviewRenderUpdatePlan:
+    next_generation = int(generation) + 1
+    if future is not None and not future.done():
+        return ReviewRenderUpdatePlan(
+            generation=next_generation,
+            pending_samples=samples,
+            should_submit=False,
+        )
+    return ReviewRenderUpdatePlan(
+        generation=next_generation,
+        pending_samples=None,
+        should_submit=True,
+    )
+
+
+def review_render_pending_ready(
+    *,
+    future: Future[ReviewRenderResult] | None,
+    pending_samples: tuple[StreamSample, ...] | None,
+) -> tuple[StreamSample, ...] | None:
+    if pending_samples is None:
+        return None
+    if future is not None and not future.done():
+        return None
+    return pending_samples
+
+
+def drain_latest_review_render_result(
+    results: queue.Queue[ReviewRenderResult],
+    *,
+    generation: int,
+) -> ReviewRenderResult | None:
+    latest: ReviewRenderResult | None = None
+    while True:
+        try:
+            result = results.get_nowait()
+        except queue.Empty:
+            break
+        if result.generation == generation:
+            latest = result
+    return latest
 
 
 def compute_live_quality_result(
