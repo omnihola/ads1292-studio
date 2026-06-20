@@ -250,20 +250,18 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   including acquisition toggles such as Save CSV; disabled toggle chips must
   use a dedicated muted style and swallow click/keyboard activation so
   state-gating is visually clear and not only decorative.
-- Disable Connect until a serial port is available or typed, while keeping
-  offline CSV actions enabled, so the empty-port state does not present a
-  primary action that can only fail; keep the header badge and sidebar
-  Connection card aligned on that `no port` state, and recompute controls
-  immediately when the port field changes or Refresh updates the port list,
-  including returning the header badge to `Not connected` when a port appears;
-  read the port variable, visible combobox text, and combobox values so
-  macOS/Tk combobox sync lag cannot leave Connect disabled while a port is
-  available; refresh must replace stale or blank visible text with the selected
-  port and keep the last valid/manual port as a fallback even if automatic
-  scanning temporarily returns no ADS candidates. Prefer allowing an explicit
-  Connect attempt, which can show a real serial error, over greying out the
-  primary action while a usable `/dev/cu.*` path is visible. Enable Start only
-  when the selected port matches the connected port.
+- Keep Connect available whenever the GUI is idle and not already connected,
+  even if automatic port detection currently reports `no port`; clicking it with
+  no selected port shows the existing validation error, while a manually typed
+  `/dev/cu.*` path gets a real serial probe. Keep offline CSV actions enabled,
+  keep the header badge and sidebar Connection card aligned on the selected-port
+  state, and recompute controls immediately when the port field changes or
+  Refresh updates the port list. Read the port variable, visible combobox text,
+  and combobox values so macOS/Tk combobox sync lag cannot hide a usable port;
+  refresh must replace stale or blank visible text with the selected port and
+  keep the last valid/manual port as a fallback even if automatic scanning
+  temporarily returns no ADS candidates. Enable Start only when the selected
+  port matches the connected port.
 - Treat macOS `/dev/cu.usbmodem*` and `/dev/cu.usbserial*` devices as ADS1292
   connection candidates in the port list. Some ADS1292RECG-FE boards show up as
   generic USB serial devices before the firmware description is fully

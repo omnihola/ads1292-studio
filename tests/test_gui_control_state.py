@@ -813,7 +813,7 @@ def test_gui_control_states_start_with_safe_disabled_defaults() -> None:
     assert states["Session Index"] == "normal"
 
 
-def test_gui_control_states_disable_connect_until_a_port_is_available() -> None:
+def test_gui_control_states_keep_connect_available_for_manual_port_entry() -> None:
     state = GuiState(
         connected=False,
         streaming=False,
@@ -825,7 +825,8 @@ def test_gui_control_states_disable_connect_until_a_port_is_available() -> None:
     states = gui_control_states(state=state)
 
     assert states["Refresh"] == "normal"
-    assert states["Connect"] == "disabled"
+    assert states["Connect"] == "normal"
+    assert states["Start"] == "disabled"
     assert states["Load CSV"] == "normal"
 
 

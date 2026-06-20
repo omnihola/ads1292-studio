@@ -134,7 +134,7 @@ def gui_control_states(
     return {
         "Port": tk.DISABLED if current.streaming else tk.NORMAL,
         "Refresh": tk.NORMAL,
-        "Connect": tk.NORMAL if current.has_port and not current.connected and not current.streaming else tk.DISABLED,
+        "Connect": tk.NORMAL if not current.connected and not current.streaming else tk.DISABLED,
         "Start": tk.NORMAL if current.connected and not current.streaming else tk.DISABLED,
         "Stop": tk.NORMAL if current.streaming else tk.DISABLED,
         "Save CSV": tk.NORMAL if not current.streaming else tk.DISABLED,
