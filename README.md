@@ -274,6 +274,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Sidebar mouse-wheel hit testing should cover the whole scroll frame, including
   scrollbar and edge padding, not only the canvas interior; otherwise scrolling
   feels broken when the pointer is still visually inside the sidebar.
+- Sidebar card value labels, including Overview status values, should set a
+  fixed wrap length and left justification so long port/status text does not
+  stretch the task panel.
 - Keep action buttons' focus borders visible so keyboard navigation has a
   clear current target across acquisition and sidebar controls; build primary
   toolbar actions and sidebar actions through shared helpers so cursor, focus,

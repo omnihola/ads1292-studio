@@ -175,6 +175,8 @@ def build_status_cards(app: Any, parent: ttk.Frame) -> None:
             content,
             textvariable=app.status_card_vars[label],
             style=status_tone_style("neutral"),
+            wraplength=card_label["value_wrap"],
+            justify=tk.LEFT,
         )
         value_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=card_label["value_padding"])
         app.status_card_label_widgets[label] = label_widget

@@ -798,8 +798,18 @@ def test_card_label_spec_keeps_status_cards_scannable() -> None:
         "stripe_width": 5,
         "row_padding": (0, 2),
         "value_padding": (6, 0),
+        "value_wrap": 160,
         "signal_value_wrap": 160,
     }
+
+
+def test_overview_status_card_values_wrap_like_other_sidebar_values() -> None:
+    from ads1292_studio.gui_sidebar import build_status_cards
+
+    source = inspect.getsource(build_status_cards)
+
+    assert "wraplength=card_label[\"value_wrap\"]" in source
+    assert "justify=tk.LEFT" in source
 
 
 def test_event_count_styles_make_session_events_visible() -> None:

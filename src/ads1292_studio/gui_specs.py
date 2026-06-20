@@ -586,6 +586,7 @@ CARD_LABEL_SPEC = {
     "stripe_width": 5,
     "row_padding": (0, 2),
     "value_padding": (6, 0),
+    "value_wrap": 160,
     "signal_value_wrap": 160,
 }
 EVENT_COUNT_STYLES = {
