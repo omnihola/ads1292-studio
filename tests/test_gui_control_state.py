@@ -854,6 +854,7 @@ def test_port_refresh_and_edits_recompute_control_state() -> None:
     toolbar_source = inspect.getsource(build_acquisition_toolbar)
 
     assert "self._apply_control_states(force=True)" in refresh_source
+    assert "allow_remembered=bool(values)" in refresh_source
     assert "app.port_var.trace_add(\"write\"" in toolbar_source
     assert "app.port_combo.bind(\"<<ComboboxSelected>>\"" in toolbar_source
     assert "app.port_combo.bind(\"<KeyRelease>\"" in toolbar_source
@@ -913,6 +914,16 @@ def test_stable_port_text_keeps_last_confirmed_port_during_tk_sync_lag() -> None
         available_values=("/dev/cu.usbmodem214301",),
         remembered_text="/dev/cu.usbmodem214301",
     ) == "/dev/cu.usbmodem999999"
+
+
+def test_stable_port_text_can_ignore_remembered_port_after_empty_refresh() -> None:
+    assert stable_port_text(
+        variable_text="",
+        widget_text="",
+        available_values=(),
+        remembered_text="/dev/cu.usbmodem214301",
+        allow_remembered=False,
+    ) == ""
 
 
 def test_selected_port_is_connected_requires_exact_selected_port_match() -> None:

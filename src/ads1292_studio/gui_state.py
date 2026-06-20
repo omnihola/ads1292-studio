@@ -184,10 +184,13 @@ def stable_port_text(
     widget_text: str,
     available_values: Iterable[object] = (),
     remembered_text: str = "",
+    allow_remembered: bool = True,
 ) -> str:
     current = effective_port_text(variable_text, widget_text, available_values)
     if current:
         return current
+    if not allow_remembered:
+        return ""
     return remembered_text.strip()
 
 

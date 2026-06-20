@@ -347,12 +347,15 @@ class App(tk.Tk):
             widget_text=self.port_combo.get(),
             available_values=values,
             remembered_text=self.last_selected_port,
+            allow_remembered=bool(values),
         )
         if values and visible_port not in values:
             visible_port = values[0]
             self.port_var.set(visible_port)
         if visible_port:
             self.last_selected_port = visible_port
+        else:
+            self.last_selected_port = ""
         self._sync_port_entry_connection_message()
         self._apply_control_states(force=True)
 

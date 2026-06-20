@@ -249,7 +249,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   macOS/Tk combobox sync lag cannot leave Connect disabled while a port is
   available; refresh must replace stale or blank visible text with the detected
   port; keep the last valid port as a fallback when Tk temporarily reports an
-  empty combobox during focus/refresh synchronization;
+  empty combobox during focus synchronization, but clear that fallback when an
+  explicit Refresh finds no ports and the field itself is empty;
   enable Start only when the selected port matches the connected port.
 - Treat macOS `/dev/cu.usbmodem*` and `/dev/cu.usbserial*` devices as ADS1292
   connection candidates in the port list. Some ADS1292RECG-FE boards show up as
