@@ -172,6 +172,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep background result dataclasses and worker helpers in `gui_workers.py`,
   with `app.py` importing them for compatibility, so App remains focused on UI
   orchestration rather than owning worker data models.
+- Keep GUI form parsing/formatting for protocol steps, calibration numbers, and
+  quality-gate thresholds in `gui_forms.py`; `app.py` may re-export these
+  helpers for compatibility but should not own the conversion rules.
 - Keep log insertion batched and avoid autoscrolling the log Text widget while
   another workspace tab is selected; scroll to the end when Event Log is opened.
   Keep append/trim/autoscroll Text-widget operations in `gui_log.py` so the
