@@ -676,7 +676,7 @@ def test_sidebar_layout_spec_stabilizes_control_column() -> None:
 
 
 def test_gui_layout_names_main_workspaces_clearly() -> None:
-    assert main_tab_labels() == ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
+    assert main_tab_labels() == ("Live ECG", "Review CSV", "PQRST Beat", "Spectrum", "Event Log")
 
 
 def test_workspace_layout_spec_balances_sidebar_and_signal_area() -> None:
@@ -1293,6 +1293,10 @@ def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
         "Load CSV for contact status",
     )
     assert messages["pqrst"] == ("Load or record ECG to review averaged PQRST",)
+    assert messages["spectrum"] == (
+        "Load or record ECG to review FFT spectrum",
+        "Amplitude histogram appears here",
+    )
 
 
 def test_empty_plot_style_uses_muted_callouts() -> None:
@@ -1332,10 +1336,12 @@ def test_empty_plot_state_uses_quiet_axes_until_data_arrives() -> None:
     assert "return" in restore_source
     assert "restore_data_axis_chrome((app.ax_live_ecg" in live_source
     assert "restore_data_axis_chrome((app.ax_review_ecg" in review_source
-    assert (
-        "self._clear_empty_plot_state((self.ax_review_ecg, self.ax_review_resp, "
-        "self.ax_review_status, self.ax_pqrst))"
-    ) in inspect.getsource(App._show_review_frame)
+    show_review_source = inspect.getsource(App._show_review_frame)
+    assert "self._clear_empty_plot_state(" in show_review_source
+    assert "self.ax_review_ecg" in show_review_source
+    assert "self.ax_pqrst" in show_review_source
+    assert "self.ax_spectrum_fft" in show_review_source
+    assert "self.ax_spectrum_hist" in show_review_source
 
 
 def test_log_panel_spec_keeps_long_sessions_readable() -> None:
@@ -1634,6 +1640,13 @@ def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
             "right": 0.996,
             "top": 0.980,
             "bottom": 0.096,
+        },
+        "two_panel": {
+            "left": 0.070,
+            "right": 0.996,
+            "top": 0.980,
+            "bottom": 0.078,
+            "hspace": 0.26,
         },
     }
 

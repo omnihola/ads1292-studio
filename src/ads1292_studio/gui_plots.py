@@ -47,6 +47,7 @@ from ads1292_studio.models import PqrstReview
 from ads1292_studio.plots import robust_ylim, stable_ylim
 from ads1292_studio.plot_theme import APP_VISUAL_TOKENS, PLOT_TRACE_COLORS, apply_seaborn_plot_theme
 from ads1292_studio.review_render import ReviewRenderFrame
+from ads1292_studio.spectrum import SpectrumAnalysis
 
 
 @dataclass(frozen=True)
@@ -141,6 +142,20 @@ def build_pqrst_plot_panel(app: Any) -> None:
     app.ax_pqrst.set_ylabel("Filtered counts")
     show_empty_plot_state(app.empty_plot_artists, "pqrst", (app.ax_pqrst,))
     app.pqrst_canvas = build_plot_canvas(app, app.pqrst_tab, fig, name="pqrst")
+
+
+def build_spectrum_plot_panel(app: Any) -> None:
+    fig = new_plot_figure(figsize=(10, 6))
+    fig.subplots_adjust(**plot_figure_layouts()["two_panel"])
+    app.ax_spectrum_fft = fig.add_subplot(211)
+    app.ax_spectrum_hist = fig.add_subplot(212)
+    style_signal_axes((app.ax_spectrum_fft, app.ax_spectrum_hist))
+    app.ax_spectrum_fft.set_xlabel("Frequency (Hz)")
+    app.ax_spectrum_fft.set_ylabel("Power")
+    app.ax_spectrum_hist.set_xlabel("Raw counts")
+    app.ax_spectrum_hist.set_ylabel("Samples")
+    show_empty_plot_state(app.empty_plot_artists, "spectrum", (app.ax_spectrum_fft, app.ax_spectrum_hist))
+    app.spectrum_canvas = build_plot_canvas(app, app.spectrum_tab, fig, name="spectrum")
 
 
 def apply_live_render_frame(
@@ -414,6 +429,45 @@ def draw_pqrst_review(ax: object, canvas: object, review: PqrstReview, *, owner:
         f"PQRST review: QRS={review.qrs_clear}, P tentative={review.p_tentative}, "
         f"T tentative={review.t_tentative}, beats={review.beats_used}",
     )
+    draw_canvas_idle_if_visible(canvas, owner)
+
+
+def draw_spectrum_analysis(
+    ax_fft: object,
+    ax_hist: object,
+    canvas: object,
+    analysis: SpectrumAnalysis,
+    *,
+    owner: object | None = None,
+) -> None:
+    for ax in (ax_fft, ax_hist):
+        ax.clear()
+    style_signal_axes((ax_fft, ax_hist))
+    trace_styles = plot_trace_styles()
+    if analysis.ecg_frequency_hz.size:
+        ax_fft.plot(
+            analysis.ecg_frequency_hz,
+            analysis.ecg_power,
+            color=PLOT_TRACE_COLORS["ecg"],
+            **trace_styles["ecg"],
+        )
+    if analysis.histogram_counts.size:
+        widths = np.diff(analysis.histogram_bin_edges)
+        ax_hist.bar(
+            analysis.histogram_bin_edges[:-1],
+            analysis.histogram_counts,
+            width=widths,
+            align="edge",
+            color=PLOT_TRACE_COLORS["respiration"],
+            alpha=0.72,
+            linewidth=0,
+        )
+    set_signal_axis_title(ax_fft, f"FFT spectrum: {analysis.ecg_label}")
+    set_signal_axis_title(ax_hist, f"Amplitude histogram: {analysis.ecg_label} raw counts")
+    ax_fft.set_xlabel("Frequency (Hz)")
+    ax_fft.set_ylabel("Power")
+    ax_hist.set_xlabel("Raw counts")
+    ax_hist.set_ylabel("Samples")
     draw_canvas_idle_if_visible(canvas, owner)
 
 

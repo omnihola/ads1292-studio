@@ -117,10 +117,12 @@ from ads1292_studio.gui_plots import (
     apply_live_axis_titles,
     apply_live_render_frame,
     apply_review_render_frame,
+    build_spectrum_plot_panel,
     build_live_plot_panel,
     build_log_panel,
     build_pqrst_plot_panel,
     build_review_plot_panel,
+    draw_spectrum_analysis,
     flush_pending_pqrst_review,
     flush_pending_review_render,
 )
@@ -215,6 +217,7 @@ from ads1292_studio.protocol import TestProtocol, protocol_template, read_protoc
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
 from ads1292_studio.report import export_review_report
 from ads1292_studio.review_render import ReviewRenderFrame, build_review_render_frame
+from ads1292_studio.spectrum import build_spectrum_analysis
 from ads1292_studio.session_index import export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.workers import LiveWorker
@@ -313,6 +316,7 @@ class App(tk.Tk):
         build_live_plot_panel(self)
         build_review_plot_panel(self)
         build_pqrst_plot_panel(self)
+        build_spectrum_plot_panel(self)
         build_log_panel(self)
         register_control_buttons(self)
         self._apply_control_states()
@@ -1342,7 +1346,16 @@ class App(tk.Tk):
         self._show_review_frame(samples, frame)
 
     def _show_review_frame(self, samples: tuple[StreamSample, ...], frame: ReviewRenderFrame) -> None:
-        self._clear_empty_plot_state((self.ax_review_ecg, self.ax_review_resp, self.ax_review_status, self.ax_pqrst))
+        self._clear_empty_plot_state(
+            (
+                self.ax_review_ecg,
+                self.ax_review_resp,
+                self.ax_review_status,
+                self.ax_pqrst,
+                self.ax_spectrum_fft,
+                self.ax_spectrum_hist,
+            )
+        )
         self._clear_signal_buffers()
         self.sample_index = 0
         display_settings = self._display_settings()
@@ -1355,6 +1368,18 @@ class App(tk.Tk):
             resp_label=resp_label,
             contact_label=contact_label,
             ecg_inverted=DEFAULT_ECG_INVERTED,
+        )
+        spectrum = build_spectrum_analysis(
+            samples,
+            source=frame.metrics.ecg_source,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+        )
+        draw_spectrum_analysis(
+            self.ax_spectrum_fft,
+            self.ax_spectrum_hist,
+            self.spectrum_canvas,
+            spectrum,
+            owner=None,
         )
         set_string_var_if_changed(
             self.metrics_var,

@@ -97,6 +97,33 @@ def test_draw_pqrst_review_renders_average_beat_and_refreshes_canvas() -> None:
     assert ax.get_xlabel() == "Time relative to R peak (ms)"
 
 
+def test_draw_spectrum_analysis_renders_fft_and_histogram() -> None:
+    from ads1292_studio import gui_plots
+    from ads1292_studio.spectrum import SpectrumAnalysis
+
+    draw_spectrum_analysis = getattr(gui_plots, "draw_spectrum_analysis")
+    fig = Figure()
+    ax_fft = fig.add_subplot(211)
+    ax_hist = fig.add_subplot(212)
+    canvas = FakeCanvas()
+    analysis = SpectrumAnalysis(
+        ecg_label="CH2",
+        ecg_frequency_hz=np.array([0.0, 10.0, 20.0]),
+        ecg_power=np.array([0.0, 5.0, 1.0]),
+        histogram_counts=np.array([2, 4, 2]),
+        histogram_bin_edges=np.array([-1.0, 0.0, 1.0, 2.0]),
+    )
+
+    draw_spectrum_analysis(ax_fft, ax_hist, canvas, analysis)
+
+    assert canvas.draw_idle_calls == 1
+    assert "FFT spectrum: CH2" in ax_fft.get_title()
+    assert ax_fft.get_xlabel() == "Frequency (Hz)"
+    assert ax_hist.get_xlabel() == "Raw counts"
+    assert len(ax_fft.lines) == 1
+    assert len(ax_hist.patches) == 3
+
+
 def test_empty_plot_state_hides_axis_chrome_and_reference_lines() -> None:
     fig = Figure()
     ax = fig.add_subplot(111)

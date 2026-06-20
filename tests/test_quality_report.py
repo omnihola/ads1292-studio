@@ -98,6 +98,7 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert result.html_path.exists()
     assert result.ecg_png_path.exists()
     assert result.pqrst_png_path.exists()
+    assert result.spectrum_png_path.exists()
     assert all(segment.ecg_source == result.metrics.ecg_source for segment in result.segment_metrics)
     html = result.html_path.read_text()
     assert "Synthetic ADS1292 Review" in html
@@ -124,6 +125,7 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "Noise RMS" in html
     assert "Peak-to-peak" in html
     assert "fixed QRS bandpass" in html
+    assert "FFT / Histogram" in html
 
 
 def test_pqrst_report_title_marks_p_and_t_as_tentative() -> None:

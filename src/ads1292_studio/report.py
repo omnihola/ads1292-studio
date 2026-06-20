@@ -35,6 +35,7 @@ from ads1292_studio.segments import (
     evaluate_segment_quality_gates,
 )
 from ads1292_studio.signal_processing import bandpass, detect_r_peaks, pqrst_review
+from ads1292_studio.spectrum import build_spectrum_analysis
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,7 @@ class ReportExport:
     html_path: Path
     ecg_png_path: Path
     pqrst_png_path: Path
+    spectrum_png_path: Path
     metrics: QualityMetrics
     segment_metrics: tuple[SegmentMetrics, ...] = tuple()
     segment_gate_result: SegmentQualityGateResult | None = None
@@ -67,6 +69,7 @@ def export_review_report(
     slug = _slugify(title)
     ecg_png = output / f"{stamp}-{slug}-ecg.png"
     pqrst_png = output / f"{stamp}-{slug}-pqrst.png"
+    spectrum_png = output / f"{stamp}-{slug}-spectrum.png"
     html_path = output / f"{stamp}-{slug}.html"
     normalized_calibration = (calibration or Calibration()).normalized()
     gate_result = evaluate_quality_gate(metrics, quality_gate)
@@ -79,12 +82,14 @@ def export_review_report(
     segment_gate_result = evaluate_segment_quality_gates(segment_metrics, quality_gate) if segment_metrics else None
     _write_ecg_png(sample_tuple, ecg_png, metrics, sample_rate_hz, normalized_calibration)
     _write_pqrst_png(sample_tuple, pqrst_png, metrics, sample_rate_hz, normalized_calibration)
+    _write_spectrum_png(sample_tuple, spectrum_png, metrics, sample_rate_hz)
     html_path.write_text(
         _html(
             title,
             metrics,
             ecg_png.name,
             pqrst_png.name,
+            spectrum_png.name,
             metadata,
             tuple(events or ()),
             normalized_calibration,
@@ -94,7 +99,7 @@ def export_review_report(
             segment_gate_result,
         )
     )
-    return ReportExport(html_path, ecg_png, pqrst_png, metrics, segment_metrics, segment_gate_result)
+    return ReportExport(html_path, ecg_png, pqrst_png, spectrum_png, metrics, segment_metrics, segment_gate_result)
 
 
 def _slugify(text: str) -> str:
@@ -198,11 +203,52 @@ def pqrst_review_title(review: PqrstReview) -> str:
     )
 
 
+def _write_spectrum_png(
+    samples: tuple[StreamSample, ...],
+    path: Path,
+    metrics: QualityMetrics,
+    sample_rate_hz: float,
+) -> None:
+    analysis = build_spectrum_analysis(samples, source=metrics.ecg_source, sample_rate_hz=sample_rate_hz)
+    fig = new_export_figure(figsize=(10, 6), dpi=160)
+    ax1 = fig.add_subplot(211)
+    ax2 = fig.add_subplot(212)
+    trace_styles = plot_trace_styles()
+    if analysis.ecg_frequency_hz.size:
+        ax1.plot(
+            analysis.ecg_frequency_hz,
+            analysis.ecg_power,
+            color=PLOT_TRACE_COLORS["ecg"],
+            **trace_styles["ecg"],
+        )
+    if analysis.histogram_counts.size:
+        widths = np.diff(analysis.histogram_bin_edges)
+        ax2.bar(
+            analysis.histogram_bin_edges[:-1],
+            analysis.histogram_counts,
+            width=widths,
+            align="edge",
+            color=PLOT_TRACE_COLORS["respiration"],
+            alpha=0.72,
+            linewidth=0,
+        )
+    ax1.set_title(f"FFT spectrum: {analysis.ecg_label}")
+    ax1.set_xlabel("Frequency (Hz)")
+    ax1.set_ylabel("Power")
+    ax2.set_title(f"Amplitude histogram: {analysis.ecg_label} raw counts")
+    ax2.set_xlabel("Raw counts")
+    ax2.set_ylabel("Samples")
+    style_export_axes((ax1, ax2))
+    fig.tight_layout()
+    fig.savefig(path)
+
+
 def _html(
     title: str,
     metrics: QualityMetrics,
     ecg_png: str,
     pqrst_png: str,
+    spectrum_png: str,
     metadata: SessionMetadata | None,
     events: tuple[EventMarker, ...],
     calibration: Calibration,
@@ -381,6 +427,9 @@ def _html(
   <img src=\"{escape(ecg_png)}\" alt=\"ECG review plot\">
   <h2>PQRST Review</h2>
   <img src=\"{escape(pqrst_png)}\" alt=\"PQRST review plot\">
+  <h2>FFT / Histogram</h2>
+  <p>FFT and amplitude histogram are computed from the raw selected ECG channel for exploratory signal review.</p>
+  <img src=\"{escape(spectrum_png)}\" alt=\"FFT spectrum and amplitude histogram\">
 </body>
 </html>
 """

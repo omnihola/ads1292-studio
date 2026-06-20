@@ -517,14 +517,16 @@ def build_workspace_tabs(app: Any, main: ttk.Frame) -> None:
     app.live_tab = ttk.Frame(app.workspace_stack, style=str(workspace_spec["main"]))
     app.review_tab = ttk.Frame(app.workspace_stack, style=str(workspace_spec["main"]))
     app.pqrst_tab = ttk.Frame(app.workspace_stack, style=str(workspace_spec["main"]))
+    app.spectrum_tab = ttk.Frame(app.workspace_stack, style=str(workspace_spec["main"]))
     app.log_tab = ttk.Frame(app.workspace_stack, style=str(workspace_spec["main"]))
-    app.workspace_tabs = (app.live_tab, app.review_tab, app.pqrst_tab, app.log_tab)
+    app.workspace_tabs = (app.live_tab, app.review_tab, app.pqrst_tab, app.spectrum_tab, app.log_tab)
     app.selected_workspace_tab = str(app.live_tab)
-    live_label, review_label, pqrst_label, log_label = main_tab_labels()
+    live_label, review_label, pqrst_label, spectrum_label, log_label = main_tab_labels()
     for label, tab in (
         (live_label, app.live_tab),
         (review_label, app.review_tab),
         (pqrst_label, app.pqrst_tab),
+        (spectrum_label, app.spectrum_tab),
         (log_label, app.log_tab),
     ):
         tab_label = ttk.Label(

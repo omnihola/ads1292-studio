@@ -268,7 +268,7 @@ BASE_CHECKBUTTON_STYLE = {
     "background": "#EEF3FA",
     "foreground": "#172033",
 }
-MAIN_TABS = ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
+MAIN_TABS = ("Live ECG", "Review CSV", "PQRST Beat", "Spectrum", "Event Log")
 STATUS_CARD_LABELS = ("Connection", "Port", "Acquisition", "Data", "Package")
 SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
 ADS1292R_ECG_SOURCE = "CH2"
@@ -383,6 +383,10 @@ EMPTY_PLOT_MESSAGES = {
         "Load CSV for contact status",
     ),
     "pqrst": ("Load or record ECG to review averaged PQRST",),
+    "spectrum": (
+        "Load or record ECG to review FFT spectrum",
+        "Amplitude histogram appears here",
+    ),
 }
 EMPTY_PLOT_STYLE = {
     "axis_face": "#F8FAFD",
@@ -494,6 +498,13 @@ PLOT_FIGURE_LAYOUTS = {
         "right": 0.996,
         "top": 0.980,
         "bottom": 0.096,
+    },
+    "two_panel": {
+        "left": 0.070,
+        "right": 0.996,
+        "top": 0.980,
+        "bottom": 0.078,
+        "hspace": 0.26,
     },
 }
 PLOT_CANVAS_WIDGET_STYLE = {
