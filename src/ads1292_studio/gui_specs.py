@@ -307,6 +307,8 @@ HEADER_CONNECTION_PILL = {
     "styles": HEADER_CONNECTION_STYLES,
     "padding": (10, 4),
     "font": ("Aptos", 11, "bold"),
+    "width": 22,
+    "wraplength": 190,
     "borderwidth": 1,
     "relief": "flat",
     "backgrounds": {
@@ -646,6 +648,8 @@ def header_connection_styles() -> dict[str, object]:
         "styles": dict(HEADER_CONNECTION_STYLES),
         "padding": HEADER_CONNECTION_PILL["padding"],
         "font": HEADER_CONNECTION_PILL["font"],
+        "width": HEADER_CONNECTION_PILL["width"],
+        "wraplength": HEADER_CONNECTION_PILL["wraplength"],
         "borderwidth": HEADER_CONNECTION_PILL["borderwidth"],
         "relief": HEADER_CONNECTION_PILL["relief"],
         "backgrounds": dict(HEADER_CONNECTION_PILL["backgrounds"]),

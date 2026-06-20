@@ -593,6 +593,8 @@ def test_header_connection_styles_make_status_a_pill() -> None:
         },
         "padding": (10, 4),
         "font": ("Aptos", 11, "bold"),
+        "width": 22,
+        "wraplength": 190,
         "borderwidth": 1,
         "relief": "flat",
         "backgrounds": {
@@ -608,6 +610,17 @@ def test_header_connection_styles_make_status_a_pill() -> None:
             "neutral": "#657084",
         },
     }
+
+
+def test_header_connection_label_uses_bounded_status_pill() -> None:
+    from ads1292_studio.gui_layout import build_header
+
+    source = inspect.getsource(build_header)
+
+    assert "connection_style = header_connection_styles()" in source
+    assert "width=int(connection_style[\"width\"])" in source
+    assert "wraplength=int(connection_style[\"wraplength\"])" in source
+    assert "justify=tk.RIGHT" in source
 
 
 def test_header_layout_spec_gives_top_bar_clear_structure() -> None:

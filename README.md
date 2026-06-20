@@ -253,6 +253,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep the toolbar display summary chip bounded with a fixed character width
   and wrap length so longer mode/filter text cannot stretch the top toolbars or
   push acquisition controls out of view.
+- Keep the header connection pill bounded with a fixed width and wrap length so
+  long connection detail strings cannot stretch the title bar; detailed
+  connection text belongs in the log and sidebar status area.
 - Keep Connect available whenever the GUI is idle and not already connected,
   even if automatic port detection currently reports `no port`; clicking it with
   no selected port shows the existing validation error, while a manually typed

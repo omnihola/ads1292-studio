@@ -10,6 +10,7 @@ from ads1292_studio.gui_specs import (
     SIGNAL_CARD_LABELS,
     STATUS_CARD_LABELS,
     header_connection_style,
+    header_connection_styles,
     header_layout_spec,
     header_text_styles,
     main_tab_labels,
@@ -56,9 +57,13 @@ def build_header(app: Any) -> None:
         style=str(header_text["subtitle"]["style"]),
     )
     app.header_subtitle_label.pack(side=tk.LEFT, padx=header_spec["subtitle_padding"])
+    connection_style = header_connection_styles()
     app.connection_label = ttk.Label(
         header,
         textvariable=app.connection_var,
+        width=int(connection_style["width"]),
+        wraplength=int(connection_style["wraplength"]),
+        justify=tk.RIGHT,
         style=header_connection_style("warning"),
     )
     app.connection_label.pack(side=tk.RIGHT)
