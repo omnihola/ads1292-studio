@@ -139,7 +139,7 @@ def apply_live_render_frame(
 ) -> None:
     restored_axis_chrome = restore_data_axis_chrome((app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
     app.live_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
-    app.live_peak_line.set_data(frame.peaks_x, frame.peaks_y)
+    set_line_data_if_changed(app.live_peak_line, frame.peaks_x, frame.peaks_y)
     set_line_visible_if_changed(app.live_peak_line, bool(frame.peaks))
     app.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
     app.live_status_line.set_data(frame.plot_status_x, frame.plot_status)
@@ -185,6 +185,15 @@ def set_line_visible_if_changed(line: object, visible: bool) -> bool:
     if bool(line.get_visible()) == bool(visible):
         return False
     line.set_visible(bool(visible))
+    return True
+
+
+def set_line_data_if_changed(line: object, x: np.ndarray, y: np.ndarray) -> bool:
+    x_unchanged = np.array_equal(np.asarray(line.get_xdata()), x)
+    y_unchanged = np.array_equal(np.asarray(line.get_ydata()), y)
+    if x_unchanged and y_unchanged:
+        return False
+    line.set_data(x, y)
     return True
 
 

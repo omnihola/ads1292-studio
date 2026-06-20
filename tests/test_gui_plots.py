@@ -12,6 +12,7 @@ from ads1292_studio.gui_plots import (
     draw_pqrst_review,
     live_contact_trace_color,
     restore_data_axis_chrome,
+    set_line_data_if_changed,
     set_line_color_if_changed,
     set_line_visible_if_changed,
     show_empty_plot_state,
@@ -309,6 +310,34 @@ def test_set_line_visible_if_changed_skips_redundant_matplotlib_writes() -> None
     assert set_line_visible_if_changed(line, False) is True
     assert line.visible is False
     assert line.set_visible_calls == 1
+
+
+def test_set_line_data_if_changed_skips_redundant_peak_marker_writes() -> None:
+    class FakeLine:
+        def __init__(self) -> None:
+            self.x = np.array([], dtype=float)
+            self.y = np.array([], dtype=float)
+            self.set_data_calls = 0
+
+        def get_xdata(self) -> np.ndarray:
+            return self.x
+
+        def get_ydata(self) -> np.ndarray:
+            return self.y
+
+        def set_data(self, x: np.ndarray, y: np.ndarray) -> None:
+            self.x = x
+            self.y = y
+            self.set_data_calls += 1
+
+    line = FakeLine()
+
+    assert set_line_data_if_changed(line, np.array([], dtype=float), np.array([], dtype=float)) is False
+    assert line.set_data_calls == 0
+    assert set_line_data_if_changed(line, np.array([1.0]), np.array([2.0])) is True
+    assert line.set_data_calls == 1
+    assert set_line_data_if_changed(line, np.array([1.0]), np.array([2.0])) is False
+    assert line.set_data_calls == 1
 
 
 def test_apply_review_render_frame_updates_review_lines_axes_and_pqrst() -> None:

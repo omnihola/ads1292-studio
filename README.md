@@ -184,6 +184,10 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   produce valid HR and should not spend GUI time on bandpass/peak detection.
 - Hide the live R-peak marker artist when no peaks are visible, and only change
   artist visibility when the peak-present state changes.
+- Apply changed-only data writes to the live R-peak marker because the peak
+  arrays are sparse and often empty; do not use array-equality guards on full
+  live ECG/respiration/contact traces, where comparing the rolling waveform can
+  cost more than the Matplotlib update it tries to avoid.
 - Keep live R-peak detection to one `find_peaks` pass by selecting the dominant
   ECG polarity before peak search; this preserves inverted-lead support without
   doubling GUI-tick peak detection work.
