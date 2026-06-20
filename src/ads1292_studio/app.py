@@ -33,6 +33,7 @@ from ads1292_studio.display import (
 from ads1292_studio.events import EventMarker, read_events_json, write_events_json
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_samples import append_live_sample_batch
+from ads1292_studio.gui_log import append_log_messages, log_tab_is_visible
 from ads1292_studio.gui_scroll import ScrollableFrame, _mousewheel_units
 from ads1292_studio.gui_session_index import build_session_index_message
 from ads1292_studio.gui_state import (
@@ -1361,23 +1362,16 @@ class App(tk.Tk):
         self._append_log_messages((message,))
 
     def _append_log_messages(self, messages: tuple[str, ...]) -> None:
-        if not messages:
-            return
-        stamp = datetime.now().strftime("%H:%M:%S")
-        self.log_text.insert(tk.END, format_log_entries(messages, stamp))
-        self._trim_log_text()
-        if self._log_tab_is_visible():
-            self.log_text.see(tk.END)
-
-    def _log_tab_is_visible(self) -> bool:
-        return hasattr(self, "log_tab") and self.selected_workspace_tab == str(self.log_tab)
-
-    def _trim_log_text(self) -> None:
-        max_lines = int(log_panel_spec()["max_lines"])
-        line_count = int(self.log_text.index("end-1c").split(".", maxsplit=1)[0])
-        if line_count <= max_lines:
-            return
-        self.log_text.delete("1.0", f"{line_count - max_lines + 1}.0")
+        append_log_messages(
+            self.log_text,
+            messages,
+            stamp=datetime.now().strftime("%H:%M:%S"),
+            max_lines=int(log_panel_spec()["max_lines"]),
+            autoscroll=log_tab_is_visible(
+                selected_workspace_tab=self.selected_workspace_tab,
+                log_tab=getattr(self, "log_tab", None),
+            ),
+        )
 
     def _close(self) -> None:
         self.is_closing = True

@@ -74,13 +74,23 @@ def test_app_tick_callback_is_cancellable_on_window_destroy() -> None:
 
 
 def test_app_batches_queued_log_messages_to_reduce_text_widget_churn() -> None:
+    from ads1292_studio.gui_log import append_log_messages, log_tab_is_visible, trim_log_text
+
     source = inspect.getsource(App)
+    helper_source = inspect.getsource(append_log_messages)
+    trim_source = inspect.getsource(trim_log_text)
 
     assert "def _append_log_messages" in source
-    assert "def _log_tab_is_visible" in source
-    assert "format_log_entries(messages, stamp)" in source
-    assert "self._trim_log_text()" in source
-    assert "if self._log_tab_is_visible():" in source
+    assert "append_log_messages(" in source
+    assert "def _log_tab_is_visible" not in source
+    assert "def _trim_log_text" not in source
+    assert append_log_messages.__module__ == "ads1292_studio.gui_log"
+    assert log_tab_is_visible.__module__ == "ads1292_studio.gui_log"
+    assert trim_log_text.__module__ == "ads1292_studio.gui_log"
+    assert "format_log_entries(messages, stamp)" in helper_source
+    assert "trim_log_text(log_text, max_lines=max_lines)" in helper_source
+    assert "if autoscroll:" in helper_source
+    assert ".delete(\"1.0\"" in trim_source
     assert "drain_queue_items(self.logs, MAX_LOG_MESSAGES_PER_TICK)" in source
     assert "self._append_log_messages(log_messages)" in source
 

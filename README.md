@@ -174,6 +174,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   orchestration rather than owning worker data models.
 - Keep log insertion batched and avoid autoscrolling the log Text widget while
   another workspace tab is selected; scroll to the end when Event Log is opened.
+  Keep append/trim/autoscroll Text-widget operations in `gui_log.py` so the
+  GUI tick only drains queues and delegates log rendering.
 - Keep toolbar toggle chips mouse- and keyboard-accessible, with visible hover
   and focus feedback, because they replace heavier checkbutton chrome,
   including acquisition toggles such as Save CSV.
