@@ -444,27 +444,23 @@ def test_display_toolbar_uses_compact_toggle_chips() -> None:
     assert "label.bind(\"<space>\", toggle)" in helper_source
 
 
-def test_record_save_control_uses_toolbar_toggle_chip() -> None:
+def test_record_save_control_uses_standard_checkbox() -> None:
     from ads1292_studio.gui_layout import build_acquisition_toolbar
 
     source = inspect.getsource(build_acquisition_toolbar)
     save_section = source.split("_toolbar_group_label(toolbar, \"Record\")", maxsplit=1)[1]
 
-    assert "_build_toolbar_toggle_chip(" in save_section
-    assert "text=\"Save CSV\"" in save_section
-    assert "ttk.Checkbutton(" not in save_section
+    assert "ttk.Checkbutton(" in save_section
+    assert "text=\"Record CSV\"" in save_section
+    assert "_build_toolbar_toggle_chip(" not in save_section
 
 
 def test_record_save_control_participates_in_control_state_gating() -> None:
-    from ads1292_studio.gui_layout import _build_toolbar_toggle_chip, register_control_buttons
+    from ads1292_studio.gui_layout import register_control_buttons
 
-    helper_source = inspect.getsource(_build_toolbar_toggle_chip)
     register_source = inspect.getsource(register_control_buttons)
 
     assert "\"Save CSV\": app.save_check" in register_source
-    assert "label.cget(\"state\") == tk.DISABLED" in helper_source
-    assert "styles[\"disabled_toggle_chip\"]" in helper_source
-    assert "label._ads1292_sync_toggle_style = sync_style" in helper_source
 
 
 def test_toolbar_toggle_chip_chrome_sync_skips_redundant_tk_writes() -> None:
