@@ -597,6 +597,22 @@ def test_gui_control_states_start_with_safe_disabled_defaults() -> None:
     assert states["Session Index"] == "normal"
 
 
+def test_gui_control_states_disable_connect_until_a_port_is_available() -> None:
+    state = GuiState(
+        connected=False,
+        streaming=False,
+        has_data=False,
+        has_recording_path=False,
+        has_port=False,
+    )
+
+    states = gui_control_states(state=state)
+
+    assert states["Refresh"] == "normal"
+    assert states["Connect"] == "disabled"
+    assert states["Load CSV"] == "normal"
+
+
 def test_app_reexports_gui_state_helpers_from_focused_module() -> None:
     import inspect
 
@@ -735,6 +751,20 @@ def test_gui_workflow_hint_guides_disconnected_state() -> None:
     )
 
     assert hint == "Next: select an ADS1292 port and press Connect, or load an existing CSV."
+
+
+def test_gui_workflow_hint_guides_missing_port_state() -> None:
+    hint = gui_workflow_hint(
+        state=GuiState(
+            connected=False,
+            streaming=False,
+            has_data=False,
+            has_recording_path=False,
+            has_port=False,
+        )
+    )
+
+    assert hint == "No ADS1292 port detected: plug in the board, press Refresh, or load an existing CSV."
 
 
 def test_gui_workflow_hint_guides_ready_to_start_state() -> None:

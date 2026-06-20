@@ -31,6 +31,7 @@ class GuiState:
     streaming: bool
     has_data: bool
     has_recording_path: bool
+    has_port: bool = True
     loading_csv: bool = False
     connecting: bool = False
     starting: bool = False
@@ -59,6 +60,7 @@ def _gui_state(
     streaming: bool = False,
     has_data: bool = False,
     has_recording_path: bool = False,
+    has_port: bool = True,
     loading_csv: bool = False,
     connecting: bool = False,
     starting: bool = False,
@@ -70,6 +72,7 @@ def _gui_state(
         streaming=streaming,
         has_data=has_data,
         has_recording_path=has_recording_path,
+        has_port=has_port,
         loading_csv=loading_csv,
         connecting=connecting,
         starting=starting,
@@ -96,6 +99,7 @@ def gui_control_states(
     streaming: bool = False,
     has_data: bool = False,
     has_recording_path: bool = False,
+    has_port: bool = True,
 ) -> dict[str, str]:
     current = _gui_state(
         state=state,
@@ -103,6 +107,7 @@ def gui_control_states(
         streaming=streaming,
         has_data=has_data,
         has_recording_path=has_recording_path,
+        has_port=has_port,
     )
     if current.busy:
         return {
@@ -119,7 +124,7 @@ def gui_control_states(
         }
     return {
         "Refresh": tk.NORMAL,
-        "Connect": tk.NORMAL,
+        "Connect": tk.NORMAL if current.has_port and not current.connected else tk.DISABLED,
         "Start": tk.NORMAL if current.connected and not current.streaming else tk.DISABLED,
         "Stop": tk.NORMAL if current.streaming else tk.DISABLED,
         "Load CSV": tk.NORMAL if not current.streaming else tk.DISABLED,
@@ -138,6 +143,7 @@ def gui_workflow_hint(
     streaming: bool = False,
     has_data: bool = False,
     has_recording_path: bool = False,
+    has_port: bool = True,
 ) -> str:
     current = _gui_state(
         state=state,
@@ -145,6 +151,7 @@ def gui_workflow_hint(
         streaming=streaming,
         has_data=has_data,
         has_recording_path=has_recording_path,
+        has_port=has_port,
     )
     if current.connecting:
         return "Connecting: probing the selected port."
@@ -160,6 +167,8 @@ def gui_workflow_hint(
         return "Data loaded: export a report; package export needs a saved CSV path."
     if current.connected:
         return "Next: press Start to begin acquisition, or load a CSV for offline review."
+    if not current.has_port:
+        return "No ADS1292 port detected: plug in the board, press Refresh, or load an existing CSV."
     return "Next: select an ADS1292 port and press Connect, or load an existing CSV."
 
 

@@ -710,6 +710,7 @@ class App(tk.Tk):
             streaming=self.is_streaming,
             has_data=bool(self.loaded_samples or (self.ch1 and self.ch2)),
             has_recording_path=self.recording_path is not None,
+            has_port=bool(self.port_var.get().strip()),
             loading_csv=self.is_loading_csv,
             connecting=self.is_connecting,
             starting=self.is_starting,
