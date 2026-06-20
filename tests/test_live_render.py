@@ -173,6 +173,31 @@ def test_live_render_skips_peak_detection_before_one_second(monkeypatch: pytest.
     assert frame.heart_rate.valid_rr_count == 0
 
 
+def test_live_render_skips_peak_detection_when_visible_window_is_lead_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_detect(*_args: object, **_kwargs: object) -> tuple[int, ...]:
+        raise AssertionError("R peak detection should skip fully lead-off live windows")
+
+    monkeypatch.setattr(live_render, "detect_r_peaks", fail_detect)
+
+    frame = build_live_render_frame(
+        indices=deque(range(600), maxlen=600),
+        ch1=deque((0.0 for _ in range(600)), maxlen=600),
+        ch2=deque((0.0 for _ in range(600)), maxlen=600),
+        status=deque((0x0F for _ in range(600)), maxlen=600),
+        display_settings=EcgDisplaySettings(time_window_seconds=2.0),
+        filter_settings=SoftwareFilterSettings(),
+        source="CH2",
+        sample_rate_hz=500.0,
+        smoothing_window=1,
+        max_render_points=100,
+        ecg_inverted=False,
+    )
+
+    assert frame is not None
+    assert frame.peaks == ()
+    assert frame.heart_rate.valid_rr_count == 0
+
+
 def test_live_render_reuses_bandpass_display_for_peak_detection() -> None:
     source = inspect.getsource(build_live_render_frame)
 

@@ -106,7 +106,8 @@ def build_live_render_frame(
     visible_ecg_plot = smooth_for_plot(visible_ecg, window=smoothing_window)
     visible_resp_plot = smooth_for_plot(visible_resp, window=smoothing_window)
     visible_status = deque_tail_array(status, visible_count, dtype=float)
-    if visible_count >= int(MIN_PEAK_DETECTION_SECONDS * sample_rate_hz):
+    contact_ok = bool(np.any(visible_status == 0.0))
+    if contact_ok and visible_count >= int(MIN_PEAK_DETECTION_SECONDS * sample_rate_hz):
         peaks = tuple(
             detect_r_peaks(
                 visible_ecg,

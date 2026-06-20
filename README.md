@@ -170,6 +170,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   without adding visible latency.
 - Do not run R-peak bandpass/detection work until at least one second of
   samples is available; earlier windows cannot produce valid HR anyway.
+- Skip live R-peak detection when the visible contact window is entirely
+  lead-off; disconnected electrodes should not spend GUI time on HR estimates
+  or show misleading peaks.
 - Keep live R-peak detection to one `find_peaks` pass by selecting the dominant
   ECG polarity before peak search; this preserves inverted-lead support without
   doubling GUI-tick peak detection work.
