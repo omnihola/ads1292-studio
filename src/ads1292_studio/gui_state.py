@@ -47,6 +47,10 @@ class GuiState:
     def package_ready(self) -> bool:
         return self.has_data and self.has_recording_path and not self.busy
 
+    @property
+    def port_available(self) -> bool:
+        return self.has_port or bool(self.selected_port.strip())
+
 
 def channel_map_cards() -> tuple[GuiStatusCard, ...]:
     return (
@@ -243,7 +247,7 @@ def gui_workflow_hint(
         return "Data loaded: export a report; package export needs a saved CSV path."
     if current.connected:
         return "Next: press Start to begin acquisition, or load a CSV for offline review."
-    if not current.has_port:
+    if not current.port_available:
         return "No ADS1292 port detected: plug in the board, press Refresh, or load an existing CSV."
     return "Next: select an ADS1292 port and press Connect, or load an existing CSV."
 
@@ -455,7 +459,7 @@ def gui_status_cards(
         has_recording_path=has_recording_path,
         selected_port=selected_port,
     )
-    connection_value = "connected" if current.connected else ("disconnected" if current.has_port else "no port")
+    connection_value = "connected" if current.connected else ("disconnected" if current.port_available else "no port")
     connection = GuiStatusCard(
         label="Connection",
         value=connection_value,

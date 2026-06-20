@@ -1183,6 +1183,21 @@ def test_gui_workflow_hint_guides_missing_port_state() -> None:
     assert hint == "No ADS1292 port detected: plug in the board, press Refresh, or load an existing CSV."
 
 
+def test_gui_workflow_hint_treats_manual_port_text_as_available() -> None:
+    hint = gui_workflow_hint(
+        state=GuiState(
+            connected=False,
+            streaming=False,
+            has_data=False,
+            has_recording_path=False,
+            has_port=False,
+            selected_port="/dev/cu.usbmodem214301",
+        )
+    )
+
+    assert hint == "Next: select an ADS1292 port and press Connect, or load an existing CSV."
+
+
 def test_gui_workflow_hint_guides_ready_to_start_state() -> None:
     hint = gui_workflow_hint(
         connected=True,
@@ -1350,6 +1365,22 @@ def test_gui_status_cards_expose_missing_port_state() -> None:
     )
 
     assert cards[0] == GuiStatusCard("Connection", "no port", "warning")
+
+
+def test_gui_status_cards_treat_manual_port_text_as_disconnected_port() -> None:
+    cards = gui_status_cards(
+        state=GuiState(
+            connected=False,
+            streaming=False,
+            has_data=False,
+            has_recording_path=False,
+            has_port=False,
+            selected_port="/dev/cu.usbmodem214301",
+        )
+    )
+
+    assert cards[0] == GuiStatusCard("Connection", "disconnected", "warning")
+    assert cards[1] == GuiStatusCard("Port", "usbmodem214301", "neutral")
 
 
 def test_gui_status_cards_expose_scan_friendly_streaming_state() -> None:
