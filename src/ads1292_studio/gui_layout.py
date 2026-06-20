@@ -132,13 +132,14 @@ def build_acquisition_toolbar(app: Any) -> None:
 
     _toolbar_group_label(toolbar, "Record")
     app.save_var = tk.BooleanVar(value=True)
-    app.save_check = ttk.Checkbutton(
+    app.save_check = _build_toolbar_toggle_chip(
         toolbar,
         text="Save CSV",
         variable=app.save_var,
-        style=toolbar_styles["toggle"],
+        command=lambda: None,
+        spec=toolbar_spec,
+        styles=toolbar_styles,
     )
-    app.save_check.pack(side=tk.LEFT, padx=toolbar_spec["save_padding"])
 
 
 def build_display_toolbar(

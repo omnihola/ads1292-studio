@@ -379,6 +379,17 @@ def test_display_toolbar_uses_compact_toggle_chips() -> None:
     assert "label.bind(\"<space>\", toggle)" in helper_source
 
 
+def test_record_save_control_uses_toolbar_toggle_chip() -> None:
+    from ads1292_studio.gui_layout import build_acquisition_toolbar
+
+    source = inspect.getsource(build_acquisition_toolbar)
+    save_section = source.split("_toolbar_group_label(toolbar, \"Record\")", maxsplit=1)[1]
+
+    assert "_build_toolbar_toggle_chip(" in save_section
+    assert "text=\"Save CSV\"" in save_section
+    assert "ttk.Checkbutton(" not in save_section
+
+
 def test_toolbar_toggle_chip_styles_are_configured() -> None:
     from ads1292_studio.gui_style import configure_toolbar_chrome
 
