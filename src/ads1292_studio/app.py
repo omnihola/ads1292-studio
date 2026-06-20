@@ -78,6 +78,7 @@ from ads1292_studio.gui_state import (
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
     should_apply_control_state,
+    stable_port_text,
     toolbar_display_hint_text,
 )
 from ads1292_studio.gui_style import (
@@ -252,6 +253,7 @@ class App(tk.Tk):
         self.stream_start_results: queue.Queue[StreamStartResult] = queue.Queue()
         self.worker = LiveWorker(self.samples, self.logs, self.stream_start_results)
         self.connected_port: str | None = None
+        self.last_selected_port = ""
         self.recording_path: Path | None = None
         self.loaded_samples: tuple[StreamSample, ...] = tuple()
         self.event_markers: list[EventMarker] = []
@@ -340,22 +342,37 @@ class App(tk.Tk):
             guess = find_ads_port()
             values = [guess] if guess else []
         self.port_combo["values"] = values
-        visible_port = effective_port_text(self.port_var.get(), self.port_combo.get())
+        visible_port = stable_port_text(
+            variable_text=self.port_var.get(),
+            widget_text=self.port_combo.get(),
+            available_values=values,
+            remembered_text=self.last_selected_port,
+        )
         if values and visible_port not in values:
-            self.port_var.set(values[0])
+            visible_port = values[0]
+            self.port_var.set(visible_port)
+        if visible_port:
+            self.last_selected_port = visible_port
         self._sync_port_entry_connection_message()
         self._apply_control_states(force=True)
 
     def _on_port_value_changed(self, *_args: object) -> None:
+        port = effective_port_text(self.port_var.get(), self.port_combo.get())
+        if port:
+            self.last_selected_port = port
         self._sync_port_entry_connection_message()
         self._apply_control_states(force=True)
 
     def _selected_port_text(self) -> str:
-        return effective_port_text(
-            self.port_var.get(),
-            self.port_combo.get(),
-            self.tk.splitlist(self.port_combo.cget("values")),
+        port = stable_port_text(
+            variable_text=self.port_var.get(),
+            widget_text=self.port_combo.get(),
+            available_values=self.tk.splitlist(self.port_combo.cget("values")),
+            remembered_text=self.last_selected_port,
         )
+        if port:
+            self.last_selected_port = port
+        return port
 
     def _sync_port_entry_connection_message(self) -> None:
         port_text = self._selected_port_text()

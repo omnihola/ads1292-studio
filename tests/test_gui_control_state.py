@@ -53,6 +53,7 @@ from ads1292_studio.app import (
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
     should_apply_control_state,
+    stable_port_text,
     status_label_spec,
     status_tone_color,
     status_tone_style,
@@ -891,6 +892,27 @@ def test_effective_port_text_falls_back_to_visible_combobox_text() -> None:
     assert effective_port_text(" /dev/cu.usbmodem214301 ", "/dev/cu.usbmodem999999") == "/dev/cu.usbmodem214301"
     assert effective_port_text("", "", ("/dev/cu.usbmodem214301",)) == "/dev/cu.usbmodem214301"
     assert effective_port_text("", "  ") == ""
+
+
+def test_stable_port_text_keeps_last_confirmed_port_during_tk_sync_lag() -> None:
+    assert stable_port_text(
+        variable_text="",
+        widget_text="",
+        available_values=(),
+        remembered_text="/dev/cu.usbmodem214301",
+    ) == "/dev/cu.usbmodem214301"
+    assert stable_port_text(
+        variable_text="",
+        widget_text="",
+        available_values=("/dev/cu.usbmodem214301",),
+        remembered_text="",
+    ) == "/dev/cu.usbmodem214301"
+    assert stable_port_text(
+        variable_text="/dev/cu.usbmodem999999",
+        widget_text="",
+        available_values=("/dev/cu.usbmodem214301",),
+        remembered_text="/dev/cu.usbmodem214301",
+    ) == "/dev/cu.usbmodem999999"
 
 
 def test_selected_port_is_connected_requires_exact_selected_port_match() -> None:

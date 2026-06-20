@@ -898,7 +898,13 @@ def test_plot_trace_styles_keep_live_and_review_signals_readable() -> None:
             "solid_capstyle": "round",
             "solid_joinstyle": "round",
         },
-        "contact": {"linewidth": 1.0, "alpha": 0.88, "drawstyle": "steps-post", "antialiased": True},
+        "contact": {
+            "linewidth": 1.0,
+            "alpha": 0.88,
+            "drawstyle": "steps-post",
+            "antialiased": False,
+            "snap": True,
+        },
         "peak": {
             "linestyle": "None",
             "marker": "o",

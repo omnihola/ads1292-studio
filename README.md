@@ -166,6 +166,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   color when the visible window is clean and the warning color when any
   lead-off bit is visible, but only write the Matplotlib line color when the
   color actually changes.
+- Render contact/status as a crisp digital trace (`steps-post`, snap enabled,
+  no antialiasing); do not smooth it like ECG or respiration.
 - Check duplicate live render keys before building render frames, and only
   clear empty-state artists after a frame is available, so idle or failed GUI
   ticks do not touch Matplotlib unnecessarily or flash blank axes.
@@ -246,7 +248,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   read the port variable, visible combobox text, and combobox values so
   macOS/Tk combobox sync lag cannot leave Connect disabled while a port is
   available; refresh must replace stale or blank visible text with the detected
-  port;
+  port; keep the last valid port as a fallback when Tk temporarily reports an
+  empty combobox during focus/refresh synchronization;
   enable Start only when the selected port matches the connected port.
 - Treat macOS `/dev/cu.usbmodem*` and `/dev/cu.usbserial*` devices as ADS1292
   connection candidates in the port list. Some ADS1292RECG-FE boards show up as

@@ -178,6 +178,19 @@ def effective_port_text(
     return ""
 
 
+def stable_port_text(
+    *,
+    variable_text: str,
+    widget_text: str,
+    available_values: Iterable[object] = (),
+    remembered_text: str = "",
+) -> str:
+    current = effective_port_text(variable_text, widget_text, available_values)
+    if current:
+        return current
+    return remembered_text.strip()
+
+
 def gui_workflow_hint(
     *,
     state: GuiState | None = None,
