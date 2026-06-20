@@ -276,6 +276,8 @@ def style_signal_axes(axes: tuple[object, ...]) -> None:
 
 
 def restore_data_axis_chrome(axes: tuple[object, ...]) -> None:
+    if not any(bool(getattr(ax, "_ads1292_empty_axis_chrome", False)) for ax in axes):
+        return
     style_signal_axes(axes)
     for ax in axes:
         ax.xaxis.label.set_visible(True)
@@ -284,6 +286,7 @@ def restore_data_axis_chrome(axes: tuple[object, ...]) -> None:
         ax.tick_params(labelleft=True, labelbottom=True, left=True, bottom=True)
         for line in ax.lines:
             line.set_visible(True)
+        setattr(ax, "_ads1292_empty_axis_chrome", False)
     for ax in axes:
         ax.label_outer()
 
@@ -299,6 +302,7 @@ def soften_empty_axis_chrome(axes: tuple[object, ...]) -> None:
             line.set_visible(False)
         for spine in ax.spines.values():
             spine.set_visible(False)
+        setattr(ax, "_ads1292_empty_axis_chrome", True)
 
 
 def set_signal_axis_title(ax: object, title: str) -> None:

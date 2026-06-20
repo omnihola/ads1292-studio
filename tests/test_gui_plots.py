@@ -76,6 +76,29 @@ def test_restore_data_axis_chrome_reenables_axis_and_lines() -> None:
     assert ax.spines["bottom"].get_visible()
 
 
+def test_restore_data_axis_chrome_skips_when_axis_is_already_active(monkeypatch) -> None:
+    import ads1292_studio.gui_plots as gui_plots
+
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    artists: list[object] = []
+    calls = {"style": 0}
+    original_style = gui_plots.style_signal_axes
+
+    def counted_style(axes: tuple[object, ...]) -> None:
+        calls["style"] += 1
+        original_style(axes)
+
+    monkeypatch.setattr(gui_plots, "style_signal_axes", counted_style)
+    show_empty_plot_state(artists, "pqrst", (ax,))
+
+    restore_data_axis_chrome((ax,))
+    restore_data_axis_chrome((ax,))
+
+    assert calls["style"] == 1
+    assert getattr(ax, "_ads1292_empty_axis_chrome") is False
+
+
 def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
     fig = Figure()
     ax_ecg = fig.add_subplot(311)

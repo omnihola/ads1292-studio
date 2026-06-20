@@ -893,13 +893,16 @@ def test_empty_plot_style_uses_muted_callouts() -> None:
 
 def test_empty_plot_state_uses_quiet_axes_until_data_arrives() -> None:
     from ads1292_studio.app import App
-    from ads1292_studio.gui_plots import apply_live_render_frame, show_empty_plot_state
+    from ads1292_studio.gui_plots import apply_live_render_frame, restore_data_axis_chrome, show_empty_plot_state
 
     empty_source = inspect.getsource(show_empty_plot_state)
+    restore_source = inspect.getsource(restore_data_axis_chrome)
     live_source = inspect.getsource(apply_live_render_frame)
     review_source = inspect.getsource(App._show_review_frame)
 
     assert "soften_empty_axis_chrome(axes)" in empty_source
+    assert "_ads1292_empty_axis_chrome" in restore_source
+    assert "return" in restore_source
     assert "restore_data_axis_chrome((app.ax_live_ecg" in live_source
     assert "restore_data_axis_chrome((self.ax_review_ecg" in review_source
 
