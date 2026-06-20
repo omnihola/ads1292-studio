@@ -30,6 +30,12 @@ def smoothing_kernel(window: int) -> np.ndarray:
     return np.full(window, 1.0 / window)
 
 
+@lru_cache(maxsize=64)
+def extrema_bin_edges(size: int, max_points: int) -> np.ndarray:
+    bin_count = max(1, (int(max_points) - 2) // 2)
+    return np.linspace(0, int(size), bin_count + 1, dtype=int)
+
+
 def decimate_for_plot(x, y, max_points: int) -> tuple[np.ndarray, np.ndarray]:
     x_arr = np.asarray(x)
     y_arr = np.asarray(y)
@@ -62,8 +68,7 @@ def decimate_extrema_for_plot(x, y, max_points: int) -> tuple[np.ndarray, np.nda
     if max_points < 4:
         return decimate_for_plot(x_arr, y_arr, max_points=max_points)
 
-    bin_count = max(1, (max_points - 2) // 2)
-    edges = np.linspace(0, y_arr.size, bin_count + 1, dtype=int)
+    edges = extrema_bin_edges(y_arr.size, max_points)
     keep: list[int] = [0, y_arr.size - 1]
     for start, stop in zip(edges[:-1], edges[1:]):
         if stop <= start:

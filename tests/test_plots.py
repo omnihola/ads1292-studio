@@ -7,6 +7,7 @@ from ads1292_studio.plots import (
     decimate_extrema_for_plot,
     decimate_for_plot,
     endpoint_indices,
+    extrema_bin_edges,
     robust_ylim,
     smooth_for_plot,
     smoothing_kernel,
@@ -59,6 +60,29 @@ def test_smooth_for_plot_even_window_uses_cached_odd_kernel() -> None:
     assert smoothing_kernel.cache_info().misses == 1
     assert smoothing_kernel.cache_info().currsize == 1
     assert smoothing_kernel(5).size == 5
+
+
+def test_extrema_bin_edges_are_cached_for_stable_live_windows() -> None:
+    extrema_bin_edges.cache_clear()
+
+    first = extrema_bin_edges(4002, 2500)
+    second = extrema_bin_edges(4002, 2500)
+
+    assert first is second
+    assert first[0] == 0
+    assert first[-1] == 4002
+    assert extrema_bin_edges.cache_info().hits == 1
+
+
+def test_decimate_extrema_for_plot_reuses_cached_bin_edges() -> None:
+    extrema_bin_edges.cache_clear()
+    x = np.arange(1000)
+    y = np.sin(np.linspace(0, 20, 1000))
+
+    decimate_extrema_for_plot(x, y, max_points=100)
+    decimate_extrema_for_plot(x, y, max_points=100)
+
+    assert extrema_bin_edges.cache_info().hits == 1
 
 
 def test_robust_ylim_can_keep_flat_noise_from_being_overzoomed() -> None:

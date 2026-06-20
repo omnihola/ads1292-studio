@@ -155,8 +155,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep the live render path lightweight: raw 1x non-inverted display should
   reuse the existing NumPy buffer, and Matplotlib artists should only be
   recreated when their visible settings actually change.
-- Reuse fixed display smoothing kernels; live ECG and respiration plots use the
-  same smoothing window repeatedly during streaming.
+- Reuse fixed display smoothing kernels and extrema-decimation bin edges; live
+  ECG and respiration plots use the same window geometry repeatedly during
+  streaming.
 - Do not run R-peak bandpass/detection work until at least one second of
   samples is available; earlier windows cannot produce valid HR anyway.
 - Keep expensive live quality recomputation in the existing single-flight
