@@ -373,9 +373,9 @@ STATUS_AXIS_SPEC = {
 }
 EMPTY_PLOT_MESSAGES = {
     "live": (
-        "CH2 ECG Lead I appears after Start",
-        "CH1 respiration appears after Start",
-        "Lead-off/contact status appears after Start",
+        "Waiting for CH2 ECG Lead I",
+        "Waiting for CH1 respiration",
+        "Waiting for contact status",
     ),
     "review": (
         "Load CSV for CH2 ECG review",

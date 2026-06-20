@@ -1267,9 +1267,9 @@ def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
     messages = empty_plot_messages()
 
     assert messages["live"] == (
-        "CH2 ECG Lead I appears after Start",
-        "CH1 respiration appears after Start",
-        "Lead-off/contact status appears after Start",
+        "Waiting for CH2 ECG Lead I",
+        "Waiting for CH1 respiration",
+        "Waiting for contact status",
     )
     assert messages["review"] == (
         "Load CSV for CH2 ECG review",
