@@ -269,8 +269,8 @@ HEADER_CONNECTION_STYLES = {
 }
 HEADER_CONNECTION_PILL = {
     "styles": HEADER_CONNECTION_STYLES,
-    "padding": (12, 5),
-    "font": ("Aptos", 12, "bold"),
+    "padding": (10, 4),
+    "font": ("Aptos", 11, "bold"),
     "borderwidth": 1,
     "relief": "flat",
     "backgrounds": {
@@ -289,8 +289,8 @@ HEADER_CONNECTION_PILL = {
 HEADER_LAYOUT_SPEC = {
     "frame": "Header.TFrame",
     "separator": "HeaderSeparator.TFrame",
-    "padding": (20, 14, 20, 12),
-    "subtitle_padding": (14, 0),
+    "padding": (18, 10, 18, 9),
+    "subtitle_padding": (12, 0),
     "separator_height": 1,
 }
 HEADER_FRAME_SPEC = {
@@ -303,13 +303,13 @@ HEADER_FRAME_SPEC = {
 HEADER_TEXT_STYLES = {
     "title": {
         "style": "AppTitle.TLabel",
-        "font": ("Aptos", 20, "bold"),
+        "font": ("Aptos", 18, "bold"),
         "background": "#FFFFFF",
         "foreground": "#172033",
     },
     "subtitle": {
         "style": "AppSubtitle.TLabel",
-        "font": ("Aptos", 12),
+        "font": ("Aptos", 11),
         "background": "#FFFFFF",
         "foreground": "#657084",
     },

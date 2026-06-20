@@ -420,8 +420,8 @@ def test_header_connection_styles_make_status_a_pill() -> None:
             "warning": "Warning.Connection.TLabel",
             "neutral": "Neutral.Connection.TLabel",
         },
-        "padding": (12, 5),
-        "font": ("Aptos", 12, "bold"),
+        "padding": (10, 4),
+        "font": ("Aptos", 11, "bold"),
         "borderwidth": 1,
         "relief": "flat",
         "backgrounds": {
@@ -443,8 +443,8 @@ def test_header_layout_spec_gives_top_bar_clear_structure() -> None:
     assert header_layout_spec() == {
         "frame": "Header.TFrame",
         "separator": "HeaderSeparator.TFrame",
-        "padding": (20, 14, 20, 12),
-        "subtitle_padding": (14, 0),
+        "padding": (18, 10, 18, 9),
+        "subtitle_padding": (12, 0),
         "separator_height": 1,
     }
 
@@ -463,13 +463,13 @@ def test_header_text_styles_keep_title_and_context_readable() -> None:
     assert header_text_styles() == {
         "title": {
             "style": "AppTitle.TLabel",
-            "font": ("Aptos", 20, "bold"),
+            "font": ("Aptos", 18, "bold"),
             "background": "#FFFFFF",
             "foreground": "#172033",
         },
         "subtitle": {
             "style": "AppSubtitle.TLabel",
-            "font": ("Aptos", 12),
+            "font": ("Aptos", 11),
             "background": "#FFFFFF",
             "foreground": "#657084",
         },
