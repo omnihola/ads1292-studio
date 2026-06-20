@@ -1188,7 +1188,6 @@ class App(tk.Tk):
     def _redraw_live(self) -> None:
         if not self.indices:
             return
-        self._clear_empty_plot_state()
         display_settings = self._display_settings()
         filter_settings = self._software_filter_settings()
         render_key = live_render_refresh_key(
@@ -1202,6 +1201,7 @@ class App(tk.Tk):
         if self.last_live_render_key == render_key:
             return
         self.last_live_render_key = render_key
+        self._clear_empty_plot_state()
         frame = build_live_render_frame(
             indices=self.indices,
             ch1=self.ch1,
