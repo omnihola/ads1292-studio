@@ -51,6 +51,7 @@ from ads1292_studio.gui_state import (
     MAX_SAMPLES_PER_TICK,
     GuiState,
     GuiStatusCard,
+    apply_live_metrics_text,
     apply_status_card_if_changed,
     axis_limits_changed,
     channel_map_cards,
@@ -69,7 +70,6 @@ from ads1292_studio.gui_state import (
     gui_tick_interval_ms,
     gui_workflow_hint,
     header_connection_tone,
-    live_metrics_text,
     live_render_refresh_key,
     port_entry_connection_message,
     selected_port_is_connected,
@@ -1238,15 +1238,13 @@ class App(tk.Tk):
             contact_label=contact_label,
             ecg_inverted=DEFAULT_ECG_INVERTED,
         )
-        set_string_var_if_changed(
+        apply_live_metrics_text(
             self.metrics_var,
-            live_metrics_text(
-                sample_index=self.sample_index,
-                duration_seconds=float(frame.visible_x[-1]),
-                ecg_label=ecg_label,
-                heart_rate_bpm=frame.heart_rate.median_bpm,
-                peak_count=len(frame.peaks),
-            ),
+            sample_index=self.sample_index,
+            duration_seconds=float(frame.visible_x[-1]),
+            ecg_label=ecg_label,
+            heart_rate_bpm=frame.heart_rate.median_bpm,
+            peak_count=len(frame.peaks),
         )
         self._schedule_live_quality_update(
             source=frame.source,

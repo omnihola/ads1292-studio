@@ -171,6 +171,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   update text/cards instead of owning plot mutation details.
 - Keep live axis title caching and title writes in `gui_plots.py`; `app.py`
   should pass current display/filter context and channel labels only.
+- Keep live metrics text generation and changed-only StringVar writes in
+  `gui_state.py`; `app.py` should pass frame values rather than formatting
+  toolbar text directly.
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs; wait
   for at least one second of samples before starting live quality snapshots.

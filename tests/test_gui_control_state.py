@@ -43,7 +43,6 @@ from ads1292_studio.app import (
     live_quality_sample_count_ready,
     live_quality_update_plan,
     live_quality_worker_available,
-    live_metrics_text,
     live_render_refresh_key,
     port_entry_connection_message,
     review_render_pending_ready,
@@ -60,7 +59,7 @@ from ads1292_studio.app import (
 )
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
-from ads1292_studio.gui_state import live_axis_titles, live_ecg_axis_title
+from ads1292_studio.gui_state import apply_live_metrics_text, live_axis_titles, live_ecg_axis_title, live_metrics_text
 from ads1292_studio.models import StreamSample
 
 
@@ -724,6 +723,55 @@ def test_live_metrics_text_carries_dynamic_runtime_counts() -> None:
     )
 
     assert text == "samples 1234 | duration 2.5 s | source CH2 ECG Lead I (LA-RA) | HR 72 bpm | R peaks 5"
+
+
+def test_live_redraw_delegates_metrics_text_application() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    redraw_source = inspect.getsource(App._redraw_live)
+
+    assert "apply_live_metrics_text(" in redraw_source
+    assert "live_metrics_text(\n                sample_index=" not in redraw_source
+    assert "set_string_var_if_changed(" not in redraw_source
+
+
+def test_apply_live_metrics_text_updates_only_when_value_changes() -> None:
+    class FakeStringVar:
+        def __init__(self) -> None:
+            self.value = ""
+            self.set_count = 0
+
+        def get(self) -> str:
+            return self.value
+
+        def set(self, value: str) -> None:
+            self.value = value
+            self.set_count += 1
+
+    var = FakeStringVar()
+    changed = apply_live_metrics_text(
+        var,
+        sample_index=1234,
+        duration_seconds=2.468,
+        ecg_label="CH2 ECG Lead I (LA-RA)",
+        heart_rate_bpm=72.4,
+        peak_count=5,
+    )
+    unchanged = apply_live_metrics_text(
+        var,
+        sample_index=1234,
+        duration_seconds=2.468,
+        ecg_label="CH2 ECG Lead I (LA-RA)",
+        heart_rate_bpm=72.4,
+        peak_count=5,
+    )
+
+    assert changed is True
+    assert unchanged is False
+    assert var.set_count == 1
+    assert var.get() == "samples 1234 | duration 2.5 s | source CH2 ECG Lead I (LA-RA) | HR 72 bpm | R peaks 5"
 
 
 def test_live_quality_worker_available_skips_when_future_is_running() -> None:

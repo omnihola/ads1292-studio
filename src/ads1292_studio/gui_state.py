@@ -263,6 +263,27 @@ def live_metrics_text(
     )
 
 
+def apply_live_metrics_text(
+    var: object,
+    *,
+    sample_index: int,
+    duration_seconds: float,
+    ecg_label: str,
+    heart_rate_bpm: float,
+    peak_count: int,
+) -> bool:
+    return set_string_var_if_changed(
+        var,
+        live_metrics_text(
+            sample_index=sample_index,
+            duration_seconds=duration_seconds,
+            ecg_label=ecg_label,
+            heart_rate_bpm=heart_rate_bpm,
+            peak_count=peak_count,
+        ),
+    )
+
+
 def format_log_entries(messages: tuple[str, ...], stamp: str) -> str:
     return "".join(f"[{stamp}] {message}\n" for message in messages)
 
