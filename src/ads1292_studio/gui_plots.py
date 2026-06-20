@@ -124,7 +124,7 @@ def apply_live_render_frame(
     min_ecg_span_counts: float,
     min_resp_span_counts: float,
 ) -> None:
-    restore_data_axis_chrome((app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
+    restored_axis_chrome = restore_data_axis_chrome((app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
     app.live_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
     app.live_peak_line.set_data(frame.peaks_x, frame.peaks_y)
     app.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
@@ -139,12 +139,18 @@ def apply_live_render_frame(
         status_top = float(frame.visible_status.max()) + 0.5 if frame.visible_status.size else 1.0
         set_axis_ylim_if_changed(app.ax_live_status, (-0.5, max(1.0, status_top)))
     apply_ecg_paper_grid(app.ax_live_ecg, display_settings, app.ecg_paper_grid_cache)
-    draw_calibration_pulse(
+    if restored_axis_chrome or calibration_pulse_needs_update(
         app.ax_live_ecg,
         app.live_calibration_artists,
         display_settings,
         app.calibration_pulse_cache,
-    )
+    ):
+        draw_calibration_pulse(
+            app.ax_live_ecg,
+            app.live_calibration_artists,
+            display_settings,
+            app.calibration_pulse_cache,
+        )
     app.live_canvas.draw_idle()
 
 
@@ -275,9 +281,9 @@ def style_signal_axes(axes: tuple[object, ...]) -> None:
             ax.spines[side].set_linewidth(style["spine_linewidth"])
 
 
-def restore_data_axis_chrome(axes: tuple[object, ...]) -> None:
+def restore_data_axis_chrome(axes: tuple[object, ...]) -> bool:
     if not any(bool(getattr(ax, "_ads1292_empty_axis_chrome", False)) for ax in axes):
-        return
+        return False
     style_signal_axes(axes)
     for ax in axes:
         ax.xaxis.label.set_visible(True)
@@ -289,6 +295,7 @@ def restore_data_axis_chrome(axes: tuple[object, ...]) -> None:
         setattr(ax, "_ads1292_empty_axis_chrome", False)
     for ax in axes:
         ax.label_outer()
+    return True
 
 
 def soften_empty_axis_chrome(axes: tuple[object, ...]) -> None:
@@ -422,6 +429,17 @@ def draw_calibration_pulse(
     )
     artists.extend((line, label))
     cache[axis_id] = label_text
+
+
+def calibration_pulse_needs_update(
+    ax: object,
+    artists: list[object],
+    settings: EcgDisplaySettings,
+    cache: dict[int, str],
+) -> bool:
+    if not artists:
+        return True
+    return cache.get(id(ax)) != display_scale_reference_label(settings)
 
 
 def show_empty_plot_state(artists: list[object], key: str, axes: tuple[object, ...]) -> None:

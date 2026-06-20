@@ -6,6 +6,8 @@ from matplotlib.figure import Figure
 from ads1292_studio.display import EcgDisplaySettings
 from ads1292_studio.gui_plots import (
     apply_live_render_frame,
+    calibration_pulse_needs_update,
+    draw_calibration_pulse,
     draw_pqrst_review,
     restore_data_axis_chrome,
     show_empty_plot_state,
@@ -67,8 +69,9 @@ def test_restore_data_axis_chrome_reenables_axis_and_lines() -> None:
     artists: list[object] = []
     show_empty_plot_state(artists, "pqrst", (ax,))
 
-    restore_data_axis_chrome((ax,))
+    restored = restore_data_axis_chrome((ax,))
 
+    assert restored is True
     assert ax.xaxis.label.get_visible()
     assert ax.yaxis.label.get_visible()
     assert line.get_visible()
@@ -92,11 +95,29 @@ def test_restore_data_axis_chrome_skips_when_axis_is_already_active(monkeypatch)
     monkeypatch.setattr(gui_plots, "style_signal_axes", counted_style)
     show_empty_plot_state(artists, "pqrst", (ax,))
 
-    restore_data_axis_chrome((ax,))
-    restore_data_axis_chrome((ax,))
+    restored = restore_data_axis_chrome((ax,))
+    skipped = restore_data_axis_chrome((ax,))
 
+    assert restored is True
+    assert skipped is False
     assert calls["style"] == 1
     assert getattr(ax, "_ads1292_empty_axis_chrome") is False
+
+
+def test_calibration_pulse_needs_update_uses_artist_and_label_cache() -> None:
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    artists: list[object] = []
+    cache: dict[int, str] = {}
+    settings = EcgDisplaySettings(gain=1.0)
+
+    assert calibration_pulse_needs_update(ax, artists, settings, cache) is True
+
+    draw_calibration_pulse(ax, artists, settings, cache)
+
+    assert artists
+    assert calibration_pulse_needs_update(ax, artists, settings, cache) is False
+    assert calibration_pulse_needs_update(ax, artists, EcgDisplaySettings(gain=2.0), cache) is True
 
 
 def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
