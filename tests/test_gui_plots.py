@@ -13,6 +13,7 @@ from ads1292_studio.gui_plots import (
     live_contact_trace_color,
     restore_data_axis_chrome,
     set_line_color_if_changed,
+    set_line_visible_if_changed,
     show_empty_plot_state,
 )
 from ads1292_studio.live_render import LiveRenderFrame
@@ -193,12 +194,71 @@ def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
 
     assert ecg_line.get_xdata().tolist() == [1.0, 2.0, 3.0]
     assert peak_line.get_ydata().tolist() == [2.0]
+    assert peak_line.get_visible() is True
     assert resp_line.get_ydata().tolist() == [10.0, 11.0, 12.0]
     assert status_line.get_ydata().tolist() == [0.0, 2.0, 2.0]
     assert status_line.get_color() == APP_VISUAL_TOKENS["warning"]
     assert ax_ecg.get_xlim() == (1.0, 9.0)
     assert ax_status.get_ylim() == (-0.5, 2.5)
     assert canvas.draw_idle_calls == 1
+
+
+def test_apply_live_render_frame_hides_empty_peak_marker_artist() -> None:
+    fig = Figure()
+    ax_ecg = fig.add_subplot(311)
+    ax_resp = fig.add_subplot(312)
+    ax_status = fig.add_subplot(313)
+    ecg_line, = ax_ecg.plot([], [])
+    peak_line, = ax_ecg.plot([], [])
+    resp_line, = ax_resp.plot([], [])
+    status_line, = ax_status.plot([], [])
+    canvas = FakeCanvas()
+    app = SimpleNamespace(
+        live_ecg_line=ecg_line,
+        live_peak_line=peak_line,
+        live_resp_line=resp_line,
+        live_status_line=status_line,
+        ax_live_ecg=ax_ecg,
+        ax_live_resp=ax_resp,
+        ax_live_status=ax_status,
+        ecg_paper_grid_cache={},
+        live_calibration_artists=[],
+        calibration_pulse_cache={},
+        live_canvas=canvas,
+    )
+    frame = LiveRenderFrame(
+        source="CH2",
+        left=1.0,
+        right=9.0,
+        visible_x=np.array([1.0, 2.0, 3.0]),
+        visible_ecg=np.array([0.0, 0.0, 0.0]),
+        visible_ecg_plot=np.array([0.0, 0.0, 0.0]),
+        visible_resp_plot=np.array([10.0, 11.0, 12.0]),
+        visible_status=np.array([0.0, 0.0, 0.0]),
+        peaks=(),
+        peaks_x=np.array([], dtype=float),
+        peaks_y=np.array([], dtype=float),
+        plot_ecg_x=np.array([1.0, 2.0, 3.0]),
+        plot_ecg=np.array([0.0, 0.0, 0.0]),
+        plot_resp_x=np.array([1.0, 2.0, 3.0]),
+        plot_resp=np.array([10.0, 11.0, 12.0]),
+        plot_status_x=np.array([1.0, 2.0, 3.0]),
+        plot_status=np.array([0.0, 0.0, 0.0]),
+        heart_rate=HeartRateSummary(0.0, 0.0, 0.0, 0),
+    )
+
+    apply_live_render_frame(
+        app,
+        frame,
+        display_settings=EcgDisplaySettings(time_window_seconds=8.0),
+        autoscale=True,
+        min_ecg_span_counts=8.0,
+        min_resp_span_counts=40.0,
+    )
+
+    assert peak_line.get_visible() is False
+    assert peak_line.get_xdata().tolist() == []
+    assert peak_line.get_ydata().tolist() == []
 
 
 def test_live_contact_trace_color_flags_visible_lead_off() -> None:
@@ -227,6 +287,28 @@ def test_set_line_color_if_changed_skips_redundant_matplotlib_writes() -> None:
     assert set_line_color_if_changed(line, "orange") is True
     assert line.color == "orange"
     assert line.set_color_calls == 1
+
+
+def test_set_line_visible_if_changed_skips_redundant_matplotlib_writes() -> None:
+    class FakeLine:
+        def __init__(self) -> None:
+            self.visible = True
+            self.set_visible_calls = 0
+
+        def get_visible(self) -> bool:
+            return self.visible
+
+        def set_visible(self, visible: bool) -> None:
+            self.visible = visible
+            self.set_visible_calls += 1
+
+    line = FakeLine()
+
+    assert set_line_visible_if_changed(line, True) is False
+    assert line.set_visible_calls == 0
+    assert set_line_visible_if_changed(line, False) is True
+    assert line.visible is False
+    assert line.set_visible_calls == 1
 
 
 def test_apply_review_render_frame_updates_review_lines_axes_and_pqrst() -> None:

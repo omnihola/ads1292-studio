@@ -182,6 +182,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   or show misleading peaks.
 - Skip live R-peak detection for flatline ECG windows; a constant trace cannot
   produce valid HR and should not spend GUI time on bandpass/peak detection.
+- Hide the live R-peak marker artist when no peaks are visible, and only change
+  artist visibility when the peak-present state changes.
 - Keep live R-peak detection to one `find_peaks` pass by selecting the dominant
   ECG polarity before peak search; this preserves inverted-lead support without
   doubling GUI-tick peak detection work.
