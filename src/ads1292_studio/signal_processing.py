@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 import numpy as np
 from scipy import signal
 
@@ -15,10 +17,7 @@ def bandpass(values, sample_rate_hz: float, low_hz: float = 0.7, high_hz: float 
     arr = as_float_array(values)
     if arr.size < 16:
         return arr - np.median(arr) if arr.size else arr
-    nyquist = sample_rate_hz / 2
-    high = min(high_hz / nyquist, 0.99)
-    low = max(low_hz / nyquist, 0.0001)
-    b, a = signal.butter(2, [low, high], btype="band")
+    b, a = _bandpass_coefficients(float(sample_rate_hz), float(low_hz), float(high_hz))
     return signal.filtfilt(b, a, arr)
 
 
@@ -26,8 +25,7 @@ def highpass(values, sample_rate_hz: float, cutoff_hz: float = 0.5) -> np.ndarra
     arr = as_float_array(values)
     if arr.size < 16:
         return arr - np.median(arr) if arr.size else arr
-    cutoff = max(cutoff_hz / (sample_rate_hz / 2), 0.0001)
-    b, a = signal.butter(2, cutoff, btype="highpass")
+    b, a = _highpass_coefficients(float(sample_rate_hz), float(cutoff_hz))
     return signal.filtfilt(b, a, arr)
 
 
@@ -35,8 +33,7 @@ def lowpass(values, sample_rate_hz: float, cutoff_hz: float = 40.0) -> np.ndarra
     arr = as_float_array(values)
     if arr.size < 16:
         return arr
-    cutoff = min(cutoff_hz / (sample_rate_hz / 2), 0.99)
-    b, a = signal.butter(2, cutoff, btype="lowpass")
+    b, a = _lowpass_coefficients(float(sample_rate_hz), float(cutoff_hz))
     return signal.filtfilt(b, a, arr)
 
 
@@ -44,9 +41,52 @@ def notch(values, sample_rate_hz: float, notch_hz: float = 60.0, q: float = 30.0
     arr = as_float_array(values)
     if arr.size < 16:
         return arr
+    b, a = _notch_coefficients(float(sample_rate_hz), float(notch_hz), float(q))
+    return signal.filtfilt(b, a, arr)
+
+
+@lru_cache(maxsize=32)
+def _bandpass_coefficients(
+    sample_rate_hz: float,
+    low_hz: float,
+    high_hz: float,
+) -> tuple[tuple[float, ...], tuple[float, ...]]:
+    nyquist = sample_rate_hz / 2
+    high = min(high_hz / nyquist, 0.99)
+    low = max(low_hz / nyquist, 0.0001)
+    b, a = signal.butter(2, [low, high], btype="band")
+    return tuple(float(value) for value in b), tuple(float(value) for value in a)
+
+
+@lru_cache(maxsize=32)
+def _highpass_coefficients(
+    sample_rate_hz: float,
+    cutoff_hz: float,
+) -> tuple[tuple[float, ...], tuple[float, ...]]:
+    cutoff = max(cutoff_hz / (sample_rate_hz / 2), 0.0001)
+    b, a = signal.butter(2, cutoff, btype="highpass")
+    return tuple(float(value) for value in b), tuple(float(value) for value in a)
+
+
+@lru_cache(maxsize=32)
+def _lowpass_coefficients(
+    sample_rate_hz: float,
+    cutoff_hz: float,
+) -> tuple[tuple[float, ...], tuple[float, ...]]:
+    cutoff = min(cutoff_hz / (sample_rate_hz / 2), 0.99)
+    b, a = signal.butter(2, cutoff, btype="lowpass")
+    return tuple(float(value) for value in b), tuple(float(value) for value in a)
+
+
+@lru_cache(maxsize=32)
+def _notch_coefficients(
+    sample_rate_hz: float,
+    notch_hz: float,
+    q: float,
+) -> tuple[tuple[float, ...], tuple[float, ...]]:
     normalized = min(notch_hz / (sample_rate_hz / 2), 0.99)
     b, a = signal.iirnotch(normalized, q)
-    return signal.filtfilt(b, a, arr)
+    return tuple(float(value) for value in b), tuple(float(value) for value in a)
 
 
 def apply_software_filters(

@@ -5,9 +5,17 @@ import pytest
 
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.signal_processing import (
+    _bandpass_coefficients,
+    _highpass_coefficients,
+    _lowpass_coefficients,
+    _notch_coefficients,
+    bandpass,
     choose_ecg_channel,
     detect_r_peaks,
     heart_rate_summary,
+    highpass,
+    lowpass,
+    notch,
     pqrst_review,
 )
 
@@ -51,6 +59,27 @@ def test_pqrst_review_is_conservative_about_p_and_t() -> None:
     assert review.beats_used >= 8
     assert review.p_tentative in (True, False)
     assert review.t_tentative in (True, False)
+
+
+def test_filter_design_coefficients_are_cached_between_live_frames() -> None:
+    values = np.sin(np.linspace(0, 12, 800))
+    for cached in (
+        _bandpass_coefficients,
+        _highpass_coefficients,
+        _lowpass_coefficients,
+        _notch_coefficients,
+    ):
+        cached.cache_clear()
+
+    np.testing.assert_allclose(bandpass(values, 500.0), bandpass(values, 500.0))
+    np.testing.assert_allclose(highpass(values, 500.0), highpass(values, 500.0))
+    np.testing.assert_allclose(lowpass(values, 500.0), lowpass(values, 500.0))
+    np.testing.assert_allclose(notch(values, 500.0), notch(values, 500.0))
+
+    assert _bandpass_coefficients.cache_info().hits == 1
+    assert _highpass_coefficients.cache_info().hits == 1
+    assert _lowpass_coefficients.cache_info().hits == 1
+    assert _notch_coefficients.cache_info().hits == 1
 
 
 def test_real_saved_run_selects_ch2_when_available() -> None:
