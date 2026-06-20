@@ -40,6 +40,7 @@ from ads1292_studio.app import (
     live_metrics_text,
     live_render_refresh_key,
     port_entry_connection_message,
+    selected_port_is_connected,
     set_axis_xlim_if_changed,
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
@@ -670,6 +671,29 @@ def test_port_entry_connection_message_tracks_manual_port_edits() -> None:
         busy=True,
         streaming=False,
     ) is None
+
+
+def test_selected_port_is_connected_requires_exact_selected_port_match() -> None:
+    assert selected_port_is_connected("/dev/cu.usbmodem214301", "/dev/cu.usbmodem214301") is True
+    assert selected_port_is_connected("/dev/cu.usbmodem214301", " /dev/cu.usbmodem214301 ") is True
+    assert selected_port_is_connected("/dev/cu.usbmodem214301", "/dev/cu.usbmodem999999") is False
+    assert selected_port_is_connected(None, "/dev/cu.usbmodem214301") is False
+    assert selected_port_is_connected("/dev/cu.usbmodem214301", "") is False
+
+
+def test_selected_port_mismatch_requires_reconnect_before_start() -> None:
+    state = GuiState(
+        connected=selected_port_is_connected("/dev/cu.usbmodem214301", "/dev/cu.usbmodem999999"),
+        streaming=False,
+        has_data=False,
+        has_recording_path=False,
+        has_port=True,
+    )
+
+    states = gui_control_states(state=state)
+
+    assert states["Connect"] == "normal"
+    assert states["Start"] == "disabled"
 
 
 def test_app_reexports_gui_state_helpers_from_focused_module() -> None:

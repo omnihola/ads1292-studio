@@ -176,7 +176,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   primary action that can only fail; keep the header badge and sidebar
   Connection card aligned on that `no port` state, and recompute controls
   immediately when the port field changes or Refresh updates the port list,
-  including returning the header badge to `Not connected` when a port appears.
+  including returning the header badge to `Not connected` when a port appears;
+  enable Start only when the selected port matches the connected port.
 - Keep custom sidebar/workspace tab strips keyboard-accessible, with visible
   hover and focus states, because they replace native notebook tabs.
 - Keep action buttons' focus borders visible so keyboard navigation has a

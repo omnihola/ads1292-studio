@@ -152,6 +152,10 @@ def port_entry_connection_message(
     return "Not connected" if port_text.strip() else "No ADS1x9x port"
 
 
+def selected_port_is_connected(connected_port: str | None, port_text: str) -> bool:
+    return connected_port is not None and port_text.strip() == connected_port
+
+
 def gui_workflow_hint(
     *,
     state: GuiState | None = None,

@@ -65,6 +65,7 @@ from ads1292_studio.gui_state import (
     live_metrics_text,
     live_render_refresh_key,
     port_entry_connection_message,
+    selected_port_is_connected,
     set_axis_xlim_if_changed,
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
@@ -355,7 +356,7 @@ class App(tk.Tk):
     def _sync_port_entry_connection_message(self) -> None:
         message = port_entry_connection_message(
             port_text=self.port_var.get(),
-            connected=self.connected_port is not None,
+            connected=selected_port_is_connected(self.connected_port, self.port_var.get()),
             busy=self.is_connecting or self.is_starting or self.is_loading_csv,
             streaming=self.is_streaming,
         )
@@ -721,12 +722,13 @@ class App(tk.Tk):
                 break
 
     def _current_gui_state(self) -> GuiState:
+        port_text = self.port_var.get()
         return GuiState(
-            connected=self.connected_port is not None,
+            connected=selected_port_is_connected(self.connected_port, port_text),
             streaming=self.is_streaming,
             has_data=bool(self.loaded_samples or (self.ch1 and self.ch2)),
             has_recording_path=self.recording_path is not None,
-            has_port=bool(self.port_var.get().strip()),
+            has_port=bool(port_text.strip()),
             loading_csv=self.is_loading_csv,
             connecting=self.is_connecting,
             starting=self.is_starting,
