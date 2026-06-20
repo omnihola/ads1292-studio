@@ -68,7 +68,13 @@ PLOT_TRACE_STYLES = {
     },
 }
 PQRST_PLOT_STYLE = {
-    "average": {"linewidth": 2.25, "label": "average beat"},
+    "average": {
+        "linewidth": 2.25,
+        "label": "average beat",
+        "antialiased": True,
+        "solid_capstyle": "round",
+        "solid_joinstyle": "round",
+    },
     "r_marker": {"linestyle": "--", "linewidth": 1.0, "label": "R"},
     "p_search": {"start_ms": -220, "end_ms": -80, "color": "#1E7A46", "alpha": 0.075, "label": "P search"},
     "t_search": {"start_ms": 120, "end_ms": 380, "color": "#A76400", "alpha": 0.075, "label": "T search"},

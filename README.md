@@ -200,6 +200,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Avoid redundant PQRST panel redraws during offline review; the review traces
   can refresh with the current frame, but the PQRST panel uses an axis clear and
   full redraw, so only redraw it when the `PqrstReview` content changes.
+- Keep the PQRST average-beat line visually consistent with the main signal
+  traces: antialiased with rounded caps/joins, so morphology review looks smooth
+  without changing the underlying averaged beat data.
 - Keep the ECG paper grid low-contrast and warm-toned enough to give ECG-paper
   scale cues without competing with the live trace; preserve the 25/50 mm/s
   spacing behavior while adjusting only palette, alpha, or linewidth for visual
