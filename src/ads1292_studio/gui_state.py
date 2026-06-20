@@ -136,6 +136,10 @@ def gui_control_states(
     }
 
 
+def gui_control_cursors(states: dict[str, str]) -> dict[str, str]:
+    return {label: "arrow" if state == tk.DISABLED else "hand2" for label, state in states.items()}
+
+
 def gui_workflow_hint(
     *,
     state: GuiState | None = None,

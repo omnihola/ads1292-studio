@@ -24,6 +24,7 @@ from ads1292_studio.app import (
     display_signal_values,
     display_refresh_key,
     drain_queue_items,
+    gui_control_cursors,
     gui_control_states,
     gui_signal_quality_cards,
     gui_status_cards,
@@ -612,6 +613,22 @@ def test_gui_control_states_disable_connect_until_a_port_is_available() -> None:
     assert states["Refresh"] == "normal"
     assert states["Connect"] == "disabled"
     assert states["Load CSV"] == "normal"
+
+
+def test_gui_control_cursors_track_enabled_button_states() -> None:
+    states = {
+        "Refresh": "normal",
+        "Connect": "disabled",
+        "Start": "disabled",
+        "Load CSV": "normal",
+    }
+
+    assert gui_control_cursors(states) == {
+        "Refresh": "hand2",
+        "Connect": "arrow",
+        "Start": "arrow",
+        "Load CSV": "hand2",
+    }
 
 
 def test_app_reexports_gui_state_helpers_from_focused_module() -> None:

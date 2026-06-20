@@ -52,6 +52,7 @@ from ads1292_studio.gui_state import (
     display_scale_reference_label,
     drain_queue_items,
     format_log_entries,
+    gui_control_cursors,
     gui_control_states,
     gui_signal_quality_cards,
     gui_status_cards,
@@ -746,8 +747,10 @@ class App(tk.Tk):
             )
         if not state.has_data:
             self._apply_signal_quality_cards(gui_signal_quality_cards())
+        cursors = gui_control_cursors(states)
         for label, button in self.control_buttons.items():
             configure_widget_option_if_changed(button, "state", states[label])
+            configure_widget_option_if_changed(button, "cursor", cursors[label])
 
     def _apply_signal_quality_cards(self, cards: tuple[GuiStatusCard, ...]) -> None:
         for card in cards:

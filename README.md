@@ -180,7 +180,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep action buttons' focus borders visible so keyboard navigation has a
   clear current target across acquisition and sidebar controls; build primary
   toolbar actions and sidebar actions through shared helpers so cursor, focus,
-  width, and style stay consistent.
+  width, and style stay consistent, with disabled buttons using the normal
+  arrow cursor instead of a hand cursor.
 - Keep empty signal panels visually quiet with the dedicated empty-state axis
   surface, then restore the normal data-axis chrome as soon as samples arrive.
 
