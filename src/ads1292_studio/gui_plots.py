@@ -124,6 +124,7 @@ def apply_live_render_frame(
     min_ecg_span_counts: float,
     min_resp_span_counts: float,
 ) -> None:
+    restore_data_axis_chrome((app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
     app.live_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
     app.live_peak_line.set_data(frame.peaks_x, frame.peaks_y)
     app.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
@@ -269,8 +270,35 @@ def style_signal_axes(axes: tuple[object, ...]) -> None:
         set_signal_axis_title(ax, ax.get_title())
         sns.despine(ax=ax, top=True, right=True, left=False, bottom=False)
         for side in ("left", "bottom"):
+            ax.spines[side].set_visible(True)
             ax.spines[side].set_color(style["spine"])
             ax.spines[side].set_linewidth(style["spine_linewidth"])
+
+
+def restore_data_axis_chrome(axes: tuple[object, ...]) -> None:
+    style_signal_axes(axes)
+    for ax in axes:
+        ax.xaxis.label.set_visible(True)
+        ax.yaxis.label.set_visible(True)
+        ax.title.set_visible(True)
+        ax.tick_params(labelleft=True, labelbottom=True, left=True, bottom=True)
+        for line in ax.lines:
+            line.set_visible(True)
+    for ax in axes:
+        ax.label_outer()
+
+
+def soften_empty_axis_chrome(axes: tuple[object, ...]) -> None:
+    for ax in axes:
+        ax.grid(False, which="both")
+        ax.tick_params(labelleft=False, labelbottom=False, left=False, bottom=False)
+        ax.xaxis.label.set_visible(False)
+        ax.yaxis.label.set_visible(False)
+        ax.title.set_visible(False)
+        for line in ax.lines:
+            line.set_visible(False)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
 
 
 def set_signal_axis_title(ax: object, title: str) -> None:
@@ -393,6 +421,7 @@ def draw_calibration_pulse(
 
 
 def show_empty_plot_state(artists: list[object], key: str, axes: tuple[object, ...]) -> None:
+    soften_empty_axis_chrome(axes)
     style = empty_plot_style()
     messages = empty_plot_messages()
     for ax, message in zip(axes, messages[key]):

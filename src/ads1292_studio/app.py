@@ -98,6 +98,7 @@ from ads1292_studio.gui_plots import (
     build_review_plot_panel,
     draw_calibration_pulse,
     draw_pqrst_review,
+    restore_data_axis_chrome,
     set_signal_axis_title,
 )
 from ads1292_studio.gui_layout import (
@@ -1259,6 +1260,7 @@ class App(tk.Tk):
 
     def _show_review_frame(self, samples: tuple[StreamSample, ...], frame: ReviewRenderFrame) -> None:
         self._clear_empty_plot_state()
+        restore_data_axis_chrome((self.ax_review_ecg, self.ax_review_resp, self.ax_review_status))
         self._clear_signal_buffers()
         self.sample_index = 0
         display_settings = self._display_settings()

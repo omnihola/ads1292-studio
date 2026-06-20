@@ -4,7 +4,12 @@ import numpy as np
 from matplotlib.figure import Figure
 
 from ads1292_studio.display import EcgDisplaySettings
-from ads1292_studio.gui_plots import apply_live_render_frame, draw_pqrst_review
+from ads1292_studio.gui_plots import (
+    apply_live_render_frame,
+    draw_pqrst_review,
+    restore_data_axis_chrome,
+    show_empty_plot_state,
+)
 from ads1292_studio.live_render import LiveRenderFrame
 from ads1292_studio.models import HeartRateSummary, PqrstReview
 
@@ -36,6 +41,39 @@ def test_draw_pqrst_review_renders_average_beat_and_refreshes_canvas() -> None:
     assert "PQRST review: QRS=True" in ax.get_title()
     assert len(ax.lines) == 2
     assert ax.get_xlabel() == "Time relative to R peak (ms)"
+
+
+def test_empty_plot_state_hides_axis_chrome_and_reference_lines() -> None:
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    line, = ax.plot([0.0, 1.0], [0.0, 1.0])
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Counts")
+    artists: list[object] = []
+
+    show_empty_plot_state(artists, "pqrst", (ax,))
+
+    assert artists
+    assert not ax.xaxis.label.get_visible()
+    assert not ax.yaxis.label.get_visible()
+    assert not line.get_visible()
+    assert all(not spine.get_visible() for spine in ax.spines.values())
+
+
+def test_restore_data_axis_chrome_reenables_axis_and_lines() -> None:
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    line, = ax.plot([0.0, 1.0], [0.0, 1.0])
+    artists: list[object] = []
+    show_empty_plot_state(artists, "pqrst", (ax,))
+
+    restore_data_axis_chrome((ax,))
+
+    assert ax.xaxis.label.get_visible()
+    assert ax.yaxis.label.get_visible()
+    assert line.get_visible()
+    assert ax.spines["left"].get_visible()
+    assert ax.spines["bottom"].get_visible()
 
 
 def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
