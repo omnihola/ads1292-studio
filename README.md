@@ -155,6 +155,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep the live render path lightweight: raw 1x non-inverted display should
   reuse the existing NumPy buffer, and Matplotlib artists should only be
   recreated when their visible settings actually change.
+- Reuse fixed display smoothing kernels; live ECG and respiration plots use the
+  same smoothing window repeatedly during streaming.
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs.
 - Keep toolbar toggle chips mouse- and keyboard-accessible, with visible hover

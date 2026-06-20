@@ -9,6 +9,7 @@ from ads1292_studio.plots import (
     endpoint_indices,
     robust_ylim,
     smooth_for_plot,
+    smoothing_kernel,
     stable_ylim,
 )
 
@@ -37,6 +38,27 @@ def test_smooth_for_plot_keeps_length_and_reduces_single_sample_spikes() -> None
     assert out.size == values.size
     assert out[2] < values[2]
     assert out[2] == 3.0
+
+
+def test_smoothing_kernel_is_cached_for_live_render_reuse() -> None:
+    smoothing_kernel.cache_clear()
+
+    first = smoothing_kernel(11)
+    second = smoothing_kernel(11)
+
+    assert first is second
+    np.testing.assert_allclose(first, np.full(11, 1.0 / 11.0))
+
+
+def test_smooth_for_plot_even_window_uses_cached_odd_kernel() -> None:
+    smoothing_kernel.cache_clear()
+    values = np.arange(8, dtype=float)
+
+    smooth_for_plot(values, window=4)
+
+    assert smoothing_kernel.cache_info().misses == 1
+    assert smoothing_kernel.cache_info().currsize == 1
+    assert smoothing_kernel(5).size == 5
 
 
 def test_robust_ylim_can_keep_flat_noise_from_being_overzoomed() -> None:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 import numpy as np
 
 
@@ -20,8 +22,12 @@ def smooth_for_plot(values, window: int = 5) -> np.ndarray:
         window += 1
     pad = window // 2
     padded = np.pad(arr, pad_width=pad, mode="edge")
-    kernel = np.full(window, 1.0 / window)
-    return np.convolve(padded, kernel, mode="valid")
+    return np.convolve(padded, smoothing_kernel(window), mode="valid")
+
+
+@lru_cache(maxsize=16)
+def smoothing_kernel(window: int) -> np.ndarray:
+    return np.full(window, 1.0 / window)
 
 
 def decimate_for_plot(x, y, max_points: int) -> tuple[np.ndarray, np.ndarray]:
