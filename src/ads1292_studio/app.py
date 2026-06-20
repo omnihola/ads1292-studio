@@ -64,6 +64,7 @@ from ads1292_studio.gui_state import (
     live_ecg_axis_title,
     live_metrics_text,
     live_render_refresh_key,
+    port_entry_connection_message,
     set_axis_xlim_if_changed,
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
@@ -344,12 +345,22 @@ class App(tk.Tk):
         self.port_combo["values"] = values
         if values and not self.port_var.get():
             self.port_var.set(values[0])
-        if not values:
-            self.connection_var.set("No ADS1x9x port")
+        self._sync_port_entry_connection_message()
         self._apply_control_states(force=True)
 
     def _on_port_value_changed(self, *_args: object) -> None:
+        self._sync_port_entry_connection_message()
         self._apply_control_states(force=True)
+
+    def _sync_port_entry_connection_message(self) -> None:
+        message = port_entry_connection_message(
+            port_text=self.port_var.get(),
+            connected=self.connected_port is not None,
+            busy=self.is_connecting or self.is_starting or self.is_loading_csv,
+            streaming=self.is_streaming,
+        )
+        if message is not None:
+            set_string_var_if_changed(self.connection_var, message)
 
     def connect(self) -> None:
         port = self.port_var.get().strip()

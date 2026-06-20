@@ -39,6 +39,7 @@ from ads1292_studio.app import (
     live_quality_worker_available,
     live_metrics_text,
     live_render_refresh_key,
+    port_entry_connection_message,
     set_axis_xlim_if_changed,
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
@@ -642,6 +643,33 @@ def test_port_refresh_and_edits_recompute_control_state() -> None:
 
     assert "self._apply_control_states(force=True)" in refresh_source
     assert "app.port_var.trace_add(\"write\"" in toolbar_source
+
+
+def test_port_entry_connection_message_tracks_manual_port_edits() -> None:
+    assert port_entry_connection_message(
+        port_text="",
+        connected=False,
+        busy=False,
+        streaming=False,
+    ) == "No ADS1x9x port"
+    assert port_entry_connection_message(
+        port_text="/dev/cu.usbmodem214301",
+        connected=False,
+        busy=False,
+        streaming=False,
+    ) == "Not connected"
+    assert port_entry_connection_message(
+        port_text="/dev/cu.usbmodem214301",
+        connected=True,
+        busy=False,
+        streaming=False,
+    ) is None
+    assert port_entry_connection_message(
+        port_text="",
+        connected=False,
+        busy=True,
+        streaming=False,
+    ) is None
 
 
 def test_app_reexports_gui_state_helpers_from_focused_module() -> None:

@@ -140,6 +140,18 @@ def gui_control_cursors(states: dict[str, str]) -> dict[str, str]:
     return {label: "arrow" if state == tk.DISABLED else "hand2" for label, state in states.items()}
 
 
+def port_entry_connection_message(
+    *,
+    port_text: str,
+    connected: bool,
+    busy: bool,
+    streaming: bool,
+) -> str | None:
+    if connected or busy or streaming:
+        return None
+    return "Not connected" if port_text.strip() else "No ADS1x9x port"
+
+
 def gui_workflow_hint(
     *,
     state: GuiState | None = None,
