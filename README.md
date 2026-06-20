@@ -268,6 +268,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   even when the visible port field contains the board path.
 - Keep custom sidebar/workspace tab strips keyboard-accessible, with visible
   hover and focus states, because they replace native notebook tabs.
+- Sidebar mouse-wheel hit testing should cover the whole scroll frame, including
+  scrollbar and edge padding, not only the canvas interior; otherwise scrolling
+  feels broken when the pointer is still visually inside the sidebar.
 - Keep action buttons' focus borders visible so keyboard navigation has a
   clear current target across acquisition and sidebar controls; build primary
   toolbar actions and sidebar actions through shared helpers so cursor, focus,

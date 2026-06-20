@@ -129,8 +129,8 @@ class ScrollableFrame:
     def _contains_pointer(self, event: tk.Event) -> bool:
         x = int(getattr(event, "x_root", self.canvas.winfo_pointerx()))
         y = int(getattr(event, "y_root", self.canvas.winfo_pointery()))
-        left = self.canvas.winfo_rootx()
-        top = self.canvas.winfo_rooty()
-        right = left + self.canvas.winfo_width()
-        bottom = top + self.canvas.winfo_height()
+        left = self.frame.winfo_rootx()
+        top = self.frame.winfo_rooty()
+        right = left + self.frame.winfo_width()
+        bottom = top + self.frame.winfo_height()
         return left <= x <= right and top <= y <= bottom

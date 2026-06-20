@@ -62,6 +62,39 @@ def test_mousewheel_units_handles_small_macos_deltas() -> None:
     assert _mousewheel_units(SimpleNamespace(delta=0, num=5)) == 1
 
 
+def test_scrollable_frame_contains_pointer_across_full_frame_not_only_canvas() -> None:
+    class FakeWidget:
+        def __init__(self, *, left: int, top: int, width: int, height: int) -> None:
+            self.left = left
+            self.top = top
+            self.width = width
+            self.height = height
+
+        def winfo_pointerx(self) -> int:
+            return 0
+
+        def winfo_pointery(self) -> int:
+            return 0
+
+        def winfo_rootx(self) -> int:
+            return self.left
+
+        def winfo_rooty(self) -> int:
+            return self.top
+
+        def winfo_width(self) -> int:
+            return self.width
+
+        def winfo_height(self) -> int:
+            return self.height
+
+    scroll = object.__new__(ScrollableFrame)
+    scroll.frame = FakeWidget(left=0, top=0, width=120, height=200)
+    scroll.canvas = FakeWidget(left=0, top=0, width=96, height=200)
+
+    assert scroll._contains_pointer(SimpleNamespace(x_root=110, y_root=100)) is True
+
+
 def test_app_tick_callback_is_cancellable_on_window_destroy() -> None:
     source = inspect.getsource(App)
 
