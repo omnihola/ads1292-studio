@@ -286,7 +286,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   empty-state artists and restore normal data-axis chrome as soon as samples
   arrive so the real-time tick path stays clean. Repeated empty-state refreshes
   for the same panel must reuse the existing empty-state artists instead of
-  stacking duplicate guide/text artists.
+  stacking duplicate guide/text artists. Clear empty-state artists by target
+  axes/panel; live data should not erase Review or PQRST placeholders.
 
 ## Safety
 

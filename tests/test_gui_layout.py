@@ -1030,6 +1030,7 @@ def test_empty_plot_style_uses_muted_callouts() -> None:
 
 
 def test_empty_plot_state_uses_quiet_axes_until_data_arrives() -> None:
+    from ads1292_studio.app import App
     from ads1292_studio.gui_plots import (
         apply_live_render_frame,
         apply_review_render_frame,
@@ -1047,6 +1048,10 @@ def test_empty_plot_state_uses_quiet_axes_until_data_arrives() -> None:
     assert "return" in restore_source
     assert "restore_data_axis_chrome((app.ax_live_ecg" in live_source
     assert "restore_data_axis_chrome((app.ax_review_ecg" in review_source
+    assert (
+        "self._clear_empty_plot_state((self.ax_review_ecg, self.ax_review_resp, "
+        "self.ax_review_status, self.ax_pqrst))"
+    ) in inspect.getsource(App._show_review_frame)
 
 
 def test_log_panel_spec_keeps_long_sessions_readable() -> None:

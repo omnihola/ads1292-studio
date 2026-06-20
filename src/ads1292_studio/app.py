@@ -327,13 +327,22 @@ class App(tk.Tk):
         configure_notebook_chrome(style)
         configure_status_chrome(style)
 
-    def _clear_empty_plot_state(self) -> None:
+    def _clear_empty_plot_state(self, axes: tuple[object, ...] | None = None) -> None:
+        axis_set = set(axes or ())
+        kept_artists = []
         while self.empty_plot_artists:
             artist = self.empty_plot_artists.pop()
+            if axis_set and getattr(artist, "axes", None) not in axis_set:
+                kept_artists.append(artist)
+                continue
             try:
                 artist.remove()
             except ValueError:
                 pass
+        self.empty_plot_artists.extend(reversed(kept_artists))
+        for ax in axis_set:
+            if hasattr(ax, "_ads1292_empty_state_token"):
+                delattr(ax, "_ads1292_empty_state_token")
 
     def refresh_ports(self) -> None:
         ports = list_ads_ports()
@@ -1249,7 +1258,7 @@ class App(tk.Tk):
             return
 
         self.last_live_render_key = render_key
-        self._clear_empty_plot_state()
+        self._clear_empty_plot_state((self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
         apply_live_render_frame(
             self,
             frame,
@@ -1297,7 +1306,7 @@ class App(tk.Tk):
         self._show_review_frame(samples, frame)
 
     def _show_review_frame(self, samples: tuple[StreamSample, ...], frame: ReviewRenderFrame) -> None:
-        self._clear_empty_plot_state()
+        self._clear_empty_plot_state((self.ax_review_ecg, self.ax_review_resp, self.ax_review_status, self.ax_pqrst))
         self._clear_signal_buffers()
         self.sample_index = 0
         display_settings = self._display_settings()
