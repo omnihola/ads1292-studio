@@ -560,6 +560,13 @@ def show_empty_plot_state(artists: list[object], key: str, axes: tuple[object, .
     style = empty_plot_style()
     messages = empty_plot_messages()
     for ax, message in zip(axes, messages[key]):
+        guide = ax.axhline(
+            0.5,
+            color=str(style["guide_color"]),
+            linewidth=float(style["guide_linewidth"]),
+            alpha=float(style["guide_alpha"]),
+            zorder=0,
+        )
         artist = ax.text(
             0.5,
             0.5,
@@ -578,4 +585,4 @@ def show_empty_plot_state(artists: list[object], key: str, axes: tuple[object, .
                 "linewidth": style["line_width"],
             },
         )
-        artists.append(artist)
+        artists.extend((guide, artist))

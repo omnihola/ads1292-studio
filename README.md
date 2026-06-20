@@ -248,7 +248,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   width, and style stay consistent, with disabled buttons using the normal
   arrow cursor instead of a hand cursor.
 - Keep empty signal panels visually quiet with the dedicated empty-state axis
-  surface, then restore the normal data-axis chrome as soon as samples arrive.
+  surface, muted callouts, and a static reference guide line, then remove those
+  empty-state artists and restore normal data-axis chrome as soon as samples
+  arrive so the real-time tick path stays clean.
 
 ## Safety
 

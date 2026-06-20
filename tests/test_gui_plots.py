@@ -82,6 +82,22 @@ def test_empty_plot_state_uses_quiet_background_until_data_arrives() -> None:
     assert ax.get_facecolor() == to_rgba(empty_plot_style()["axis_face"])
 
 
+def test_empty_plot_state_adds_muted_reference_guides() -> None:
+    from ads1292_studio.gui_specs import empty_plot_style
+
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    artists: list[object] = []
+
+    show_empty_plot_state(artists, "pqrst", (ax,))
+
+    guide_lines = [line for line in ax.lines if line.get_visible()]
+    assert len(guide_lines) == 1
+    assert guide_lines[0] in artists
+    assert guide_lines[0].get_alpha() == empty_plot_style()["guide_alpha"]
+    assert guide_lines[0].get_color() == empty_plot_style()["guide_color"]
+
+
 def test_restore_data_axis_chrome_reenables_axis_and_lines() -> None:
     fig = Figure()
     ax = fig.add_subplot(111)

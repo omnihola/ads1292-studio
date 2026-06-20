@@ -372,6 +372,9 @@ EMPTY_PLOT_STYLE = {
     "box_pad": 0.48,
     "rounding": 0.12,
     "line_width": 0.8,
+    "guide_color": "#D9E1EC",
+    "guide_linewidth": 1.0,
+    "guide_alpha": 0.58,
 }
 LOG_PANEL_SPEC = {
     "shell": "Main.TFrame",

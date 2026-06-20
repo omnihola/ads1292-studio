@@ -981,6 +981,9 @@ def test_empty_plot_style_uses_muted_callouts() -> None:
         "box_pad": 0.48,
         "rounding": 0.12,
         "line_width": 0.8,
+        "guide_color": "#D9E1EC",
+        "guide_linewidth": 1.0,
+        "guide_alpha": 0.58,
     }
 
 
