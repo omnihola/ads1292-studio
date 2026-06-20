@@ -356,9 +356,10 @@ def gui_status_cards(
         has_data=has_data,
         has_recording_path=has_recording_path,
     )
+    connection_value = "connected" if current.connected else ("disconnected" if current.has_port else "no port")
     connection = GuiStatusCard(
         label="Connection",
-        value="connected" if current.connected else "disconnected",
+        value=connection_value,
         tone="ready" if current.connected else "warning",
     )
     if current.connecting:

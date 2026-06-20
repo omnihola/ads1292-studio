@@ -827,6 +827,25 @@ def test_gui_status_overview_summarizes_empty_disconnected_state() -> None:
     )
 
 
+def test_gui_status_overview_summarizes_missing_port_state() -> None:
+    overview = gui_status_overview(
+        state=GuiState(
+            connected=False,
+            streaming=False,
+            has_data=False,
+            has_recording_path=False,
+            has_port=False,
+        )
+    )
+
+    assert overview == (
+        "Connection: no port\n"
+        "Acquisition: idle\n"
+        "Data: none loaded\n"
+        "Package: unavailable"
+    )
+
+
 def test_gui_status_overview_summarizes_connected_idle_state() -> None:
     overview = gui_status_overview(
         connected=True,
@@ -889,6 +908,20 @@ def test_gui_status_cards_expose_scan_friendly_disconnected_state() -> None:
         ("Data", "none loaded", "neutral"),
         ("Package", "unavailable", "neutral"),
     ]
+
+
+def test_gui_status_cards_expose_missing_port_state() -> None:
+    cards = gui_status_cards(
+        state=GuiState(
+            connected=False,
+            streaming=False,
+            has_data=False,
+            has_recording_path=False,
+            has_port=False,
+        )
+    )
+
+    assert cards[0] == GuiStatusCard("Connection", "no port", "warning")
 
 
 def test_gui_status_cards_expose_scan_friendly_streaming_state() -> None:
