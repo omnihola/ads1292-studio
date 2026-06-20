@@ -156,6 +156,13 @@ def selected_port_is_connected(connected_port: str | None, port_text: str) -> bo
     return connected_port is not None and port_text.strip() == connected_port
 
 
+def effective_port_text(variable_text: str, widget_text: str) -> str:
+    variable_port = variable_text.strip()
+    if variable_port:
+        return variable_port
+    return widget_text.strip()
+
+
 def gui_workflow_hint(
     *,
     state: GuiState | None = None,

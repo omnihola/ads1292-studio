@@ -177,6 +177,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   Connection card aligned on that `no port` state, and recompute controls
   immediately when the port field changes or Refresh updates the port list,
   including returning the header badge to `Not connected` when a port appears;
+  read both the port variable and the visible combobox text so macOS/Tk
+  combobox sync lag cannot leave Connect disabled while a port is visible;
   enable Start only when the selected port matches the connected port.
 - Keep custom sidebar/workspace tab strips keyboard-accessible, with visible
   hover and focus states, because they replace native notebook tabs.

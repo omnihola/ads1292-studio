@@ -51,6 +51,7 @@ from ads1292_studio.gui_state import (
     display_refresh_key,
     display_scale_reference_label,
     drain_queue_items,
+    effective_port_text,
     format_log_entries,
     gui_control_cursors,
     gui_control_states,
@@ -353,10 +354,14 @@ class App(tk.Tk):
         self._sync_port_entry_connection_message()
         self._apply_control_states(force=True)
 
+    def _selected_port_text(self) -> str:
+        return effective_port_text(self.port_var.get(), self.port_combo.get())
+
     def _sync_port_entry_connection_message(self) -> None:
+        port_text = self._selected_port_text()
         message = port_entry_connection_message(
-            port_text=self.port_var.get(),
-            connected=selected_port_is_connected(self.connected_port, self.port_var.get()),
+            port_text=port_text,
+            connected=selected_port_is_connected(self.connected_port, port_text),
             busy=self.is_connecting or self.is_starting or self.is_loading_csv,
             streaming=self.is_streaming,
         )
@@ -364,7 +369,7 @@ class App(tk.Tk):
             set_string_var_if_changed(self.connection_var, message)
 
     def connect(self) -> None:
-        port = self.port_var.get().strip()
+        port = self._selected_port_text()
         if not port:
             messagebox.showerror("No port", "Select an ADS1x9x serial port first.")
             return
@@ -415,7 +420,7 @@ class App(tk.Tk):
         self._apply_control_states()
 
     def start(self) -> None:
-        port = self.port_var.get().strip()
+        port = self._selected_port_text()
         if not port:
             messagebox.showerror("No port", "Select a port and press Connect first.")
             return
@@ -722,7 +727,7 @@ class App(tk.Tk):
                 break
 
     def _current_gui_state(self) -> GuiState:
-        port_text = self.port_var.get()
+        port_text = self._selected_port_text()
         return GuiState(
             connected=selected_port_is_connected(self.connected_port, port_text),
             streaming=self.is_streaming,

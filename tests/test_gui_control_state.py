@@ -24,6 +24,7 @@ from ads1292_studio.app import (
     display_signal_values,
     display_refresh_key,
     drain_queue_items,
+    effective_port_text,
     gui_control_cursors,
     gui_control_states,
     gui_signal_quality_cards,
@@ -644,6 +645,9 @@ def test_port_refresh_and_edits_recompute_control_state() -> None:
 
     assert "self._apply_control_states(force=True)" in refresh_source
     assert "app.port_var.trace_add(\"write\"" in toolbar_source
+    assert "app.port_combo.bind(\"<<ComboboxSelected>>\"" in toolbar_source
+    assert "app.port_combo.bind(\"<KeyRelease>\"" in toolbar_source
+    assert "app.port_combo.bind(\"<FocusOut>\"" in toolbar_source
 
 
 def test_port_entry_connection_message_tracks_manual_port_edits() -> None:
@@ -671,6 +675,12 @@ def test_port_entry_connection_message_tracks_manual_port_edits() -> None:
         busy=True,
         streaming=False,
     ) is None
+
+
+def test_effective_port_text_falls_back_to_visible_combobox_text() -> None:
+    assert effective_port_text("", "/dev/cu.usbmodem214301") == "/dev/cu.usbmodem214301"
+    assert effective_port_text(" /dev/cu.usbmodem214301 ", "/dev/cu.usbmodem999999") == "/dev/cu.usbmodem214301"
+    assert effective_port_text("", "  ") == ""
 
 
 def test_selected_port_is_connected_requires_exact_selected_port_match() -> None:

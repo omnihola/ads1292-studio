@@ -87,6 +87,9 @@ def build_acquisition_toolbar(app: Any) -> None:
         width=int(toolbar_spec["port_width"]),
         style=toolbar_styles["port"],
     )
+    app.port_combo.bind("<<ComboboxSelected>>", app._on_port_value_changed)
+    app.port_combo.bind("<KeyRelease>", app._on_port_value_changed)
+    app.port_combo.bind("<FocusOut>", app._on_port_value_changed)
     app.port_combo.pack(side=tk.LEFT, padx=toolbar_spec["port_padding"])
     app.refresh_button = _build_toolbar_button(
         toolbar,
