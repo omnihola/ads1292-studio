@@ -1,9 +1,14 @@
 from ads1292_studio.app import (
+    _calibration_from_values,
     _format_protocol_steps,
+    _metadata_from_values,
     _parse_protocol_steps,
+    _protocol_from_values,
     _quality_gate_from_values,
     _quality_gate_to_values,
 )
+from ads1292_studio.calibration import Calibration
+from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.protocol import ProtocolStep
 from ads1292_studio.quality_gate import QualityGate
 
@@ -60,3 +65,29 @@ def test_protocol_steps_text_round_trips_through_gui_form_helpers() -> None:
     text = _format_protocol_steps(steps)
 
     assert _parse_protocol_steps(text) == steps
+
+
+def test_metadata_calibration_and_protocol_helpers_live_in_gui_forms() -> None:
+    assert _metadata_from_values.__module__ == "ads1292_studio.gui_forms"
+    assert _calibration_from_values.__module__ == "ads1292_studio.gui_forms"
+    assert _protocol_from_values.__module__ == "ads1292_studio.gui_forms"
+
+    metadata = _metadata_from_values(
+        session_id=" run-1 ",
+        subject_id="",
+        electrode=" motac ",
+        montage="Lead I",
+        operator="J",
+        notes=" quiet ",
+    )
+    calibration = _calibration_from_values(label=" bench ", vref_mv="2400", pga_gain="12")
+    protocol = _protocol_from_values(
+        name="ecg check",
+        objective="validate",
+        steps_text="0,5,baseline,sit still",
+        acceptance_notes="review",
+    )
+
+    assert metadata == SessionMetadata("run-1", "anonymous", "motac", "Lead I", "J", "quiet")
+    assert calibration == Calibration(vref_mv=2400.0, pga_gain=12.0, adc_bits=24, label="bench")
+    assert protocol.steps == (ProtocolStep(0.0, 5.0, "baseline", "sit still"),)

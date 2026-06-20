@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ads1292_studio.protocol import ProtocolStep, protocol_template
+from ads1292_studio.calibration import Calibration
+from ads1292_studio.metadata import SessionMetadata
+from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template
 from ads1292_studio.quality_gate import QualityGate
 
 
@@ -15,6 +17,50 @@ def _float_from_var(variable: StringVariable, fallback: float) -> float:
         return float(variable.get())
     except ValueError:
         return fallback
+
+
+def _metadata_from_values(
+    *,
+    session_id: str,
+    subject_id: str,
+    electrode: str,
+    montage: str,
+    operator: str,
+    notes: str,
+) -> SessionMetadata:
+    return SessionMetadata(
+        session_id=session_id,
+        subject_id=subject_id,
+        electrode=electrode,
+        montage=montage,
+        operator=operator,
+        notes=notes,
+    ).normalized()
+
+
+def _calibration_from_values(*, label: str, vref_mv: str, pga_gain: str) -> Calibration:
+    return Calibration(
+        vref_mv=_float_value(vref_mv, 2420.0),
+        pga_gain=_float_value(pga_gain, 6.0),
+        adc_bits=24,
+        label=label,
+    ).normalized()
+
+
+def _protocol_from_values(
+    *,
+    name: str,
+    objective: str,
+    steps_text: str,
+    acceptance_notes: str,
+) -> TestProtocol:
+    return TestProtocol(
+        name=name,
+        objective=objective,
+        operator_instructions="Follow the listed protocol steps.",
+        steps=_parse_protocol_steps(steps_text),
+        acceptance_notes=acceptance_notes,
+    ).normalized()
 
 
 def _quality_gate_from_values(values: dict[str, object]) -> QualityGate:

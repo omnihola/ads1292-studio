@@ -692,6 +692,7 @@ def test_port_entry_connection_message_tracks_manual_port_edits() -> None:
 def test_effective_port_text_falls_back_to_visible_combobox_text() -> None:
     assert effective_port_text("", "/dev/cu.usbmodem214301") == "/dev/cu.usbmodem214301"
     assert effective_port_text(" /dev/cu.usbmodem214301 ", "/dev/cu.usbmodem999999") == "/dev/cu.usbmodem214301"
+    assert effective_port_text("", "", ("/dev/cu.usbmodem214301",)) == "/dev/cu.usbmodem214301"
     assert effective_port_text("", "  ") == ""
 
 

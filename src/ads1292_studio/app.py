@@ -35,9 +35,11 @@ from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_li
 from ads1292_studio.gui_samples import append_live_sample_batch
 from ads1292_studio.gui_log import append_log_messages, log_tab_is_visible
 from ads1292_studio.gui_forms import (
-    _float_from_var,
+    _calibration_from_values,
     _format_protocol_steps,
+    _metadata_from_values,
     _parse_protocol_steps,
+    _protocol_from_values,
     _quality_gate_from_values,
     _quality_gate_to_values,
 )
@@ -337,7 +339,8 @@ class App(tk.Tk):
             guess = find_ads_port()
             values = [guess] if guess else []
         self.port_combo["values"] = values
-        if values and not self.port_var.get():
+        visible_port = effective_port_text(self.port_var.get(), self.port_combo.get())
+        if values and visible_port not in values:
             self.port_var.set(values[0])
         self._sync_port_entry_connection_message()
         self._apply_control_states(force=True)
@@ -347,7 +350,11 @@ class App(tk.Tk):
         self._apply_control_states(force=True)
 
     def _selected_port_text(self) -> str:
-        return effective_port_text(self.port_var.get(), self.port_combo.get())
+        return effective_port_text(
+            self.port_var.get(),
+            self.port_combo.get(),
+            self.tk.splitlist(self.port_combo.cget("values")),
+        )
 
     def _sync_port_entry_connection_message(self) -> None:
         port_text = self._selected_port_text()
@@ -776,7 +783,7 @@ class App(tk.Tk):
             )
 
     def _metadata(self) -> SessionMetadata:
-        return SessionMetadata(
+        return _metadata_from_values(
             session_id=self.session_id_var.get(),
             subject_id=self.subject_id_var.get(),
             electrode=self.electrode_var.get(),
@@ -823,21 +830,19 @@ class App(tk.Tk):
         self.event_count_var.set(f"{len(self.event_markers)} events")
 
     def _calibration(self) -> Calibration:
-        return Calibration(
-            vref_mv=_float_from_var(self.vref_mv_var, 2420.0),
-            pga_gain=_float_from_var(self.pga_gain_var, 6.0),
-            adc_bits=24,
+        return _calibration_from_values(
             label=self.calibration_label_var.get(),
-        ).normalized()
+            vref_mv=self.vref_mv_var.get(),
+            pga_gain=self.pga_gain_var.get(),
+        )
 
     def _protocol(self) -> TestProtocol:
-        return TestProtocol(
+        return _protocol_from_values(
             name=self.protocol_name_var.get(),
             objective=self.protocol_objective_var.get(),
-            operator_instructions="Follow the listed protocol steps.",
-            steps=_parse_protocol_steps(self.protocol_steps_var.get()),
+            steps_text=self.protocol_steps_var.get(),
             acceptance_notes=self.protocol_acceptance_var.get(),
-        ).normalized()
+        )
 
     def _quality_gate(self) -> QualityGate:
         return _quality_gate_from_values(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Iterable
 from pathlib import Path
 import queue
 import tkinter as tk
@@ -156,11 +157,22 @@ def selected_port_is_connected(connected_port: str | None, port_text: str) -> bo
     return connected_port is not None and port_text.strip() == connected_port
 
 
-def effective_port_text(variable_text: str, widget_text: str) -> str:
+def effective_port_text(
+    variable_text: str,
+    widget_text: str,
+    available_values: Iterable[object] = (),
+) -> str:
     variable_port = variable_text.strip()
     if variable_port:
         return variable_port
-    return widget_text.strip()
+    widget_port = widget_text.strip()
+    if widget_port:
+        return widget_port
+    for value in available_values:
+        port = str(value).strip()
+        if port:
+            return port
+    return ""
 
 
 def gui_workflow_hint(

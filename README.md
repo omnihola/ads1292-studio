@@ -172,9 +172,10 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep background result dataclasses and worker helpers in `gui_workers.py`,
   with `app.py` importing them for compatibility, so App remains focused on UI
   orchestration rather than owning worker data models.
-- Keep GUI form parsing/formatting for protocol steps, calibration numbers, and
-  quality-gate thresholds in `gui_forms.py`; `app.py` may re-export these
-  helpers for compatibility but should not own the conversion rules.
+- Keep GUI form parsing/formatting for metadata, protocol steps, calibration
+  numbers, and quality-gate thresholds in `gui_forms.py`; `app.py` may
+  re-export these helpers for compatibility but should not own the conversion
+  rules.
 - Keep log insertion batched and avoid autoscrolling the log Text widget while
   another workspace tab is selected; scroll to the end when Event Log is opened.
   Keep append/trim/autoscroll Text-widget operations in `gui_log.py` so the
@@ -188,8 +189,10 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   Connection card aligned on that `no port` state, and recompute controls
   immediately when the port field changes or Refresh updates the port list,
   including returning the header badge to `Not connected` when a port appears;
-  read both the port variable and the visible combobox text so macOS/Tk
-  combobox sync lag cannot leave Connect disabled while a port is visible;
+  read the port variable, visible combobox text, and combobox values so
+  macOS/Tk combobox sync lag cannot leave Connect disabled while a port is
+  available; refresh must replace stale or blank visible text with the detected
+  port;
   enable Start only when the selected port matches the connected port.
 - Keep custom sidebar/workspace tab strips keyboard-accessible, with visible
   hover and focus states, because they replace native notebook tabs.
