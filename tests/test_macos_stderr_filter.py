@@ -24,3 +24,14 @@ def test_suppresses_known_macos_tk_input_service_noise() -> None:
     )
 
     assert all(should_suppress_stderr_line(line) for line in noisy_lines)
+
+
+def test_app_installs_macos_stderr_filter_before_tk_initialization() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App.__init__)
+
+    assert "install_macos_stderr_filter()" in source
+    assert source.index("install_macos_stderr_filter()") < source.index("super().__init__()")

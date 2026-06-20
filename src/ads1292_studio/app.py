@@ -230,6 +230,7 @@ DISPLAY_MIN_RESP_SPAN_COUNTS = 40.0
 
 class App(tk.Tk):
     def __init__(self) -> None:
+        install_macos_stderr_filter()
         super().__init__()
         self.title("ADS1292 Studio")
         window_spec = app_window_spec()
