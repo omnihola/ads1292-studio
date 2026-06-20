@@ -118,6 +118,7 @@ from ads1292_studio.gui_plots import (
     build_log_panel,
     build_pqrst_plot_panel,
     build_review_plot_panel,
+    flush_pending_pqrst_review,
 )
 from ads1292_studio.gui_layout import (
     build_acquisition_toolbar,
@@ -1360,6 +1361,9 @@ class App(tk.Tk):
                 peak_to_peak_counts=frame.metrics.peak_to_peak_counts,
             )
         )
+
+    def _redraw_pqrst_if_pending(self) -> None:
+        flush_pending_pqrst_review(self)
 
     def _quality_text(
         self,

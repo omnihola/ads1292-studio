@@ -180,14 +180,19 @@ def apply_live_render_frame(
 
 
 def draw_canvas_idle_if_visible(canvas: object, owner: object | None = None) -> bool:
-    if owner is not None:
-        try:
-            if hasattr(owner, "winfo_ismapped") and not owner.winfo_ismapped():
-                return False
-        except tk.TclError:
-            return False
+    if not widget_is_visible(owner):
+        return False
     canvas.draw_idle()
     return True
+
+
+def widget_is_visible(owner: object | None = None) -> bool:
+    if owner is None:
+        return True
+    try:
+        return not hasattr(owner, "winfo_ismapped") or bool(owner.winfo_ismapped())
+    except tk.TclError:
+        return False
 
 
 def live_contact_trace_color(status_values: np.ndarray) -> str:
@@ -300,11 +305,26 @@ def apply_review_render_frame(
 
 
 def draw_pqrst_review_if_changed(app: Any, review: PqrstReview) -> bool:
+    if getattr(app, "last_pqrst_review", None) == review and getattr(app, "pending_pqrst_review", None) is None:
+        return False
+    owner = getattr(app, "pqrst_tab", None)
+    if not widget_is_visible(owner):
+        if getattr(app, "last_pqrst_review", None) != review:
+            app.pending_pqrst_review = review
+        return False
+    app.pending_pqrst_review = None
     if getattr(app, "last_pqrst_review", None) == review:
         return False
     app.last_pqrst_review = review
-    draw_pqrst_review(app.ax_pqrst, app.pqrst_canvas, review, owner=getattr(app, "pqrst_tab", None))
+    draw_pqrst_review(app.ax_pqrst, app.pqrst_canvas, review, owner=owner)
     return True
+
+
+def flush_pending_pqrst_review(app: Any) -> bool:
+    review = getattr(app, "pending_pqrst_review", None)
+    if review is None or not widget_is_visible(getattr(app, "pqrst_tab", None)):
+        return False
+    return draw_pqrst_review_if_changed(app, review)
 
 
 def draw_pqrst_review(ax: object, canvas: object, review: PqrstReview, *, owner: object | None = None) -> None:

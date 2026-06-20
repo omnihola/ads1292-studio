@@ -16,6 +16,7 @@ from ads1292_studio.gui_plots import (
     set_line_data_if_changed,
     set_line_color_if_changed,
     set_line_visible_if_changed,
+    flush_pending_pqrst_review,
     show_empty_plot_state,
 )
 from ads1292_studio.live_render import LiveRenderFrame
@@ -826,8 +827,35 @@ def test_apply_review_render_frame_defers_canvas_draw_when_review_tabs_are_hidde
 
     assert ecg_line.get_ydata().tolist() == [0.0, 2.0, 0.0]
     assert ax_ecg.get_xlim() == (0.0, 2.0)
+    assert len(ax_pqrst.lines) == 0
+    assert app.pending_pqrst_review == frame.pqrst
     assert review_canvas.draw_idle_calls == 0
     assert pqrst_canvas.draw_idle_calls == 0
+
+
+def test_flush_pending_pqrst_review_draws_when_pqrst_tab_becomes_visible() -> None:
+    ax = Figure().add_subplot(111)
+    canvas = FakeCanvas()
+    review = PqrstReview(
+        qrs_clear=True,
+        p_tentative=True,
+        t_tentative=False,
+        beats_used=1,
+        average_beat=(0.0, 1.0, 0.0),
+        time_ms=(-10.0, 0.0, 10.0),
+    )
+    app = SimpleNamespace(
+        ax_pqrst=ax,
+        pqrst_canvas=canvas,
+        pqrst_tab=FakeMappedWidget(mapped=True),
+        pending_pqrst_review=review,
+    )
+
+    assert flush_pending_pqrst_review(app) is True
+    assert app.pending_pqrst_review is None
+    assert app.last_pqrst_review == review
+    assert len(ax.lines) == 2
+    assert canvas.draw_idle_calls == 1
 
 
 def test_apply_review_render_frame_skips_unchanged_peak_marker_writes() -> None:

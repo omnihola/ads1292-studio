@@ -917,6 +917,15 @@ def test_selecting_live_workspace_tab_flushes_pending_live_canvas_draw() -> None
     assert "app._redraw_live()" in source
 
 
+def test_selecting_pqrst_workspace_tab_flushes_pending_pqrst_draw() -> None:
+    from ads1292_studio.gui_layout import _select_workspace_tab
+
+    source = inspect.getsource(_select_workspace_tab)
+
+    assert "target is app.pqrst_tab" in source
+    assert "app._redraw_pqrst_if_pending()" in source
+
+
 def test_native_sidebar_and_workspace_notebook_styles_are_not_configured() -> None:
     from ads1292_studio.gui_style import configure_notebook_chrome
 
