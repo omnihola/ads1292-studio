@@ -158,8 +158,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Reuse fixed display smoothing kernels and extrema-decimation bin edges; live
   ECG and respiration plots use the same window geometry repeatedly during
   streaming.
-- Check duplicate live render keys before clearing empty-state artists or
-  building render frames so idle GUI ticks do not touch Matplotlib unnecessarily.
+- Check duplicate live render keys before building render frames, and only
+  clear empty-state artists after a frame is available, so idle or failed GUI
+  ticks do not touch Matplotlib unnecessarily or flash blank axes.
 - Do not run R-peak bandpass/detection work until at least one second of
   samples is available; earlier windows cannot produce valid HR anyway.
 - Keep expensive live quality recomputation in the existing single-flight

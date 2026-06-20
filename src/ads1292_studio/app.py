@@ -1204,8 +1204,6 @@ class App(tk.Tk):
         )
         if self.last_live_render_key == render_key:
             return
-        self.last_live_render_key = render_key
-        self._clear_empty_plot_state()
         frame = build_live_render_frame(
             indices=self.indices,
             ch1=self.ch1,
@@ -1222,6 +1220,8 @@ class App(tk.Tk):
         if frame is None:
             return
 
+        self.last_live_render_key = render_key
+        self._clear_empty_plot_state()
         apply_live_render_frame(
             self,
             frame,

@@ -526,9 +526,10 @@ def test_live_redraw_skips_duplicate_render_keys() -> None:
     assert "self.last_live_render_key = render_key" in redraw_source
     assert "self.last_live_render_key = None" in clear_source
     assert redraw_source.index("if self.last_live_render_key == render_key:") < redraw_source.index(
-        "self._clear_empty_plot_state()"
+        "build_live_render_frame("
     )
-    assert redraw_source.index("self._clear_empty_plot_state()") < redraw_source.index("build_live_render_frame(")
+    assert redraw_source.index("if frame is None:") < redraw_source.index("self.last_live_render_key = render_key")
+    assert redraw_source.index("build_live_render_frame(") < redraw_source.index("self._clear_empty_plot_state()")
 
 
 def test_live_redraw_skips_unchanged_y_axis_limit_writes() -> None:
