@@ -143,8 +143,7 @@ def apply_live_render_frame(
     app.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
     app.live_status_line.set_data(frame.plot_status_x, frame.plot_status)
     app.live_status_line.set_color(live_contact_trace_color(frame.visible_status))
-    for ax in (app.ax_live_ecg, app.ax_live_resp, app.ax_live_status):
-        set_axis_xlim_if_changed(ax, (frame.left, frame.right))
+    set_axis_xlim_if_changed(app.ax_live_ecg, (frame.left, frame.right))
     if autoscale:
         ecg_ylim = robust_ylim(frame.visible_ecg_plot, min_span=min_ecg_span_counts * display_settings.gain)
         resp_ylim = robust_ylim(frame.visible_resp_plot, min_span=min_resp_span_counts)

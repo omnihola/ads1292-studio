@@ -168,6 +168,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Check duplicate live render keys before building render frames, and only
   clear empty-state artists after a frame is available, so idle or failed GUI
   ticks do not touch Matplotlib unnecessarily or flash blank axes.
+- Live ECG, respiration, and contact axes share x-limits; update the primary
+  ECG x-axis only and let Matplotlib propagate the shared range to avoid extra
+  per-frame axis writes.
 - When streaming samples remain queued after a GUI tick, schedule the next tick
   with the catch-up interval so the display can recover from short stalls
   without adding visible latency.

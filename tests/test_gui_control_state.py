@@ -704,7 +704,8 @@ def test_live_redraw_skips_unchanged_y_axis_limit_writes() -> None:
     apply_source = inspect.getsource(apply_live_render_frame)
 
     assert "apply_live_render_frame(" in redraw_source
-    assert "set_axis_xlim_if_changed(ax, (frame.left, frame.right))" in apply_source
+    assert "set_axis_xlim_if_changed(app.ax_live_ecg, (frame.left, frame.right))" in apply_source
+    assert "for ax in (app.ax_live_ecg, app.ax_live_resp, app.ax_live_status):" not in apply_source
     assert "set_axis_ylim_if_changed(app.ax_live_ecg" in apply_source
     assert "set_axis_ylim_if_changed(app.ax_live_resp" in apply_source
     assert "set_axis_ylim_if_changed(app.ax_live_status" in apply_source
