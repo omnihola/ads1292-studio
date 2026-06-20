@@ -165,6 +165,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Check duplicate live render keys before building render frames, and only
   clear empty-state artists after a frame is available, so idle or failed GUI
   ticks do not touch Matplotlib unnecessarily or flash blank axes.
+- When streaming samples remain queued after a GUI tick, schedule the next tick
+  with the catch-up interval so the display can recover from short stalls
+  without adding visible latency.
 - Do not run R-peak bandpass/detection work until at least one second of
   samples is available; earlier windows cannot produce valid HR anyway.
 - Keep live R-peak detection to one `find_peaks` pass by selecting the dominant

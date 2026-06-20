@@ -15,6 +15,7 @@ _T = TypeVar("_T")
 
 MAX_SAMPLES_PER_TICK = 1000
 MAX_LOG_MESSAGES_PER_TICK = 200
+CATCH_UP_TICK_INTERVAL_MS = 1
 ACTIVE_TICK_INTERVAL_MS = 40
 IDLE_TICK_INTERVAL_MS = 150
 
@@ -89,7 +90,9 @@ def should_apply_control_state(
     return force or previous != current
 
 
-def gui_tick_interval_ms(state: GuiState) -> int:
+def gui_tick_interval_ms(state: GuiState, *, sample_backlog: bool = False) -> int:
+    if sample_backlog and state.streaming:
+        return CATCH_UP_TICK_INTERVAL_MS
     return ACTIVE_TICK_INTERVAL_MS if state.streaming or state.busy else IDLE_TICK_INTERVAL_MS
 
 

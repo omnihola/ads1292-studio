@@ -49,6 +49,7 @@ from ads1292_studio.gui_state import (
     IDLE_TICK_INTERVAL_MS,
     MAX_LOG_MESSAGES_PER_TICK,
     MAX_SAMPLES_PER_TICK,
+    CATCH_UP_TICK_INTERVAL_MS,
     GuiState,
     GuiStatusCard,
     apply_live_metrics_text,
@@ -905,10 +906,13 @@ class App(tk.Tk):
         write_protocol_json(self._protocol_path(self.recording_path), self._protocol())
         write_quality_gate_json(self._quality_gate_path(self.recording_path), self._quality_gate())
 
-    def _schedule_tick(self) -> None:
+    def _schedule_tick(self, *, sample_backlog: bool = False) -> None:
         if self.is_closing or self.tick_after_id is not None:
             return
-        self.tick_after_id = self.after(gui_tick_interval_ms(self._current_gui_state()), self._tick)
+        self.tick_after_id = self.after(
+            gui_tick_interval_ms(self._current_gui_state(), sample_backlog=sample_backlog),
+            self._tick,
+        )
 
     def _cancel_tick(self) -> None:
         if self.tick_after_id is None:
@@ -929,6 +933,7 @@ class App(tk.Tk):
         self._drain_stream_start_results()
         self._drain_live_quality_results()
         sample_batch = drain_queue_items(self.samples, MAX_SAMPLES_PER_TICK)
+        sample_backlog = not self.samples.empty()
         self.sample_index, latest = append_live_sample_batch(
             sample_batch,
             start_index=self.sample_index,
@@ -946,7 +951,7 @@ class App(tk.Tk):
         self._append_log_messages(log_messages)
         self._drain_live_quality_results()
         self._drain_review_render_results()
-        self._schedule_tick()
+        self._schedule_tick(sample_backlog=sample_backlog)
 
     def _schedule_live_quality_update(
         self,

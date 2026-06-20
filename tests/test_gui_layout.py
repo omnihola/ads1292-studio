@@ -1282,7 +1282,7 @@ def test_tick_scheduler_uses_current_gui_state_for_adaptive_interval() -> None:
 
     source = inspect.getsource(App._schedule_tick)
 
-    assert "gui_tick_interval_ms(self._current_gui_state())" in source
+    assert "gui_tick_interval_ms(self._current_gui_state(), sample_backlog=sample_backlog)" in source
     assert "self._gui_state()" not in source
 
 

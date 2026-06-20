@@ -7,6 +7,7 @@ from ads1292_studio.app import (
     DEFAULT_ECG_INVERTED,
     DEFAULT_FILTER_ENABLED,
     ACTIVE_TICK_INTERVAL_MS,
+    CATCH_UP_TICK_INTERVAL_MS,
     ConnectResult,
     CsvLoadResult,
     GuiState,
@@ -963,7 +964,24 @@ def test_gui_tick_interval_slows_only_when_idle() -> None:
     assert gui_tick_interval_ms(connecting) == ACTIVE_TICK_INTERVAL_MS
     assert gui_tick_interval_ms(loading) == ACTIVE_TICK_INTERVAL_MS
     assert gui_tick_interval_ms(starting) == ACTIVE_TICK_INTERVAL_MS
+    assert gui_tick_interval_ms(streaming, sample_backlog=True) == CATCH_UP_TICK_INTERVAL_MS
+    assert gui_tick_interval_ms(idle, sample_backlog=True) == IDLE_TICK_INTERVAL_MS
+    assert CATCH_UP_TICK_INTERVAL_MS < ACTIVE_TICK_INTERVAL_MS
     assert ACTIVE_TICK_INTERVAL_MS <= 40
+
+
+def test_tick_reschedules_immediately_when_sample_backlog_remains() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    tick_source = inspect.getsource(App._tick)
+    schedule_source = inspect.getsource(App._schedule_tick)
+
+    assert "sample_backlog = not self.samples.empty()" in tick_source
+    assert "self._schedule_tick(sample_backlog=sample_backlog)" in tick_source
+    assert "sample_backlog: bool = False" in schedule_source
+    assert "gui_tick_interval_ms(self._current_gui_state(), sample_backlog=sample_backlog)" in schedule_source
 
 
 def test_gui_control_states_disable_everything_while_connecting() -> None:
