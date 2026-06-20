@@ -353,11 +353,16 @@ def test_toolbar_layout_spec_keeps_acquisition_controls_ordered() -> None:
 
 
 def test_primary_toolbar_buttons_use_stable_widths() -> None:
-    from ads1292_studio.gui_layout import build_acquisition_toolbar
+    from ads1292_studio.gui_layout import _build_toolbar_button, build_acquisition_toolbar
 
     source = inspect.getsource(build_acquisition_toolbar)
+    helper_source = inspect.getsource(_build_toolbar_button)
 
-    assert source.count('width=int(toolbar_spec["button_width"])') == 4
+    assert source.count("_build_toolbar_button(") == 4
+    assert "ttk.Button(" not in source
+    assert 'width=int(spec["button_width"])' in helper_source
+    assert 'cursor="hand2"' in helper_source
+    assert "takefocus=True" in helper_source
 
 
 def test_display_toolbar_uses_compact_toggle_chips() -> None:

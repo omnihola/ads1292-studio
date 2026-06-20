@@ -87,36 +87,32 @@ def build_acquisition_toolbar(app: Any) -> None:
         style=toolbar_styles["port"],
     )
     app.port_combo.pack(side=tk.LEFT, padx=toolbar_spec["port_padding"])
-    app.refresh_button = ttk.Button(
+    app.refresh_button = _build_toolbar_button(
         toolbar,
         text="Refresh",
         command=app.refresh_ports,
-        style=toolbar_button_style("Refresh"),
-        width=int(toolbar_spec["button_width"]),
+        spec=toolbar_spec,
     )
     app.refresh_button.pack(side=tk.LEFT, padx=toolbar_spec["refresh_padding"])
-    app.connect_button = ttk.Button(
+    app.connect_button = _build_toolbar_button(
         toolbar,
         text="Connect",
         command=app.connect,
-        style=toolbar_button_style("Connect"),
-        width=int(toolbar_spec["button_width"]),
+        spec=toolbar_spec,
     )
     app.connect_button.pack(side=tk.LEFT, padx=toolbar_spec["primary_action_padding"])
-    app.start_button = ttk.Button(
+    app.start_button = _build_toolbar_button(
         toolbar,
         text="Start",
         command=app.start,
-        style=toolbar_button_style("Start"),
-        width=int(toolbar_spec["button_width"]),
+        spec=toolbar_spec,
     )
     app.start_button.pack(side=tk.LEFT, padx=toolbar_spec["inline_action_padding"])
-    app.stop_button = ttk.Button(
+    app.stop_button = _build_toolbar_button(
         toolbar,
         text="Stop",
         command=app.stop,
-        style=toolbar_button_style("Stop"),
-        width=int(toolbar_spec["button_width"]),
+        spec=toolbar_spec,
     )
     app.stop_button.pack(side=tk.LEFT)
     app.toolbar_acquisition_separator = ttk.Frame(
@@ -231,6 +227,24 @@ def build_display_toolbar(
 def _toolbar_group_label(toolbar: ttk.Frame, text: str) -> None:
     spec = toolbar_group_label_spec()
     ttk.Label(toolbar, text=text, style=str(spec["style"])).pack(side=tk.LEFT, padx=(2, 5))
+
+
+def _build_toolbar_button(
+    toolbar: ttk.Frame,
+    *,
+    text: str,
+    command: Any,
+    spec: dict[str, object],
+) -> ttk.Button:
+    return ttk.Button(
+        toolbar,
+        text=text,
+        command=command,
+        cursor="hand2",
+        takefocus=True,
+        style=toolbar_button_style(text),
+        width=int(spec["button_width"]),
+    )
 
 
 def _build_toolbar_toggle_chip(
