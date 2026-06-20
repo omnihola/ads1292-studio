@@ -225,6 +225,10 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep live metrics text generation and changed-only StringVar writes in
   `gui_state.py`; `app.py` should pass frame values rather than formatting
   toolbar text directly.
+- Keep live trace updates changed-only where practical: ECG, respiration,
+  contact, and peak marker lines should use shared line-update helpers instead
+  of unconditional `set_data()` calls, because repeated GUI ticks may reuse an
+  identical render frame.
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs; wait
   for at least one second of samples before starting live quality snapshots.

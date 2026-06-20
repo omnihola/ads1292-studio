@@ -259,6 +259,98 @@ def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
     assert canvas.draw_idle_calls == 1
 
 
+def test_apply_live_render_frame_skips_redundant_main_trace_writes() -> None:
+    class FakeLine:
+        def __init__(self, *, color: str = PLOT_TRACE_COLORS["contact"]) -> None:
+            self.x = np.array([], dtype=float)
+            self.y = np.array([], dtype=float)
+            self.color = color
+            self.visible = True
+            self.set_data_calls = 0
+
+        def get_xdata(self) -> np.ndarray:
+            return self.x
+
+        def get_ydata(self) -> np.ndarray:
+            return self.y
+
+        def set_data(self, x: np.ndarray, y: np.ndarray) -> None:
+            self.x = x
+            self.y = y
+            self.set_data_calls += 1
+
+        def get_color(self) -> str:
+            return self.color
+
+        def set_color(self, color: str) -> None:
+            self.color = color
+
+        def get_visible(self) -> bool:
+            return self.visible
+
+        def set_visible(self, visible: bool) -> None:
+            self.visible = visible
+
+    fig = Figure()
+    ax_ecg = fig.add_subplot(311)
+    ax_resp = fig.add_subplot(312)
+    ax_status = fig.add_subplot(313)
+    app = SimpleNamespace(
+        live_ecg_line=FakeLine(),
+        live_peak_line=FakeLine(),
+        live_resp_line=FakeLine(),
+        live_status_line=FakeLine(),
+        ax_live_ecg=ax_ecg,
+        ax_live_resp=ax_resp,
+        ax_live_status=ax_status,
+        ecg_paper_grid_cache={},
+        live_calibration_artists=[],
+        calibration_pulse_cache={},
+        live_canvas=FakeCanvas(),
+    )
+    frame = LiveRenderFrame(
+        source="CH2",
+        left=1.0,
+        right=9.0,
+        visible_x=np.array([1.0, 2.0, 3.0]),
+        visible_ecg=np.array([0.0, 2.0, 0.0]),
+        visible_ecg_plot=np.array([0.0, 2.0, 0.0]),
+        visible_resp_plot=np.array([10.0, 11.0, 12.0]),
+        visible_status=np.array([0.0, 0.0, 0.0]),
+        peaks=tuple(),
+        peaks_x=np.array([], dtype=float),
+        peaks_y=np.array([], dtype=float),
+        plot_ecg_x=np.array([1.0, 2.0, 3.0]),
+        plot_ecg=np.array([0.0, 2.0, 0.0]),
+        plot_resp_x=np.array([1.0, 2.0, 3.0]),
+        plot_resp=np.array([10.0, 11.0, 12.0]),
+        plot_status_x=np.array([1.0, 2.0, 3.0]),
+        plot_status=np.array([0.0, 0.0, 0.0]),
+        heart_rate=HeartRateSummary(0.0, 0.0, 0.0, 0),
+    )
+
+    apply_live_render_frame(
+        app,
+        frame,
+        display_settings=EcgDisplaySettings(time_window_seconds=8.0),
+        autoscale=True,
+        min_ecg_span_counts=8.0,
+        min_resp_span_counts=40.0,
+    )
+    apply_live_render_frame(
+        app,
+        frame,
+        display_settings=EcgDisplaySettings(time_window_seconds=8.0),
+        autoscale=True,
+        min_ecg_span_counts=8.0,
+        min_resp_span_counts=40.0,
+    )
+
+    assert app.live_ecg_line.set_data_calls == 1
+    assert app.live_resp_line.set_data_calls == 1
+    assert app.live_status_line.set_data_calls == 1
+
+
 def test_apply_live_render_frame_defers_canvas_draw_when_live_tab_is_hidden() -> None:
     fig = Figure()
     ax_ecg = fig.add_subplot(311)

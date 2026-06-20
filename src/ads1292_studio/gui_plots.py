@@ -138,11 +138,11 @@ def apply_live_render_frame(
     min_resp_span_counts: float,
 ) -> None:
     restored_axis_chrome = restore_data_axis_chrome((app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
-    app.live_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
+    set_line_data_if_changed(app.live_ecg_line, frame.plot_ecg_x, frame.plot_ecg)
     set_line_data_if_changed(app.live_peak_line, frame.peaks_x, frame.peaks_y)
     set_line_visible_if_changed(app.live_peak_line, bool(frame.peaks))
-    app.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
-    app.live_status_line.set_data(frame.plot_status_x, frame.plot_status)
+    set_line_data_if_changed(app.live_resp_line, frame.plot_resp_x, frame.plot_resp)
+    set_line_data_if_changed(app.live_status_line, frame.plot_status_x, frame.plot_status)
     set_line_color_if_changed(app.live_status_line, live_contact_trace_color(frame.visible_status))
     set_axis_xlim_if_changed(app.ax_live_ecg, (frame.left, frame.right))
     set_axis_xlim_if_changed(app.ax_live_resp, (frame.left, frame.right))
