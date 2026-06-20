@@ -5,6 +5,10 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any
 
+from ads1292_studio.matplotlib_runtime import configure_matplotlib_cache
+
+configure_matplotlib_cache()
+
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.ticker import MultipleLocator

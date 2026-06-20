@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from ads1292_studio import matplotlib_runtime
 
 
@@ -25,3 +27,14 @@ def test_configure_matplotlib_cache_replaces_unwritable_existing_dir(monkeypatch
     assert cache_path == tmp_path / matplotlib_runtime.MATPLOTLIB_CACHE_DIR_NAME
     assert cache_path.exists()
     assert cache_path.is_dir()
+
+
+def test_gui_plots_configures_cache_before_matplotlib_imports() -> None:
+    source = Path("src/ads1292_studio/gui_plots.py").read_text()
+
+    configure_index = source.index("configure_matplotlib_cache()")
+    backend_index = source.index("from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg")
+    figure_index = source.index("from matplotlib.figure import Figure")
+
+    assert configure_index < backend_index
+    assert configure_index < figure_index
