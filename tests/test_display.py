@@ -38,6 +38,15 @@ def test_ecg_paper_grid_matches_sweep_speed() -> None:
     assert speed_50["minor_x_seconds"] == 0.02
 
 
+def test_ecg_paper_grid_uses_soft_modern_palette() -> None:
+    spec = ecg_paper_grid_spec(EcgDisplaySettings())
+
+    assert spec["major_color"] == "#F6CACA"
+    assert spec["minor_color"] == "#FCE9E9"
+    assert spec["major_alpha"] == 0.42
+    assert spec["minor_alpha"] == 0.32
+
+
 def test_ecg_paper_grid_key_changes_only_when_spacing_changes() -> None:
     settings = EcgDisplaySettings(sweep_speed_mm_s=25)
 

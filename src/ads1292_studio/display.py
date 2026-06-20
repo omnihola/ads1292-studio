@@ -68,12 +68,12 @@ def ecg_paper_grid_spec(settings: EcgDisplaySettings) -> dict[str, float | str]:
     return {
         "major_x_seconds": major_x_seconds,
         "minor_x_seconds": minor_x_seconds,
-        "major_color": "#F3A6A6",
-        "minor_color": "#F9D5D5",
+        "major_color": "#F6CACA",
+        "minor_color": "#FCE9E9",
         "major_linewidth": 0.65,
         "minor_linewidth": 0.35,
-        "major_alpha": 0.58,
-        "minor_alpha": 0.45,
+        "major_alpha": 0.42,
+        "minor_alpha": 0.32,
     }
 
 

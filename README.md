@@ -194,6 +194,10 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep both live and offline review Matplotlib line/axis/grid/calibration
   application in `gui_plots.py`; `app.py` should queue frames, clear state, and
   update text/cards instead of owning plot mutation details.
+- Keep the ECG paper grid low-contrast and warm-toned enough to give ECG-paper
+  scale cues without competing with the live trace; preserve the 25/50 mm/s
+  spacing behavior while adjusting only palette, alpha, or linewidth for visual
+  polish.
 - Keep live axis title caching and title writes in `gui_plots.py`; `app.py`
   should pass current display/filter context and channel labels only.
 - Keep live metrics text generation and changed-only StringVar writes in
