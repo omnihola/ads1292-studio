@@ -349,6 +349,7 @@ def test_apply_live_render_frame_skips_redundant_main_trace_writes() -> None:
     assert app.live_ecg_line.set_data_calls == 1
     assert app.live_resp_line.set_data_calls == 1
     assert app.live_status_line.set_data_calls == 1
+    assert app.live_canvas.draw_idle_calls == 1
 
 
 def test_apply_live_render_frame_defers_canvas_draw_when_live_tab_is_hidden() -> None:

@@ -228,7 +228,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep live trace updates changed-only where practical: ECG, respiration,
   contact, and peak marker lines should use shared line-update helpers instead
   of unconditional `set_data()` calls, because repeated GUI ticks may reuse an
-  identical render frame.
+  identical render frame. Live canvas redraw should also be changed-only:
+  aggregate trace, axis, grid, and calibration changes and skip `draw_idle()`
+  when the frame is visually identical.
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs; wait
   for at least one second of samples before starting live quality snapshots.

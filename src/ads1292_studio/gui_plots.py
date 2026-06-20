@@ -138,36 +138,45 @@ def apply_live_render_frame(
     min_resp_span_counts: float,
 ) -> None:
     restored_axis_chrome = restore_data_axis_chrome((app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
-    set_line_data_if_changed(app.live_ecg_line, frame.plot_ecg_x, frame.plot_ecg)
-    set_line_data_if_changed(app.live_peak_line, frame.peaks_x, frame.peaks_y)
-    set_line_visible_if_changed(app.live_peak_line, bool(frame.peaks))
-    set_line_data_if_changed(app.live_resp_line, frame.plot_resp_x, frame.plot_resp)
-    set_line_data_if_changed(app.live_status_line, frame.plot_status_x, frame.plot_status)
-    set_line_color_if_changed(app.live_status_line, live_contact_trace_color(frame.visible_status))
-    set_axis_xlim_if_changed(app.ax_live_ecg, (frame.left, frame.right))
-    set_axis_xlim_if_changed(app.ax_live_resp, (frame.left, frame.right))
-    set_axis_xlim_if_changed(app.ax_live_status, (frame.left, frame.right))
+    trace_changed = (
+        set_line_data_if_changed(app.live_ecg_line, frame.plot_ecg_x, frame.plot_ecg),
+        set_line_data_if_changed(app.live_peak_line, frame.peaks_x, frame.peaks_y),
+        set_line_visible_if_changed(app.live_peak_line, bool(frame.peaks)),
+        set_line_data_if_changed(app.live_resp_line, frame.plot_resp_x, frame.plot_resp),
+        set_line_data_if_changed(app.live_status_line, frame.plot_status_x, frame.plot_status),
+        set_line_color_if_changed(app.live_status_line, live_contact_trace_color(frame.visible_status)),
+    )
+    xlim_changed = (
+        set_axis_xlim_if_changed(app.ax_live_ecg, (frame.left, frame.right)),
+        set_axis_xlim_if_changed(app.ax_live_resp, (frame.left, frame.right)),
+        set_axis_xlim_if_changed(app.ax_live_status, (frame.left, frame.right)),
+    )
+    ylim_changed: tuple[bool, ...] = tuple()
     if autoscale:
         ecg_ylim = robust_ylim(frame.visible_ecg_plot, min_span=min_ecg_span_counts * display_settings.gain)
         resp_ylim = robust_ylim(frame.visible_resp_plot, min_span=min_resp_span_counts)
-        set_axis_ylim_if_changed(app.ax_live_ecg, stable_ylim(app.ax_live_ecg.get_ylim(), ecg_ylim))
-        set_axis_ylim_if_changed(app.ax_live_resp, stable_ylim(app.ax_live_resp.get_ylim(), resp_ylim))
         status_top = float(frame.visible_status.max()) + 0.5 if frame.visible_status.size else 1.0
-        set_axis_ylim_if_changed(app.ax_live_status, (-0.5, max(1.0, status_top)))
-    apply_ecg_paper_grid(app.ax_live_ecg, display_settings, app.ecg_paper_grid_cache)
-    if restored_axis_chrome or calibration_pulse_needs_update(
+        ylim_changed = (
+            set_axis_ylim_if_changed(app.ax_live_ecg, stable_ylim(app.ax_live_ecg.get_ylim(), ecg_ylim)),
+            set_axis_ylim_if_changed(app.ax_live_resp, stable_ylim(app.ax_live_resp.get_ylim(), resp_ylim)),
+            set_axis_ylim_if_changed(app.ax_live_status, (-0.5, max(1.0, status_top))),
+        )
+    grid_changed = apply_ecg_paper_grid(app.ax_live_ecg, display_settings, app.ecg_paper_grid_cache)
+    calibration_changed = restored_axis_chrome or calibration_pulse_needs_update(
         app.ax_live_ecg,
         app.live_calibration_artists,
         display_settings,
         app.calibration_pulse_cache,
-    ):
+    )
+    if calibration_changed:
         draw_calibration_pulse(
             app.ax_live_ecg,
             app.live_calibration_artists,
             display_settings,
             app.calibration_pulse_cache,
         )
-    draw_canvas_idle_if_visible(app.live_canvas, getattr(app, "live_tab", None))
+    if any((*trace_changed, *xlim_changed, *ylim_changed, grid_changed, calibration_changed)):
+        draw_canvas_idle_if_visible(app.live_canvas, getattr(app, "live_tab", None))
 
 
 def draw_canvas_idle_if_visible(canvas: object, owner: object | None = None) -> bool:
@@ -496,12 +505,12 @@ def apply_ecg_paper_grid(
     ax: object,
     settings: EcgDisplaySettings,
     cache: dict[int, tuple[float, float, float, float]],
-) -> None:
+) -> bool:
     spec = ecg_paper_grid_spec(settings)
     cache_key = ecg_paper_grid_key(settings, ax.get_ylim())
     axis_id = id(ax)
     if cache.get(axis_id) == cache_key:
-        return
+        return False
     cache[axis_id] = cache_key
     ax.xaxis.set_major_locator(MultipleLocator(float(spec["major_x_seconds"])))
     ax.xaxis.set_minor_locator(MultipleLocator(float(spec["minor_x_seconds"])))
@@ -522,6 +531,7 @@ def apply_ecg_paper_grid(
         linewidth=spec["minor_linewidth"],
         alpha=spec["minor_alpha"],
     )
+    return True
 
 
 def draw_calibration_pulse(
