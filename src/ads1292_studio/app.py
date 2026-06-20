@@ -146,6 +146,7 @@ from ads1292_studio.gui_specs import (
     plot_axis_style,
     plot_canvas_widget_style,
     plot_figure_layouts,
+    plot_panel_chrome_spec,
     plot_panel_spec,
     plot_trace_colors,
     plot_trace_styles,

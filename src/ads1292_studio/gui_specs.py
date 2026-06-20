@@ -396,10 +396,16 @@ PANEL_CHROME_SPEC = {
     "borderwidth": 1,
     "relief": "flat",
 }
+PLOT_PANEL_CHROME_SPEC = {
+    "background": "#FFFFFF",
+    "border": "#FFFFFF",
+    "borderwidth": 0,
+    "relief": "flat",
+}
 PLOT_PANEL_SPEC = {
     "shell": "Main.TFrame",
     "panel": "PlotPanel.TFrame",
-    "padding": (4, 6),
+    "padding": (0, 4),
     "panel_padding": (0, 0),
 }
 PLOT_AXIS_STYLE = {
@@ -712,6 +718,10 @@ def scrollable_frame_spec() -> dict[str, object]:
 
 def panel_chrome_spec() -> dict[str, object]:
     return dict(PANEL_CHROME_SPEC)
+
+
+def plot_panel_chrome_spec() -> dict[str, object]:
+    return dict(PLOT_PANEL_CHROME_SPEC)
 
 
 def plot_panel_spec() -> dict[str, object]:

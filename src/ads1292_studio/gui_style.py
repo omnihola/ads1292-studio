@@ -16,6 +16,7 @@ from ads1292_studio.gui_specs import (
     input_chrome_spec,
     muted_label_spec,
     panel_chrome_spec,
+    plot_panel_chrome_spec,
     protocol_note_styles,
     safety_notice_styles,
     scrollbar_chrome_spec,
@@ -273,7 +274,6 @@ def configure_panel_chrome(style: ttk.Style) -> None:
     panel_chrome = panel_chrome_spec()
     for panel_style in (
         "Card.TFrame",
-        "PlotPanel.TFrame",
         "LogPanel.TFrame",
         "WorkflowHint.TFrame",
         "SafetyNotice.TFrame",
@@ -290,6 +290,16 @@ def configure_panel_chrome(style: ttk.Style) -> None:
             lightcolor=panel_chrome["border"],
             darkcolor=panel_chrome["border"],
         )
+    plot_panel_chrome = plot_panel_chrome_spec()
+    style.configure(
+        "PlotPanel.TFrame",
+        background=plot_panel_chrome["background"],
+        borderwidth=plot_panel_chrome["borderwidth"],
+        relief=plot_panel_chrome["relief"],
+        bordercolor=plot_panel_chrome["border"],
+        lightcolor=plot_panel_chrome["border"],
+        darkcolor=plot_panel_chrome["border"],
+    )
     for notice_style in (workflow_hint_styles(), safety_notice_styles()):
         style.configure(
             notice_style["frame"],

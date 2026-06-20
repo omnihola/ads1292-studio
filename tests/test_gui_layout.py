@@ -28,6 +28,7 @@ from ads1292_studio.app import (
     plot_axis_style,
     plot_canvas_widget_style,
     plot_figure_layouts,
+    plot_panel_chrome_spec,
     plot_panel_spec,
     plot_trace_colors,
     plot_trace_styles,
@@ -162,6 +163,17 @@ def test_app_delegates_static_chrome_to_style_helpers() -> None:
     assert "configure_button_chrome(style)" in source
     assert "configure_notebook_chrome(style)" in source
     assert "configure_status_chrome(style)" in source
+
+
+def test_plot_panel_chrome_is_configured_separately_from_cards() -> None:
+    from ads1292_studio.gui_style import configure_panel_chrome
+
+    source = inspect.getsource(configure_panel_chrome)
+    card_loop = source.split("for panel_style in (", maxsplit=1)[1].split("):", maxsplit=1)[0]
+
+    assert "\"PlotPanel.TFrame\"" not in card_loop
+    assert "plot_panel_chrome_spec()" in source
+    assert "style.configure(\n        \"PlotPanel.TFrame\"" in source
 
 
 def test_toolbar_frame_spec_groups_acquisition_controls_as_one_surface() -> None:
@@ -911,11 +923,20 @@ def test_panel_chrome_spec_softens_repeated_card_borders() -> None:
     }
 
 
-def test_plot_panel_spec_frames_signal_workspaces() -> None:
+def test_plot_panel_chrome_spec_keeps_signal_workspace_unframed() -> None:
+    assert plot_panel_chrome_spec() == {
+        "background": "#FFFFFF",
+        "border": "#FFFFFF",
+        "borderwidth": 0,
+        "relief": "flat",
+    }
+
+
+def test_plot_panel_spec_keeps_signal_workspace_tight() -> None:
     assert plot_panel_spec() == {
         "shell": "Main.TFrame",
         "panel": "PlotPanel.TFrame",
-        "padding": (4, 6),
+        "padding": (0, 4),
         "panel_padding": (0, 0),
     }
 
