@@ -868,12 +868,15 @@ def test_port_refresh_and_edits_recompute_control_state() -> None:
     from ads1292_studio.gui_layout import build_acquisition_toolbar
 
     refresh_source = inspect.getsource(App.refresh_ports)
+    port_edit_source = inspect.getsource(App._on_port_value_changed)
     toolbar_source = inspect.getsource(build_acquisition_toolbar)
 
     assert "self._apply_control_states(force=True)" in refresh_source
     assert "allow_remembered=True" in refresh_source
     assert "self.port_var.set(visible_port)" in refresh_source
     assert "self.port_var.get().strip() != visible_port" in refresh_source
+    assert "self._apply_control_states()" in port_edit_source
+    assert "force=True" not in port_edit_source
     assert "app.port_var.trace_add(\"write\"" in toolbar_source
     assert "app.port_combo.bind(\"<<ComboboxSelected>>\"" in toolbar_source
     assert "app.port_combo.bind(\"<KeyRelease>\"" in toolbar_source

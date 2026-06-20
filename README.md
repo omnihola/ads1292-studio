@@ -277,12 +277,14 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   `/dev/cu.*` path gets a real serial probe. Keep offline CSV actions enabled,
   keep the header badge and sidebar Connection card aligned on the selected-port
   state, and recompute controls immediately when the port field changes or
-  Refresh updates the port list. Read the port variable, visible combobox text,
-  and combobox values so macOS/Tk combobox sync lag cannot hide a usable port;
-  refresh must replace stale or blank visible text with the selected port and
-  keep the last valid/manual port as a fallback even if automatic scanning
-  temporarily returns no ADS candidates. Enable Start only when the selected
-  port matches the connected port.
+  Refresh updates the port list. Port edits should use the normal changed-only
+  control-state path; Refresh may force a sync because it mutates the detected
+  port values. Read the port variable, visible combobox text, and combobox
+  values so macOS/Tk combobox sync lag cannot hide a usable port; refresh must
+  replace stale or blank visible text with the selected port and keep the last
+  valid/manual port as a fallback even if automatic scanning temporarily returns
+  no ADS candidates. Enable Start only when the selected port matches the
+  connected port.
 - Treat macOS `/dev/cu.usbmodem*` and `/dev/cu.usbserial*` devices as ADS1292
   connection candidates in the port list. Some ADS1292RECG-FE boards show up as
   generic USB serial devices before the firmware description is fully
