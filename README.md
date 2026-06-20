@@ -255,11 +255,12 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   including returning the header badge to `Not connected` when a port appears;
   read the port variable, visible combobox text, and combobox values so
   macOS/Tk combobox sync lag cannot leave Connect disabled while a port is
-  available; refresh must replace stale or blank visible text with the detected
-  port; keep the last valid port as a fallback when Tk temporarily reports an
-  empty combobox during focus synchronization, but clear that fallback when an
-  explicit Refresh finds no ports and the field itself is empty;
-  enable Start only when the selected port matches the connected port.
+  available; refresh must replace stale or blank visible text with the selected
+  port and keep the last valid/manual port as a fallback even if automatic
+  scanning temporarily returns no ADS candidates. Prefer allowing an explicit
+  Connect attempt, which can show a real serial error, over greying out the
+  primary action while a usable `/dev/cu.*` path is visible. Enable Start only
+  when the selected port matches the connected port.
 - Treat macOS `/dev/cu.usbmodem*` and `/dev/cu.usbserial*` devices as ADS1292
   connection candidates in the port list. Some ADS1292RECG-FE boards show up as
   generic USB serial devices before the firmware description is fully

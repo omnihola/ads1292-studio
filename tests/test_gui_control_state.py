@@ -854,7 +854,9 @@ def test_port_refresh_and_edits_recompute_control_state() -> None:
     toolbar_source = inspect.getsource(build_acquisition_toolbar)
 
     assert "self._apply_control_states(force=True)" in refresh_source
-    assert "allow_remembered=bool(values)" in refresh_source
+    assert "allow_remembered=True" in refresh_source
+    assert "self.port_var.set(visible_port)" in refresh_source
+    assert "self.port_var.get().strip() != visible_port" in refresh_source
     assert "app.port_var.trace_add(\"write\"" in toolbar_source
     assert "app.port_combo.bind(\"<<ComboboxSelected>>\"" in toolbar_source
     assert "app.port_combo.bind(\"<KeyRelease>\"" in toolbar_source
