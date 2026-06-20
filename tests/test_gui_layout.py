@@ -782,12 +782,26 @@ def test_workspace_tab_strip_styles_replace_native_tab_chrome() -> None:
         "selected_hover_background": "#1F4FB2",
         "foreground": "#657084",
         "selected_foreground": "#FFFFFF",
+        "tab_border": "#D9E1EC",
+        "hover_border": "#CFE0FF",
+        "selected_border": "#1F4FB2",
         "font": ("Aptos", 12, "bold"),
         "padding": (4, 0, 4, 6),
         "tab_padding": (12, 7),
         "tab_width": 12,
         "tab_gap": (0, 4),
     }
+
+
+def test_tab_strip_chrome_configures_label_borders() -> None:
+    from ads1292_studio.gui_style import _configure_tab_strip
+
+    source = inspect.getsource(_configure_tab_strip)
+
+    assert "bordercolor=" in source
+    assert "lightcolor=" in source
+    assert "darkcolor=" in source
+    assert "selected_border" in source
 
 
 def test_workspace_tabs_use_custom_segmented_strip() -> None:

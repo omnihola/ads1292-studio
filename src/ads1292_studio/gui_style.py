@@ -557,6 +557,9 @@ def configure_notebook_chrome(style: ttk.Style) -> None:
 
 
 def _configure_tab_strip(style: ttk.Style, chrome: dict[str, object]) -> None:
+    tab_border = chrome.get("tab_border", chrome["background"])
+    hover_border = chrome.get("hover_border", chrome["hover_background"])
+    selected_border = chrome.get("selected_border", chrome["selected_background"])
     style.configure(
         chrome["frame"],
         background=chrome["background"],
@@ -568,8 +571,11 @@ def _configure_tab_strip(style: ttk.Style, chrome: dict[str, object]) -> None:
         foreground=chrome["foreground"],
         font=chrome["font"],
         padding=chrome["tab_padding"],
-        borderwidth=0,
+        borderwidth=1,
         relief="flat",
+        bordercolor=tab_border,
+        lightcolor=tab_border,
+        darkcolor=tab_border,
     )
     style.configure(
         chrome["hover_tab"],
@@ -577,8 +583,11 @@ def _configure_tab_strip(style: ttk.Style, chrome: dict[str, object]) -> None:
         foreground=chrome["selected_foreground"],
         font=chrome["font"],
         padding=chrome["tab_padding"],
-        borderwidth=0,
+        borderwidth=1,
         relief="flat",
+        bordercolor=hover_border,
+        lightcolor=hover_border,
+        darkcolor=hover_border,
     )
     style.configure(
         chrome["selected_tab"],
@@ -586,8 +595,11 @@ def _configure_tab_strip(style: ttk.Style, chrome: dict[str, object]) -> None:
         foreground=chrome["selected_foreground"],
         font=chrome["font"],
         padding=chrome["tab_padding"],
-        borderwidth=0,
+        borderwidth=1,
         relief="flat",
+        bordercolor=selected_border,
+        lightcolor=selected_border,
+        darkcolor=selected_border,
     )
     style.configure(
         chrome["selected_hover_tab"],
@@ -595,8 +607,11 @@ def _configure_tab_strip(style: ttk.Style, chrome: dict[str, object]) -> None:
         foreground=chrome["selected_foreground"],
         font=chrome["font"],
         padding=chrome["tab_padding"],
-        borderwidth=0,
+        borderwidth=1,
         relief="flat",
+        bordercolor=selected_border,
+        lightcolor=selected_border,
+        darkcolor=selected_border,
     )
     style.map(
         chrome["tab"],
