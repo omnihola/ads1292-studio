@@ -295,7 +295,7 @@ def apply_review_render_frame(
             app.calibration_pulse_cache,
         )
     if any((*trace_changed, *axis_changed, label_changed, grid_changed, calibration_changed)):
-        app.review_canvas.draw_idle()
+        draw_canvas_idle_if_visible(app.review_canvas, getattr(app, "review_tab", None))
     draw_pqrst_review_if_changed(app, frame.pqrst)
 
 
@@ -303,11 +303,11 @@ def draw_pqrst_review_if_changed(app: Any, review: PqrstReview) -> bool:
     if getattr(app, "last_pqrst_review", None) == review:
         return False
     app.last_pqrst_review = review
-    draw_pqrst_review(app.ax_pqrst, app.pqrst_canvas, review)
+    draw_pqrst_review(app.ax_pqrst, app.pqrst_canvas, review, owner=getattr(app, "pqrst_tab", None))
     return True
 
 
-def draw_pqrst_review(ax: object, canvas: object, review: PqrstReview) -> None:
+def draw_pqrst_review(ax: object, canvas: object, review: PqrstReview, *, owner: object | None = None) -> None:
     ax.clear()
     style_signal_axes((ax,))
     ax.set_xlabel("Time relative to R peak (ms)")
@@ -347,7 +347,7 @@ def draw_pqrst_review(ax: object, canvas: object, review: PqrstReview) -> None:
         f"PQRST review: QRS={review.qrs_clear}, P tentative={review.p_tentative}, "
         f"T tentative={review.t_tentative}, beats={review.beats_used}",
     )
-    canvas.draw_idle()
+    draw_canvas_idle_if_visible(canvas, owner)
 
 
 def build_plot_canvas(app: Any, parent: ttk.Frame, fig: Figure, *, name: str) -> FigureCanvasTkAgg:
