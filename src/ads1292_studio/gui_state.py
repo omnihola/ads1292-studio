@@ -397,7 +397,7 @@ def set_axis_xlim_if_changed(ax: object, limits: tuple[float, float]) -> bool:
 
 
 def toolbar_display_hint_text(settings: EcgDisplaySettings, filters: SoftwareFilterSettings) -> str:
-    return f"Live: CH2 ECG Lead I | CH1 Resp | Contact | {display_mode_label(settings, filters)}"
+    return f"CH2 Lead I | CH1 Resp | Contact | {display_mode_label(settings, filters)}"
 
 
 def display_scale_reference_label(settings: EcgDisplaySettings) -> str:
