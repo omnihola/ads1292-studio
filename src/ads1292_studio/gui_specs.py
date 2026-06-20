@@ -206,7 +206,12 @@ TOOLBAR_LAYOUT_SPEC = {
     "frame": "Toolbar.TFrame",
     "padding": (14, 7, 14, 7),
     "port_width": 34,
-    "button_width": 10,
+    "button_widths": {
+        "Refresh": 10,
+        "Connect": 12,
+        "Start": 12,
+        "Stop": 12,
+    },
     "port_padding": (6, 5),
     "refresh_padding": (0, 2),
     "primary_action_padding": (8, 2),
@@ -859,6 +864,13 @@ def primary_toolbar_button_labels() -> tuple[str, ...]:
 
 def toolbar_button_style(label: str) -> str:
     return TOOLBAR_BUTTON_STYLES.get(label, "TButton")
+
+
+def toolbar_button_width(label: str, spec: dict[str, object]) -> int:
+    widths = spec.get("button_widths", {})
+    if isinstance(widths, dict):
+        return int(widths.get(label, widths.get("Refresh", 10)))
+    return 10
 
 
 def button_chrome_spec() -> dict[str, dict[str, object]]:

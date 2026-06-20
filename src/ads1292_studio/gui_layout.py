@@ -18,6 +18,7 @@ from ads1292_studio.gui_specs import (
     sidebar_action_button_style,
     sidebar_field_styles,
     sidebar_layout_spec,
+    toolbar_button_width,
     toolbar_button_style,
     toolbar_control_styles,
     toolbar_group_padding,
@@ -253,7 +254,7 @@ def _build_toolbar_button(
         cursor="hand2",
         takefocus=True,
         style=toolbar_button_style(text),
-        width=int(spec["button_width"]),
+        width=toolbar_button_width(text, spec),
     )
 
 

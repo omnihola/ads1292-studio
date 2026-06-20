@@ -392,7 +392,12 @@ def test_toolbar_layout_spec_keeps_acquisition_controls_ordered() -> None:
         "frame": "Toolbar.TFrame",
         "padding": (14, 7, 14, 7),
         "port_width": 34,
-        "button_width": 10,
+        "button_widths": {
+            "Refresh": 10,
+            "Connect": 12,
+            "Start": 12,
+            "Stop": 12,
+        },
         "port_padding": (6, 5),
         "refresh_padding": (0, 2),
         "primary_action_padding": (8, 2),
@@ -415,7 +420,7 @@ def test_primary_toolbar_buttons_use_stable_widths() -> None:
 
     assert source.count("_build_toolbar_button(") == 4
     assert "ttk.Button(" not in source
-    assert 'width=int(spec["button_width"])' in helper_source
+    assert "width=toolbar_button_width(text, spec)" in helper_source
     assert 'cursor="hand2"' in helper_source
     assert "takefocus=True" in helper_source
 
