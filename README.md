@@ -164,6 +164,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   samples is available; earlier windows cannot produce valid HR anyway.
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs.
+- Keep log insertion batched and avoid autoscrolling the log Text widget while
+  another workspace tab is selected; scroll to the end when Event Log is opened.
 - Keep toolbar toggle chips mouse- and keyboard-accessible, with visible hover
   and focus feedback, because they replace heavier checkbutton chrome,
   including acquisition toggles such as Save CSV.

@@ -77,7 +77,18 @@ def test_app_batches_queued_log_messages_to_reduce_text_widget_churn() -> None:
     source = inspect.getsource(App)
 
     assert "def _append_log_messages" in source
+    assert "def _log_tab_is_visible" in source
     assert "format_log_entries(messages, stamp)" in source
     assert "self._trim_log_text()" in source
+    assert "if self._log_tab_is_visible():" in source
     assert "drain_queue_items(self.logs, MAX_LOG_MESSAGES_PER_TICK)" in source
     assert "self._append_log_messages(log_messages)" in source
+
+
+def test_workspace_log_tab_autoscrolls_when_selected() -> None:
+    from ads1292_studio.gui_layout import _select_workspace_tab
+
+    source = inspect.getsource(_select_workspace_tab)
+
+    assert "target is app.log_tab" in source
+    assert "app.log_text.see(tk.END)" in source

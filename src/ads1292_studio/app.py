@@ -1353,7 +1353,11 @@ class App(tk.Tk):
         stamp = datetime.now().strftime("%H:%M:%S")
         self.log_text.insert(tk.END, format_log_entries(messages, stamp))
         self._trim_log_text()
-        self.log_text.see(tk.END)
+        if self._log_tab_is_visible():
+            self.log_text.see(tk.END)
+
+    def _log_tab_is_visible(self) -> bool:
+        return hasattr(self, "log_tab") and self.selected_workspace_tab == str(self.log_tab)
 
     def _trim_log_text(self) -> None:
         max_lines = int(log_panel_spec()["max_lines"])
