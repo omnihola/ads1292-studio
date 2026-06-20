@@ -696,6 +696,21 @@ def test_live_redraw_skips_duplicate_render_keys() -> None:
     assert redraw_source.index("build_live_render_frame(") < redraw_source.index("self._clear_empty_plot_state(")
 
 
+def test_live_redraw_skips_frame_build_when_live_tab_is_hidden() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    redraw_source = inspect.getsource(App._redraw_live)
+    helper_source = inspect.getsource(App._live_tab_visible)
+
+    assert "def _live_tab_visible" in helper_source
+    assert "winfo_ismapped()" in helper_source
+    assert "if not self._live_tab_visible():" in redraw_source
+    assert "self.last_live_render_key = None" in redraw_source
+    assert redraw_source.index("if not self._live_tab_visible():") < redraw_source.index("build_live_render_frame(")
+
+
 def test_live_redraw_skips_unchanged_y_axis_limit_writes() -> None:
     import inspect
 
@@ -1020,6 +1035,20 @@ def test_tick_reschedules_immediately_when_sample_backlog_remains() -> None:
     assert "self._schedule_tick(sample_backlog=sample_backlog)" in tick_source
     assert "sample_backlog: bool = False" in schedule_source
     assert "gui_tick_interval_ms(self._current_gui_state(), sample_backlog=sample_backlog)" in schedule_source
+
+
+def test_tick_skips_hidden_live_plot_render_but_keeps_quality_updates() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    tick_source = inspect.getsource(App._tick)
+
+    assert "if self._live_tab_visible():" in tick_source
+    assert "self._redraw_live()" in tick_source
+    assert "self._schedule_live_quality_update(" in tick_source
+    assert tick_source.index("if self._live_tab_visible():") < tick_source.index("self._redraw_live()")
+    assert tick_source.index("else:") < tick_source.index("self._schedule_live_quality_update(")
 
 
 def test_gui_control_states_disable_everything_while_connecting() -> None:

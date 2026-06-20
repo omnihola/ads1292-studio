@@ -979,7 +979,13 @@ class App(tk.Tk):
             board_rr=self.board_rr,
         )
         if latest is not None:
-            self._redraw_live()
+            if self._live_tab_visible():
+                self._redraw_live()
+            else:
+                self._schedule_live_quality_update(
+                    source=ADS1292R_ECG_SOURCE,
+                    valid_rr=0,
+                )
             self._apply_control_states()
         log_messages = drain_queue_items(self.logs, MAX_LOG_MESSAGES_PER_TICK)
         self._append_log_messages(log_messages)
@@ -1226,8 +1232,17 @@ class App(tk.Tk):
             sample_rate_hz=SAMPLE_RATE_HZ,
         )
 
+    def _live_tab_visible(self) -> bool:
+        try:
+            return bool(self.live_tab.winfo_ismapped())
+        except tk.TclError:
+            return False
+
     def _redraw_live(self) -> None:
         if not self.indices:
+            return
+        if not self._live_tab_visible():
+            self.last_live_render_key = None
             return
         display_settings = self._display_settings()
         filter_settings = self._software_filter_settings()
