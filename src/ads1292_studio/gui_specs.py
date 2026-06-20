@@ -362,6 +362,7 @@ EMPTY_PLOT_MESSAGES = {
     "pqrst": ("Load or record ECG to review averaged PQRST",),
 }
 EMPTY_PLOT_STYLE = {
+    "axis_face": "#F8FAFD",
     "text_color": "#657084",
     "box_face": "#FFFFFF",
     "box_edge": "#EAF1FF",

@@ -299,7 +299,9 @@ def restore_data_axis_chrome(axes: tuple[object, ...]) -> bool:
 
 
 def soften_empty_axis_chrome(axes: tuple[object, ...]) -> None:
+    style = empty_plot_style()
     for ax in axes:
+        ax.set_facecolor(str(style["axis_face"]))
         ax.grid(False, which="both")
         ax.tick_params(labelleft=False, labelbottom=False, left=False, bottom=False)
         ax.xaxis.label.set_visible(False)

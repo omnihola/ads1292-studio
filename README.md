@@ -168,6 +168,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   hover and focus states, because they replace native notebook tabs.
 - Keep action buttons' focus borders visible so keyboard navigation has a
   clear current target across acquisition and sidebar controls.
+- Keep empty signal panels visually quiet with the dedicated empty-state axis
+  surface, then restore the normal data-axis chrome as soon as samples arrive.
 
 ## Safety
 

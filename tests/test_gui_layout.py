@@ -162,6 +162,13 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
     }
 
 
+def test_empty_plot_style_uses_dedicated_quiet_axis_surface() -> None:
+    spec = empty_plot_style()
+
+    assert spec["axis_face"] == "#F8FAFD"
+    assert spec["box_face"] == "#FFFFFF"
+
+
 def test_app_delegates_static_chrome_to_style_helpers() -> None:
     from ads1292_studio.app import App
 
@@ -938,6 +945,7 @@ def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
 
 def test_empty_plot_style_uses_muted_callouts() -> None:
     assert empty_plot_style() == {
+        "axis_face": "#F8FAFD",
         "text_color": "#657084",
         "box_face": "#FFFFFF",
         "box_edge": "#EAF1FF",

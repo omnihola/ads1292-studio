@@ -62,6 +62,20 @@ def test_empty_plot_state_hides_axis_chrome_and_reference_lines() -> None:
     assert all(not spine.get_visible() for spine in ax.spines.values())
 
 
+def test_empty_plot_state_uses_quiet_background_until_data_arrives() -> None:
+    from matplotlib.colors import to_rgba
+
+    from ads1292_studio.gui_specs import empty_plot_style
+
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    artists: list[object] = []
+
+    show_empty_plot_state(artists, "pqrst", (ax,))
+
+    assert ax.get_facecolor() == to_rgba(empty_plot_style()["axis_face"])
+
+
 def test_restore_data_axis_chrome_reenables_axis_and_lines() -> None:
     fig = Figure()
     ax = fig.add_subplot(111)
