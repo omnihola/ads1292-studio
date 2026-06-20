@@ -377,7 +377,7 @@ class App(tk.Tk):
         if port:
             self.last_selected_port = port
         self._sync_port_entry_connection_message()
-        self._apply_control_states()
+        self._apply_control_states(force=True)
 
     def _selected_port_text(self) -> str:
         port = stable_port_text(
