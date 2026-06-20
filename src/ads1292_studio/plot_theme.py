@@ -99,6 +99,7 @@ PQRST_PLOT_STYLE = {
         "borderaxespad": 0.8,
     },
 }
+_SEABORN_THEME_APPLIED = False
 
 
 def seaborn_plot_theme() -> dict[str, object]:
@@ -119,6 +120,9 @@ def pqrst_plot_style() -> dict[str, dict[str, object]]:
 
 
 def apply_seaborn_plot_theme() -> None:
+    global _SEABORN_THEME_APPLIED
+    if _SEABORN_THEME_APPLIED:
+        return
     theme = seaborn_plot_theme()
     sns.set_theme(
         style=str(theme["style"]),
@@ -126,6 +130,7 @@ def apply_seaborn_plot_theme() -> None:
         palette=str(theme["palette"]),
         rc=theme["rc"],
     )
+    _SEABORN_THEME_APPLIED = True
 
 
 def new_export_figure(*, figsize: tuple[float, float], dpi: int = 160) -> Figure:
