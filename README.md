@@ -66,6 +66,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Live ECG, respiration raw, and lead-off/status display.
 - Synchronized three-panel ADS1292R view: CH2 ECG Lead I, CH1 respiration raw,
   and lead-off/contact status on the same time axis.
+- Empty Live ECG panels show the acquisition sequence directly: select an
+  ADS1292 port, connect the recorder, then press Start.
 - CSV saving with `status_byte` and `lead_off_bits`.
 - Offline CSV review with R-peak detection and conservative PQRST review.
 - HTML/PNG review report export for experiment records.
