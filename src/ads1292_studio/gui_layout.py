@@ -541,6 +541,8 @@ def _select_workspace_tab(app: Any, target: ttk.Frame) -> str:
         target.pack(fill=tk.BOTH, expand=True)
         app.selected_workspace_tab = str(target)
     _sync_workspace_tab_styles(app)
+    if target is app.live_tab and hasattr(app, "_redraw_live"):
+        app._redraw_live()
     if target is app.log_tab and hasattr(app, "log_text"):
         app.log_text.see(tk.END)
     return "break"

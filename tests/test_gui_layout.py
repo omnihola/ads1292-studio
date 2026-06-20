@@ -677,6 +677,15 @@ def test_workspace_tab_selection_uses_stacked_frames() -> None:
     assert "app.notebook" not in select_source + sync_source
 
 
+def test_selecting_live_workspace_tab_flushes_pending_live_canvas_draw() -> None:
+    from ads1292_studio.gui_layout import _select_workspace_tab
+
+    source = inspect.getsource(_select_workspace_tab)
+
+    assert "target is app.live_tab" in source
+    assert "app._redraw_live()" in source
+
+
 def test_native_sidebar_and_workspace_notebook_styles_are_not_configured() -> None:
     from ads1292_studio.gui_style import configure_notebook_chrome
 

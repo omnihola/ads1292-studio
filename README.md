@@ -269,6 +269,10 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   even when the visible port field contains the board path.
 - Keep custom sidebar/workspace tab strips keyboard-accessible, with visible
   hover and focus states, because they replace native notebook tabs.
+- Avoid redrawing hidden Matplotlib canvases: keep live data objects current, but
+  defer `draw_idle()` while the Live ECG workspace tab is unmapped and flush one
+  redraw when the user returns to Live ECG. This keeps Review CSV, PQRST, and Log
+  navigation responsive during streaming.
 - Sidebar mouse-wheel hit testing should cover the whole scroll frame, including
   scrollbar and edge padding, not only the canvas interior; otherwise scrolling
   feels broken when the pointer is still visually inside the sidebar.

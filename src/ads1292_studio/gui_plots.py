@@ -167,7 +167,18 @@ def apply_live_render_frame(
             display_settings,
             app.calibration_pulse_cache,
         )
-    app.live_canvas.draw_idle()
+    draw_canvas_idle_if_visible(app.live_canvas, getattr(app, "live_tab", None))
+
+
+def draw_canvas_idle_if_visible(canvas: object, owner: object | None = None) -> bool:
+    if owner is not None:
+        try:
+            if hasattr(owner, "winfo_ismapped") and not owner.winfo_ismapped():
+                return False
+        except tk.TclError:
+            return False
+    canvas.draw_idle()
+    return True
 
 
 def live_contact_trace_color(status_values: np.ndarray) -> str:
