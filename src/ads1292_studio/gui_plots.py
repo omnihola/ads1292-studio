@@ -142,7 +142,7 @@ def apply_live_render_frame(
     app.live_peak_line.set_data(frame.peaks_x, frame.peaks_y)
     app.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
     app.live_status_line.set_data(frame.plot_status_x, frame.plot_status)
-    app.live_status_line.set_color(live_contact_trace_color(frame.visible_status))
+    set_line_color_if_changed(app.live_status_line, live_contact_trace_color(frame.visible_status))
     set_axis_xlim_if_changed(app.ax_live_ecg, (frame.left, frame.right))
     if autoscale:
         ecg_ylim = robust_ylim(frame.visible_ecg_plot, min_span=min_ecg_span_counts * display_settings.gain)
@@ -171,6 +171,13 @@ def live_contact_trace_color(status_values: np.ndarray) -> str:
     if status_values.size and np.any(status_values != 0.0):
         return APP_VISUAL_TOKENS["warning"]
     return PLOT_TRACE_COLORS["contact"]
+
+
+def set_line_color_if_changed(line: object, color: str) -> bool:
+    if line.get_color() == color:
+        return False
+    line.set_color(color)
+    return True
 
 
 def apply_live_axis_titles(

@@ -12,6 +12,7 @@ from ads1292_studio.gui_plots import (
     draw_pqrst_review,
     live_contact_trace_color,
     restore_data_axis_chrome,
+    set_line_color_if_changed,
     show_empty_plot_state,
 )
 from ads1292_studio.live_render import LiveRenderFrame
@@ -204,6 +205,28 @@ def test_live_contact_trace_color_flags_visible_lead_off() -> None:
     assert live_contact_trace_color(np.array([], dtype=float)) == PLOT_TRACE_COLORS["contact"]
     assert live_contact_trace_color(np.array([0.0, 0.0])) == PLOT_TRACE_COLORS["contact"]
     assert live_contact_trace_color(np.array([0.0, 2.0])) == APP_VISUAL_TOKENS["warning"]
+
+
+def test_set_line_color_if_changed_skips_redundant_matplotlib_writes() -> None:
+    class FakeLine:
+        def __init__(self) -> None:
+            self.color = "blue"
+            self.set_color_calls = 0
+
+        def get_color(self) -> str:
+            return self.color
+
+        def set_color(self, color: str) -> None:
+            self.color = color
+            self.set_color_calls += 1
+
+    line = FakeLine()
+
+    assert set_line_color_if_changed(line, "blue") is False
+    assert line.set_color_calls == 0
+    assert set_line_color_if_changed(line, "orange") is True
+    assert line.color == "orange"
+    assert line.set_color_calls == 1
 
 
 def test_apply_review_render_frame_updates_review_lines_axes_and_pqrst() -> None:
