@@ -281,7 +281,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   hover and focus states, because they replace native notebook tabs. Tab labels
   should use fixed character widths so hover/selection and system font
   differences do not cause the tab strip to reflow. Tab style synchronization
-  should skip redundant Tk `configure` calls when the style is already current.
+  should skip redundant Tk `configure` calls when the style is already current,
+  and hover/focus handlers should skip synchronization when the hover state did
+  not actually change.
 - Avoid doing hidden live-plot work: while the Live ECG workspace tab is
   unmapped, keep draining samples and running background quality updates, but
   skip the live plot frame build and canvas redraw. Flush one live redraw when

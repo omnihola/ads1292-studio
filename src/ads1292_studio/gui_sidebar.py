@@ -316,7 +316,10 @@ def _select_sidebar_tab(app: Any, target: ttk.Frame) -> str:
 
 
 def _set_sidebar_tab_hovered(app: Any, target: ttk.Frame, value: bool) -> None:
-    app.sidebar_tab_hovered[str(target)] = value
+    tab_id = str(target)
+    if bool(app.sidebar_tab_hovered.get(tab_id, False)) == value:
+        return
+    app.sidebar_tab_hovered[tab_id] = value
     _sync_sidebar_tab_styles(app)
 
 

@@ -593,6 +593,24 @@ def test_sidebar_tab_style_sync_skips_redundant_tk_writes() -> None:
     assert stale.cget("style") == styles["hover_tab"]
 
 
+def test_sidebar_tab_hover_sync_skips_unchanged_state(monkeypatch) -> None:
+    import ads1292_studio.gui_sidebar as gui_sidebar
+
+    calls = {"sync": 0}
+    app = SimpleNamespace(sidebar_tab_hovered={"tab": True})
+
+    def count_sync(_app: object) -> None:
+        calls["sync"] += 1
+
+    monkeypatch.setattr(gui_sidebar, "_sync_sidebar_tab_styles", count_sync)
+
+    gui_sidebar._set_sidebar_tab_hovered(app, "tab", True)
+    gui_sidebar._set_sidebar_tab_hovered(app, "tab", False)
+
+    assert calls["sync"] == 1
+    assert app.sidebar_tab_hovered["tab"] is False
+
+
 def test_sidebar_layout_spec_stabilizes_control_column() -> None:
     assert sidebar_layout_spec() == {
         "shell": "SidebarShell.TFrame",
@@ -774,6 +792,24 @@ def test_workspace_tab_style_sync_skips_redundant_tk_writes() -> None:
     assert current.configure_calls == 0
     assert stale.configure_calls == 1
     assert stale.cget("style") == styles["hover_tab"]
+
+
+def test_workspace_tab_hover_sync_skips_unchanged_state(monkeypatch) -> None:
+    import ads1292_studio.gui_layout as gui_layout
+
+    calls = {"sync": 0}
+    app = SimpleNamespace(workspace_tab_hovered={"tab": True})
+
+    def count_sync(_app: object) -> None:
+        calls["sync"] += 1
+
+    monkeypatch.setattr(gui_layout, "_sync_workspace_tab_styles", count_sync)
+
+    gui_layout._set_workspace_tab_hovered(app, "tab", True)
+    gui_layout._set_workspace_tab_hovered(app, "tab", False)
+
+    assert calls["sync"] == 1
+    assert app.workspace_tab_hovered["tab"] is False
 
 
 def test_selecting_live_workspace_tab_flushes_pending_live_canvas_draw() -> None:
