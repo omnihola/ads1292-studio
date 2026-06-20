@@ -55,7 +55,9 @@ class LiveWorker:
                 started = True
                 self.start_result_queue.put(StreamStartResult(ok=True))
                 self.log_queue.put("Streaming started")
-                for sample in device.iter_stream_samples():
+                for sample in device.iter_stream_samples(
+                    should_continue=lambda: not self.stop_event.is_set()
+                ):
                     if self.stop_event.is_set():
                         break
                     self.sample_queue.put(sample)

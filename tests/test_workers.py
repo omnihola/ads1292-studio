@@ -117,3 +117,51 @@ def test_live_worker_posts_failure_result_when_start_stream_raises(monkeypatch) 
 
     assert result.ok is False
     assert "device not responding" in (result.error or "")
+
+
+class _StreamSpyDevice:
+    instances: list["_StreamSpyDevice"] = []
+
+    def __init__(self, port: str, *args, **kwargs) -> None:
+        self.port = port
+        self.should_continue: object = "UNSET"
+        _StreamSpyDevice.instances.append(self)
+
+    def __enter__(self) -> "_StreamSpyDevice":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def query_firmware(self) -> str:
+        return "1.0"
+
+    def start_stream(self) -> None:
+        return None
+
+    def stop_stream(self) -> None:
+        return None
+
+    def iter_stream_samples(self, *, should_continue=None):
+        self.should_continue = should_continue
+        yield StreamSample(
+            timestamp=0.0,
+            ch1=0,
+            ch2=0,
+            board_heart_rate=0,
+            board_respiration_rate=0,
+            status_byte=0,
+        )
+
+
+def test_live_worker_passes_stop_predicate_to_stream(monkeypatch) -> None:
+    monkeypatch.setattr(workers, "Ads1x9xDevice", _StreamSpyDevice)
+    _StreamSpyDevice.instances.clear()
+    worker = LiveWorker(queue.Queue(), queue.Queue(), queue.Queue())
+
+    worker.start("fake-port", None)
+    if worker.thread:
+        worker.thread.join(timeout=2.0)
+
+    assert _StreamSpyDevice.instances, "worker never constructed a device"
+    assert callable(_StreamSpyDevice.instances[0].should_continue)

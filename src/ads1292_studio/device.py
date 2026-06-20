@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Iterable
+from typing import Callable, Iterable
 
 import serial
 from serial.tools import list_ports
@@ -202,9 +202,21 @@ class Ads1x9xDevice:
         self.write_cmd(CMD_DATA_STREAMING, 0, 0)
         self.streaming = False
 
-    def iter_stream_samples(self) -> Iterable[StreamSample]:
+    def iter_stream_samples(
+        self,
+        *,
+        should_continue: Callable[[], bool] | None = None,
+    ) -> Iterable[StreamSample]:
         while True:
-            frame_type, payload = self.read_frame()
+            if should_continue is not None and not should_continue():
+                return
+            try:
+                frame_type, payload = self.read_frame()
+            except TimeoutError:
+                # A transient gap (USB scheduling jitter or a brief device pause)
+                # must not end the recording. Keep waiting; a real disconnect
+                # surfaces as serial.SerialException and still propagates.
+                continue
             if frame_type != CMD_DATA_STREAMING or len(payload) < 59:
                 continue
             if self._stream_t0 is None:

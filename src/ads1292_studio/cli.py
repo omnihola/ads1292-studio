@@ -54,7 +54,9 @@ def cmd_stream(args: argparse.Namespace) -> int:
         try:
             device.start_stream()
             count = 0
-            for sample in device.iter_stream_samples():
+            for sample in device.iter_stream_samples(
+                should_continue=lambda: time.monotonic() < deadline
+            ):
                 if recorder:
                     recorder.write(sample)
                 count += 1

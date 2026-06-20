@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from ads1292_studio import cli
 from ads1292_studio.calibration import Calibration, read_calibration_json, write_calibration_json
 from ads1292_studio.cli import main
 from ads1292_studio.csv_io import write_recording_csv
@@ -228,3 +229,43 @@ def test_cli_review_prints_artifact_metrics(tmp_path: Path, capsys) -> None:
     assert "baseline_drift_counts=" in output
     assert "noise_rms_counts=" in output
     assert "peak_to_peak_counts=" in output
+
+
+class _CliStreamSpyDevice:
+    instances: list["_CliStreamSpyDevice"] = []
+
+    def __init__(self, port: str, *args, **kwargs) -> None:
+        self.port = port
+        self.should_continue: object = "UNSET"
+        _CliStreamSpyDevice.instances.append(self)
+
+    def __enter__(self) -> "_CliStreamSpyDevice":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def query_firmware(self) -> str:
+        return "1.0"
+
+    def start_stream(self) -> None:
+        return None
+
+    def stop_stream(self) -> None:
+        return None
+
+    def iter_stream_samples(self, *, should_continue=None):
+        self.should_continue = should_continue
+        return
+        yield  # pragma: no cover - makes this a generator that yields nothing
+
+
+def test_cli_stream_passes_deadline_predicate_to_device(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(cli, "Ads1x9xDevice", _CliStreamSpyDevice)
+    _CliStreamSpyDevice.instances.clear()
+
+    rc = cli.main(["stream", "--port", "fake-port", "--seconds", "0"])
+
+    assert rc == 0
+    assert _CliStreamSpyDevice.instances, "cmd_stream never constructed a device"
+    assert callable(_CliStreamSpyDevice.instances[0].should_continue)
