@@ -157,6 +157,7 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
         "toggle": "ToolbarToggle.TCheckbutton",
         "toggle_chip": "ToolbarToggleChip.TLabel",
         "hover_toggle_chip": "Hover.ToolbarToggleChip.TLabel",
+        "disabled_toggle_chip": "Disabled.ToolbarToggleChip.TLabel",
         "selected_toggle_chip": "Selected.ToolbarToggleChip.TLabel",
         "selected_hover_toggle_chip": "SelectedHover.ToolbarToggleChip.TLabel",
     }
@@ -403,6 +404,8 @@ def test_record_save_control_participates_in_control_state_gating() -> None:
 
     assert "\"Save CSV\": app.save_check" in register_source
     assert "label.cget(\"state\") == tk.DISABLED" in helper_source
+    assert "styles[\"disabled_toggle_chip\"]" in helper_source
+    assert "label._ads1292_sync_toggle_style = sync_style" in helper_source
 
 
 def test_port_combobox_participates_in_control_state_gating() -> None:
@@ -420,11 +423,20 @@ def test_toolbar_toggle_chip_styles_are_configured() -> None:
 
     assert "toolbar_control_styles()[\"toggle_chip\"]" in source
     assert "toolbar_control_styles()[\"hover_toggle_chip\"]" in source
+    assert "toolbar_control_styles()[\"disabled_toggle_chip\"]" in source
     assert "toolbar_control_styles()[\"selected_toggle_chip\"]" in source
     assert "toolbar_control_styles()[\"selected_hover_toggle_chip\"]" in source
     assert "selected_background" in source
     assert "selected_border" in source
     assert "selected_active_background" in source
+
+
+def test_control_state_sync_refreshes_toggle_chip_visual_state() -> None:
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._apply_control_states)
+
+    assert "_ads1292_sync_toggle_style" in source
 
 
 def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:

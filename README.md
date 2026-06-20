@@ -245,7 +245,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep toolbar toggle chips mouse- and keyboard-accessible, with visible hover
   and focus feedback, because they replace heavier checkbutton chrome,
   including acquisition toggles such as Save CSV; disabled toggle chips must
-  swallow click/keyboard activation so state-gating is real, not only visual.
+  use a dedicated muted style and swallow click/keyboard activation so
+  state-gating is visually clear and not only decorative.
 - Disable Connect until a serial port is available or typed, while keeping
   offline CSV actions enabled, so the empty-port state does not present a
   primary action that can only fail; keep the header badge and sidebar

@@ -216,6 +216,18 @@ def configure_toolbar_chrome(style: ttk.Style) -> None:
         darkcolor=toolbar_toggle["active_border"],
     )
     style.configure(
+        toolbar_control_styles()["disabled_toggle_chip"],
+        background=toolbar_toggle["disabled_background"],
+        foreground=toolbar_toggle["disabled_foreground"],
+        font=toolbar_toggle["font"],
+        padding=toolbar_toggle["padding"],
+        borderwidth=1,
+        relief="flat",
+        bordercolor=toolbar_toggle["border"],
+        lightcolor=toolbar_toggle["border"],
+        darkcolor=toolbar_toggle["border"],
+    )
+    style.configure(
         toolbar_control_styles()["selected_toggle_chip"],
         background=toolbar_toggle["selected_background"],
         foreground=toolbar_toggle["selected_foreground"],

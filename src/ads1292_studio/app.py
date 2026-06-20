@@ -794,6 +794,9 @@ class App(tk.Tk):
         for label, button in self.control_buttons.items():
             configure_widget_option_if_changed(button, "state", states[label])
             configure_widget_option_if_changed(button, "cursor", cursors[label])
+            sync_toggle_style = getattr(button, "_ads1292_sync_toggle_style", None)
+            if sync_toggle_style is not None:
+                sync_toggle_style()
 
     def _apply_signal_quality_cards(self, cards: tuple[GuiStatusCard, ...]) -> None:
         for card in cards:

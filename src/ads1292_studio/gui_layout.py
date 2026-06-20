@@ -270,12 +270,15 @@ def _build_toolbar_toggle_chip(
     state = {"hovered": False}
 
     def current_style() -> str:
+        if label.cget("state") == tk.DISABLED:
+            return styles["disabled_toggle_chip"]
         if variable.get():
             return styles["selected_hover_toggle_chip"] if state["hovered"] else styles["selected_toggle_chip"]
         return styles["hover_toggle_chip"] if state["hovered"] else styles["toggle_chip"]
 
     def sync_style(*_args: object) -> None:
         label.configure(style=current_style())
+        label.configure(cursor="arrow" if label.cget("state") == tk.DISABLED else "hand2")
 
     def toggle(_event: tk.Event | None = None) -> str:
         if label.cget("state") == tk.DISABLED:
@@ -289,6 +292,7 @@ def _build_toolbar_toggle_chip(
         sync_style()
 
     variable.trace_add("write", sync_style)
+    label._ads1292_sync_toggle_style = sync_style
     label.bind("<Enter>", lambda _event: set_hovered(True))
     label.bind("<Leave>", lambda _event: set_hovered(False))
     label.bind("<FocusIn>", lambda _event: set_hovered(True))

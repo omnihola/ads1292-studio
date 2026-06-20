@@ -148,6 +148,7 @@ TOOLBAR_CONTROL_STYLES = {
     "toggle": "ToolbarToggle.TCheckbutton",
     "toggle_chip": "ToolbarToggleChip.TLabel",
     "hover_toggle_chip": "Hover.ToolbarToggleChip.TLabel",
+    "disabled_toggle_chip": "Disabled.ToolbarToggleChip.TLabel",
     "selected_toggle_chip": "Selected.ToolbarToggleChip.TLabel",
     "selected_hover_toggle_chip": "SelectedHover.ToolbarToggleChip.TLabel",
 }
