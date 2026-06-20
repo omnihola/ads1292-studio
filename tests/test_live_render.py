@@ -1,4 +1,5 @@
 from collections import deque
+import inspect
 
 import numpy as np
 
@@ -84,3 +85,9 @@ def test_build_live_render_frame_returns_none_without_samples() -> None:
     )
 
     assert frame is None
+
+
+def test_live_render_reuses_bandpass_display_for_peak_detection() -> None:
+    source = inspect.getsource(build_live_render_frame)
+
+    assert "prefiltered=bool(filter_settings.bandpass_enabled)" in source

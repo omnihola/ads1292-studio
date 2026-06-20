@@ -49,6 +49,15 @@ def test_r_peak_detection_and_heart_rate_are_plausible() -> None:
     assert summary.valid_rr_count >= 8
 
 
+def test_r_peak_detection_accepts_prefiltered_live_ecg() -> None:
+    _, ch2 = synthetic_two_channel_recording()
+
+    raw_peaks = detect_r_peaks(ch2, sample_rate_hz=500.0)
+    filtered_peaks = detect_r_peaks(bandpass(ch2, 500.0), sample_rate_hz=500.0, prefiltered=True)
+
+    assert filtered_peaks == raw_peaks
+
+
 def test_pqrst_review_is_conservative_about_p_and_t() -> None:
     _, ch2 = synthetic_two_channel_recording()
     peaks = detect_r_peaks(ch2, sample_rate_hz=500.0)

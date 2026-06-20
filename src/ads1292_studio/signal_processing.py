@@ -149,8 +149,8 @@ def _channel_selection_score(values, sample_rate_hz: float) -> float:
     return qrs_like_score(values, sample_rate_hz) * regularity
 
 
-def detect_r_peaks(values, sample_rate_hz: float = 500.0) -> tuple[int, ...]:
-    filtered = bandpass(values, sample_rate_hz)
+def detect_r_peaks(values, sample_rate_hz: float = 500.0, *, prefiltered: bool = False) -> tuple[int, ...]:
+    filtered = as_float_array(values) if prefiltered else bandpass(values, sample_rate_hz)
     if filtered.size < int(sample_rate_hz):
         return tuple()
     centered = filtered - np.median(filtered)
