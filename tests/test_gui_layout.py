@@ -419,9 +419,19 @@ def test_workspace_layout_spec_balances_sidebar_and_signal_area() -> None:
     assert workspace_layout_spec() == {
         "main": "Main.TFrame",
         "main_padding": (8, 10, 14, 10),
-        "sidebar_weight": 0,
-        "main_weight": 1,
     }
+
+
+def test_body_shell_uses_fixed_sidebar_without_native_paned_sash() -> None:
+    from ads1292_studio.gui_layout import build_body_shell
+
+    source = inspect.getsource(build_body_shell)
+
+    assert "ttk.PanedWindow" not in source
+    assert "app.body_shell" in source
+    assert "side_shell.pack(side=tk.LEFT, fill=tk.Y)" in source
+    assert "side_shell.pack_propagate(False)" in source
+    assert "main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)" in source
 
 
 def test_header_connection_styles_make_status_a_pill() -> None:

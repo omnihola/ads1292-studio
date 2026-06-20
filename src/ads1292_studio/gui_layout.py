@@ -260,11 +260,11 @@ def _build_display_combo(
 
 
 def build_body_shell(app: Any) -> tuple[dict[str, ttk.Frame], ttk.Frame]:
-    body = ttk.PanedWindow(app, orient=tk.HORIZONTAL)
-    body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-    app.body_pane = body
     workspace_spec = workspace_layout_spec()
     sidebar_spec = sidebar_layout_spec()
+    body = ttk.Frame(app, style=str(workspace_spec["main"]))
+    body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+    app.body_shell = body
     side_shell = ttk.Frame(
         body,
         width=sidebar_spec["width"],
@@ -272,11 +272,12 @@ def build_body_shell(app: Any) -> tuple[dict[str, ttk.Frame], ttk.Frame]:
         style=str(sidebar_spec["shell"]),
     )
     app.sidebar_shell = side_shell
-    body.add(side_shell, weight=workspace_spec["sidebar_weight"])
+    side_shell.pack(side=tk.LEFT, fill=tk.Y)
+    side_shell.pack_propagate(False)
     sidebar = build_sidebar(app, side_shell)
     main = ttk.Frame(body, padding=workspace_spec["main_padding"], style=str(workspace_spec["main"]))
     app.main_workspace = main
-    body.add(main, weight=workspace_spec["main_weight"])
+    main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     return sidebar, main
 
 

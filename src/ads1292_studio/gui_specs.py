@@ -198,8 +198,6 @@ SIDEBAR_LAYOUT_SPEC = {
 WORKSPACE_LAYOUT_SPEC = {
     "main": "Main.TFrame",
     "main_padding": (8, 10, 14, 10),
-    "sidebar_weight": 0,
-    "main_weight": 1,
 }
 BASE_CHROME_SPEC = {
     "font": ("Aptos", 12),
