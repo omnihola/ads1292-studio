@@ -245,6 +245,8 @@ def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
     assert status_line.get_ydata().tolist() == [0.0, 2.0, 2.0]
     assert status_line.get_color() == APP_VISUAL_TOKENS["warning"]
     assert ax_ecg.get_xlim() == (1.0, 9.0)
+    assert ax_resp.get_xlim() == (1.0, 9.0)
+    assert ax_status.get_xlim() == (1.0, 9.0)
     assert ax_status.get_ylim() == (-0.5, 2.5)
     assert canvas.draw_idle_calls == 1
 

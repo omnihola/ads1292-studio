@@ -164,6 +164,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Reuse fixed display smoothing kernels and stable decimation budgets; live ECG
   and respiration plots use the same window geometry repeatedly during
   streaming.
+- Keep live ECG, respiration, and contact/status x-limits explicitly
+  synchronized during every live frame; do not rely only on `sharex`, because
+  the render helper should remain correct if panel construction changes.
 - Use stride decimation for live ECG/respiration traces after display
   smoothing so the rolling view reads as a continuous waveform; reserve
   extrema-preserving decimation for offline review and reports where narrow
