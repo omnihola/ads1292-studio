@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import queue
 
 import numpy as np
@@ -25,6 +26,8 @@ from ads1292_studio.app import (
     display_scale_reference_label,
     display_signal_values,
     display_refresh_key,
+    drain_latest_generation_result,
+    drain_latest_live_quality_result,
     drain_latest_review_render_result,
     drain_queue_items,
     effective_port_text,
@@ -213,6 +216,8 @@ def test_worker_helpers_live_outside_app_module() -> None:
     assert live_quality_sample_count_ready.__module__ == "ads1292_studio.gui_workers"
     assert review_render_update_plan.__module__ == "ads1292_studio.gui_workers"
     assert review_render_pending_ready.__module__ == "ads1292_studio.gui_workers"
+    assert drain_latest_generation_result.__module__ == "ads1292_studio.gui_workers"
+    assert drain_latest_live_quality_result.__module__ == "ads1292_studio.gui_workers"
     assert drain_latest_review_render_result.__module__ == "ads1292_studio.gui_workers"
     assert "class ConnectResult" not in app_source
     assert "class CsvLoadResult" not in app_source
@@ -267,6 +272,47 @@ def test_drain_latest_review_render_result_ignores_stale_generations() -> None:
     results.put(latest)
 
     assert drain_latest_review_render_result(results, generation=3) == latest
+    assert results.empty()
+
+
+def test_drain_latest_generation_result_reuses_latest_matching_generation() -> None:
+    @dataclass(frozen=True)
+    class Generated:
+        generation: int
+        value: str
+
+    results: queue.Queue = queue.Queue()
+    results.put(Generated(1, "stale"))
+    results.put(Generated(2, "first"))
+    latest = Generated(2, "second")
+    results.put(latest)
+
+    assert drain_latest_generation_result(results, generation=2) == latest
+    assert results.empty()
+
+
+def test_drain_latest_live_quality_result_ignores_stale_generations() -> None:
+    results: queue.Queue = queue.Queue()
+    stale = compute_live_quality_result(
+        generation=2,
+        source="CH2",
+        valid_rr=0,
+        ch1_values=(0.0,) * 500,
+        ch2_values=(0.0,) * 500,
+        status_values=(0,) * 500,
+    )
+    latest = compute_live_quality_result(
+        generation=3,
+        source="CH2",
+        valid_rr=1,
+        ch1_values=(0.0,) * 500,
+        ch2_values=(0.0,) * 500,
+        status_values=(0,) * 500,
+    )
+    results.put(stale)
+    results.put(latest)
+
+    assert drain_latest_live_quality_result(results, generation=3) == latest
     assert results.empty()
 
 

@@ -1229,20 +1229,40 @@ def test_loaded_csv_display_refresh_schedules_single_flight_review_render() -> N
 
 def test_review_render_results_reschedule_pending_latest_settings() -> None:
     from ads1292_studio.app import App
-    from ads1292_studio.gui_workers import drain_latest_review_render_result, review_render_pending_ready
+    from ads1292_studio.gui_workers import (
+        drain_latest_generation_result,
+        drain_latest_review_render_result,
+        review_render_pending_ready,
+    )
 
     source = inspect.getsource(App._drain_review_render_results) + inspect.getsource(App._schedule_pending_review_render)
     drain_source = inspect.getsource(drain_latest_review_render_result)
+    generation_drain_source = inspect.getsource(drain_latest_generation_result)
     pending_source = inspect.getsource(review_render_pending_ready)
 
     assert "if latest is None:" in source
     assert "self._schedule_pending_review_render()" in source
     assert "drain_latest_review_render_result(" in source
     assert "review_render_pending_ready(" in source
-    assert "if result.generation == generation:" in drain_source
+    assert "drain_latest_generation_result(results" in drain_source
+    assert "if result.generation == generation:" in generation_drain_source
     assert "pending_samples is None" in pending_source
     assert "future is not None and not future.done()" in pending_source
     assert "self._schedule_review_render_update(samples)" in source
+
+
+def test_live_quality_results_use_worker_generation_drain_helper() -> None:
+    from ads1292_studio.app import App
+    from ads1292_studio.gui_workers import drain_latest_live_quality_result
+
+    source = inspect.getsource(App._drain_live_quality_results)
+    helper_source = inspect.getsource(drain_latest_live_quality_result)
+
+    assert "drain_latest_live_quality_result(" in source
+    assert "self.live_quality_results" in source
+    assert "generation=self.live_quality_generation" in source
+    assert "get_nowait()" not in source
+    assert "drain_latest_generation_result(results" in helper_source
 
 
 def test_control_state_updates_skip_redundant_tk_writes() -> None:

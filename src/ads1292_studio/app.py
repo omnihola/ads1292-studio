@@ -102,6 +102,8 @@ from ads1292_studio.gui_workers import (
     build_live_quality_samples,
     compute_live_quality_result,
     compute_review_render_result,
+    drain_latest_generation_result,
+    drain_latest_live_quality_result,
     drain_latest_review_render_result,
     live_quality_sample_count_ready,
     live_quality_worker_available,
@@ -1063,14 +1065,10 @@ class App(tk.Tk):
         self._schedule_review_render_update(samples)
 
     def _drain_live_quality_results(self) -> None:
-        latest: LiveQualityResult | None = None
-        while True:
-            try:
-                result = self.live_quality_results.get_nowait()
-            except queue.Empty:
-                break
-            if result.generation == self.live_quality_generation:
-                latest = result
+        latest = drain_latest_live_quality_result(
+            self.live_quality_results,
+            generation=self.live_quality_generation,
+        )
         if latest is None:
             return
         self._apply_live_quality_result(latest)

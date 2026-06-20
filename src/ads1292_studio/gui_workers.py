@@ -4,6 +4,7 @@ from concurrent.futures import Future
 from dataclasses import dataclass
 from pathlib import Path
 import queue
+from typing import Protocol, TypeVar
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
 from ads1292_studio.gui_specs import ADS1292R_ECG_SOURCE
@@ -18,6 +19,13 @@ DEFAULT_WORKER_ECG_INVERTED = False
 DEFAULT_WORKER_SMOOTHING_WINDOW = 11
 DEFAULT_WORKER_MIN_ECG_SPAN_COUNTS = 8.0
 DEFAULT_WORKER_MIN_RESP_SPAN_COUNTS = 40.0
+
+
+class GeneratedResult(Protocol):
+    generation: int
+
+
+GeneratedResultT = TypeVar("GeneratedResultT", bound=GeneratedResult)
 
 
 @dataclass(frozen=True)
@@ -103,12 +111,12 @@ def review_render_pending_ready(
     return pending_samples
 
 
-def drain_latest_review_render_result(
-    results: queue.Queue[ReviewRenderResult],
+def drain_latest_generation_result(
+    results: queue.Queue[GeneratedResultT],
     *,
     generation: int,
-) -> ReviewRenderResult | None:
-    latest: ReviewRenderResult | None = None
+) -> GeneratedResultT | None:
+    latest: GeneratedResultT | None = None
     while True:
         try:
             result = results.get_nowait()
@@ -117,6 +125,22 @@ def drain_latest_review_render_result(
         if result.generation == generation:
             latest = result
     return latest
+
+
+def drain_latest_live_quality_result(
+    results: queue.Queue[LiveQualityResult],
+    *,
+    generation: int,
+) -> LiveQualityResult | None:
+    return drain_latest_generation_result(results, generation=generation)
+
+
+def drain_latest_review_render_result(
+    results: queue.Queue[ReviewRenderResult],
+    *,
+    generation: int,
+) -> ReviewRenderResult | None:
+    return drain_latest_generation_result(results, generation=generation)
 
 
 def compute_live_quality_result(

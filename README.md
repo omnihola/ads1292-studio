@@ -175,6 +175,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep background result dataclasses and worker helpers in `gui_workers.py`,
   with `app.py` importing them for compatibility, so App remains focused on UI
   orchestration rather than owning worker data models.
+- Keep live quality and offline review result queues drained through the shared
+  generation-aware helper in `gui_workers.py`; App should only apply the newest
+  result for the current generation.
 - Keep offline review redraw scheduling as a single-flight worker flow in
   `gui_workers.py`: when a redraw is running, store only the newest pending
   samples and submit that latest request after the current future finishes.
