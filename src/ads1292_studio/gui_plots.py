@@ -564,10 +564,14 @@ def calibration_pulse_needs_update(
 
 
 def show_empty_plot_state(artists: list[object], key: str, axes: tuple[object, ...]) -> None:
+    state_token = (key, tuple(id(ax) for ax in axes))
+    if artists and all(getattr(ax, "_ads1292_empty_state_token", None) == state_token for ax in axes):
+        return
     soften_empty_axis_chrome(axes)
     style = empty_plot_style()
     messages = empty_plot_messages()
     for ax, message in zip(axes, messages[key]):
+        setattr(ax, "_ads1292_empty_state_token", state_token)
         guide = ax.axhline(
             0.5,
             color=str(style["guide_color"]),

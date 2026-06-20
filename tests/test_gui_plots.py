@@ -98,6 +98,35 @@ def test_empty_plot_state_adds_muted_reference_guides() -> None:
     assert guide_lines[0].get_color() == empty_plot_style()["guide_color"]
 
 
+def test_empty_plot_state_skips_duplicate_artists_for_same_panel() -> None:
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    artists: list[object] = []
+
+    show_empty_plot_state(artists, "pqrst", (ax,))
+    first_artist_count = len(artists)
+    first_line_count = len(ax.lines)
+    first_text_count = len(ax.texts)
+
+    show_empty_plot_state(artists, "pqrst", (ax,))
+
+    assert len(artists) == first_artist_count
+    assert len(ax.lines) == first_line_count
+    assert len(ax.texts) == first_text_count
+
+
+def test_empty_plot_state_allows_new_artists_when_panel_key_changes() -> None:
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    artists: list[object] = []
+
+    show_empty_plot_state(artists, "pqrst", (ax,))
+    show_empty_plot_state(artists, "live", (ax,))
+
+    assert len(artists) == 4
+    assert ax.texts[-1].get_text() == "Waiting for CH2 ECG Lead I"
+
+
 def test_restore_data_axis_chrome_reenables_axis_and_lines() -> None:
     fig = Figure()
     ax = fig.add_subplot(111)

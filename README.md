@@ -278,7 +278,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep empty signal panels visually quiet with the dedicated empty-state axis
   surface, muted callouts, and a static reference guide line, then remove those
   empty-state artists and restore normal data-axis chrome as soon as samples
-  arrive so the real-time tick path stays clean.
+  arrive so the real-time tick path stays clean. Repeated empty-state refreshes
+  for the same panel must reuse the existing empty-state artists instead of
+  stacking duplicate guide/text artists.
 
 ## Safety
 
