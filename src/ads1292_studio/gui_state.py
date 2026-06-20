@@ -118,6 +118,7 @@ def gui_control_states(
     )
     if current.busy:
         return {
+            "Port": tk.DISABLED,
             "Refresh": tk.DISABLED,
             "Connect": tk.DISABLED,
             "Start": tk.DISABLED,
@@ -131,8 +132,9 @@ def gui_control_states(
             "Session Index": tk.DISABLED,
         }
     return {
+        "Port": tk.DISABLED if current.streaming else tk.NORMAL,
         "Refresh": tk.NORMAL,
-        "Connect": tk.NORMAL if current.has_port and not current.connected else tk.DISABLED,
+        "Connect": tk.NORMAL if current.has_port and not current.connected and not current.streaming else tk.DISABLED,
         "Start": tk.NORMAL if current.connected and not current.streaming else tk.DISABLED,
         "Stop": tk.NORMAL if current.streaming else tk.DISABLED,
         "Save CSV": tk.NORMAL if not current.streaming else tk.DISABLED,

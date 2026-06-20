@@ -405,6 +405,14 @@ def test_record_save_control_participates_in_control_state_gating() -> None:
     assert "label.cget(\"state\") == tk.DISABLED" in helper_source
 
 
+def test_port_combobox_participates_in_control_state_gating() -> None:
+    from ads1292_studio.gui_layout import register_control_buttons
+
+    register_source = inspect.getsource(register_control_buttons)
+
+    assert "\"Port\": app.port_combo" in register_source
+
+
 def test_toolbar_toggle_chip_styles_are_configured() -> None:
     from ads1292_studio.gui_style import configure_toolbar_chrome
 

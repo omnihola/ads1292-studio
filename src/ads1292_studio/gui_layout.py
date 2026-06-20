@@ -561,6 +561,7 @@ def _sync_workspace_tab_styles(app: Any) -> None:
 
 def register_control_buttons(app: Any) -> None:
     app.control_buttons = {
+        "Port": app.port_combo,
         "Refresh": app.refresh_button,
         "Connect": app.connect_button,
         "Start": app.start_button,

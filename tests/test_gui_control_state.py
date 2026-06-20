@@ -1023,6 +1023,7 @@ def test_gui_control_states_disable_everything_while_connecting() -> None:
 
     states = gui_control_states(state=state)
 
+    assert states["Port"] == "disabled"
     assert states["Connect"] == "disabled"
     assert states["Start"] == "disabled"
     assert states["Save CSV"] == "disabled"
@@ -1046,6 +1047,22 @@ def test_gui_control_states_lock_save_csv_while_streaming() -> None:
 
     assert gui_control_states(state=idle)["Save CSV"] == "normal"
     assert gui_control_states(state=streaming)["Save CSV"] == "disabled"
+
+
+def test_gui_control_states_lock_port_and_connect_while_streaming_even_if_port_text_changes() -> None:
+    streaming_mismatch = GuiState(
+        connected=False,
+        streaming=True,
+        has_data=True,
+        has_recording_path=True,
+        has_port=True,
+    )
+
+    states = gui_control_states(state=streaming_mismatch)
+
+    assert states["Port"] == "disabled"
+    assert states["Connect"] == "disabled"
+    assert states["Stop"] == "normal"
 
 
 def test_gui_workflow_hint_explains_connecting_and_starting() -> None:

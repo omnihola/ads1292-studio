@@ -110,6 +110,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - GUI buttons are state-gated: Start requires a confirmed connection, Stop
   requires streaming, and report/package export actions require available data
   instead of relying on error dialogs after invalid clicks.
+- The Port combobox is state-gated with the same snapshot: it remains editable
+  before acquisition, then locks while connecting, starting, or streaming so a
+  mid-stream text edit cannot re-enable Connect for a different port.
 - The Save CSV acquisition toggle is state-gated too: it stays editable before
   acquisition, then locks while connecting, starting, or streaming because the
   active recording path is decided when Start is pressed.
