@@ -93,6 +93,7 @@ def build_acquisition_toolbar(app: Any) -> None:
         text="Refresh",
         command=app.refresh_ports,
         style=toolbar_button_style("Refresh"),
+        width=int(toolbar_spec["button_width"]),
     )
     app.refresh_button.pack(side=tk.LEFT, padx=toolbar_spec["refresh_padding"])
     app.connect_button = ttk.Button(
@@ -100,6 +101,7 @@ def build_acquisition_toolbar(app: Any) -> None:
         text="Connect",
         command=app.connect,
         style=toolbar_button_style("Connect"),
+        width=int(toolbar_spec["button_width"]),
     )
     app.connect_button.pack(side=tk.LEFT, padx=toolbar_spec["primary_action_padding"])
     app.start_button = ttk.Button(
@@ -107,6 +109,7 @@ def build_acquisition_toolbar(app: Any) -> None:
         text="Start",
         command=app.start,
         style=toolbar_button_style("Start"),
+        width=int(toolbar_spec["button_width"]),
     )
     app.start_button.pack(side=tk.LEFT, padx=toolbar_spec["inline_action_padding"])
     app.stop_button = ttk.Button(
@@ -114,6 +117,7 @@ def build_acquisition_toolbar(app: Any) -> None:
         text="Stop",
         command=app.stop,
         style=toolbar_button_style("Stop"),
+        width=int(toolbar_spec["button_width"]),
     )
     app.stop_button.pack(side=tk.LEFT)
     app.toolbar_acquisition_separator = ttk.Frame(

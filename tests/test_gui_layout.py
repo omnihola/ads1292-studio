@@ -285,6 +285,7 @@ def test_toolbar_layout_spec_keeps_acquisition_controls_ordered() -> None:
         "frame": "Toolbar.TFrame",
         "padding": (14, 7, 14, 7),
         "port_width": 34,
+        "button_width": 10,
         "port_padding": (6, 5),
         "refresh_padding": (0, 2),
         "primary_action_padding": (8, 2),
@@ -297,6 +298,14 @@ def test_toolbar_layout_spec_keeps_acquisition_controls_ordered() -> None:
         "separator_width": 1,
         "hint_padding": (10, 3),
     }
+
+
+def test_primary_toolbar_buttons_use_stable_widths() -> None:
+    from ads1292_studio.gui_layout import build_acquisition_toolbar
+
+    source = inspect.getsource(build_acquisition_toolbar)
+
+    assert source.count('width=int(toolbar_spec["button_width"])') == 4
 
 
 def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:

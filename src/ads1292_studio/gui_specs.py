@@ -167,6 +167,7 @@ TOOLBAR_LAYOUT_SPEC = {
     "frame": "Toolbar.TFrame",
     "padding": (14, 7, 14, 7),
     "port_width": 34,
+    "button_width": 10,
     "port_padding": (6, 5),
     "refresh_padding": (0, 2),
     "primary_action_padding": (8, 2),
