@@ -433,6 +433,8 @@ def test_display_toolbar_uses_compact_toggle_chips() -> None:
 
     assert source.count("_build_toolbar_toggle_chip(") == 5
     assert "ttk.Checkbutton(\n        toolbar" not in source
+    assert 'text="QRS filter"' in source
+    assert 'text="Bandpass"' not in source
     assert "variable.trace_add(\"write\", sync_style)" in helper_source
     assert "takefocus=True" in helper_source
     assert "label.bind(\"<Enter>\"" in helper_source

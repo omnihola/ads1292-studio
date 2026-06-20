@@ -70,7 +70,7 @@ def test_display_mode_label_lists_active_software_filters() -> None:
     )
     assert (
         display_mode_label(settings, SoftwareFilterSettings(highpass_enabled=True, bandpass_enabled=True))
-        == "bandpass | 2x | 12s | 50 mm/s"
+        == "QRS | 2x | 12s | 50 mm/s"
     )
 
 

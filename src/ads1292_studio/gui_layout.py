@@ -202,7 +202,7 @@ def build_display_toolbar(
     app.filter_var = tk.BooleanVar(value=default_filter_settings.bandpass_enabled)
     app.filter_check = _build_toolbar_toggle_chip(
         toolbar,
-        text="Bandpass",
+        text="QRS filter",
         variable=app.filter_var,
         command=app._refresh_display_plots,
         spec=toolbar_spec,

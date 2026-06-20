@@ -95,7 +95,7 @@ def display_mode_label(settings: EcgDisplaySettings, filters: SoftwareFilterSett
     normalized = settings.normalized()
     active_filters: list[str] = []
     if filters.bandpass_enabled:
-        active_filters.append("bandpass")
+        active_filters.append("QRS")
     else:
         if filters.highpass_enabled:
             active_filters.append("HP")
