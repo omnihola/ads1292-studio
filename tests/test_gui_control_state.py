@@ -34,6 +34,7 @@ from ads1292_studio.app import (
     header_connection_tone,
     live_axis_titles,
     live_ecg_axis_title,
+    live_quality_sample_count_ready,
     live_quality_worker_available,
     live_metrics_text,
     live_render_refresh_key,
@@ -170,10 +171,18 @@ def test_compute_live_quality_result_keeps_generation_and_metrics() -> None:
     assert len(result.samples) == len(ch2_values)
 
 
+def test_live_quality_sample_count_waits_for_one_second_of_data() -> None:
+    assert live_quality_sample_count_ready(499, 500.0) is False
+    assert live_quality_sample_count_ready(500, 500.0) is True
+    assert live_quality_sample_count_ready(1000, 500.0) is True
+    assert live_quality_sample_count_ready(0, 0.0) is False
+
+
 def test_worker_helpers_live_outside_app_module() -> None:
     assert compute_live_quality_result.__module__ == "ads1292_studio.gui_workers"
     assert compute_review_render_result.__module__ == "ads1292_studio.gui_workers"
     assert build_live_quality_samples.__module__ == "ads1292_studio.gui_workers"
+    assert live_quality_sample_count_ready.__module__ == "ads1292_studio.gui_workers"
 
 
 def test_compute_review_render_result_prepares_offline_frame() -> None:
@@ -558,6 +567,17 @@ def test_live_quality_worker_available_skips_when_future_is_running() -> None:
     assert live_quality_worker_available(None) is True
     assert live_quality_worker_available(_FakeFuture(done=True)) is True
     assert live_quality_worker_available(_FakeFuture(done=False)) is False
+
+
+def test_live_quality_scheduler_checks_sample_count_before_copying_buffers() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    source = inspect.getsource(App._schedule_live_quality_update)
+
+    assert "live_quality_sample_count_ready(" in source
+    assert source.index("live_quality_sample_count_ready(") < source.index("ch1_values = tuple(self.ch1)")
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:

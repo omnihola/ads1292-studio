@@ -87,6 +87,7 @@ from ads1292_studio.gui_workers import (
     build_live_quality_samples,
     compute_live_quality_result,
     compute_review_render_result,
+    live_quality_sample_count_ready,
     live_quality_worker_available,
 )
 from ads1292_studio.gui_plots import (
@@ -931,6 +932,8 @@ class App(tk.Tk):
         valid_rr: int,
     ) -> None:
         if not live_quality_worker_available(self.live_quality_future):
+            return
+        if not live_quality_sample_count_ready(len(self.ch2), SAMPLE_RATE_HZ):
             return
         ch1_values = tuple(self.ch1)
         ch2_values = tuple(self.ch2)

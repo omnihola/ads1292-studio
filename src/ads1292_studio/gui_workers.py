@@ -41,6 +41,10 @@ def live_quality_worker_available(future: Future[LiveQualityResult] | None) -> b
     return future is None or future.done()
 
 
+def live_quality_sample_count_ready(sample_count: int, sample_rate_hz: float) -> bool:
+    return sample_rate_hz > 0 and int(sample_count) >= int(sample_rate_hz)
+
+
 def compute_live_quality_result(
     *,
     generation: int,
