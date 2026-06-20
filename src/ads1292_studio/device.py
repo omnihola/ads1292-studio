@@ -199,6 +199,11 @@ class Ads1x9xDevice:
         self.streaming = True
 
     def stop_stream(self) -> None:
+        # CMD_DATA_STREAMING (0x93) is a start/stop *toggle* in the ECG-FE
+        # firmware: re-sending it while streaming halts the stream. Sending the
+        # same bytes as start_stream() is intentional, not a bug. Verified on
+        # firmware 1.12 via scripts/probe_stream_stop.py (START -> 46 frames/s,
+        # STOP -> 0 frames/s).
         self.write_cmd(CMD_DATA_STREAMING, 0, 0)
         self.streaming = False
 
