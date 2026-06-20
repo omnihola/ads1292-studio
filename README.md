@@ -229,8 +229,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   respiration, contact, and peak marker lines should use shared line-update
   helpers instead of unconditional `set_data()` calls, because repeated GUI
   ticks or repeated CSV redraw requests may reuse an identical render frame.
-  Canvas redraw should also be changed-only: aggregate trace, axis, grid, and
-  calibration changes and skip `draw_idle()` when the frame is visually
+  Canvas redraw should also be changed-only: aggregate trace, axis, label, grid,
+  and calibration changes and skip `draw_idle()` when the frame is visually
   identical.
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs; wait

@@ -12,6 +12,7 @@ from ads1292_studio.gui_plots import (
     draw_pqrst_review,
     live_contact_trace_color,
     restore_data_axis_chrome,
+    set_axis_xlabel_if_changed,
     set_line_data_if_changed,
     set_line_color_if_changed,
     set_line_visible_if_changed,
@@ -581,6 +582,28 @@ def test_set_line_data_if_changed_skips_redundant_peak_marker_writes() -> None:
     assert line.set_data_calls == 1
     assert set_line_data_if_changed(line, np.array([1.0]), np.array([2.0])) is False
     assert line.set_data_calls == 1
+
+
+def test_set_axis_xlabel_if_changed_skips_redundant_matplotlib_writes() -> None:
+    class FakeAxis:
+        def __init__(self) -> None:
+            self.xlabel = "Time (s)"
+            self.set_xlabel_calls = 0
+
+        def get_xlabel(self) -> str:
+            return self.xlabel
+
+        def set_xlabel(self, value: str) -> None:
+            self.xlabel = value
+            self.set_xlabel_calls += 1
+
+    axis = FakeAxis()
+
+    assert set_axis_xlabel_if_changed(axis, "Time (s)") is False
+    assert axis.set_xlabel_calls == 0
+    assert set_axis_xlabel_if_changed(axis, "Time relative to R peak (ms)") is True
+    assert axis.xlabel == "Time relative to R peak (ms)"
+    assert axis.set_xlabel_calls == 1
 
 
 def test_apply_review_render_frame_updates_review_lines_axes_and_pqrst() -> None:

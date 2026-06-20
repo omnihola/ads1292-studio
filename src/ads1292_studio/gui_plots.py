@@ -279,7 +279,7 @@ def apply_review_render_frame(
         set_axis_xlim_if_changed(app.ax_review_status, (0, frame.x_right)),
         set_axis_ylim_if_changed(app.ax_review_status, frame.status_ylim),
     )
-    app.ax_review_status.set_xlabel("Time (s)")
+    label_changed = set_axis_xlabel_if_changed(app.ax_review_status, "Time (s)")
     grid_changed = apply_ecg_paper_grid(app.ax_review_ecg, display_settings, app.ecg_paper_grid_cache)
     calibration_changed = restored_axis_chrome or calibration_pulse_needs_update(
         app.ax_review_ecg,
@@ -294,7 +294,7 @@ def apply_review_render_frame(
             display_settings,
             app.calibration_pulse_cache,
         )
-    if any((*trace_changed, *axis_changed, grid_changed, calibration_changed)):
+    if any((*trace_changed, *axis_changed, label_changed, grid_changed, calibration_changed)):
         app.review_canvas.draw_idle()
     draw_pqrst_review_if_changed(app, frame.pqrst)
 
@@ -478,6 +478,13 @@ def set_signal_axis_title(ax: object, title: str) -> None:
         fontweight=style["title_weight"],
         pad=style["title_pad"],
     )
+
+
+def set_axis_xlabel_if_changed(ax: object, label: str) -> bool:
+    if ax.get_xlabel() == label:
+        return False
+    ax.set_xlabel(label)
+    return True
 
 
 def add_signal_reference_lines(axes: tuple[object, ...]) -> None:
