@@ -150,6 +150,14 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   existing files.
 - Testable signal-analysis core independent of live hardware.
 
+## Development notes
+
+- Keep the live render path lightweight: raw 1x non-inverted display should
+  reuse the existing NumPy buffer, and Matplotlib artists should only be
+  recreated when their visible settings actually change.
+- Keep expensive live quality recomputation in the existing single-flight
+  background worker so GUI ticks do not accumulate queued analysis jobs.
+
 ## Safety
 
 Use a battery-powered laptop for body-contact tests. Do not charge the laptop

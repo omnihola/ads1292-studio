@@ -29,6 +29,35 @@ def test_display_signal_gain_is_display_only() -> None:
     np.testing.assert_array_equal(values, np.array([10.0, -20.0, 30.0]))
 
 
+def test_display_signal_raw_one_x_reuses_numpy_buffer() -> None:
+    values = np.array([10.0, -20.0, 30.0])
+
+    display = display_signal_values(
+        values,
+        filter_enabled=False,
+        filter_settings=SoftwareFilterSettings(),
+        gain=1.0,
+        invert=False,
+    )
+
+    assert display is values
+
+
+def test_display_signal_invert_copies_only_when_scale_changes() -> None:
+    values = np.array([10.0, -20.0, 30.0])
+
+    display = display_signal_values(
+        values,
+        filter_enabled=False,
+        filter_settings=SoftwareFilterSettings(),
+        gain=1.0,
+        invert=True,
+    )
+
+    np.testing.assert_array_equal(display, np.array([-10.0, 20.0, -30.0]))
+    assert display is not values
+
+
 def test_build_live_render_frame_uses_only_visible_tail_and_decimates() -> None:
     indices = deque(range(20), maxlen=20)
     ch1 = deque((float(index) for index in range(20)), maxlen=20)

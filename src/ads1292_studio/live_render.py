@@ -45,8 +45,10 @@ def display_signal_values(
     settings = filter_settings or SoftwareFilterSettings(bandpass_enabled=filter_enabled)
     display = apply_software_filters(values, sample_rate_hz, settings)
     display = np.asarray(display, dtype=float)
-    display = -display if invert else display
-    return display * gain
+    scale = -float(gain) if invert else float(gain)
+    if scale == 1.0:
+        return display
+    return display * scale
 
 
 def deque_tail_array(values: deque[float] | deque[int], count: int, *, dtype: object = float) -> np.ndarray:
