@@ -38,6 +38,42 @@ class FakeMappedWidget:
         return self.mapped
 
 
+class CountingLine:
+    def __init__(self, *, color: str = PLOT_TRACE_COLORS["contact"], visible: bool = True) -> None:
+        self.x = np.array([], dtype=float)
+        self.y = np.array([], dtype=float)
+        self.color = color
+        self.visible = visible
+        self.set_data_calls = 0
+        self.set_color_calls = 0
+        self.set_visible_calls = 0
+
+    def get_xdata(self) -> np.ndarray:
+        return self.x
+
+    def get_ydata(self) -> np.ndarray:
+        return self.y
+
+    def set_data(self, x: np.ndarray, y: np.ndarray) -> None:
+        self.x = x
+        self.y = y
+        self.set_data_calls += 1
+
+    def get_color(self) -> str:
+        return self.color
+
+    def set_color(self, color: str) -> None:
+        self.color = color
+        self.set_color_calls += 1
+
+    def get_visible(self) -> bool:
+        return self.visible
+
+    def set_visible(self, visible: bool) -> None:
+        self.visible = visible
+        self.set_visible_calls += 1
+
+
 def test_draw_pqrst_review_renders_average_beat_and_refreshes_canvas() -> None:
     fig = Figure()
     ax = fig.add_subplot(111)
@@ -630,10 +666,10 @@ def test_apply_review_render_frame_skips_unchanged_pqrst_redraw() -> None:
     ax_resp = fig.add_subplot(312)
     ax_status = fig.add_subplot(313)
     ax_pqrst = Figure().add_subplot(111)
-    ecg_line, = ax_ecg.plot([], [])
-    peak_line, = ax_ecg.plot([], [])
-    resp_line, = ax_resp.plot([], [])
-    status_line, = ax_status.plot([], [])
+    ecg_line = CountingLine()
+    peak_line = CountingLine()
+    resp_line = CountingLine()
+    status_line = CountingLine()
     review_canvas = FakeCanvas()
     pqrst_canvas = FakeCanvas()
     app = SimpleNamespace(
@@ -691,28 +727,14 @@ def test_apply_review_render_frame_skips_unchanged_pqrst_redraw() -> None:
             ecg_inverted=False,
         )
 
-    assert review_canvas.draw_idle_calls == 2
+    assert ecg_line.set_data_calls == 1
+    assert resp_line.set_data_calls == 1
+    assert status_line.set_data_calls == 1
+    assert review_canvas.draw_idle_calls == 1
     assert pqrst_canvas.draw_idle_calls == 1
 
 
 def test_apply_review_render_frame_skips_unchanged_peak_marker_writes() -> None:
-    class CountingLine:
-        def __init__(self) -> None:
-            self.x = np.array([], dtype=float)
-            self.y = np.array([], dtype=float)
-            self.set_data_calls = 0
-
-        def get_xdata(self) -> np.ndarray:
-            return self.x
-
-        def get_ydata(self) -> np.ndarray:
-            return self.y
-
-        def set_data(self, x: np.ndarray, y: np.ndarray) -> None:
-            self.x = x
-            self.y = y
-            self.set_data_calls += 1
-
     fig = Figure()
     ax_ecg = fig.add_subplot(311)
     ax_resp = fig.add_subplot(312)

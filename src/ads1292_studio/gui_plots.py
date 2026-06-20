@@ -256,11 +256,13 @@ def apply_review_render_frame(
     contact_label: str,
     ecg_inverted: bool,
 ) -> None:
-    restore_data_axis_chrome((app.ax_review_ecg, app.ax_review_resp, app.ax_review_status))
-    app.review_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
-    app.review_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
-    app.review_status_line.set_data(frame.plot_status_x, frame.plot_status)
-    set_line_data_if_changed(app.review_peak_line, frame.peak_x, frame.peak_y)
+    restored_axis_chrome = restore_data_axis_chrome((app.ax_review_ecg, app.ax_review_resp, app.ax_review_status))
+    trace_changed = (
+        set_line_data_if_changed(app.review_ecg_line, frame.plot_ecg_x, frame.plot_ecg),
+        set_line_data_if_changed(app.review_resp_line, frame.plot_resp_x, frame.plot_resp),
+        set_line_data_if_changed(app.review_status_line, frame.plot_status_x, frame.plot_status),
+        set_line_data_if_changed(app.review_peak_line, frame.peak_x, frame.peak_y),
+    )
     polarity = ", inverted" if ecg_inverted else ""
     set_signal_axis_title(
         app.ax_review_ecg,
@@ -269,21 +271,31 @@ def apply_review_render_frame(
     )
     set_signal_axis_title(app.ax_review_resp, resp_label)
     set_signal_axis_title(app.ax_review_status, contact_label)
-    set_axis_xlim_if_changed(app.ax_review_ecg, (0, frame.x_right))
-    set_axis_ylim_if_changed(app.ax_review_ecg, frame.ecg_ylim)
-    set_axis_xlim_if_changed(app.ax_review_resp, (0, frame.x_right))
-    set_axis_ylim_if_changed(app.ax_review_resp, frame.resp_ylim)
-    set_axis_xlim_if_changed(app.ax_review_status, (0, frame.x_right))
-    set_axis_ylim_if_changed(app.ax_review_status, frame.status_ylim)
+    axis_changed = (
+        set_axis_xlim_if_changed(app.ax_review_ecg, (0, frame.x_right)),
+        set_axis_ylim_if_changed(app.ax_review_ecg, frame.ecg_ylim),
+        set_axis_xlim_if_changed(app.ax_review_resp, (0, frame.x_right)),
+        set_axis_ylim_if_changed(app.ax_review_resp, frame.resp_ylim),
+        set_axis_xlim_if_changed(app.ax_review_status, (0, frame.x_right)),
+        set_axis_ylim_if_changed(app.ax_review_status, frame.status_ylim),
+    )
     app.ax_review_status.set_xlabel("Time (s)")
-    apply_ecg_paper_grid(app.ax_review_ecg, display_settings, app.ecg_paper_grid_cache)
-    draw_calibration_pulse(
+    grid_changed = apply_ecg_paper_grid(app.ax_review_ecg, display_settings, app.ecg_paper_grid_cache)
+    calibration_changed = restored_axis_chrome or calibration_pulse_needs_update(
         app.ax_review_ecg,
         app.review_calibration_artists,
         display_settings,
         app.calibration_pulse_cache,
     )
-    app.review_canvas.draw_idle()
+    if calibration_changed:
+        draw_calibration_pulse(
+            app.ax_review_ecg,
+            app.review_calibration_artists,
+            display_settings,
+            app.calibration_pulse_cache,
+        )
+    if any((*trace_changed, *axis_changed, grid_changed, calibration_changed)):
+        app.review_canvas.draw_idle()
     draw_pqrst_review_if_changed(app, frame.pqrst)
 
 
