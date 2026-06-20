@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import tkinter as tk
 from tkinter import ttk
 from typing import Any
@@ -42,6 +43,16 @@ from ads1292_studio.models import PqrstReview
 from ads1292_studio.plots import robust_ylim, stable_ylim
 from ads1292_studio.plot_theme import APP_VISUAL_TOKENS, PLOT_TRACE_COLORS, apply_seaborn_plot_theme
 from ads1292_studio.review_render import ReviewRenderFrame
+
+
+@dataclass(frozen=True)
+class PendingReviewPlot:
+    frame: ReviewRenderFrame
+    display_settings: EcgDisplaySettings
+    ecg_label: str
+    resp_label: str
+    contact_label: str
+    ecg_inverted: bool
 
 
 def build_live_plot_panel(app: Any) -> None:
@@ -260,7 +271,21 @@ def apply_review_render_frame(
     resp_label: str,
     contact_label: str,
     ecg_inverted: bool,
+    force_visible: bool = False,
 ) -> None:
+    if not force_visible and not widget_is_visible(getattr(app, "review_tab", None)):
+        app.pending_review_plot = PendingReviewPlot(
+            frame=frame,
+            display_settings=display_settings,
+            ecg_label=ecg_label,
+            resp_label=resp_label,
+            contact_label=contact_label,
+            ecg_inverted=ecg_inverted,
+        )
+        draw_pqrst_review_if_changed(app, frame.pqrst)
+        return
+    app.pending_review_plot = None
+    review_owner = None if force_visible else getattr(app, "review_tab", None)
     restored_axis_chrome = restore_data_axis_chrome((app.ax_review_ecg, app.ax_review_resp, app.ax_review_status))
     trace_changed = (
         set_line_data_if_changed(app.review_ecg_line, frame.plot_ecg_x, frame.plot_ecg),
@@ -300,15 +325,33 @@ def apply_review_render_frame(
             app.calibration_pulse_cache,
         )
     if any((*trace_changed, *axis_changed, label_changed, grid_changed, calibration_changed)):
-        draw_canvas_idle_if_visible(app.review_canvas, getattr(app, "review_tab", None))
+        draw_canvas_idle_if_visible(app.review_canvas, review_owner)
     draw_pqrst_review_if_changed(app, frame.pqrst)
 
 
-def draw_pqrst_review_if_changed(app: Any, review: PqrstReview) -> bool:
+def flush_pending_review_render(app: Any, *, force: bool = False) -> bool:
+    pending = getattr(app, "pending_review_plot", None)
+    if pending is None or (not force and not widget_is_visible(getattr(app, "review_tab", None))):
+        return False
+    app.pending_review_plot = None
+    apply_review_render_frame(
+        app,
+        pending.frame,
+        display_settings=pending.display_settings,
+        ecg_label=pending.ecg_label,
+        resp_label=pending.resp_label,
+        contact_label=pending.contact_label,
+        ecg_inverted=pending.ecg_inverted,
+        force_visible=force,
+    )
+    return True
+
+
+def draw_pqrst_review_if_changed(app: Any, review: PqrstReview, *, force_visible: bool = False) -> bool:
     if getattr(app, "last_pqrst_review", None) == review and getattr(app, "pending_pqrst_review", None) is None:
         return False
     owner = getattr(app, "pqrst_tab", None)
-    if not widget_is_visible(owner):
+    if not force_visible and not widget_is_visible(owner):
         if getattr(app, "last_pqrst_review", None) != review:
             app.pending_pqrst_review = review
         return False
@@ -316,15 +359,15 @@ def draw_pqrst_review_if_changed(app: Any, review: PqrstReview) -> bool:
     if getattr(app, "last_pqrst_review", None) == review:
         return False
     app.last_pqrst_review = review
-    draw_pqrst_review(app.ax_pqrst, app.pqrst_canvas, review, owner=owner)
+    draw_pqrst_review(app.ax_pqrst, app.pqrst_canvas, review, owner=None if force_visible else owner)
     return True
 
 
-def flush_pending_pqrst_review(app: Any) -> bool:
+def flush_pending_pqrst_review(app: Any, *, force: bool = False) -> bool:
     review = getattr(app, "pending_pqrst_review", None)
-    if review is None or not widget_is_visible(getattr(app, "pqrst_tab", None)):
+    if review is None or (not force and not widget_is_visible(getattr(app, "pqrst_tab", None))):
         return False
-    return draw_pqrst_review_if_changed(app, review)
+    return draw_pqrst_review_if_changed(app, review, force_visible=force)
 
 
 def draw_pqrst_review(ax: object, canvas: object, review: PqrstReview, *, owner: object | None = None) -> None:

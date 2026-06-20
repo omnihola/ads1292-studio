@@ -825,12 +825,150 @@ def test_apply_review_render_frame_defers_canvas_draw_when_review_tabs_are_hidde
         ecg_inverted=False,
     )
 
-    assert ecg_line.get_ydata().tolist() == [0.0, 2.0, 0.0]
-    assert ax_ecg.get_xlim() == (0.0, 2.0)
+    assert ecg_line.get_ydata().tolist() == []
+    assert ax_ecg.get_xlim() != (0.0, 2.0)
+    assert app.pending_review_plot.frame is frame
     assert len(ax_pqrst.lines) == 0
     assert app.pending_pqrst_review == frame.pqrst
     assert review_canvas.draw_idle_calls == 0
     assert pqrst_canvas.draw_idle_calls == 0
+
+
+def test_flush_pending_review_render_draws_when_review_tab_becomes_visible() -> None:
+    fig = Figure()
+    ax_ecg = fig.add_subplot(311)
+    ax_resp = fig.add_subplot(312)
+    ax_status = fig.add_subplot(313)
+    ax_pqrst = Figure().add_subplot(111)
+    ecg_line, = ax_ecg.plot([], [])
+    peak_line, = ax_ecg.plot([], [])
+    resp_line, = ax_resp.plot([], [])
+    status_line, = ax_status.plot([], [])
+    review_canvas = FakeCanvas()
+    pqrst_canvas = FakeCanvas()
+    from ads1292_studio.gui_plots import PendingReviewPlot, flush_pending_review_render
+
+    frame = SimpleNamespace(
+        mode="raw, display-smoothed",
+        plot_ecg_x=np.array([0.0, 1.0, 2.0]),
+        plot_ecg=np.array([0.0, 2.0, 0.0]),
+        plot_resp_x=np.array([0.0, 1.0, 2.0]),
+        plot_resp=np.array([10.0, 11.0, 12.0]),
+        plot_status_x=np.array([0.0, 1.0, 2.0]),
+        plot_status=np.array([0.0, 1.0, 1.0]),
+        peak_x=np.array([1.0]),
+        peak_y=np.array([2.0]),
+        x_right=2.0,
+        ecg_ylim=(-3.0, 3.0),
+        resp_ylim=(8.0, 14.0),
+        status_ylim=(-0.5, 1.5),
+        review=SimpleNamespace(
+            heart_rate=HeartRateSummary(72.0, 0.0, 0.0, 1),
+            peaks=(1,),
+        ),
+        pqrst=PqrstReview(
+            qrs_clear=True,
+            p_tentative=True,
+            t_tentative=False,
+            beats_used=1,
+            average_beat=(0.0, 1.0, 0.0),
+            time_ms=(-10.0, 0.0, 10.0),
+        ),
+    )
+    app = SimpleNamespace(
+        review_ecg_line=ecg_line,
+        review_peak_line=peak_line,
+        review_resp_line=resp_line,
+        review_status_line=status_line,
+        ax_review_ecg=ax_ecg,
+        ax_review_resp=ax_resp,
+        ax_review_status=ax_status,
+        ax_pqrst=ax_pqrst,
+        ecg_paper_grid_cache={},
+        review_calibration_artists=[],
+        calibration_pulse_cache={},
+        review_canvas=review_canvas,
+        pqrst_canvas=pqrst_canvas,
+        review_tab=FakeMappedWidget(mapped=True),
+        pqrst_tab=FakeMappedWidget(mapped=False),
+        pending_review_plot=PendingReviewPlot(
+            frame=frame,
+            display_settings=EcgDisplaySettings(time_window_seconds=8.0),
+            ecg_label="CH2 ECG Lead I",
+            resp_label="CH1 respiration",
+            contact_label="lead-off bits",
+            ecg_inverted=False,
+        ),
+    )
+
+    assert flush_pending_review_render(app) is True
+    assert app.pending_review_plot is None
+    assert ecg_line.get_ydata().tolist() == [0.0, 2.0, 0.0]
+    assert ax_ecg.get_xlim() == (0.0, 2.0)
+    assert review_canvas.draw_idle_calls == 1
+    assert app.pending_pqrst_review == frame.pqrst
+
+
+def test_flush_pending_review_render_can_force_selected_tab_before_tk_maps() -> None:
+    fig = Figure()
+    ax_ecg = fig.add_subplot(311)
+    ax_resp = fig.add_subplot(312)
+    ax_status = fig.add_subplot(313)
+    ecg_line, = ax_ecg.plot([], [])
+    peak_line, = ax_ecg.plot([], [])
+    resp_line, = ax_resp.plot([], [])
+    status_line, = ax_status.plot([], [])
+    from ads1292_studio.gui_plots import PendingReviewPlot, flush_pending_review_render
+
+    frame = SimpleNamespace(
+        mode="raw, display-smoothed",
+        plot_ecg_x=np.array([0.0, 1.0]),
+        plot_ecg=np.array([0.0, 2.0]),
+        plot_resp_x=np.array([0.0, 1.0]),
+        plot_resp=np.array([10.0, 11.0]),
+        plot_status_x=np.array([0.0, 1.0]),
+        plot_status=np.array([0.0, 0.0]),
+        peak_x=np.array([1.0]),
+        peak_y=np.array([2.0]),
+        x_right=1.0,
+        ecg_ylim=(-3.0, 3.0),
+        resp_ylim=(8.0, 12.0),
+        status_ylim=(-0.5, 1.5),
+        review=SimpleNamespace(
+            heart_rate=HeartRateSummary(72.0, 0.0, 0.0, 1),
+            peaks=(1,),
+        ),
+        pqrst=PqrstReview(True, True, False, 1, (0.0, 1.0, 0.0), (-10.0, 0.0, 10.0)),
+    )
+    app = SimpleNamespace(
+        review_ecg_line=ecg_line,
+        review_peak_line=peak_line,
+        review_resp_line=resp_line,
+        review_status_line=status_line,
+        ax_review_ecg=ax_ecg,
+        ax_review_resp=ax_resp,
+        ax_review_status=ax_status,
+        ax_pqrst=Figure().add_subplot(111),
+        ecg_paper_grid_cache={},
+        review_calibration_artists=[],
+        calibration_pulse_cache={},
+        review_canvas=FakeCanvas(),
+        pqrst_canvas=FakeCanvas(),
+        review_tab=FakeMappedWidget(mapped=False),
+        pqrst_tab=FakeMappedWidget(mapped=False),
+        pending_review_plot=PendingReviewPlot(
+            frame=frame,
+            display_settings=EcgDisplaySettings(time_window_seconds=8.0),
+            ecg_label="CH2 ECG Lead I",
+            resp_label="CH1 respiration",
+            contact_label="lead-off bits",
+            ecg_inverted=False,
+        ),
+    )
+
+    assert flush_pending_review_render(app, force=True) is True
+    assert app.pending_review_plot is None
+    assert ecg_line.get_ydata().tolist() == [0.0, 2.0]
 
 
 def test_flush_pending_pqrst_review_draws_when_pqrst_tab_becomes_visible() -> None:
@@ -856,6 +994,22 @@ def test_flush_pending_pqrst_review_draws_when_pqrst_tab_becomes_visible() -> No
     assert app.last_pqrst_review == review
     assert len(ax.lines) == 2
     assert canvas.draw_idle_calls == 1
+
+
+def test_flush_pending_pqrst_review_can_force_selected_tab_before_tk_maps() -> None:
+    ax = Figure().add_subplot(111)
+    canvas = FakeCanvas()
+    review = PqrstReview(True, True, False, 1, (0.0, 1.0, 0.0), (-10.0, 0.0, 10.0))
+    app = SimpleNamespace(
+        ax_pqrst=ax,
+        pqrst_canvas=canvas,
+        pqrst_tab=FakeMappedWidget(mapped=False),
+        pending_pqrst_review=review,
+    )
+
+    assert flush_pending_pqrst_review(app, force=True) is True
+    assert app.pending_pqrst_review is None
+    assert len(ax.lines) == 2
 
 
 def test_apply_review_render_frame_skips_unchanged_peak_marker_writes() -> None:

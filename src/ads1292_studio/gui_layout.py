@@ -561,6 +561,8 @@ def _select_workspace_tab(app: Any, target: ttk.Frame) -> str:
     _sync_workspace_tab_styles(app)
     if target is app.live_tab and hasattr(app, "_redraw_live"):
         app._redraw_live()
+    if target is app.review_tab and hasattr(app, "_redraw_review_if_pending"):
+        app._redraw_review_if_pending()
     if target is app.pqrst_tab and hasattr(app, "_redraw_pqrst_if_pending"):
         app._redraw_pqrst_if_pending()
     if target is app.log_tab and hasattr(app, "log_text"):

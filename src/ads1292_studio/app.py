@@ -119,6 +119,7 @@ from ads1292_studio.gui_plots import (
     build_pqrst_plot_panel,
     build_review_plot_panel,
     flush_pending_pqrst_review,
+    flush_pending_review_render,
 )
 from ads1292_studio.gui_layout import (
     build_acquisition_toolbar,
@@ -1363,7 +1364,10 @@ class App(tk.Tk):
         )
 
     def _redraw_pqrst_if_pending(self) -> None:
-        flush_pending_pqrst_review(self)
+        flush_pending_pqrst_review(self, force=True)
+
+    def _redraw_review_if_pending(self) -> None:
+        flush_pending_review_render(self, force=True)
 
     def _quality_text(
         self,
