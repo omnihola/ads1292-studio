@@ -174,7 +174,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Disable Connect until a serial port is available or typed, while keeping
   offline CSV actions enabled, so the empty-port state does not present a
   primary action that can only fail; keep the header badge and sidebar
-  Connection card aligned on that `no port` state.
+  Connection card aligned on that `no port` state, and recompute controls
+  immediately when the port field changes or Refresh updates the port list.
 - Keep custom sidebar/workspace tab strips keyboard-accessible, with visible
   hover and focus states, because they replace native notebook tabs.
 - Keep action buttons' focus borders visible so keyboard navigation has a

@@ -631,6 +631,19 @@ def test_gui_control_cursors_track_enabled_button_states() -> None:
     }
 
 
+def test_port_refresh_and_edits_recompute_control_state() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+    from ads1292_studio.gui_layout import build_acquisition_toolbar
+
+    refresh_source = inspect.getsource(App.refresh_ports)
+    toolbar_source = inspect.getsource(build_acquisition_toolbar)
+
+    assert "self._apply_control_states(force=True)" in refresh_source
+    assert "app.port_var.trace_add(\"write\"" in toolbar_source
+
+
 def test_app_reexports_gui_state_helpers_from_focused_module() -> None:
     import inspect
 

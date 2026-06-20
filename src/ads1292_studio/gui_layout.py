@@ -80,6 +80,7 @@ def build_acquisition_toolbar(app: Any) -> None:
     _toolbar_group_label(toolbar, "Input")
     ttk.Label(toolbar, text="Port", style=str(toolbar_label_spec()["style"])).pack(side=tk.LEFT)
     app.port_var = tk.StringVar()
+    app.port_var.trace_add("write", app._on_port_value_changed)
     app.port_combo = ttk.Combobox(
         toolbar,
         textvariable=app.port_var,

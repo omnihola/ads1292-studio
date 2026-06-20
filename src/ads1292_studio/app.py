@@ -346,6 +346,10 @@ class App(tk.Tk):
             self.port_var.set(values[0])
         if not values:
             self.connection_var.set("No ADS1x9x port")
+        self._apply_control_states(force=True)
+
+    def _on_port_value_changed(self, *_args: object) -> None:
+        self._apply_control_states(force=True)
 
     def connect(self) -> None:
         port = self.port_var.get().strip()
