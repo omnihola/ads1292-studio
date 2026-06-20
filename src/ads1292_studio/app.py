@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
 from collections import deque
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 import queue
@@ -86,6 +85,8 @@ from ads1292_studio.gui_style import (
     configure_toolbar_chrome,
 )
 from ads1292_studio.gui_workers import (
+    ConnectResult,
+    CsvLoadResult,
     LiveQualityResult,
     ReviewRenderResult,
     build_live_quality_samples,
@@ -213,23 +214,6 @@ DEFAULT_FILTER_SETTINGS = SoftwareFilterSettings()
 DISPLAY_SMOOTHING_WINDOW = 11
 DISPLAY_MIN_ECG_SPAN_COUNTS = 8.0
 DISPLAY_MIN_RESP_SPAN_COUNTS = 40.0
-
-
-@dataclass(frozen=True)
-class CsvLoadResult:
-    path: Path
-    recording: Recording | None = None
-    review_frame: ReviewRenderFrame | None = None
-    display_settings: EcgDisplaySettings | None = None
-    filter_settings: SoftwareFilterSettings | None = None
-    error: str | None = None
-
-
-@dataclass(frozen=True)
-class ConnectResult:
-    port: str
-    detail: str | None = None
-    error: str | None = None
 
 
 class App(tk.Tk):

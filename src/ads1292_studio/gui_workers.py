@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from concurrent.futures import Future
 from dataclasses import dataclass
+from pathlib import Path
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
 from ads1292_studio.gui_specs import ADS1292R_ECG_SOURCE
-from ads1292_studio.models import StreamSample
+from ads1292_studio.models import Recording, StreamSample
 from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
 from ads1292_studio.review_render import ReviewRenderFrame, build_review_render_frame
 
@@ -16,6 +17,23 @@ DEFAULT_WORKER_ECG_INVERTED = False
 DEFAULT_WORKER_SMOOTHING_WINDOW = 11
 DEFAULT_WORKER_MIN_ECG_SPAN_COUNTS = 8.0
 DEFAULT_WORKER_MIN_RESP_SPAN_COUNTS = 40.0
+
+
+@dataclass(frozen=True)
+class CsvLoadResult:
+    path: Path
+    recording: Recording | None = None
+    review_frame: ReviewRenderFrame | None = None
+    display_settings: EcgDisplaySettings | None = None
+    filter_settings: SoftwareFilterSettings | None = None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class ConnectResult:
+    port: str
+    detail: str | None = None
+    error: str | None = None
 
 
 @dataclass(frozen=True)

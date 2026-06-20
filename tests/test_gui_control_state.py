@@ -6,6 +6,8 @@ from ads1292_studio.app import (
     DEFAULT_ECG_INVERTED,
     DEFAULT_FILTER_ENABLED,
     ACTIVE_TICK_INTERVAL_MS,
+    ConnectResult,
+    CsvLoadResult,
     GuiState,
     GuiStatusCard,
     IDLE_TICK_INTERVAL_MS,
@@ -183,10 +185,20 @@ def test_live_quality_sample_count_waits_for_one_second_of_data() -> None:
 
 
 def test_worker_helpers_live_outside_app_module() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    app_source = inspect.getsource(App)
+
+    assert ConnectResult.__module__ == "ads1292_studio.gui_workers"
+    assert CsvLoadResult.__module__ == "ads1292_studio.gui_workers"
     assert compute_live_quality_result.__module__ == "ads1292_studio.gui_workers"
     assert compute_review_render_result.__module__ == "ads1292_studio.gui_workers"
     assert build_live_quality_samples.__module__ == "ads1292_studio.gui_workers"
     assert live_quality_sample_count_ready.__module__ == "ads1292_studio.gui_workers"
+    assert "class ConnectResult" not in app_source
+    assert "class CsvLoadResult" not in app_source
 
 
 def test_compute_review_render_result_prepares_offline_frame() -> None:
