@@ -209,7 +209,7 @@ def test_empty_plot_style_uses_dedicated_quiet_axis_surface() -> None:
     spec = empty_plot_style()
 
     assert spec["axis_face"] == "#F8FAFD"
-    assert spec["box_face"] == "#FFFFFF"
+    assert spec["box_face"] == "#F8FAFD"
 
 
 def test_app_delegates_static_chrome_to_style_helpers() -> None:
@@ -1301,17 +1301,17 @@ def test_empty_plot_style_uses_muted_callouts() -> None:
     assert empty_plot_style() == {
         "axis_face": "#F8FAFD",
         "text_color": "#657084",
-        "box_face": "#FFFFFF",
-        "box_edge": "#EAF1FF",
+        "box_face": "#F8FAFD",
+        "box_edge": "#D9E1EC",
         "font_size": 9,
         "font_weight": "bold",
-        "alpha": 0.88,
-        "box_pad": 0.48,
-        "rounding": 0.12,
-        "line_width": 0.8,
+        "alpha": 0.82,
+        "box_pad": 0.34,
+        "rounding": 0.08,
+        "line_width": 0.6,
         "guide_color": "#D9E1EC",
         "guide_linewidth": 1.0,
-        "guide_alpha": 0.58,
+        "guide_alpha": 0.38,
     }
 
 
