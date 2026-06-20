@@ -23,7 +23,6 @@ from ads1292_studio.gui_specs import (
     toolbar_label_spec,
     toolbar_layout_spec,
     workspace_layout_spec,
-    workspace_notebook_styles,
     workspace_tab_strip_styles,
 )
 from ads1292_studio.gui_sidebar import (
@@ -442,6 +441,7 @@ def _sidebar_button(parent: ttk.Frame, text: str, command: object) -> ttk.Button
 
 def build_workspace_tabs(app: Any, main: ttk.Frame) -> None:
     tab_strip_style = workspace_tab_strip_styles()
+    workspace_spec = workspace_layout_spec()
     tab_strip = ttk.Frame(
         main,
         padding=tab_strip_style["padding"],
@@ -450,18 +450,15 @@ def build_workspace_tabs(app: Any, main: ttk.Frame) -> None:
     tab_strip.pack(fill=tk.X)
     app.workspace_tab_strip = tab_strip
     app.workspace_tab_labels = {}
-
-    app.notebook = ttk.Notebook(main, style=workspace_notebook_styles()["notebook"])
-    app.notebook.pack(fill=tk.BOTH, expand=True)
-    app.live_tab = ttk.Frame(app.notebook)
-    app.review_tab = ttk.Frame(app.notebook)
-    app.pqrst_tab = ttk.Frame(app.notebook)
-    app.log_tab = ttk.Frame(app.notebook)
+    app.workspace_stack = ttk.Frame(main, style=str(workspace_spec["main"]))
+    app.workspace_stack.pack(fill=tk.BOTH, expand=True)
+    app.live_tab = ttk.Frame(app.workspace_stack, style=str(workspace_spec["main"]))
+    app.review_tab = ttk.Frame(app.workspace_stack, style=str(workspace_spec["main"]))
+    app.pqrst_tab = ttk.Frame(app.workspace_stack, style=str(workspace_spec["main"]))
+    app.log_tab = ttk.Frame(app.workspace_stack, style=str(workspace_spec["main"]))
+    app.workspace_tabs = (app.live_tab, app.review_tab, app.pqrst_tab, app.log_tab)
+    app.selected_workspace_tab = str(app.live_tab)
     live_label, review_label, pqrst_label, log_label = main_tab_labels()
-    app.notebook.add(app.live_tab, text=live_label)
-    app.notebook.add(app.review_tab, text=review_label)
-    app.notebook.add(app.pqrst_tab, text=pqrst_label)
-    app.notebook.add(app.log_tab, text=log_label)
     for label, tab in (
         (live_label, app.live_tab),
         (review_label, app.review_tab),
@@ -479,21 +476,24 @@ def build_workspace_tabs(app: Any, main: ttk.Frame) -> None:
         tab_label.bind("<Return>", lambda _event, target=tab: _select_workspace_tab(app, target))
         tab_label.bind("<space>", lambda _event, target=tab: _select_workspace_tab(app, target))
         app.workspace_tab_labels[str(tab)] = tab_label
-    app.notebook.bind("<<NotebookTabChanged>>", lambda _event: _sync_workspace_tab_styles(app))
+    app.live_tab.pack(fill=tk.BOTH, expand=True)
     _sync_workspace_tab_styles(app)
 
 
 def _select_workspace_tab(app: Any, target: ttk.Frame) -> str:
-    app.notebook.select(target)
+    if str(target) != app.selected_workspace_tab:
+        for tab in app.workspace_tabs:
+            tab.pack_forget()
+        target.pack(fill=tk.BOTH, expand=True)
+        app.selected_workspace_tab = str(target)
     _sync_workspace_tab_styles(app)
     return "break"
 
 
 def _sync_workspace_tab_styles(app: Any) -> None:
     tab_strip_style = workspace_tab_strip_styles()
-    selected = app.notebook.select()
     for tab_id, label in app.workspace_tab_labels.items():
-        style = tab_strip_style["selected_tab"] if tab_id == selected else tab_strip_style["tab"]
+        style = tab_strip_style["selected_tab"] if tab_id == app.selected_workspace_tab else tab_strip_style["tab"]
         label.configure(style=str(style))
 
 

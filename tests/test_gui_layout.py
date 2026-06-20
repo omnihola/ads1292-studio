@@ -571,8 +571,22 @@ def test_workspace_tabs_use_custom_segmented_strip() -> None:
 
     assert "app.workspace_tab_strip" in source
     assert "app.workspace_tab_labels" in source
+    assert "app.workspace_stack" in source
     assert "_select_workspace_tab(app, target)" in source
-    assert "<<NotebookTabChanged>>" in source
+    assert "ttk.Notebook" not in source
+    assert "<<NotebookTabChanged>>" not in source
+
+
+def test_workspace_tab_selection_uses_stacked_frames() -> None:
+    from ads1292_studio.gui_layout import _select_workspace_tab, _sync_workspace_tab_styles
+
+    select_source = inspect.getsource(_select_workspace_tab)
+    sync_source = inspect.getsource(_sync_workspace_tab_styles)
+
+    assert "tab.pack_forget()" in select_source
+    assert "target.pack(fill=tk.BOTH, expand=True)" in select_source
+    assert "app.selected_workspace_tab = str(target)" in select_source
+    assert "app.notebook" not in select_source + sync_source
 
 
 def test_workspace_notebook_native_tabs_are_hidden() -> None:
