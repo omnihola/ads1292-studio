@@ -12,6 +12,7 @@ from ads1292_studio.signal_processing import HeartRateSummary, apply_software_fi
 
 
 MIN_PEAK_DETECTION_SECONDS = 1.0
+MIN_PEAK_DETECTION_SPAN_COUNTS = 1e-9
 
 
 @dataclass(frozen=True)
@@ -107,7 +108,8 @@ def build_live_render_frame(
     visible_resp_plot = smooth_for_plot(visible_resp, window=smoothing_window)
     visible_status = deque_tail_array(status, visible_count, dtype=float)
     contact_ok = bool(np.any(visible_status == 0.0))
-    if contact_ok and visible_count >= int(MIN_PEAK_DETECTION_SECONDS * sample_rate_hz):
+    ecg_has_signal = bool(np.ptp(visible_ecg) > MIN_PEAK_DETECTION_SPAN_COUNTS)
+    if contact_ok and ecg_has_signal and visible_count >= int(MIN_PEAK_DETECTION_SECONDS * sample_rate_hz):
         peaks = tuple(
             detect_r_peaks(
                 visible_ecg,
