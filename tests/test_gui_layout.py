@@ -964,6 +964,9 @@ def test_workflow_hint_styles_make_next_step_prominent() -> None:
         "stripe": "#2F6FED",
         "background": "#EAF1FF",
         "foreground": "#1F4FB2",
+        "border": "#CFE0FF",
+        "borderwidth": 1,
+        "relief": "flat",
         "font": ("Aptos", 11, "bold"),
     }
 
@@ -975,8 +978,23 @@ def test_safety_notice_styles_make_research_use_boundary_visible() -> None:
         "stripe": "#A76400",
         "background": "#FFF4E3",
         "foreground": "#6B4700",
+        "border": "#F3D3A0",
+        "borderwidth": 1,
+        "relief": "flat",
         "font": ("Aptos", 11, "bold"),
     }
+
+
+def test_sidebar_hint_frames_get_bordered_card_chrome() -> None:
+    from ads1292_studio.gui_style import configure_sidebar_card_chrome
+
+    source = inspect.getsource(configure_sidebar_card_chrome)
+
+    assert "workflow_hint[\"frame\"]" in source
+    assert "safety_notice[\"frame\"]" in source
+    assert "bordercolor=" in source
+    assert "lightcolor=" in source
+    assert "darkcolor=" in source
 
 
 def test_sidebar_text_card_spec_keeps_long_notes_readable() -> None:

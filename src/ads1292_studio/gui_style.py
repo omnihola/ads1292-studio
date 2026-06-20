@@ -405,6 +405,15 @@ def configure_sidebar_card_chrome(style: ttk.Style) -> None:
 
     workflow_hint = workflow_hint_styles()
     style.configure(
+        workflow_hint["frame"],
+        background=workflow_hint["background"],
+        borderwidth=workflow_hint["borderwidth"],
+        relief=workflow_hint["relief"],
+        bordercolor=workflow_hint["border"],
+        lightcolor=workflow_hint["border"],
+        darkcolor=workflow_hint["border"],
+    )
+    style.configure(
         workflow_hint["label"],
         background=workflow_hint["background"],
         foreground=workflow_hint["foreground"],
@@ -412,6 +421,15 @@ def configure_sidebar_card_chrome(style: ttk.Style) -> None:
     )
 
     safety_notice = safety_notice_styles()
+    style.configure(
+        safety_notice["frame"],
+        background=safety_notice["background"],
+        borderwidth=safety_notice["borderwidth"],
+        relief=safety_notice["relief"],
+        bordercolor=safety_notice["border"],
+        lightcolor=safety_notice["border"],
+        darkcolor=safety_notice["border"],
+    )
     style.configure(
         safety_notice["label"],
         background=safety_notice["background"],

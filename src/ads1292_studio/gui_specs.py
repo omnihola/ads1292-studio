@@ -565,6 +565,9 @@ WORKFLOW_HINT_STYLES = {
     "stripe": "#2F6FED",
     "background": "#EAF1FF",
     "foreground": "#1F4FB2",
+    "border": "#CFE0FF",
+    "borderwidth": 1,
+    "relief": "flat",
     "font": ("Aptos", 11, "bold"),
 }
 SAFETY_NOTICE_STYLES = {
@@ -573,6 +576,9 @@ SAFETY_NOTICE_STYLES = {
     "stripe": "#A76400",
     "background": "#FFF4E3",
     "foreground": "#6B4700",
+    "border": "#F3D3A0",
+    "borderwidth": 1,
+    "relief": "flat",
     "font": ("Aptos", 11, "bold"),
 }
 SIDEBAR_TEXT_CARD_SPEC = {
@@ -800,11 +806,11 @@ def workspace_layout_spec() -> dict[str, object]:
     return dict(WORKSPACE_LAYOUT_SPEC)
 
 
-def workflow_hint_styles() -> dict[str, str]:
+def workflow_hint_styles() -> dict[str, object]:
     return dict(WORKFLOW_HINT_STYLES)
 
 
-def safety_notice_styles() -> dict[str, str]:
+def safety_notice_styles() -> dict[str, object]:
     return dict(SAFETY_NOTICE_STYLES)
 
 
