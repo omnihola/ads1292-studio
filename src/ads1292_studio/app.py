@@ -985,6 +985,10 @@ class App(tk.Tk):
             board_rr=self.board_rr,
         )
         if latest is not None:
+            self._schedule_live_quality_update(
+                source=ADS1292R_ECG_SOURCE,
+                valid_rr=0,
+            )
             if self._live_tab_visible():
                 # Drain samples every tick, but throttle the expensive live-plot
                 # rebuild during catch-up bursts so it never runs on every 1 ms tick.
@@ -992,11 +996,6 @@ class App(tk.Tk):
                 if not sample_backlog or should_redraw_live(now, self.last_live_redraw_monotonic):
                     self.last_live_redraw_monotonic = now
                     self._redraw_live()
-            else:
-                self._schedule_live_quality_update(
-                    source=ADS1292R_ECG_SOURCE,
-                    valid_rr=0,
-                )
             self._apply_control_states()
         log_messages = drain_queue_items(self.logs, MAX_LOG_MESSAGES_PER_TICK)
         self._append_log_messages(log_messages)
@@ -1310,10 +1309,6 @@ class App(tk.Tk):
             ecg_label=ecg_label,
             heart_rate_bpm=frame.heart_rate.median_bpm,
             peak_count=len(frame.peaks),
-        )
-        self._schedule_live_quality_update(
-            source=frame.source,
-            valid_rr=frame.heart_rate.valid_rr_count,
         )
 
     def _show_recording(self, samples: tuple[StreamSample, ...]) -> None:

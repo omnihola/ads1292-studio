@@ -195,6 +195,25 @@ def test_compute_live_quality_result_keeps_generation_and_metrics() -> None:
     assert len(result.samples) == len(ch2_values)
 
 
+def test_compute_live_quality_result_derives_valid_rr_from_metrics_when_not_supplied() -> None:
+    ch1_values = tuple(0.0 for _ in range(3000))
+    ch2_values = tuple(1000.0 if index % 250 == 0 else 0.0 for index in range(3000))
+    status_values = tuple(0 for _ in range(3000))
+
+    result = compute_live_quality_result(
+        generation=7,
+        source="CH2",
+        valid_rr=0,
+        ch1_values=ch1_values,
+        ch2_values=ch2_values,
+        status_values=status_values,
+    )
+
+    assert result.metrics is not None
+    assert result.metrics.r_peaks == 4
+    assert result.valid_rr == 3
+
+
 def test_live_quality_sample_count_waits_for_one_second_of_data() -> None:
     assert live_quality_sample_count_ready(499, 500.0) is False
     assert live_quality_sample_count_ready(500, 500.0) is True
@@ -1066,8 +1085,8 @@ def test_tick_skips_hidden_live_plot_render_but_keeps_quality_updates() -> None:
     assert "if self._live_tab_visible():" in tick_source
     assert "self._redraw_live()" in tick_source
     assert "self._schedule_live_quality_update(" in tick_source
+    assert tick_source.index("self._schedule_live_quality_update(") < tick_source.index("if self._live_tab_visible():")
     assert tick_source.index("if self._live_tab_visible():") < tick_source.index("self._redraw_live()")
-    assert tick_source.index("else:") < tick_source.index("self._schedule_live_quality_update(")
 
 
 def test_gui_control_states_disable_everything_while_connecting() -> None:

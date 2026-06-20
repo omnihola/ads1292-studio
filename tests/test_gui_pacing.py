@@ -1,3 +1,6 @@
+import inspect
+
+from ads1292_studio.app import App
 from ads1292_studio.gui_state import (
     ACTIVE_TICK_INTERVAL_MS,
     LIVE_REDRAW_MIN_INTERVAL_MS,
@@ -20,3 +23,16 @@ def test_should_redraw_live_allows_rebuild_exactly_at_min_interval() -> None:
 
 def test_live_redraw_cap_matches_active_frame_rate() -> None:
     assert LIVE_REDRAW_MIN_INTERVAL_MS == ACTIVE_TICK_INTERVAL_MS
+
+
+def test_tick_schedules_live_quality_before_throttled_redraw() -> None:
+    source = inspect.getsource(App._tick)
+
+    assert source.index("self._schedule_live_quality_update(") < source.index("if self._live_tab_visible():")
+    assert source.index("self._schedule_live_quality_update(") < source.index("should_redraw_live(")
+
+
+def test_redraw_live_only_updates_plot_and_metrics_text_not_quality_worker() -> None:
+    source = inspect.getsource(App._redraw_live)
+
+    assert "_schedule_live_quality_update(" not in source

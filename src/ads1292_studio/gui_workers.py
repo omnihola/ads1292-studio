@@ -184,7 +184,15 @@ def compute_live_quality_result(
         metrics = compute_quality_metrics(samples, sample_rate_hz, ecg_source)
     except Exception as exc:  # pragma: no cover - defensive worker boundary
         return LiveQualityResult(generation, source, valid_rr, tuple(), status_values, error=str(exc))
-    return LiveQualityResult(generation, source, valid_rr, samples, status_values, metrics=metrics)
+    derived_valid_rr = max(0, metrics.r_peaks - 1)
+    return LiveQualityResult(
+        generation,
+        source,
+        max(int(valid_rr), derived_valid_rr),
+        samples,
+        status_values,
+        metrics=metrics,
+    )
 
 
 def compute_review_render_result(
