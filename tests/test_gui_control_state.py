@@ -40,8 +40,6 @@ from ads1292_studio.app import (
     gui_workflow_hint,
     header_connection_style,
     header_connection_tone,
-    live_axis_titles,
-    live_ecg_axis_title,
     live_quality_sample_count_ready,
     live_quality_update_plan,
     live_quality_worker_available,
@@ -62,6 +60,7 @@ from ads1292_studio.app import (
 )
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
+from ads1292_studio.gui_state import live_axis_titles, live_ecg_axis_title
 from ads1292_studio.models import StreamSample
 
 
@@ -659,17 +658,19 @@ def test_live_redraw_caches_axis_title_updates() -> None:
     import inspect
 
     from ads1292_studio.app import App
+    from ads1292_studio.gui_plots import apply_live_axis_titles
 
     redraw_source = inspect.getsource(App._redraw_live)
-    apply_source = inspect.getsource(App._apply_live_axis_titles)
+    apply_source = inspect.getsource(apply_live_axis_titles)
     init_source = inspect.getsource(App.__init__)
 
     assert "self.last_live_axis_titles: tuple[str, str, str] | None = None" in init_source
-    assert "self._apply_live_axis_titles(display_settings, filter_settings)" in redraw_source
+    assert "apply_live_axis_titles(" in redraw_source
+    assert not hasattr(App, "_apply_live_axis_titles")
     assert "set_signal_axis_title(" not in redraw_source
-    assert "if self.last_live_axis_titles == titles:" in apply_source
+    assert "if app.last_live_axis_titles == titles:" in apply_source
     assert "return" in apply_source
-    assert "self.last_live_axis_titles = titles" in apply_source
+    assert "app.last_live_axis_titles = titles" in apply_source
 
 
 def test_live_redraw_skips_duplicate_render_keys() -> None:

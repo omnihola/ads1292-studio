@@ -9,8 +9,19 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 
-from ads1292_studio.display import EcgDisplaySettings, ecg_paper_grid_key, ecg_paper_grid_spec
-from ads1292_studio.gui_state import display_scale_reference_label, set_axis_xlim_if_changed, set_axis_ylim_if_changed
+from ads1292_studio.display import (
+    EcgDisplaySettings,
+    SoftwareFilterSettings,
+    display_mode_label,
+    ecg_paper_grid_key,
+    ecg_paper_grid_spec,
+)
+from ads1292_studio.gui_state import (
+    display_scale_reference_label,
+    live_axis_titles,
+    set_axis_xlim_if_changed,
+    set_axis_ylim_if_changed,
+)
 from ads1292_studio.gui_specs import (
     empty_plot_messages,
     empty_plot_style,
@@ -153,6 +164,33 @@ def apply_live_render_frame(
             app.calibration_pulse_cache,
         )
     app.live_canvas.draw_idle()
+
+
+def apply_live_axis_titles(
+    app: Any,
+    display_settings: EcgDisplaySettings,
+    filter_settings: SoftwareFilterSettings,
+    *,
+    ecg_label: str,
+    resp_label: str,
+    contact_label: str,
+    ecg_inverted: bool,
+) -> None:
+    mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
+    titles = live_axis_titles(
+        ecg_label=ecg_label,
+        resp_label=resp_label,
+        contact_label=contact_label,
+        mode=mode,
+        inverted=ecg_inverted,
+    )
+    if app.last_live_axis_titles == titles:
+        return
+    app.last_live_axis_titles = titles
+    ecg_title, resp_title, contact_title = titles
+    set_signal_axis_title(app.ax_live_ecg, ecg_title)
+    set_signal_axis_title(app.ax_live_resp, resp_title)
+    set_signal_axis_title(app.ax_live_status, contact_title)
 
 
 def apply_review_render_frame(

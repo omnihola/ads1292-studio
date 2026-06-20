@@ -25,7 +25,6 @@ from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.display import (
     EcgDisplaySettings,
     SoftwareFilterSettings,
-    display_mode_label,
     parse_display_gain,
     parse_display_window,
     parse_sweep_speed,
@@ -70,8 +69,6 @@ from ads1292_studio.gui_state import (
     gui_tick_interval_ms,
     gui_workflow_hint,
     header_connection_tone,
-    live_axis_titles,
-    live_ecg_axis_title,
     live_metrics_text,
     live_render_refresh_key,
     port_entry_connection_message,
@@ -112,13 +109,13 @@ from ads1292_studio.gui_workers import (
     review_render_update_plan,
 )
 from ads1292_studio.gui_plots import (
+    apply_live_axis_titles,
     apply_live_render_frame,
     apply_review_render_frame,
     build_live_plot_panel,
     build_log_panel,
     build_pqrst_plot_panel,
     build_review_plot_panel,
-    set_signal_axis_title,
 )
 from ads1292_studio.gui_layout import (
     build_acquisition_toolbar,
@@ -1190,28 +1187,6 @@ class App(tk.Tk):
             sample_rate_hz=SAMPLE_RATE_HZ,
         )
 
-    def _apply_live_axis_titles(
-        self,
-        display_settings: EcgDisplaySettings,
-        filter_settings: SoftwareFilterSettings,
-    ) -> None:
-        ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
-        mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
-        titles = live_axis_titles(
-            ecg_label=ecg_label,
-            resp_label=resp_label,
-            contact_label=contact_label,
-            mode=mode,
-            inverted=DEFAULT_ECG_INVERTED,
-        )
-        if self.last_live_axis_titles == titles:
-            return
-        self.last_live_axis_titles = titles
-        ecg_title, resp_title, contact_title = titles
-        set_signal_axis_title(self.ax_live_ecg, ecg_title)
-        set_signal_axis_title(self.ax_live_resp, resp_title)
-        set_signal_axis_title(self.ax_live_status, contact_title)
-
     def _redraw_live(self) -> None:
         if not self.indices:
             return
@@ -1253,8 +1228,16 @@ class App(tk.Tk):
             min_ecg_span_counts=DISPLAY_MIN_ECG_SPAN_COUNTS,
             min_resp_span_counts=DISPLAY_MIN_RESP_SPAN_COUNTS,
         )
-        ecg_label = ads1292r_plot_layout_labels()[0]
-        self._apply_live_axis_titles(display_settings, filter_settings)
+        ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
+        apply_live_axis_titles(
+            self,
+            display_settings,
+            filter_settings,
+            ecg_label=ecg_label,
+            resp_label=resp_label,
+            contact_label=contact_label,
+            ecg_inverted=DEFAULT_ECG_INVERTED,
+        )
         set_string_var_if_changed(
             self.metrics_var,
             live_metrics_text(
