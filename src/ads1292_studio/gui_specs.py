@@ -119,6 +119,10 @@ INPUT_CHROME_SPEC = {
         "font": ("Aptos", 10, "bold"),
         "background": "#FFFFFF",
         "foreground": "#293247",
+        "selected_background": "#2F6FED",
+        "selected_foreground": "#FFFFFF",
+        "border": "#D9E1EC",
+        "selected_border": "#2F6FED",
         "active_foreground": "#1F4FB2",
         "disabled_foreground": "#657084",
         "active_background": "#EAF1FF",
@@ -127,6 +131,8 @@ INPUT_CHROME_SPEC = {
 TOOLBAR_CONTROL_STYLES = {
     "port": "Port.TCombobox",
     "toggle": "ToolbarToggle.TCheckbutton",
+    "toggle_chip": "ToolbarToggleChip.TLabel",
+    "selected_toggle_chip": "Selected.ToolbarToggleChip.TLabel",
 }
 TOOLBAR_FRAME_SPEC = {
     "frame": "Toolbar.TFrame",

@@ -157,51 +157,51 @@ def build_display_toolbar(
 
     _toolbar_group_label(toolbar, "Display")
     app.autoscale_var = tk.BooleanVar(value=True)
-    app.autoscale_check = ttk.Checkbutton(
+    app.autoscale_check = _build_toolbar_toggle_chip(
         toolbar,
         text="Auto scale",
         variable=app.autoscale_var,
         command=app._refresh_display_plots,
-        style=toolbar_styles["toggle"],
+        spec=toolbar_spec,
+        styles=toolbar_styles,
     )
-    app.autoscale_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
     _toolbar_group_label(toolbar, "Filters")
     app.highpass_filter_var = tk.BooleanVar(value=default_filter_settings.highpass_enabled)
-    app.highpass_filter_check = ttk.Checkbutton(
+    app.highpass_filter_check = _build_toolbar_toggle_chip(
         toolbar,
         text="HP",
         variable=app.highpass_filter_var,
         command=app._refresh_display_plots,
-        style=toolbar_styles["toggle"],
+        spec=toolbar_spec,
+        styles=toolbar_styles,
     )
-    app.highpass_filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
     app.notch_filter_var = tk.BooleanVar(value=default_filter_settings.notch_enabled)
-    app.notch_filter_check = ttk.Checkbutton(
+    app.notch_filter_check = _build_toolbar_toggle_chip(
         toolbar,
         text="Notch",
         variable=app.notch_filter_var,
         command=app._refresh_display_plots,
-        style=toolbar_styles["toggle"],
+        spec=toolbar_spec,
+        styles=toolbar_styles,
     )
-    app.notch_filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
     app.lowpass_filter_var = tk.BooleanVar(value=default_filter_settings.lowpass_enabled)
-    app.lowpass_filter_check = ttk.Checkbutton(
+    app.lowpass_filter_check = _build_toolbar_toggle_chip(
         toolbar,
         text="LP",
         variable=app.lowpass_filter_var,
         command=app._refresh_display_plots,
-        style=toolbar_styles["toggle"],
+        spec=toolbar_spec,
+        styles=toolbar_styles,
     )
-    app.lowpass_filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
     app.filter_var = tk.BooleanVar(value=default_filter_settings.bandpass_enabled)
-    app.filter_check = ttk.Checkbutton(
+    app.filter_check = _build_toolbar_toggle_chip(
         toolbar,
         text="Bandpass",
         variable=app.filter_var,
         command=app._refresh_display_plots,
-        style=toolbar_styles["toggle"],
+        spec=toolbar_spec,
+        styles=toolbar_styles,
     )
-    app.filter_check.pack(side=tk.LEFT, padx=toolbar_spec["toggle_padding"])
     app.display_filter_separator = ttk.Frame(
         toolbar,
         width=toolbar_spec["separator_width"],
@@ -231,6 +231,39 @@ def build_display_toolbar(
 def _toolbar_group_label(toolbar: ttk.Frame, text: str) -> None:
     spec = toolbar_group_label_spec()
     ttk.Label(toolbar, text=text, style=str(spec["style"])).pack(side=tk.LEFT, padx=(2, 5))
+
+
+def _build_toolbar_toggle_chip(
+    toolbar: ttk.Frame,
+    *,
+    text: str,
+    variable: tk.BooleanVar,
+    command: Any,
+    spec: dict[str, object],
+    styles: dict[str, str],
+) -> ttk.Label:
+    label = ttk.Label(
+        toolbar,
+        text=text,
+        cursor="hand2",
+        style=styles["selected_toggle_chip"] if variable.get() else styles["toggle_chip"],
+    )
+
+    def sync_style(*_args: object) -> None:
+        style = styles["selected_toggle_chip"] if variable.get() else styles["toggle_chip"]
+        label.configure(style=style)
+
+    def toggle(_event: tk.Event | None = None) -> str:
+        variable.set(not variable.get())
+        command()
+        return "break"
+
+    variable.trace_add("write", sync_style)
+    label.bind("<Button-1>", toggle)
+    label.bind("<Return>", toggle)
+    label.bind("<space>", toggle)
+    label.pack(side=tk.LEFT, padx=spec["toggle_padding"])
+    return label
 
 
 def _build_display_combo(

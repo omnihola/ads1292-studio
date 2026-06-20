@@ -193,6 +193,35 @@ def configure_toolbar_chrome(style: ttk.Style) -> None:
         ],
         background=[("active", toolbar_toggle["active_background"])],
     )
+    style.configure(
+        toolbar_control_styles()["toggle_chip"],
+        background=toolbar_toggle["background"],
+        foreground=toolbar_toggle["foreground"],
+        font=toolbar_toggle["font"],
+        padding=toolbar_toggle["padding"],
+        borderwidth=1,
+        relief="flat",
+        bordercolor=toolbar_toggle["border"],
+        lightcolor=toolbar_toggle["border"],
+        darkcolor=toolbar_toggle["border"],
+    )
+    style.configure(
+        toolbar_control_styles()["selected_toggle_chip"],
+        background=toolbar_toggle["selected_background"],
+        foreground=toolbar_toggle["selected_foreground"],
+        font=toolbar_toggle["font"],
+        padding=toolbar_toggle["padding"],
+        borderwidth=1,
+        relief="flat",
+        bordercolor=toolbar_toggle["selected_border"],
+        lightcolor=toolbar_toggle["selected_border"],
+        darkcolor=toolbar_toggle["selected_border"],
+    )
+    style.map(
+        toolbar_control_styles()["toggle_chip"],
+        background=[("active", toolbar_toggle["active_background"])],
+        foreground=[("active", toolbar_toggle["active_foreground"])],
+    )
 
 
 def configure_form_chrome(style: ttk.Style) -> None:

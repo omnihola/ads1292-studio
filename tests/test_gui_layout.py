@@ -145,6 +145,8 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
     assert toolbar_control_styles() == {
         "port": "Port.TCombobox",
         "toggle": "ToolbarToggle.TCheckbutton",
+        "toggle_chip": "ToolbarToggleChip.TLabel",
+        "selected_toggle_chip": "Selected.ToolbarToggleChip.TLabel",
     }
 
 
@@ -256,6 +258,10 @@ def test_input_chrome_spec_keeps_forms_readable() -> None:
             "font": ("Aptos", 10, "bold"),
             "background": "#FFFFFF",
             "foreground": "#293247",
+            "selected_background": "#2F6FED",
+            "selected_foreground": "#FFFFFF",
+            "border": "#D9E1EC",
+            "selected_border": "#2F6FED",
             "active_foreground": "#1F4FB2",
             "disabled_foreground": "#657084",
             "active_background": "#EAF1FF",
@@ -318,6 +324,31 @@ def test_primary_toolbar_buttons_use_stable_widths() -> None:
     source = inspect.getsource(build_acquisition_toolbar)
 
     assert source.count('width=int(toolbar_spec["button_width"])') == 4
+
+
+def test_display_toolbar_uses_compact_toggle_chips() -> None:
+    from ads1292_studio.gui_layout import _build_toolbar_toggle_chip, build_display_toolbar
+
+    source = inspect.getsource(build_display_toolbar)
+    helper_source = inspect.getsource(_build_toolbar_toggle_chip)
+
+    assert source.count("_build_toolbar_toggle_chip(") == 5
+    assert "ttk.Checkbutton(\n        toolbar" not in source
+    assert "variable.trace_add(\"write\", sync_style)" in helper_source
+    assert "label.bind(\"<Button-1>\", toggle)" in helper_source
+    assert "label.bind(\"<Return>\", toggle)" in helper_source
+    assert "label.bind(\"<space>\", toggle)" in helper_source
+
+
+def test_toolbar_toggle_chip_styles_are_configured() -> None:
+    from ads1292_studio.gui_style import configure_toolbar_chrome
+
+    source = inspect.getsource(configure_toolbar_chrome)
+
+    assert "toolbar_control_styles()[\"toggle_chip\"]" in source
+    assert "toolbar_control_styles()[\"selected_toggle_chip\"]" in source
+    assert "selected_background" in source
+    assert "selected_border" in source
 
 
 def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:
