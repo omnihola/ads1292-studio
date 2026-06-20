@@ -150,9 +150,10 @@ def _channel_selection_score(values, sample_rate_hz: float) -> float:
 
 
 def detect_r_peaks(values, sample_rate_hz: float = 500.0, *, prefiltered: bool = False) -> tuple[int, ...]:
-    filtered = as_float_array(values) if prefiltered else bandpass(values, sample_rate_hz)
-    if filtered.size < int(sample_rate_hz):
+    arr = as_float_array(values)
+    if arr.size < int(sample_rate_hz):
         return tuple()
+    filtered = arr if prefiltered else bandpass(arr, sample_rate_hz)
     centered = filtered - np.median(filtered)
     scale = np.std(centered)
     prominence = max(20.0, scale * 0.45)

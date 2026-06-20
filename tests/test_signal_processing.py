@@ -58,6 +58,23 @@ def test_r_peak_detection_accepts_prefiltered_live_ecg() -> None:
     assert filtered_peaks == raw_peaks
 
 
+def test_r_peak_detection_skips_bandpass_until_one_second_is_available(monkeypatch) -> None:
+    import ads1292_studio.signal_processing as signal_processing
+
+    calls = {"bandpass": 0}
+
+    def counted_bandpass(values, sample_rate_hz: float, low_hz: float = 0.7, high_hz: float = 35.0):
+        calls["bandpass"] += 1
+        return bandpass(values, sample_rate_hz, low_hz=low_hz, high_hz=high_hz)
+
+    monkeypatch.setattr(signal_processing, "bandpass", counted_bandpass)
+
+    peaks = signal_processing.detect_r_peaks(np.zeros(499), sample_rate_hz=500.0)
+
+    assert peaks == tuple()
+    assert calls["bandpass"] == 0
+
+
 def test_pqrst_review_is_conservative_about_p_and_t() -> None:
     _, ch2 = synthetic_two_channel_recording()
     peaks = detect_r_peaks(ch2, sample_rate_hz=500.0)

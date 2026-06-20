@@ -157,6 +157,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   recreated when their visible settings actually change.
 - Reuse fixed display smoothing kernels; live ECG and respiration plots use the
   same smoothing window repeatedly during streaming.
+- Do not run R-peak bandpass/detection work until at least one second of
+  samples is available; earlier windows cannot produce valid HR anyway.
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs.
 - Keep toolbar toggle chips mouse- and keyboard-accessible, with visible hover
