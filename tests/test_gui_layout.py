@@ -332,8 +332,8 @@ def test_gui_layout_frames_toolbar_channel_hint_as_chip() -> None:
         "border": "#EAF1FF",
         "borderwidth": 0,
         "relief": "flat",
-        "width": 52,
-        "wraplength": 420,
+        "width": 58,
+        "wraplength": 470,
     }
 
 

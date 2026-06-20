@@ -593,7 +593,7 @@ def test_toolbar_display_hint_text_summarizes_channel_and_display_mode() -> None
         SoftwareFilterSettings(highpass_enabled=True, notch_enabled=True),
     )
 
-    assert hint == "CH2 Lead I | CH1 Resp | Contact | HP+notch | 2x | 12s | 50 mm/s"
+    assert hint == "Live: CH2 ECG Lead I | CH1 Resp | Contact | HP+notch | 2x | 12s | 50 mm/s"
 
 
 def test_display_scale_reference_label_does_not_claim_voltage_calibration() -> None:

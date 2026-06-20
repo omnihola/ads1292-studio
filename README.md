@@ -254,7 +254,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   state-gating is visually clear and not only decorative.
 - Keep the toolbar display summary chip bounded with a fixed character width
   and wrap length so longer mode/filter text cannot stretch the top toolbars or
-  push acquisition controls out of view.
+  push acquisition controls out of view. The chip should read like an operator
+  status line (`Live: CH2 ECG Lead I | CH1 Resp | Contact | ...`), not only raw
+  internal channel names.
 - Keep the header connection pill bounded with a fixed width and wrap length so
   long connection detail strings cannot stretch the title bar; detailed
   connection text belongs in the log and sidebar status area.

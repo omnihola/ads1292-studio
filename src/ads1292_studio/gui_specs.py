@@ -194,8 +194,8 @@ TOOLBAR_HINT_STYLES = {
     "border": "#EAF1FF",
     "borderwidth": 0,
     "relief": "flat",
-    "width": 52,
-    "wraplength": 420,
+    "width": 58,
+    "wraplength": 470,
 }
 TOOLBAR_GROUP_PADDING = {
     "separator": (8, 6),
