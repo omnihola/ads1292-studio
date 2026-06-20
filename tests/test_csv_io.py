@@ -63,6 +63,19 @@ def test_csv_reader_combines_canonical_lead_off_bits_when_status_byte_omits_them
     assert loaded.samples[0].lead_off_bits == 5
 
 
+def test_csv_reader_prefers_canonical_lead_off_bits_over_stale_status_low_nibble(tmp_path: Path) -> None:
+    path = tmp_path / "recording.csv"
+    path.write_text(
+        "timestamp,ch1_counts,ch2_counts,board_heart_rate,board_respiration_rate,status_byte,lead_off_bits\n"
+        "1.0,7,99,80,20,21,0\n"
+    )
+
+    loaded = read_recording_csv(path)
+
+    assert loaded.samples[0].status_byte == 16
+    assert loaded.samples[0].lead_off_bits == 0
+
+
 def test_csv_recorder_flushes_in_batches_and_on_close(tmp_path: Path, monkeypatch) -> None:
     path = tmp_path / "recording.csv"
     samples = [

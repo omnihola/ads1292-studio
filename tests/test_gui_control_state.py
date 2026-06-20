@@ -61,7 +61,12 @@ from ads1292_studio.app import (
 )
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
-from ads1292_studio.gui_state import apply_live_metrics_text, live_axis_titles, live_ecg_axis_title, live_metrics_text
+from ads1292_studio.gui_state import (
+    apply_live_metrics_text,
+    live_axis_titles,
+    live_ecg_axis_title,
+    live_metrics_text,
+)
 from ads1292_studio.models import StreamSample
 
 
@@ -1087,6 +1092,26 @@ def test_tick_skips_hidden_live_plot_render_but_keeps_quality_updates() -> None:
     assert "self._schedule_live_quality_update(" in tick_source
     assert tick_source.index("self._schedule_live_quality_update(") < tick_source.index("if self._live_tab_visible():")
     assert tick_source.index("if self._live_tab_visible():") < tick_source.index("self._redraw_live()")
+
+
+def test_tick_syncs_worker_death_before_rescheduling() -> None:
+    import inspect
+
+    from ads1292_studio.app import App
+
+    tick_source = inspect.getsource(App._tick)
+
+    assert "self._sync_worker_stream_state()" in tick_source
+
+
+def test_stream_worker_has_ended_only_when_active_thread_dies() -> None:
+    from ads1292_studio import gui_state
+
+    stream_worker_has_ended = getattr(gui_state, "stream_worker_has_ended")
+    assert stream_worker_has_ended(is_streaming=True, is_starting=False, worker_alive=False) is True
+    assert stream_worker_has_ended(is_streaming=True, is_starting=False, worker_alive=True) is False
+    assert stream_worker_has_ended(is_streaming=False, is_starting=False, worker_alive=False) is False
+    assert stream_worker_has_ended(is_streaming=True, is_starting=True, worker_alive=False) is False
 
 
 def test_gui_control_states_disable_everything_while_connecting() -> None:

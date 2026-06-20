@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 
 from ads1292_studio.calibration import Calibration
-from ads1292_studio.models import StreamSample
+from ads1292_studio.models import PqrstReview, StreamSample
 from ads1292_studio.events import EventMarker
 from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.protocol import ProtocolStep, TestProtocol
@@ -123,3 +123,15 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "Baseline drift" in html
     assert "Noise RMS" in html
     assert "Peak-to-peak" in html
+    assert "fixed QRS bandpass" in html
+
+
+def test_pqrst_report_title_marks_p_and_t_as_tentative() -> None:
+    from ads1292_studio import report
+
+    pqrst_review_title = getattr(report, "pqrst_review_title")
+    title = pqrst_review_title(PqrstReview(True, True, True, 12, tuple(), tuple()))
+
+    assert title == "PQRST review | QRS=True | P tentative=True | T tentative=True"
+    assert "P=True" not in title
+    assert "T=True" not in title

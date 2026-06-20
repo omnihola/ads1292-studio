@@ -1,7 +1,7 @@
 import numpy as np
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
-from ads1292_studio.models import StreamSample
+from ads1292_studio.models import PqrstReview, StreamSample
 from ads1292_studio.review_render import build_review_render_frame
 
 
@@ -53,3 +53,31 @@ def test_build_review_render_frame_precomputes_plot_quality_and_pqrst() -> None:
     assert frame.ecg_ylim[0] < frame.ecg_ylim[1]
     assert frame.resp_ylim[0] < frame.resp_ylim[1]
     assert frame.status_ylim == (-0.5, 1.5)
+
+
+def test_review_pqrst_uses_raw_ecg_channel_not_display_filtered_values(monkeypatch) -> None:
+    import ads1292_studio.review_render as review_render
+
+    samples = _samples()
+    captured: dict[str, np.ndarray] = {}
+
+    def capture_pqrst(values, peaks, sample_rate_hz: float = 500.0):
+        captured["values"] = np.asarray(values, dtype=float)
+        return PqrstReview(False, False, False, 0, tuple(), tuple())
+
+    monkeypatch.setattr(review_render, "pqrst_review", capture_pqrst)
+
+    build_review_render_frame(
+        samples,
+        display_settings=EcgDisplaySettings(time_window_seconds=8, gain=5.0, sweep_speed_mm_s=25),
+        filter_settings=SoftwareFilterSettings(bandpass_enabled=True),
+        source="CH2",
+        sample_rate_hz=500.0,
+        smoothing_window=11,
+        max_points=300,
+        ecg_inverted=True,
+        min_ecg_span_counts=8.0,
+        min_resp_span_counts=40.0,
+    )
+
+    np.testing.assert_allclose(captured["values"], np.asarray([sample.ch2 for sample in samples], dtype=float))

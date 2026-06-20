@@ -40,7 +40,11 @@ def read_recording_csv(path: Path | str, sample_rate_hz: float = 500.0) -> Recor
     with csv_path.open(newline="") as handle:
         for row in csv.DictReader(handle):
             status_byte = _int_field(row, "status_byte", "lead_off")
-            lead_off_bits = _int_field(row, "lead_off_bits", default=status_byte & 0x0F)
+            if row.get("lead_off_bits") not in (None, ""):
+                lead_off_bits = _int_field(row, "lead_off_bits") & 0x0F
+                status_byte = (status_byte & 0xF0) | lead_off_bits
+            else:
+                lead_off_bits = status_byte & 0x0F
             samples.append(
                 StreamSample(
                     timestamp=_float_field(row, "timestamp"),
@@ -52,7 +56,7 @@ def read_recording_csv(path: Path | str, sample_rate_hz: float = 500.0) -> Recor
                         "board_respiration_rate",
                         "respiration_rate",
                     ),
-                    status_byte=status_byte | (lead_off_bits & 0x0F),
+                    status_byte=status_byte,
                 )
             )
     return Recording(path=csv_path, samples=tuple(samples), sample_rate_hz=sample_rate_hz)

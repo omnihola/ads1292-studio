@@ -69,7 +69,8 @@ def build_review_render_frame(
     )
     review = review_channels(full_ch1, full_ch2, sample_rate_hz, source)
     metrics = compute_quality_metrics(samples, sample_rate_hz, source)
-    pqrst = pqrst_review(ecg, review.peaks, sample_rate_hz)
+    pqrst_raw = full_ch2 if review.source.channel == "CH2" else full_ch1
+    pqrst = pqrst_review(pqrst_raw, review.peaks, sample_rate_hz)
     x = np.arange(ecg.size) / sample_rate_hz
     display_ecg = smooth_for_plot(ecg, window=smoothing_window)
     display_resp = smooth_for_plot(resp, window=smoothing_window)

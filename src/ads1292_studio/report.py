@@ -16,7 +16,7 @@ matplotlib.use("Agg")
 
 from ads1292_studio.calibration import Calibration, counts_to_microvolts
 from ads1292_studio.events import EventMarker
-from ads1292_studio.models import StreamSample
+from ads1292_studio.models import PqrstReview, StreamSample
 from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.plot_theme import (
     PLOT_TRACE_COLORS,
@@ -181,12 +181,21 @@ def _write_pqrst_png(
             label=style["t_search"]["label"],
         )
         ax.legend(**style["legend"])
-    ax.set_title(f"PQRST review | QRS={review.qrs_clear} | P={review.p_tentative} | T={review.t_tentative}")
+    ax.set_title(pqrst_review_title(review))
     ax.set_xlabel("Time relative to R peak (ms)")
     ax.set_ylabel("Filtered uV")
     style_export_axes((ax,))
     fig.tight_layout()
     fig.savefig(path)
+
+
+def pqrst_review_title(review: PqrstReview) -> str:
+    return (
+        "PQRST review | "
+        f"QRS={review.qrs_clear} | "
+        f"P tentative={review.p_tentative} | "
+        f"T tentative={review.t_tentative}"
+    )
 
 
 def _html(
@@ -368,6 +377,7 @@ def _html(
   <h2>Signal Quality</h2>
   <table>{table}</table>
   <h2>ECG Review</h2>
+  <p>Exported ECG and PQRST plots use a fixed QRS bandpass for review consistency; GUI display filter toggles are not applied to this report.</p>
   <img src=\"{escape(ecg_png)}\" alt=\"ECG review plot\">
   <h2>PQRST Review</h2>
   <img src=\"{escape(pqrst_png)}\" alt=\"PQRST review plot\">

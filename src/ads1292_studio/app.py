@@ -81,6 +81,7 @@ from ads1292_studio.gui_state import (
     should_apply_control_state,
     should_redraw_live,
     stable_port_text,
+    stream_worker_has_ended,
     toolbar_display_hint_text,
 )
 from ads1292_studio.gui_style import (
@@ -971,6 +972,7 @@ class App(tk.Tk):
         self._drain_review_render_results()
         self._drain_connect_results()
         self._drain_stream_start_results()
+        self._sync_worker_stream_state()
         self._drain_live_quality_results()
         sample_batch = drain_queue_items(self.samples, MAX_SAMPLES_PER_TICK)
         sample_backlog = not self.samples.empty()
@@ -1002,6 +1004,19 @@ class App(tk.Tk):
         self._drain_live_quality_results()
         self._drain_review_render_results()
         self._schedule_tick(sample_backlog=sample_backlog)
+
+    def _sync_worker_stream_state(self) -> None:
+        thread = self.worker.thread
+        worker_alive = bool(thread and thread.is_alive())
+        if not stream_worker_has_ended(
+            is_streaming=self.is_streaming,
+            is_starting=self.is_starting,
+            worker_alive=worker_alive,
+        ):
+            return
+        self.is_streaming = False
+        self.connection_var.set(f"Connected: {self.connected_port}" if self.connected_port else "Stream ended")
+        self._apply_control_states()
 
     def _schedule_live_quality_update(
         self,

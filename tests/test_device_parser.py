@@ -27,3 +27,18 @@ def test_parse_stream_payload_extracts_status_and_fourteen_sample_pairs() -> Non
     assert samples[0].board_respiration_rate == 21
     assert samples[0].status_byte == 0x10
     assert samples[0].lead_off_bits == 0
+
+
+def test_parse_stream_payload_rejects_bad_trailer() -> None:
+    payload = bytearray([88, 21, 0x10])
+    for index in range(14):
+        payload.extend(int(index).to_bytes(2, "little", signed=True))
+        payload.extend(int(index + 100).to_bytes(2, "little", signed=True))
+    payload.extend([0x00, 0x03])
+
+    try:
+        parse_stream_payload(bytes(payload), start_timestamp=10.0, sample_rate_hz=500.0, start_index=0)
+    except ValueError as exc:
+        assert "bad stream trailer" in str(exc)
+    else:
+        raise AssertionError("bad stream trailer was accepted")

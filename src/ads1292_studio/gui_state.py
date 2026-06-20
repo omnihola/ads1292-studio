@@ -109,6 +109,10 @@ def gui_tick_interval_ms(state: GuiState, *, sample_backlog: bool = False) -> in
     return ACTIVE_TICK_INTERVAL_MS if state.streaming or state.busy else IDLE_TICK_INTERVAL_MS
 
 
+def stream_worker_has_ended(*, is_streaming: bool, is_starting: bool, worker_alive: bool) -> bool:
+    return bool(is_streaming and not is_starting and not worker_alive)
+
+
 def should_redraw_live(
     now_monotonic: float,
     last_redraw_monotonic: float,

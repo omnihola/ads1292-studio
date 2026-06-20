@@ -65,8 +65,10 @@ def parse_stream_payload(
     sample_rate_hz: float,
     start_index: int,
 ) -> tuple[StreamSample, ...]:
-    if len(payload) < 59:
+    if len(payload) < 61:
         raise ValueError(f"stream payload too short: {len(payload)} bytes")
+    if payload[-2:] != bytes([END, END]):
+        raise ValueError(f"bad stream trailer: {payload[-2:].hex(' ')}")
     board_heart_rate = payload[0]
     board_respiration_rate = payload[1]
     status_byte = payload[2]
@@ -222,7 +224,7 @@ class Ads1x9xDevice:
                 # must not end the recording. Keep waiting; a real disconnect
                 # surfaces as serial.SerialException and still propagates.
                 continue
-            if frame_type != CMD_DATA_STREAMING or len(payload) < 59:
+            if frame_type != CMD_DATA_STREAMING or len(payload) < 61:
                 continue
             if self._stream_t0 is None:
                 self._stream_t0 = time.time()
