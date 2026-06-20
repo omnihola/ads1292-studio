@@ -71,12 +71,32 @@ class ReviewRenderUpdatePlan:
     should_submit: bool
 
 
+@dataclass(frozen=True)
+class LiveQualityUpdatePlan:
+    generation: int
+    should_submit: bool
+
+
 def live_quality_worker_available(future: Future[LiveQualityResult] | None) -> bool:
     return future is None or future.done()
 
 
 def live_quality_sample_count_ready(sample_count: int, sample_rate_hz: float) -> bool:
     return sample_rate_hz > 0 and int(sample_count) >= int(sample_rate_hz)
+
+
+def live_quality_update_plan(
+    *,
+    future: Future[LiveQualityResult] | None,
+    generation: int,
+    sample_count: int,
+    sample_rate_hz: float,
+) -> LiveQualityUpdatePlan:
+    if not live_quality_worker_available(future):
+        return LiveQualityUpdatePlan(generation=int(generation), should_submit=False)
+    if not live_quality_sample_count_ready(sample_count, sample_rate_hz):
+        return LiveQualityUpdatePlan(generation=int(generation), should_submit=False)
+    return LiveQualityUpdatePlan(generation=int(generation) + 1, should_submit=True)
 
 
 def review_render_update_plan(

@@ -43,6 +43,7 @@ from ads1292_studio.app import (
     live_axis_titles,
     live_ecg_axis_title,
     live_quality_sample_count_ready,
+    live_quality_update_plan,
     live_quality_worker_available,
     live_metrics_text,
     live_render_refresh_key,
@@ -201,6 +202,34 @@ def test_live_quality_sample_count_waits_for_one_second_of_data() -> None:
     assert live_quality_sample_count_ready(0, 0.0) is False
 
 
+def test_live_quality_update_plan_keeps_worker_single_flight_and_sample_gate() -> None:
+    busy = live_quality_update_plan(
+        future=_FakeFuture(done=False),
+        generation=3,
+        sample_count=1000,
+        sample_rate_hz=500.0,
+    )
+    too_early = live_quality_update_plan(
+        future=_FakeFuture(done=True),
+        generation=3,
+        sample_count=499,
+        sample_rate_hz=500.0,
+    )
+    ready = live_quality_update_plan(
+        future=None,
+        generation=3,
+        sample_count=500,
+        sample_rate_hz=500.0,
+    )
+
+    assert busy.should_submit is False
+    assert busy.generation == 3
+    assert too_early.should_submit is False
+    assert too_early.generation == 3
+    assert ready.should_submit is True
+    assert ready.generation == 4
+
+
 def test_worker_helpers_live_outside_app_module() -> None:
     import inspect
 
@@ -214,6 +243,7 @@ def test_worker_helpers_live_outside_app_module() -> None:
     assert compute_review_render_result.__module__ == "ads1292_studio.gui_workers"
     assert build_live_quality_samples.__module__ == "ads1292_studio.gui_workers"
     assert live_quality_sample_count_ready.__module__ == "ads1292_studio.gui_workers"
+    assert live_quality_update_plan.__module__ == "ads1292_studio.gui_workers"
     assert review_render_update_plan.__module__ == "ads1292_studio.gui_workers"
     assert review_render_pending_ready.__module__ == "ads1292_studio.gui_workers"
     assert drain_latest_generation_result.__module__ == "ads1292_studio.gui_workers"
@@ -708,8 +738,9 @@ def test_live_quality_scheduler_checks_sample_count_before_copying_buffers() -> 
 
     source = inspect.getsource(App._schedule_live_quality_update)
 
-    assert "live_quality_sample_count_ready(" in source
-    assert source.index("live_quality_sample_count_ready(") < source.index("ch1_values = tuple(self.ch1)")
+    assert "live_quality_update_plan(" in source
+    assert "sample_count=len(self.ch2)" in source
+    assert source.index("live_quality_update_plan(") < source.index("ch1_values = tuple(self.ch1)")
 
 
 def test_gui_control_states_start_with_safe_disabled_defaults() -> None:

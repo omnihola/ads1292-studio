@@ -106,6 +106,7 @@ from ads1292_studio.gui_workers import (
     drain_latest_live_quality_result,
     drain_latest_review_render_result,
     live_quality_sample_count_ready,
+    live_quality_update_plan,
     live_quality_worker_available,
     review_render_pending_ready,
     review_render_update_plan,
@@ -956,18 +957,21 @@ class App(tk.Tk):
         source: str,
         valid_rr: int,
     ) -> None:
-        if not live_quality_worker_available(self.live_quality_future):
-            return
-        if not live_quality_sample_count_ready(len(self.ch2), SAMPLE_RATE_HZ):
+        plan = live_quality_update_plan(
+            future=self.live_quality_future,
+            generation=self.live_quality_generation,
+            sample_count=len(self.ch2),
+            sample_rate_hz=SAMPLE_RATE_HZ,
+        )
+        if not plan.should_submit:
             return
         ch1_values = tuple(self.ch1)
         ch2_values = tuple(self.ch2)
         status_values = tuple(self.status)
-        self.live_quality_generation += 1
-        generation = self.live_quality_generation
+        self.live_quality_generation = plan.generation
         future = self.live_quality_executor.submit(
             compute_live_quality_result,
-            generation=generation,
+            generation=plan.generation,
             source=source,
             valid_rr=valid_rr,
             ch1_values=ch1_values,

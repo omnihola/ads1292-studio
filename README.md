@@ -172,6 +172,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs; wait
   for at least one second of samples before starting live quality snapshots.
+- Keep live quality scheduling decisions in `gui_workers.py`; App must decide
+  whether a worker can run before copying live channel buffers into tuples.
 - Keep background result dataclasses and worker helpers in `gui_workers.py`,
   with `app.py` importing them for compatibility, so App remains focused on UI
   orchestration rather than owning worker data models.
