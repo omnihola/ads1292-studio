@@ -278,6 +278,8 @@ def _build_toolbar_toggle_chip(
         label.configure(style=current_style())
 
     def toggle(_event: tk.Event | None = None) -> str:
+        if label.cget("state") == tk.DISABLED:
+            return "break"
         variable.set(not variable.get())
         command()
         return "break"
@@ -563,6 +565,7 @@ def register_control_buttons(app: Any) -> None:
         "Connect": app.connect_button,
         "Start": app.start_button,
         "Stop": app.stop_button,
+        "Save CSV": app.save_check,
         "Load CSV": app.load_csv_button,
         "Export Report": app.export_report_button,
         "Export Package": app.export_package_button,

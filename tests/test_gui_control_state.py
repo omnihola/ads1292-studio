@@ -1025,6 +1025,7 @@ def test_gui_control_states_disable_everything_while_connecting() -> None:
 
     assert states["Connect"] == "disabled"
     assert states["Start"] == "disabled"
+    assert states["Save CSV"] == "disabled"
     assert states["Load CSV"] == "disabled"
 
 
@@ -1035,7 +1036,16 @@ def test_gui_control_states_disable_everything_while_starting() -> None:
 
     assert states["Start"] == "disabled"
     assert states["Stop"] == "disabled"
+    assert states["Save CSV"] == "disabled"
     assert states["Load CSV"] == "disabled"
+
+
+def test_gui_control_states_lock_save_csv_while_streaming() -> None:
+    idle = GuiState(connected=True, streaming=False, has_data=False, has_recording_path=False)
+    streaming = GuiState(connected=True, streaming=True, has_data=True, has_recording_path=True)
+
+    assert gui_control_states(state=idle)["Save CSV"] == "normal"
+    assert gui_control_states(state=streaming)["Save CSV"] == "disabled"
 
 
 def test_gui_workflow_hint_explains_connecting_and_starting() -> None:

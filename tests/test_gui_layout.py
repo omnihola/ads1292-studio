@@ -395,6 +395,16 @@ def test_record_save_control_uses_toolbar_toggle_chip() -> None:
     assert "ttk.Checkbutton(" not in save_section
 
 
+def test_record_save_control_participates_in_control_state_gating() -> None:
+    from ads1292_studio.gui_layout import _build_toolbar_toggle_chip, register_control_buttons
+
+    helper_source = inspect.getsource(_build_toolbar_toggle_chip)
+    register_source = inspect.getsource(register_control_buttons)
+
+    assert "\"Save CSV\": app.save_check" in register_source
+    assert "label.cget(\"state\") == tk.DISABLED" in helper_source
+
+
 def test_toolbar_toggle_chip_styles_are_configured() -> None:
     from ads1292_studio.gui_style import configure_toolbar_chrome
 

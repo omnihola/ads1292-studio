@@ -110,6 +110,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - GUI buttons are state-gated: Start requires a confirmed connection, Stop
   requires streaming, and report/package export actions require available data
   instead of relying on error dialogs after invalid clicks.
+- The Save CSV acquisition toggle is state-gated too: it stays editable before
+  acquisition, then locks while connecting, starting, or streaming because the
+  active recording path is decided when Start is pressed.
 - GUI control gating, workflow hints, overview text, and status rows share one
   immutable `GuiState` snapshot so the UI does not recompute the same state in
   multiple places.
@@ -238,7 +241,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   GUI tick only drains queues and delegates log rendering.
 - Keep toolbar toggle chips mouse- and keyboard-accessible, with visible hover
   and focus feedback, because they replace heavier checkbutton chrome,
-  including acquisition toggles such as Save CSV.
+  including acquisition toggles such as Save CSV; disabled toggle chips must
+  swallow click/keyboard activation so state-gating is real, not only visual.
 - Disable Connect until a serial port is available or typed, while keeping
   offline CSV actions enabled, so the empty-port state does not present a
   primary action that can only fail; keep the header badge and sidebar
