@@ -477,6 +477,14 @@ def test_gui_layout_uses_task_based_sidebar_tabs() -> None:
     assert sidebar_tab_labels() == ("Status", "Session", "Validation", "Protocol", "Actions")
 
 
+def test_sidebar_tabs_use_fixed_width_labels() -> None:
+    from ads1292_studio.gui_sidebar import build_sidebar
+
+    source = inspect.getsource(build_sidebar)
+
+    assert "width=int(tab_strip_style[\"tab_width\"])" in source
+
+
 def test_base_notebook_styles_keep_tab_defaults_consistent() -> None:
     assert base_notebook_styles() == {
         "notebook": "TNotebook",
@@ -514,6 +522,7 @@ def test_sidebar_tab_strip_styles_replace_native_tab_chrome() -> None:
         "font": ("Aptos", 10, "bold"),
         "padding": (0, 0, 0, 5),
         "tab_padding": (7, 6),
+        "tab_width": 10,
         "tab_gap": (0, 2),
     }
 
@@ -676,6 +685,7 @@ def test_workspace_tab_strip_styles_replace_native_tab_chrome() -> None:
         "font": ("Aptos", 12, "bold"),
         "padding": (4, 0, 4, 6),
         "tab_padding": (12, 7),
+        "tab_width": 12,
         "tab_gap": (0, 4),
     }
 
@@ -690,6 +700,7 @@ def test_workspace_tabs_use_custom_segmented_strip() -> None:
     assert "app.workspace_tab_hovered" in source
     assert "app.workspace_stack" in source
     assert "takefocus=True" in source
+    assert "width=int(tab_strip_style[\"tab_width\"])" in source
     assert "tab_label.bind(\"<Enter>\"" in source
     assert "tab_label.bind(\"<Leave>\"" in source
     assert "tab_label.bind(\"<FocusIn>\"" in source

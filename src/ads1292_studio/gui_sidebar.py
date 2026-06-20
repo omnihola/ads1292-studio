@@ -282,6 +282,7 @@ def build_sidebar(app: Any, parent: ttk.Frame) -> dict[str, ttk.Frame]:
         tab_label = ttk.Label(
             tab_strip,
             text=label,
+            width=int(tab_strip_style["tab_width"]),
             style=str(tab_strip_style["tab"]),
             cursor="hand2",
             takefocus=True,

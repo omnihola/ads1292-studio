@@ -278,7 +278,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   populated; excluding those candidates can leave Connect/Start/Stop disabled
   even when the visible port field contains the board path.
 - Keep custom sidebar/workspace tab strips keyboard-accessible, with visible
-  hover and focus states, because they replace native notebook tabs.
+  hover and focus states, because they replace native notebook tabs. Tab labels
+  should use fixed character widths so hover/selection and system font
+  differences do not cause the tab strip to reflow.
 - Avoid doing hidden live-plot work: while the Live ECG workspace tab is
   unmapped, keep draining samples and running background quality updates, but
   skip the live plot frame build and canvas redraw. Flush one live redraw when

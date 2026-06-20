@@ -537,6 +537,7 @@ SIDEBAR_TAB_STRIP_STYLES = {
     "font": ("Aptos", 10, "bold"),
     "padding": (0, 0, 0, 5),
     "tab_padding": (7, 6),
+    "tab_width": 10,
     "tab_gap": (0, 2),
 }
 WORKSPACE_TAB_STRIP_STYLES = {
@@ -554,6 +555,7 @@ WORKSPACE_TAB_STRIP_STYLES = {
     "font": ("Aptos", 12, "bold"),
     "padding": (4, 0, 4, 6),
     "tab_padding": (12, 7),
+    "tab_width": 12,
     "tab_gap": (0, 4),
 }
 WORKFLOW_HINT_STYLES = {
