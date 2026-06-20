@@ -95,6 +95,9 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "background": "#FFFFFF",
             "active_foreground": "#1F4FB2",
             "active_background": "#EEF3FA",
+            "border": "#D9E1EC",
+            "active_border": "#2F6FED",
+            "focus_border": "#2F6FED",
             "disabled_foreground": "#657084",
             "disabled_background": "#D9E1EC",
             "borderwidth": 1,
@@ -107,6 +110,9 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "background": "#2F6FED",
             "active_foreground": "#FFFFFF",
             "active_background": "#1F4FB2",
+            "border": "#2F6FED",
+            "active_border": "#1F4FB2",
+            "focus_border": "#173F99",
             "disabled_foreground": "#657084",
             "disabled_background": "#D9E1EC",
             "borderwidth": 1,
@@ -119,6 +125,9 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "background": "#FFFFFF",
             "active_foreground": "#FFFFFF",
             "active_background": "#B3261E",
+            "border": "#F3C8C4",
+            "active_border": "#B3261E",
+            "focus_border": "#B3261E",
             "disabled_foreground": "#657084",
             "disabled_background": "#D9E1EC",
             "borderwidth": 1,
@@ -131,6 +140,9 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "background": "#FFFFFF",
             "active_foreground": "#1F4FB2",
             "active_background": "#EEF3FA",
+            "border": "#D9E1EC",
+            "active_border": "#2F6FED",
+            "focus_border": "#2F6FED",
             "disabled_foreground": "#657084",
             "disabled_background": "#D9E1EC",
             "borderwidth": 1,
@@ -165,6 +177,18 @@ def test_app_delegates_static_chrome_to_style_helpers() -> None:
     assert "configure_button_chrome(style)" in source
     assert "configure_notebook_chrome(style)" in source
     assert "configure_status_chrome(style)" in source
+
+
+def test_button_chrome_maps_keyboard_focus_border() -> None:
+    from ads1292_studio.gui_style import _configure_button_style
+
+    source = inspect.getsource(_configure_button_style)
+
+    assert "bordercolor=chrome[\"border\"]" in source
+    assert "(\"focus\", chrome[\"focus_border\"])" in source
+    assert "(\"active\", chrome[\"active_border\"])" in source
+    assert "lightcolor" in source
+    assert "darkcolor" in source
 
 
 def test_plot_panel_chrome_is_configured_separately_from_cards() -> None:

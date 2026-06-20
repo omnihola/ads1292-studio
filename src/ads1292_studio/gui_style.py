@@ -442,6 +442,9 @@ def _configure_button_style(style: ttk.Style, style_name: str, chrome: dict[str,
         font=chrome["font"],
         foreground=chrome["foreground"],
         background=chrome["background"],
+        bordercolor=chrome["border"],
+        lightcolor=chrome["border"],
+        darkcolor=chrome["border"],
         borderwidth=chrome["borderwidth"],
         relief=chrome["relief"],
     )
@@ -454,6 +457,21 @@ def _configure_button_style(style: ttk.Style, style_name: str, chrome: dict[str,
         background=[
             ("disabled", chrome["disabled_background"]),
             ("active", chrome["active_background"]),
+        ],
+        bordercolor=[
+            ("disabled", chrome["disabled_background"]),
+            ("focus", chrome["focus_border"]),
+            ("active", chrome["active_border"]),
+        ],
+        lightcolor=[
+            ("disabled", chrome["disabled_background"]),
+            ("focus", chrome["focus_border"]),
+            ("active", chrome["active_border"]),
+        ],
+        darkcolor=[
+            ("disabled", chrome["disabled_background"]),
+            ("focus", chrome["focus_border"]),
+            ("active", chrome["active_border"]),
         ],
     )
 

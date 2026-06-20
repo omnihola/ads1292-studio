@@ -161,6 +161,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   and focus feedback, because they replace heavier checkbutton chrome.
 - Keep custom sidebar/workspace tab strips keyboard-accessible, with visible
   hover and focus states, because they replace native notebook tabs.
+- Keep action buttons' focus borders visible so keyboard navigation has a
+  clear current target across acquisition and sidebar controls.
 
 ## Safety
 
