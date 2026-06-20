@@ -463,7 +463,14 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
 
 
 def _sidebar_button(parent: ttk.Frame, text: str, command: object) -> ttk.Button:
-    button = ttk.Button(parent, text=text, command=command, style=sidebar_action_button_style())
+    button = ttk.Button(
+        parent,
+        text=text,
+        command=command,
+        cursor="hand2",
+        takefocus=True,
+        style=sidebar_action_button_style(),
+    )
     button.pack(anchor=tk.W, fill=tk.X, pady=2)
     return button
 

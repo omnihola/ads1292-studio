@@ -688,6 +688,16 @@ def test_sidebar_action_button_style_keeps_secondary_actions_consistent() -> Non
     assert sidebar_action_button_style() == "SidebarAction.TButton"
 
 
+def test_sidebar_action_buttons_use_action_affordances() -> None:
+    from ads1292_studio.gui_layout import _sidebar_button
+
+    source = inspect.getsource(_sidebar_button)
+
+    assert 'cursor="hand2"' in source
+    assert "takefocus=True" in source
+    assert "style=sidebar_action_button_style()" in source
+
+
 def test_action_section_styles_make_sidebar_action_groups_scannable() -> None:
     assert action_section_styles() == {
         "frame": "ActionSection.TFrame",
