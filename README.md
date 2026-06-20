@@ -188,6 +188,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   arrays are sparse and often empty; do not use array-equality guards on full
   live ECG/respiration/contact traces, where comparing the rolling waveform can
   cost more than the Matplotlib update it tries to avoid.
+- Apply the same changed-only rule to offline review R-peak markers; keep full
+  review ECG/respiration/contact traces as direct `set_data` writes because
+  those arrays carry the main waveform and are usually larger than peak markers.
 - Keep live R-peak detection to one `find_peaks` pass by selecting the dominant
   ECG polarity before peak search; this preserves inverted-lead support without
   doubling GUI-tick peak detection work.

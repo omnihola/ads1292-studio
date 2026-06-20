@@ -238,7 +238,7 @@ def apply_review_render_frame(
     app.review_ecg_line.set_data(frame.plot_ecg_x, frame.plot_ecg)
     app.review_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
     app.review_status_line.set_data(frame.plot_status_x, frame.plot_status)
-    app.review_peak_line.set_data(frame.peak_x, frame.peak_y)
+    set_line_data_if_changed(app.review_peak_line, frame.peak_x, frame.peak_y)
     polarity = ", inverted" if ecg_inverted else ""
     set_signal_axis_title(
         app.ax_review_ecg,
