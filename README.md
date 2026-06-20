@@ -231,6 +231,11 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   available; refresh must replace stale or blank visible text with the detected
   port;
   enable Start only when the selected port matches the connected port.
+- Treat macOS `/dev/cu.usbmodem*` and `/dev/cu.usbserial*` devices as ADS1292
+  connection candidates in the port list. Some ADS1292RECG-FE boards show up as
+  generic USB serial devices before the firmware description is fully
+  populated; excluding those candidates can leave Connect/Start/Stop disabled
+  even when the visible port field contains the board path.
 - Keep custom sidebar/workspace tab strips keyboard-accessible, with visible
   hover and focus states, because they replace native notebook tabs.
 - Keep action buttons' focus borders visible so keyboard navigation has a

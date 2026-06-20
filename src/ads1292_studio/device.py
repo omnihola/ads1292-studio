@@ -11,6 +11,7 @@ from ads1292_studio.models import AdsPort, StreamSample
 
 VID_TI = 0x2047
 PID_ADS1X9X = 0x0300
+SERIAL_CANDIDATE_MARKERS = ("usbmodem", "usbserial")
 
 START = 0x02
 END = 0x03
@@ -19,6 +20,21 @@ CMD_REG_READ = 0x92
 CMD_DATA_STREAMING = 0x93
 CMD_ACQUIRE_DATA = 0x94
 CMD_QUERY_FIRMWARE_VERSION = 0x99
+
+
+def _is_ads_candidate_port(port: object) -> bool:
+    device = str(getattr(port, "device", "") or "")
+    description = str(getattr(port, "description", "") or "")
+    is_ti_ads = (
+        getattr(port, "vid", None) == VID_TI
+        and getattr(port, "pid", None) == PID_ADS1X9X
+    )
+    is_named_ads = "ADS1x9x" in description
+    is_usb_serial_candidate = any(
+        marker in device.lower()
+        for marker in SERIAL_CANDIDATE_MARKERS
+    )
+    return is_ti_ads or is_named_ads or is_usb_serial_candidate
 
 
 def _int16_le(lo: int, hi: int) -> int:
@@ -31,10 +47,7 @@ def _int16_le(lo: int, hi: int) -> int:
 def list_ads_ports() -> list[AdsPort]:
     ports: list[AdsPort] = []
     for port in list_ports.comports():
-        is_ads = (port.vid == VID_TI and port.pid == PID_ADS1X9X) or (
-            "ADS1x9x" in (port.description or "")
-        )
-        if is_ads:
+        if _is_ads_candidate_port(port):
             ports.append(AdsPort(port.device, port.description or "", port.hwid or ""))
     return ports
 
@@ -43,9 +56,6 @@ def find_ads_port() -> str | None:
     ports = list_ads_ports()
     if ports:
         return ports[0].device
-    for port in list_ports.comports():
-        if "usbmodem" in port.device.lower() or "usbserial" in port.device.lower():
-            return port.device
     return None
 
 
