@@ -245,19 +245,33 @@ def _build_toolbar_toggle_chip(
         toolbar,
         text=text,
         cursor="hand2",
+        takefocus=True,
         style=styles["selected_toggle_chip"] if variable.get() else styles["toggle_chip"],
     )
+    state = {"hovered": False}
+
+    def current_style() -> str:
+        if variable.get():
+            return styles["selected_hover_toggle_chip"] if state["hovered"] else styles["selected_toggle_chip"]
+        return styles["hover_toggle_chip"] if state["hovered"] else styles["toggle_chip"]
 
     def sync_style(*_args: object) -> None:
-        style = styles["selected_toggle_chip"] if variable.get() else styles["toggle_chip"]
-        label.configure(style=style)
+        label.configure(style=current_style())
 
     def toggle(_event: tk.Event | None = None) -> str:
         variable.set(not variable.get())
         command()
         return "break"
 
+    def set_hovered(value: bool) -> None:
+        state["hovered"] = value
+        sync_style()
+
     variable.trace_add("write", sync_style)
+    label.bind("<Enter>", lambda _event: set_hovered(True))
+    label.bind("<Leave>", lambda _event: set_hovered(False))
+    label.bind("<FocusIn>", lambda _event: set_hovered(True))
+    label.bind("<FocusOut>", lambda _event: set_hovered(False))
     label.bind("<Button-1>", toggle)
     label.bind("<Return>", toggle)
     label.bind("<space>", toggle)

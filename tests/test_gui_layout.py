@@ -144,7 +144,9 @@ def test_gui_layout_styles_toolbar_inputs_and_toggles() -> None:
         "port": "Port.TCombobox",
         "toggle": "ToolbarToggle.TCheckbutton",
         "toggle_chip": "ToolbarToggleChip.TLabel",
+        "hover_toggle_chip": "Hover.ToolbarToggleChip.TLabel",
         "selected_toggle_chip": "Selected.ToolbarToggleChip.TLabel",
+        "selected_hover_toggle_chip": "SelectedHover.ToolbarToggleChip.TLabel",
     }
 
 
@@ -261,8 +263,11 @@ def test_input_chrome_spec_keeps_forms_readable() -> None:
             "border": "#D9E1EC",
             "selected_border": "#2F6FED",
             "active_foreground": "#1F4FB2",
+            "active_border": "#2F6FED",
             "disabled_foreground": "#657084",
             "active_background": "#EAF1FF",
+            "selected_active_background": "#1F4FB2",
+            "selected_active_border": "#1F4FB2",
         },
     }
 
@@ -333,6 +338,11 @@ def test_display_toolbar_uses_compact_toggle_chips() -> None:
     assert source.count("_build_toolbar_toggle_chip(") == 5
     assert "ttk.Checkbutton(\n        toolbar" not in source
     assert "variable.trace_add(\"write\", sync_style)" in helper_source
+    assert "takefocus=True" in helper_source
+    assert "label.bind(\"<Enter>\"" in helper_source
+    assert "label.bind(\"<Leave>\"" in helper_source
+    assert "label.bind(\"<FocusIn>\"" in helper_source
+    assert "label.bind(\"<FocusOut>\"" in helper_source
     assert "label.bind(\"<Button-1>\", toggle)" in helper_source
     assert "label.bind(\"<Return>\", toggle)" in helper_source
     assert "label.bind(\"<space>\", toggle)" in helper_source
@@ -344,9 +354,12 @@ def test_toolbar_toggle_chip_styles_are_configured() -> None:
     source = inspect.getsource(configure_toolbar_chrome)
 
     assert "toolbar_control_styles()[\"toggle_chip\"]" in source
+    assert "toolbar_control_styles()[\"hover_toggle_chip\"]" in source
     assert "toolbar_control_styles()[\"selected_toggle_chip\"]" in source
+    assert "toolbar_control_styles()[\"selected_hover_toggle_chip\"]" in source
     assert "selected_background" in source
     assert "selected_border" in source
+    assert "selected_active_background" in source
 
 
 def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:

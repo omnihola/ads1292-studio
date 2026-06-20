@@ -124,15 +124,20 @@ INPUT_CHROME_SPEC = {
         "border": "#D9E1EC",
         "selected_border": "#2F6FED",
         "active_foreground": "#1F4FB2",
+        "active_border": "#2F6FED",
         "disabled_foreground": "#657084",
         "active_background": "#EAF1FF",
+        "selected_active_background": "#1F4FB2",
+        "selected_active_border": "#1F4FB2",
     },
 }
 TOOLBAR_CONTROL_STYLES = {
     "port": "Port.TCombobox",
     "toggle": "ToolbarToggle.TCheckbutton",
     "toggle_chip": "ToolbarToggleChip.TLabel",
+    "hover_toggle_chip": "Hover.ToolbarToggleChip.TLabel",
     "selected_toggle_chip": "Selected.ToolbarToggleChip.TLabel",
+    "selected_hover_toggle_chip": "SelectedHover.ToolbarToggleChip.TLabel",
 }
 TOOLBAR_FRAME_SPEC = {
     "frame": "Toolbar.TFrame",

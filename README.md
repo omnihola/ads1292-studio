@@ -157,6 +157,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   recreated when their visible settings actually change.
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs.
+- Keep toolbar toggle chips mouse- and keyboard-accessible, with visible hover
+  and focus feedback, because they replace heavier checkbutton chrome.
 
 ## Safety
 

@@ -204,6 +204,18 @@ def configure_toolbar_chrome(style: ttk.Style) -> None:
         darkcolor=toolbar_toggle["border"],
     )
     style.configure(
+        toolbar_control_styles()["hover_toggle_chip"],
+        background=toolbar_toggle["active_background"],
+        foreground=toolbar_toggle["active_foreground"],
+        font=toolbar_toggle["font"],
+        padding=toolbar_toggle["padding"],
+        borderwidth=1,
+        relief="flat",
+        bordercolor=toolbar_toggle["active_border"],
+        lightcolor=toolbar_toggle["active_border"],
+        darkcolor=toolbar_toggle["active_border"],
+    )
+    style.configure(
         toolbar_control_styles()["selected_toggle_chip"],
         background=toolbar_toggle["selected_background"],
         foreground=toolbar_toggle["selected_foreground"],
@@ -214,6 +226,18 @@ def configure_toolbar_chrome(style: ttk.Style) -> None:
         bordercolor=toolbar_toggle["selected_border"],
         lightcolor=toolbar_toggle["selected_border"],
         darkcolor=toolbar_toggle["selected_border"],
+    )
+    style.configure(
+        toolbar_control_styles()["selected_hover_toggle_chip"],
+        background=toolbar_toggle["selected_active_background"],
+        foreground=toolbar_toggle["selected_foreground"],
+        font=toolbar_toggle["font"],
+        padding=toolbar_toggle["padding"],
+        borderwidth=1,
+        relief="flat",
+        bordercolor=toolbar_toggle["selected_active_border"],
+        lightcolor=toolbar_toggle["selected_active_border"],
+        darkcolor=toolbar_toggle["selected_active_border"],
     )
     style.map(
         toolbar_control_styles()["toggle_chip"],
