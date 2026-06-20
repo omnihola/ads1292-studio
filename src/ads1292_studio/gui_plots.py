@@ -262,7 +262,15 @@ def apply_review_render_frame(
         app.calibration_pulse_cache,
     )
     app.review_canvas.draw_idle()
-    draw_pqrst_review(app.ax_pqrst, app.pqrst_canvas, frame.pqrst)
+    draw_pqrst_review_if_changed(app, frame.pqrst)
+
+
+def draw_pqrst_review_if_changed(app: Any, review: PqrstReview) -> bool:
+    if getattr(app, "last_pqrst_review", None) == review:
+        return False
+    app.last_pqrst_review = review
+    draw_pqrst_review(app.ax_pqrst, app.pqrst_canvas, review)
+    return True
 
 
 def draw_pqrst_review(ax: object, canvas: object, review: PqrstReview) -> None:
