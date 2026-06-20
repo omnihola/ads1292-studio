@@ -7,7 +7,7 @@ import pytest
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
 import ads1292_studio.live_render as live_render
 from ads1292_studio.live_render import build_live_render_frame, deque_tail_array, display_signal_values
-from ads1292_studio.plots import decimate_for_plot
+from ads1292_studio.plots import decimate_extrema_for_plot
 
 
 def test_deque_tail_array_limits_live_plot_work_to_visible_tail() -> None:
@@ -101,7 +101,7 @@ def test_build_live_render_frame_uses_only_visible_tail_and_decimates() -> None:
     assert frame.visible_ecg[3] == 1000.0
 
 
-def test_live_render_uses_stride_decimation_for_readable_realtime_traces() -> None:
+def test_live_render_uses_extrema_decimation_for_readable_realtime_traces() -> None:
     indices = deque(range(80), maxlen=80)
     ch1 = deque((float(index % 9) for index in range(80)), maxlen=80)
     ch2 = deque((1000.0 if index in {17, 43, 66} else float(index % 5) for index in range(80)), maxlen=80)
@@ -122,12 +122,13 @@ def test_live_render_uses_stride_decimation_for_readable_realtime_traces() -> No
     )
 
     assert frame is not None
-    expected_ecg_x, expected_ecg = decimate_for_plot(frame.visible_x, frame.visible_ecg_plot, 12)
-    expected_resp_x, expected_resp = decimate_for_plot(frame.visible_x, frame.visible_resp_plot, 12)
+    expected_ecg_x, expected_ecg = decimate_extrema_for_plot(frame.visible_x, frame.visible_ecg_plot, 12)
+    expected_resp_x, expected_resp = decimate_extrema_for_plot(frame.visible_x, frame.visible_resp_plot, 12)
     np.testing.assert_array_equal(frame.plot_ecg_x, expected_ecg_x)
     np.testing.assert_array_equal(frame.plot_ecg, expected_ecg)
     np.testing.assert_array_equal(frame.plot_resp_x, expected_resp_x)
     np.testing.assert_array_equal(frame.plot_resp, expected_resp)
+    assert np.count_nonzero(frame.plot_ecg == 1000.0) == 3
 
 
 def test_build_live_render_frame_returns_none_without_samples() -> None:

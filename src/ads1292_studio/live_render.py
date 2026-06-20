@@ -7,7 +7,7 @@ from itertools import islice
 import numpy as np
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
-from ads1292_studio.plots import decimate_for_plot, smooth_for_plot
+from ads1292_studio.plots import decimate_extrema_for_plot, decimate_for_plot, smooth_for_plot
 from ads1292_studio.signal_processing import HeartRateSummary, apply_software_filters, detect_r_peaks, heart_rate_summary
 
 
@@ -122,8 +122,8 @@ def build_live_render_frame(
     peak_indices = list(peaks)
     peaks_x = visible_x[peak_indices] if peaks else np.array([], dtype=float)
     peaks_y = visible_ecg_plot[peak_indices] if peaks else np.array([], dtype=float)
-    plot_ecg_x, plot_ecg = decimate_for_plot(visible_x, visible_ecg_plot, max_render_points)
-    plot_resp_x, plot_resp = decimate_for_plot(visible_x, visible_resp_plot, max_render_points)
+    plot_ecg_x, plot_ecg = decimate_extrema_for_plot(visible_x, visible_ecg_plot, max_render_points)
+    plot_resp_x, plot_resp = decimate_extrema_for_plot(visible_x, visible_resp_plot, max_render_points)
     plot_status_x, plot_status = decimate_for_plot(visible_x, visible_status, max_render_points)
     return LiveRenderFrame(
         source=source,
