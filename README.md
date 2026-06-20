@@ -155,9 +155,13 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep the live render path lightweight: raw 1x non-inverted display should
   reuse the existing NumPy buffer, and Matplotlib artists should only be
   recreated when their visible settings actually change.
-- Reuse fixed display smoothing kernels and extrema-decimation bin edges; live
-  ECG and respiration plots use the same window geometry repeatedly during
+- Reuse fixed display smoothing kernels and stable decimation budgets; live ECG
+  and respiration plots use the same window geometry repeatedly during
   streaming.
+- Use stride decimation for live ECG/respiration traces after display
+  smoothing so the rolling view reads as a continuous waveform; reserve
+  extrema-preserving decimation for offline review and reports where narrow
+  spike preservation matters more than live visual smoothness.
 - Check duplicate live render keys before building render frames, and only
   clear empty-state artists after a frame is available, so idle or failed GUI
   ticks do not touch Matplotlib unnecessarily or flash blank axes.
