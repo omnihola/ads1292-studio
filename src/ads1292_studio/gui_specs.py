@@ -398,18 +398,18 @@ PANEL_CHROME_SPEC = {
 PLOT_PANEL_SPEC = {
     "shell": "Main.TFrame",
     "panel": "PlotPanel.TFrame",
-    "padding": (8, 8),
-    "panel_padding": (8, 6),
+    "padding": (4, 6),
+    "panel_padding": (0, 0),
 }
 PLOT_AXIS_STYLE = {
-    "face": "#FFFFFF",
-    "grid": "#E5EAF2",
+    "face": "#FBFCFE",
+    "grid": "#E3EAF3",
     "spine": "#D9E1EC",
     "tick": "#657084",
     "label": "#293247",
     "title": "#172033",
     "grid_linewidth": 0.56,
-    "grid_alpha": 0.30,
+    "grid_alpha": 0.26,
     "axisbelow": True,
     "spine_linewidth": 0.65,
     "tick_label_size": 9,
@@ -428,17 +428,17 @@ PLOT_AXIS_STYLE = {
 }
 PLOT_FIGURE_LAYOUTS = {
     "three_panel": {
-        "left": 0.058,
-        "right": 0.992,
-        "top": 0.982,
-        "bottom": 0.060,
-        "hspace": 0.24,
+        "left": 0.052,
+        "right": 0.996,
+        "top": 0.990,
+        "bottom": 0.052,
+        "hspace": 0.18,
     },
     "single_panel": {
-        "left": 0.064,
-        "right": 0.992,
-        "top": 0.972,
-        "bottom": 0.106,
+        "left": 0.058,
+        "right": 0.996,
+        "top": 0.980,
+        "bottom": 0.096,
     },
 }
 PLOT_CANVAS_WIDGET_STYLE = {
