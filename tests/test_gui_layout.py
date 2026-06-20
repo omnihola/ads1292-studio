@@ -78,6 +78,22 @@ class _FakeLabel:
         self.configure_calls += 1
 
 
+class _FakeTab:
+    def __init__(self, tab_id: str) -> None:
+        self.tab_id = tab_id
+        self.pack_calls = 0
+        self.pack_forget_calls = 0
+
+    def __str__(self) -> str:
+        return self.tab_id
+
+    def pack(self, **_values: object) -> None:
+        self.pack_calls += 1
+
+    def pack_forget(self) -> None:
+        self.pack_forget_calls += 1
+
+
 def test_gui_layout_keeps_primary_toolbar_focused_on_acquisition() -> None:
     assert primary_toolbar_button_labels() == ("Refresh", "Connect", "Start", "Stop")
     assert "Load CSV" not in primary_toolbar_button_labels()
@@ -329,6 +345,7 @@ def test_input_chrome_spec_keeps_forms_readable() -> None:
             "active_foreground": "#1F4FB2",
             "active_border": "#2F6FED",
             "disabled_foreground": "#657084",
+            "disabled_background": "#EEF3FA",
             "active_background": "#EAF1FF",
             "selected_active_background": "#1F4FB2",
             "selected_active_border": "#1F4FB2",
@@ -574,6 +591,24 @@ def test_sidebar_tab_selection_uses_stacked_frames() -> None:
     assert "app.sidebar_notebook" not in select_source + sync_source
 
 
+def test_sidebar_tab_selection_skips_already_active_tab(monkeypatch) -> None:
+    import ads1292_studio.gui_sidebar as gui_sidebar
+
+    calls = {"sync": 0}
+    target = _FakeTab("active")
+    app = SimpleNamespace(sidebar_tabs=(target,), selected_sidebar_tab=str(target))
+
+    def count_sync(_app: object) -> None:
+        calls["sync"] += 1
+
+    monkeypatch.setattr(gui_sidebar, "_sync_sidebar_tab_styles", count_sync)
+
+    assert gui_sidebar._select_sidebar_tab(app, target) == "break"
+    assert calls["sync"] == 0
+    assert target.pack_calls == 0
+    assert target.pack_forget_calls == 0
+
+
 def test_sidebar_tab_style_sync_skips_redundant_tk_writes() -> None:
     from ads1292_studio.gui_sidebar import _sync_sidebar_tab_styles
 
@@ -773,6 +808,31 @@ def test_workspace_tab_selection_uses_stacked_frames() -> None:
     assert "selected_hover_tab" in sync_source
     assert "hover_tab" in sync_source
     assert "app.notebook" not in select_source + sync_source
+
+
+def test_workspace_tab_selection_skips_already_active_tab(monkeypatch) -> None:
+    import ads1292_studio.gui_layout as gui_layout
+
+    calls = {"sync": 0, "redraw": 0}
+    live = _FakeTab("live")
+    log = _FakeTab("log")
+    app = SimpleNamespace(
+        workspace_tabs=(live, log),
+        selected_workspace_tab=str(live),
+        live_tab=live,
+        log_tab=log,
+        _redraw_live=lambda: calls.__setitem__("redraw", calls["redraw"] + 1),
+    )
+
+    def count_sync(_app: object) -> None:
+        calls["sync"] += 1
+
+    monkeypatch.setattr(gui_layout, "_sync_workspace_tab_styles", count_sync)
+
+    assert gui_layout._select_workspace_tab(app, live) == "break"
+    assert calls == {"sync": 0, "redraw": 0}
+    assert live.pack_calls == 0
+    assert live.pack_forget_calls == 0
 
 
 def test_workspace_tab_style_sync_skips_redundant_tk_writes() -> None:

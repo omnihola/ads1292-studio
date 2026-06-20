@@ -251,7 +251,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   and focus feedback, because they replace heavier checkbutton chrome,
   including acquisition toggles such as Save CSV; disabled toggle chips must
   use a dedicated muted style and swallow click/keyboard activation so
-  state-gating is visually clear and not only decorative.
+  state-gating is visually clear and not only decorative. Keep the disabled
+  foreground and background tokens together in `input_chrome_spec()` because
+  the Tk style setup uses both during startup.
 - Keep the toolbar display summary chip bounded with a fixed character width
   and wrap length so longer mode/filter text cannot stretch the top toolbars or
   push acquisition controls out of view. The chip should read like an operator
@@ -283,7 +285,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   differences do not cause the tab strip to reflow. Tab style synchronization
   should skip redundant Tk `configure` calls when the style is already current,
   and hover/focus handlers should skip synchronization when the hover state did
-  not actually change.
+  not actually change. Re-clicking the already selected sidebar or workspace
+  tab should return without restacking frames, syncing tab styles, redrawing the
+  Live ECG canvas, or autoscrolling the Log tab.
 - Avoid doing hidden live-plot work: while the Live ECG workspace tab is
   unmapped, keep draining samples and running background quality updates, but
   skip the live plot frame build and canvas redraw. Flush one live redraw when

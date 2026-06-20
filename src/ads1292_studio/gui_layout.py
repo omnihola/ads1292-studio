@@ -542,11 +542,12 @@ def build_workspace_tabs(app: Any, main: ttk.Frame) -> None:
 
 
 def _select_workspace_tab(app: Any, target: ttk.Frame) -> str:
-    if str(target) != app.selected_workspace_tab:
-        for tab in app.workspace_tabs:
-            tab.pack_forget()
-        target.pack(fill=tk.BOTH, expand=True)
-        app.selected_workspace_tab = str(target)
+    if str(target) == app.selected_workspace_tab:
+        return "break"
+    for tab in app.workspace_tabs:
+        tab.pack_forget()
+    target.pack(fill=tk.BOTH, expand=True)
+    app.selected_workspace_tab = str(target)
     _sync_workspace_tab_styles(app)
     if target is app.live_tab and hasattr(app, "_redraw_live"):
         app._redraw_live()

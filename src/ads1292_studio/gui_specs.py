@@ -150,6 +150,7 @@ INPUT_CHROME_SPEC = {
         "active_foreground": "#1F4FB2",
         "active_border": "#2F6FED",
         "disabled_foreground": "#657084",
+        "disabled_background": "#EEF3FA",
         "active_background": "#EAF1FF",
         "selected_active_background": "#1F4FB2",
         "selected_active_border": "#1F4FB2",

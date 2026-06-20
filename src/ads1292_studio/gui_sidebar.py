@@ -306,11 +306,12 @@ def build_sidebar(app: Any, parent: ttk.Frame) -> dict[str, ttk.Frame]:
 
 
 def _select_sidebar_tab(app: Any, target: ttk.Frame) -> str:
-    if str(target) != app.selected_sidebar_tab:
-        for tab in app.sidebar_tabs:
-            tab.pack_forget()
-        target.pack(fill=tk.BOTH, expand=True)
-        app.selected_sidebar_tab = str(target)
+    if str(target) == app.selected_sidebar_tab:
+        return "break"
+    for tab in app.sidebar_tabs:
+        tab.pack_forget()
+    target.pack(fill=tk.BOTH, expand=True)
+    app.selected_sidebar_tab = str(target)
     _sync_sidebar_tab_styles(app)
     return "break"
 
