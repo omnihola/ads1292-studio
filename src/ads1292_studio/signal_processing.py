@@ -157,19 +157,14 @@ def detect_r_peaks(values, sample_rate_hz: float = 500.0, *, prefiltered: bool =
     centered = filtered - np.median(filtered)
     scale = np.std(centered)
     prominence = max(20.0, scale * 0.45)
-    positive, props_pos = signal.find_peaks(
-        centered,
+    positive_excursion = float(np.max(centered))
+    negative_excursion = abs(float(np.min(centered)))
+    peak_signal = centered if positive_excursion >= negative_excursion else -centered
+    peaks, _props = signal.find_peaks(
+        peak_signal,
         distance=int(0.35 * sample_rate_hz),
         prominence=prominence,
     )
-    negative, props_neg = signal.find_peaks(
-        -centered,
-        distance=int(0.35 * sample_rate_hz),
-        prominence=prominence,
-    )
-    pos_power = float(np.sum(props_pos.get("prominences", np.array([]))))
-    neg_power = float(np.sum(props_neg.get("prominences", np.array([]))))
-    peaks = positive if pos_power >= neg_power else negative
     return tuple(int(peak) for peak in peaks)
 
 

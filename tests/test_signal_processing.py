@@ -58,6 +58,31 @@ def test_r_peak_detection_accepts_prefiltered_live_ecg() -> None:
     assert filtered_peaks == raw_peaks
 
 
+@pytest.mark.parametrize("polarity", [1.0, -1.0])
+def test_r_peak_detection_uses_single_find_peaks_pass_for_dominant_polarity(
+    monkeypatch: pytest.MonkeyPatch,
+    polarity: float,
+) -> None:
+    import ads1292_studio.signal_processing as signal_processing
+
+    _, ch2 = synthetic_two_channel_recording()
+    calls = {"find_peaks": 0}
+    original_find_peaks = signal_processing.signal.find_peaks
+
+    def counted_find_peaks(*args, **kwargs):
+        calls["find_peaks"] += 1
+        return original_find_peaks(*args, **kwargs)
+
+    monkeypatch.setattr(signal_processing.signal, "find_peaks", counted_find_peaks)
+
+    peaks = signal_processing.detect_r_peaks(polarity * ch2, sample_rate_hz=500.0)
+    summary = heart_rate_summary(peaks, sample_rate_hz=500.0)
+
+    assert calls["find_peaks"] == 1
+    assert len(peaks) >= 10
+    assert 95 <= summary.median_bpm <= 110
+
+
 def test_r_peak_detection_skips_bandpass_until_one_second_is_available(monkeypatch) -> None:
     import ads1292_studio.signal_processing as signal_processing
 

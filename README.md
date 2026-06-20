@@ -163,6 +163,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   ticks do not touch Matplotlib unnecessarily or flash blank axes.
 - Do not run R-peak bandpass/detection work until at least one second of
   samples is available; earlier windows cannot produce valid HR anyway.
+- Keep live R-peak detection to one `find_peaks` pass by selecting the dominant
+  ECG polarity before peak search; this preserves inverted-lead support without
+  doubling GUI-tick peak detection work.
 - Keep expensive live quality recomputation in the existing single-flight
   background worker so GUI ticks do not accumulate queued analysis jobs; wait
   for at least one second of samples before starting live quality snapshots.
