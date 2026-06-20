@@ -253,7 +253,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   use a dedicated muted style and swallow click/keyboard activation so
   state-gating is visually clear and not only decorative. Keep the disabled
   foreground and background tokens together in `input_chrome_spec()` because
-  the Tk style setup uses both during startup.
+  the Tk style setup uses both during startup. Toggle chip style synchronization
+  should also skip redundant Tk `configure` calls because acquisition control
+  state refreshes invoke those sync hooks repeatedly.
 - Keep the toolbar display summary chip bounded with a fixed character width
   and wrap length so longer mode/filter text cannot stretch the top toolbars or
   push acquisition controls out of view. The chip should read like an operator

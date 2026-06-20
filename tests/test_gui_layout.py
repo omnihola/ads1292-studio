@@ -66,8 +66,8 @@ from ads1292_studio.plot_theme import new_export_figure, style_export_axes
 
 
 class _FakeLabel:
-    def __init__(self, *, style: str) -> None:
-        self.values = {"style": style}
+    def __init__(self, *, style: str, cursor: str = "") -> None:
+        self.values = {"style": style, "cursor": cursor}
         self.configure_calls = 0
 
     def cget(self, key: str) -> str:
@@ -460,6 +460,20 @@ def test_record_save_control_participates_in_control_state_gating() -> None:
     assert "label.cget(\"state\") == tk.DISABLED" in helper_source
     assert "styles[\"disabled_toggle_chip\"]" in helper_source
     assert "label._ads1292_sync_toggle_style = sync_style" in helper_source
+
+
+def test_toolbar_toggle_chip_chrome_sync_skips_redundant_tk_writes() -> None:
+    from ads1292_studio.gui_layout import _sync_toolbar_chip_chrome
+
+    label = _FakeLabel(style="ToolbarToggleChip.TLabel", cursor="hand2")
+
+    assert _sync_toolbar_chip_chrome(label, "ToolbarToggleChip.TLabel", "hand2") is False
+    assert label.configure_calls == 0
+
+    assert _sync_toolbar_chip_chrome(label, "Disabled.ToolbarToggleChip.TLabel", "arrow") is True
+    assert label.values["style"] == "Disabled.ToolbarToggleChip.TLabel"
+    assert label.values["cursor"] == "arrow"
+    assert label.configure_calls == 2
 
 
 def test_port_combobox_participates_in_control_state_gating() -> None:

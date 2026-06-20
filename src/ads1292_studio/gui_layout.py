@@ -257,6 +257,12 @@ def _build_toolbar_button(
     )
 
 
+def _sync_toolbar_chip_chrome(label: object, style: str, cursor: str) -> bool:
+    style_changed = configure_widget_option_if_changed(label, "style", style)
+    cursor_changed = configure_widget_option_if_changed(label, "cursor", cursor)
+    return style_changed or cursor_changed
+
+
 def _build_toolbar_toggle_chip(
     toolbar: ttk.Frame,
     *,
@@ -283,8 +289,11 @@ def _build_toolbar_toggle_chip(
         return styles["hover_toggle_chip"] if state["hovered"] else styles["toggle_chip"]
 
     def sync_style(*_args: object) -> None:
-        label.configure(style=current_style())
-        label.configure(cursor="arrow" if label.cget("state") == tk.DISABLED else "hand2")
+        _sync_toolbar_chip_chrome(
+            label,
+            current_style(),
+            "arrow" if label.cget("state") == tk.DISABLED else "hand2",
+        )
 
     def toggle(_event: tk.Event | None = None) -> str:
         if label.cget("state") == tk.DISABLED:
