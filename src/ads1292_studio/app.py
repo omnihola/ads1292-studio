@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 import queue
 import threading
+import time
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -78,6 +79,7 @@ from ads1292_studio.gui_state import (
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
     should_apply_control_state,
+    should_redraw_live,
     stable_port_text,
     toolbar_display_hint_text,
 )
@@ -265,6 +267,7 @@ class App(tk.Tk):
         self.is_starting = False
         self.is_closing = False
         self.tick_after_id: str | None = None
+        self.last_live_redraw_monotonic = 0.0
 
         self.sample_index = 0
         self.ch1: deque[float] = deque(maxlen=MAX_POINTS)
@@ -983,7 +986,12 @@ class App(tk.Tk):
         )
         if latest is not None:
             if self._live_tab_visible():
-                self._redraw_live()
+                # Drain samples every tick, but throttle the expensive live-plot
+                # rebuild during catch-up bursts so it never runs on every 1 ms tick.
+                now = time.monotonic()
+                if not sample_backlog or should_redraw_live(now, self.last_live_redraw_monotonic):
+                    self.last_live_redraw_monotonic = now
+                    self._redraw_live()
             else:
                 self._schedule_live_quality_update(
                     source=ADS1292R_ECG_SOURCE,

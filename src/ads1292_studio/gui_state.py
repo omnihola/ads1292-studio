@@ -19,6 +19,12 @@ CATCH_UP_TICK_INTERVAL_MS = 1
 ACTIVE_TICK_INTERVAL_MS = 40
 IDLE_TICK_INTERVAL_MS = 150
 
+# A catch-up burst drops the tick interval to CATCH_UP_TICK_INTERVAL_MS (1 ms) to drain the
+# sample queue fast. Rebuilding the live plot (full-window filtering + peak detection) on
+# every such tick is what stutters the UI, so cap the rebuild rate at the normal active
+# frame rate. Sample draining stays per-tick; only the redraw is throttled.
+LIVE_REDRAW_MIN_INTERVAL_MS = ACTIVE_TICK_INTERVAL_MS
+
 
 @dataclass(frozen=True)
 class GuiStatusCard:
@@ -101,6 +107,20 @@ def gui_tick_interval_ms(state: GuiState, *, sample_backlog: bool = False) -> in
     if sample_backlog and state.streaming:
         return CATCH_UP_TICK_INTERVAL_MS
     return ACTIVE_TICK_INTERVAL_MS if state.streaming or state.busy else IDLE_TICK_INTERVAL_MS
+
+
+def should_redraw_live(
+    now_monotonic: float,
+    last_redraw_monotonic: float,
+    *,
+    min_interval_ms: int = LIVE_REDRAW_MIN_INTERVAL_MS,
+) -> bool:
+    """Whether enough time has elapsed to rebuild the live plot again.
+
+    Throttles live-plot rebuilds during catch-up bursts so the expensive
+    full-window filtering / peak detection does not run on every 1 ms tick.
+    """
+    return (now_monotonic - last_redraw_monotonic) * 1000.0 >= float(min_interval_ms)
 
 
 def gui_control_states(
