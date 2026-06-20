@@ -368,9 +368,9 @@ STATUS_AXIS_SPEC = {
 }
 EMPTY_PLOT_MESSAGES = {
     "live": (
-        "1 Select ADS1292 port",
-        "2 Connect ECG recorder",
-        "3 Press Start to stream",
+        "CH2 ECG Lead I appears after Start",
+        "CH1 respiration appears after Start",
+        "Lead-off/contact status appears after Start",
     ),
     "review": (
         "Load CSV for CH2 ECG review",

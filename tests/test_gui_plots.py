@@ -169,7 +169,7 @@ def test_empty_plot_state_allows_new_artists_when_panel_key_changes() -> None:
     show_empty_plot_state(artists, "live", (ax,))
 
     assert len(artists) == 4
-    assert ax.texts[-1].get_text() == "1 Select ADS1292 port"
+    assert ax.texts[-1].get_text() == "CH2 ECG Lead I appears after Start"
 
 
 def test_restore_data_axis_chrome_reenables_axis_and_lines() -> None:

@@ -1227,9 +1227,9 @@ def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
     messages = empty_plot_messages()
 
     assert messages["live"] == (
-        "1 Select ADS1292 port",
-        "2 Connect ECG recorder",
-        "3 Press Start to stream",
+        "CH2 ECG Lead I appears after Start",
+        "CH1 respiration appears after Start",
+        "Lead-off/contact status appears after Start",
     )
     assert messages["review"] == (
         "Load CSV for CH2 ECG review",
