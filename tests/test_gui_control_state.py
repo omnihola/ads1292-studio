@@ -599,6 +599,7 @@ def test_gui_tick_interval_slows_only_when_idle() -> None:
     assert gui_tick_interval_ms(connecting) == ACTIVE_TICK_INTERVAL_MS
     assert gui_tick_interval_ms(loading) == ACTIVE_TICK_INTERVAL_MS
     assert gui_tick_interval_ms(starting) == ACTIVE_TICK_INTERVAL_MS
+    assert ACTIVE_TICK_INTERVAL_MS <= 40
 
 
 def test_gui_control_states_disable_everything_while_connecting() -> None:
