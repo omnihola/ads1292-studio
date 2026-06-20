@@ -754,6 +754,7 @@ class App(tk.Tk):
             has_data=bool(self.loaded_samples or (self.ch1 and self.ch2)),
             has_recording_path=self.recording_path is not None,
             has_port=bool(port_text.strip()),
+            selected_port=port_text,
             loading_csv=self.is_loading_csv,
             connecting=self.is_connecting,
             starting=self.is_starting,

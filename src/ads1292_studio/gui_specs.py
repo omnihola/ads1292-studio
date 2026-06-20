@@ -248,7 +248,7 @@ BASE_CHECKBUTTON_STYLE = {
     "foreground": "#172033",
 }
 MAIN_TABS = ("Live ECG", "Review CSV", "PQRST Beat", "Event Log")
-STATUS_CARD_LABELS = ("Connection", "Acquisition", "Data", "Package")
+STATUS_CARD_LABELS = ("Connection", "Port", "Acquisition", "Data", "Package")
 SIGNAL_CARD_LABELS = ("Signal", "Contact", "Heart rate", "Artifacts")
 ADS1292R_ECG_SOURCE = "CH2"
 ADS1292R_CHANNEL_LABELS = {

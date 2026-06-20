@@ -115,9 +115,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   multiple places.
 - Status tab includes a Next Step hint that translates connection, streaming,
   loaded-data, and packaging state into the next valid operator action.
-- Status tab includes a compact Overview with Connection, Acquisition, Data,
-  and Package readiness so the operator can scan the current state without
-  interpreting disabled buttons.
+- Status tab includes a compact Overview with Connection, selected Port,
+  Acquisition, Data, and Package readiness so the operator can scan the current
+  state without interpreting disabled buttons.
 - Status Overview is rendered as scan-friendly status rows with deterministic
   ready, running, warning, and neutral styles instead of only a multiline text
   block.

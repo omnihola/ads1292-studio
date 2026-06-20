@@ -1174,6 +1174,7 @@ def test_gui_status_overview_summarizes_empty_disconnected_state() -> None:
 
     assert overview == (
         "Connection: disconnected\n"
+        "Port: none\n"
         "Acquisition: idle\n"
         "Data: none loaded\n"
         "Package: unavailable"
@@ -1193,6 +1194,7 @@ def test_gui_status_overview_summarizes_missing_port_state() -> None:
 
     assert overview == (
         "Connection: no port\n"
+        "Port: none\n"
         "Acquisition: idle\n"
         "Data: none loaded\n"
         "Package: unavailable"
@@ -1201,14 +1203,18 @@ def test_gui_status_overview_summarizes_missing_port_state() -> None:
 
 def test_gui_status_overview_summarizes_connected_idle_state() -> None:
     overview = gui_status_overview(
-        connected=True,
-        streaming=False,
-        has_data=False,
-        has_recording_path=False,
+        state=GuiState(
+            connected=True,
+            streaming=False,
+            has_data=False,
+            has_recording_path=False,
+            selected_port="/dev/cu.usbmodem214301",
+        ),
     )
 
     assert overview == (
         "Connection: connected\n"
+        "Port: usbmodem214301\n"
         "Acquisition: ready to start\n"
         "Data: none loaded\n"
         "Package: unavailable"
@@ -1225,6 +1231,7 @@ def test_gui_status_overview_summarizes_streaming_with_saved_data() -> None:
 
     assert overview == (
         "Connection: connected\n"
+        "Port: none\n"
         "Acquisition: streaming\n"
         "Data: live or loaded\n"
         "Package: ready"
@@ -1241,6 +1248,7 @@ def test_gui_status_overview_summarizes_loaded_unsaved_data() -> None:
 
     assert overview == (
         "Connection: disconnected\n"
+        "Port: none\n"
         "Acquisition: idle\n"
         "Data: live or loaded\n"
         "Package: needs saved CSV"
@@ -1249,14 +1257,18 @@ def test_gui_status_overview_summarizes_loaded_unsaved_data() -> None:
 
 def test_gui_status_cards_expose_scan_friendly_disconnected_state() -> None:
     cards = gui_status_cards(
-        connected=False,
-        streaming=False,
-        has_data=False,
-        has_recording_path=False,
+        state=GuiState(
+            connected=False,
+            streaming=False,
+            has_data=False,
+            has_recording_path=False,
+            selected_port="/dev/cu.usbmodem214301",
+        ),
     )
 
     assert [(card.label, card.value, card.tone) for card in cards] == [
         ("Connection", "disconnected", "warning"),
+        ("Port", "usbmodem214301", "neutral"),
         ("Acquisition", "idle", "neutral"),
         ("Data", "none loaded", "neutral"),
         ("Package", "unavailable", "neutral"),
@@ -1287,6 +1299,7 @@ def test_gui_status_cards_expose_scan_friendly_streaming_state() -> None:
 
     assert [(card.label, card.value, card.tone) for card in cards] == [
         ("Connection", "connected", "ready"),
+        ("Port", "none", "warning"),
         ("Acquisition", "streaming", "running"),
         ("Data", "live or loaded", "ready"),
         ("Package", "ready", "ready"),
@@ -1301,11 +1314,10 @@ def test_gui_status_cards_mark_unsaved_loaded_data_as_package_warning() -> None:
         has_recording_path=False,
     )
 
-    assert cards[2].label == "Data"
-    assert cards[2].tone == "ready"
-    assert cards[3].label == "Package"
-    assert cards[3].value == "needs saved CSV"
-    assert cards[3].tone == "warning"
+    by_label = {card.label: card for card in cards}
+    assert by_label["Data"].tone == "ready"
+    assert by_label["Package"].value == "needs saved CSV"
+    assert by_label["Package"].tone == "warning"
 
 
 def test_status_tone_style_maps_known_and_unknown_tones() -> None:
@@ -1373,12 +1385,14 @@ def test_gui_state_snapshot_drives_all_status_helpers() -> None:
     assert gui_workflow_hint(state=state) == "Streaming: monitor signal quality, add events if needed, then press Stop."
     assert gui_status_overview(state=state) == (
         "Connection: connected\n"
+        "Port: none\n"
         "Acquisition: streaming\n"
         "Data: live or loaded\n"
         "Package: ready"
     )
     assert [(card.label, card.value, card.tone) for card in gui_status_cards(state=state)] == [
         ("Connection", "connected", "ready"),
+        ("Port", "none", "warning"),
         ("Acquisition", "streaming", "running"),
         ("Data", "live or loaded", "ready"),
         ("Package", "ready", "ready"),

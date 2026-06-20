@@ -34,6 +34,7 @@ class GuiState:
     has_data: bool
     has_recording_path: bool
     has_port: bool = True
+    selected_port: str = ""
     loading_csv: bool = False
     connecting: bool = False
     starting: bool = False
@@ -63,6 +64,7 @@ def _gui_state(
     has_data: bool = False,
     has_recording_path: bool = False,
     has_port: bool = True,
+    selected_port: str = "",
     loading_csv: bool = False,
     connecting: bool = False,
     starting: bool = False,
@@ -75,6 +77,7 @@ def _gui_state(
         has_data=has_data,
         has_recording_path=has_recording_path,
         has_port=has_port,
+        selected_port=selected_port,
         loading_csv=loading_csv,
         connecting=connecting,
         starting=starting,
@@ -158,6 +161,17 @@ def port_entry_connection_message(
 
 def selected_port_is_connected(connected_port: str | None, port_text: str) -> bool:
     return connected_port is not None and port_text.strip() == connected_port
+
+
+def short_port_label(port_text: str) -> str:
+    port = port_text.strip()
+    if not port:
+        return "none"
+    name = Path(port).name
+    for prefix in ("cu.", "tty."):
+        if name.startswith(prefix):
+            return name[len(prefix):]
+    return name
 
 
 def effective_port_text(
@@ -427,6 +441,7 @@ def gui_status_cards(
     streaming: bool = False,
     has_data: bool = False,
     has_recording_path: bool = False,
+    selected_port: str = "",
 ) -> tuple[GuiStatusCard, ...]:
     current = _gui_state(
         state=state,
@@ -434,12 +449,18 @@ def gui_status_cards(
         streaming=streaming,
         has_data=has_data,
         has_recording_path=has_recording_path,
+        selected_port=selected_port,
     )
     connection_value = "connected" if current.connected else ("disconnected" if current.has_port else "no port")
     connection = GuiStatusCard(
         label="Connection",
         value=connection_value,
         tone="ready" if current.connected else "warning",
+    )
+    port = GuiStatusCard(
+        label="Port",
+        value=short_port_label(current.selected_port),
+        tone="neutral" if current.selected_port.strip() else "warning",
     )
     if current.connecting:
         acquisition_value = "connecting"
@@ -475,6 +496,7 @@ def gui_status_cards(
         package_tone = "neutral"
     return (
         connection,
+        port,
         GuiStatusCard("Acquisition", acquisition_value, acquisition_tone),
         data,
         GuiStatusCard("Package", package_value, package_tone),
