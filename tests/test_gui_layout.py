@@ -1005,6 +1005,10 @@ def test_live_and_review_runtime_grid_and_calibration_are_plot_helpers() -> None
     review_source = inspect.getsource(App._show_review_frame)
 
     assert "apply_live_render_frame(" in inspect.getsource(App._redraw_live)
+    assert "set_axis_xlim_if_changed(self.ax_review_ecg" in review_source
+    assert "set_axis_xlim_if_changed(self.ax_review_resp" in review_source
+    assert "set_axis_xlim_if_changed(self.ax_review_status" in review_source
+    assert ".set_xlim(0, frame.x_right)" not in review_source
     assert "apply_ecg_paper_grid(app.ax_live_ecg" in live_source
     assert "apply_ecg_paper_grid(self.ax_review_ecg" in review_source
     assert "draw_calibration_pulse(" in live_source + review_source

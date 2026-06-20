@@ -277,6 +277,15 @@ def set_axis_ylim_if_changed(ax: object, limits: tuple[float, float]) -> bool:
     return True
 
 
+def set_axis_xlim_if_changed(ax: object, limits: tuple[float, float]) -> bool:
+    target = (float(limits[0]), float(limits[1]))
+    current = tuple(float(value) for value in ax.get_xlim())
+    if not axis_limits_changed(current, target):
+        return False
+    ax.set_xlim(*target)
+    return True
+
+
 def toolbar_display_hint_text(settings: EcgDisplaySettings, filters: SoftwareFilterSettings) -> str:
     return f"CH2 Lead I | CH1 Resp | Contact | {display_mode_label(settings, filters)}"
 

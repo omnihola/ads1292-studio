@@ -10,7 +10,7 @@ from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 
 from ads1292_studio.display import EcgDisplaySettings, ecg_paper_grid_key, ecg_paper_grid_spec
-from ads1292_studio.gui_state import display_scale_reference_label, set_axis_ylim_if_changed
+from ads1292_studio.gui_state import display_scale_reference_label, set_axis_xlim_if_changed, set_axis_ylim_if_changed
 from ads1292_studio.gui_specs import (
     empty_plot_messages,
     empty_plot_style,
@@ -129,7 +129,7 @@ def apply_live_render_frame(
     app.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
     app.live_status_line.set_data(frame.plot_status_x, frame.plot_status)
     for ax in (app.ax_live_ecg, app.ax_live_resp, app.ax_live_status):
-        ax.set_xlim(frame.left, frame.right)
+        set_axis_xlim_if_changed(ax, (frame.left, frame.right))
     if autoscale:
         ecg_ylim = robust_ylim(frame.visible_ecg_plot, min_span=min_ecg_span_counts * display_settings.gain)
         resp_ylim = robust_ylim(frame.visible_resp_plot, min_span=min_resp_span_counts)

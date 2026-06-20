@@ -37,6 +37,7 @@ from ads1292_studio.app import (
     live_quality_worker_available,
     live_metrics_text,
     live_render_refresh_key,
+    set_axis_xlim_if_changed,
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
     should_apply_control_state,
@@ -77,9 +78,18 @@ class _FakeWidget:
 
 
 class _FakeAxis:
-    def __init__(self, ylim: tuple[float, float]) -> None:
+    def __init__(self, ylim: tuple[float, float], xlim: tuple[float, float] = (0.0, 1.0)) -> None:
         self.ylim = ylim
+        self.xlim = xlim
         self.set_ylim_calls = 0
+        self.set_xlim_calls = 0
+
+    def get_xlim(self) -> tuple[float, float]:
+        return self.xlim
+
+    def set_xlim(self, lo: float, hi: float) -> None:
+        self.xlim = (lo, hi)
+        self.set_xlim_calls += 1
 
     def get_ylim(self) -> tuple[float, float]:
         return self.ylim
@@ -396,6 +406,17 @@ def test_set_axis_ylim_if_changed_skips_redundant_matplotlib_writes() -> None:
     assert axis.set_ylim_calls == 1
 
 
+def test_set_axis_xlim_if_changed_skips_redundant_matplotlib_writes() -> None:
+    axis = _FakeAxis((-1.0, 1.0), xlim=(0.0, 8.0))
+
+    assert set_axis_xlim_if_changed(axis, (0.0, 8.0)) is False
+    assert axis.set_xlim_calls == 0
+
+    assert set_axis_xlim_if_changed(axis, (1.0, 9.0)) is True
+    assert axis.xlim == (1.0, 9.0)
+    assert axis.set_xlim_calls == 1
+
+
 def test_toolbar_display_hint_text_summarizes_channel_and_display_mode() -> None:
     hint = toolbar_display_hint_text(
         EcgDisplaySettings(time_window_seconds=12.0, gain=2.0, sweep_speed_mm_s=50),
@@ -507,9 +528,11 @@ def test_live_redraw_skips_unchanged_y_axis_limit_writes() -> None:
     apply_source = inspect.getsource(apply_live_render_frame)
 
     assert "apply_live_render_frame(" in redraw_source
+    assert "set_axis_xlim_if_changed(ax, (frame.left, frame.right))" in apply_source
     assert "set_axis_ylim_if_changed(app.ax_live_ecg" in apply_source
     assert "set_axis_ylim_if_changed(app.ax_live_resp" in apply_source
     assert "set_axis_ylim_if_changed(app.ax_live_status" in apply_source
+    assert "ax.set_xlim(frame.left, frame.right)" not in apply_source
     assert "self.ax_live_ecg.set_ylim(" not in redraw_source
     assert "self.ax_live_resp.set_ylim(" not in redraw_source
     assert "self.ax_live_status.set_ylim(" not in redraw_source

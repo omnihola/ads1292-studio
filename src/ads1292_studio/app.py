@@ -63,6 +63,7 @@ from ads1292_studio.gui_state import (
     live_ecg_axis_title,
     live_metrics_text,
     live_render_refresh_key,
+    set_axis_xlim_if_changed,
     set_axis_ylim_if_changed,
     set_string_var_if_changed,
     should_apply_control_state,
@@ -1275,11 +1276,11 @@ class App(tk.Tk):
         )
         set_signal_axis_title(self.ax_review_resp, resp_label)
         set_signal_axis_title(self.ax_review_status, contact_label)
-        self.ax_review_ecg.set_xlim(0, frame.x_right)
+        set_axis_xlim_if_changed(self.ax_review_ecg, (0, frame.x_right))
         self.ax_review_ecg.set_ylim(*frame.ecg_ylim)
-        self.ax_review_resp.set_xlim(0, frame.x_right)
+        set_axis_xlim_if_changed(self.ax_review_resp, (0, frame.x_right))
         self.ax_review_resp.set_ylim(*frame.resp_ylim)
-        self.ax_review_status.set_xlim(0, frame.x_right)
+        set_axis_xlim_if_changed(self.ax_review_status, (0, frame.x_right))
         self.ax_review_status.set_ylim(*frame.status_ylim)
         self.ax_review_status.set_xlabel("Time (s)")
         apply_ecg_paper_grid(self.ax_review_ecg, display_settings, self.ecg_paper_grid_cache)
