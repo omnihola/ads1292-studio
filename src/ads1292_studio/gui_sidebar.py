@@ -80,7 +80,14 @@ def build_toolbar_hint_chip(app: Any, parent: ttk.Frame, variable: tk.StringVar)
         style=styles["frame"],
     )
     app.toolbar_hint_chip.pack(side=tk.LEFT)
-    app.toolbar_hint_label = ttk.Label(app.toolbar_hint_chip, textvariable=variable, style=styles["label"])
+    app.toolbar_hint_label = ttk.Label(
+        app.toolbar_hint_chip,
+        textvariable=variable,
+        width=int(styles["width"]),
+        wraplength=int(styles["wraplength"]),
+        justify=tk.LEFT,
+        style=styles["label"],
+    )
     app.toolbar_hint_label.pack(side=tk.LEFT)
 
 

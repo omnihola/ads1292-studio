@@ -250,6 +250,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   including acquisition toggles such as Save CSV; disabled toggle chips must
   use a dedicated muted style and swallow click/keyboard activation so
   state-gating is visually clear and not only decorative.
+- Keep the toolbar display summary chip bounded with a fixed character width
+  and wrap length so longer mode/filter text cannot stretch the top toolbars or
+  push acquisition controls out of view.
 - Keep Connect available whenever the GUI is idle and not already connected,
   even if automatic port detection currently reports `no port`; clicking it with
   no selected port shows the existing validation error, while a manually typed
