@@ -95,8 +95,11 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "background": "#FFFFFF",
             "active_foreground": "#1F4FB2",
             "active_background": "#EEF3FA",
+            "pressed_foreground": "#FFFFFF",
+            "pressed_background": "#2F6FED",
             "border": "#D9E1EC",
             "active_border": "#2F6FED",
+            "pressed_border": "#1F4FB2",
             "focus_border": "#2F6FED",
             "disabled_foreground": "#A9B4C3",
             "disabled_background": "#EEF3FA",
@@ -110,8 +113,11 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "background": "#2F6FED",
             "active_foreground": "#FFFFFF",
             "active_background": "#1F4FB2",
+            "pressed_foreground": "#FFFFFF",
+            "pressed_background": "#173F99",
             "border": "#2F6FED",
             "active_border": "#1F4FB2",
+            "pressed_border": "#173F99",
             "focus_border": "#173F99",
             "disabled_foreground": "#A9B4C3",
             "disabled_background": "#EEF3FA",
@@ -125,8 +131,11 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "background": "#FFFFFF",
             "active_foreground": "#FFFFFF",
             "active_background": "#B3261E",
+            "pressed_foreground": "#FFFFFF",
+            "pressed_background": "#8C1D18",
             "border": "#F3C8C4",
             "active_border": "#B3261E",
+            "pressed_border": "#8C1D18",
             "focus_border": "#B3261E",
             "disabled_foreground": "#A9B4C3",
             "disabled_background": "#EEF3FA",
@@ -140,8 +149,11 @@ def test_button_chrome_spec_makes_actions_visually_distinct() -> None:
             "background": "#FFFFFF",
             "active_foreground": "#1F4FB2",
             "active_background": "#EEF3FA",
+            "pressed_foreground": "#FFFFFF",
+            "pressed_background": "#2F6FED",
             "border": "#D9E1EC",
             "active_border": "#2F6FED",
+            "pressed_border": "#1F4FB2",
             "focus_border": "#2F6FED",
             "disabled_foreground": "#A9B4C3",
             "disabled_background": "#EEF3FA",
@@ -193,8 +205,14 @@ def test_button_chrome_maps_keyboard_focus_border() -> None:
     source = inspect.getsource(_configure_button_style)
 
     assert "bordercolor=chrome[\"border\"]" in source
+    assert "(\"pressed\", chrome[\"pressed_foreground\"])" in source
+    assert "(\"pressed\", chrome[\"pressed_background\"])" in source
+    assert "(\"pressed\", chrome[\"pressed_border\"])" in source
     assert "(\"focus\", chrome[\"focus_border\"])" in source
     assert "(\"active\", chrome[\"active_border\"])" in source
+    assert source.index("(\"pressed\", chrome[\"pressed_background\"])") < source.index(
+        "(\"active\", chrome[\"active_background\"])"
+    )
     assert "lightcolor" in source
     assert "darkcolor" in source
 

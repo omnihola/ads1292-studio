@@ -286,7 +286,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   width, and style stay consistent, with disabled buttons using the normal
   arrow cursor instead of a hand cursor. Disabled action buttons should use a
   light recessed surface and muted text so unavailable actions recede instead
-  of becoming a row of heavy gray blocks.
+  of becoming a row of heavy gray blocks. Buttons should also define pressed
+  foreground/background/border tokens, mapped before hover/active states, so
+  clicks feel tactile instead of only changing cursor state.
 - Keep empty signal panels visually quiet with the dedicated empty-state axis
   surface, muted callouts, and a static reference guide line, then remove those
   empty-state artists and restore normal data-axis chrome as soon as samples
