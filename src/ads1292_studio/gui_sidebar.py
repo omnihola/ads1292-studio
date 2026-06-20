@@ -5,7 +5,7 @@ from tkinter import ttk
 from typing import Any
 
 from ads1292_studio.gui_scroll import ScrollableFrame
-from ads1292_studio.gui_state import channel_map_cards
+from ads1292_studio.gui_state import channel_map_cards, configure_widget_option_if_changed
 from ads1292_studio.gui_specs import (
     SIGNAL_CARD_LABELS,
     SIDEBAR_TABS,
@@ -329,7 +329,7 @@ def _sync_sidebar_tab_styles(app: Any) -> None:
             style = tab_strip_style["selected_hover_tab"] if is_hovered else tab_strip_style["selected_tab"]
         else:
             style = tab_strip_style["hover_tab"] if is_hovered else tab_strip_style["tab"]
-        label.configure(style=str(style))
+        configure_widget_option_if_changed(label, "style", str(style))
 
 
 def metadata_entry(app: Any, parent: ttk.Frame, label: str, variable: tk.StringVar) -> None:

@@ -1,4 +1,5 @@
 import inspect
+from types import SimpleNamespace
 
 from ads1292_studio.app import (
     action_section_styles,
@@ -62,6 +63,19 @@ from ads1292_studio.app import (
     workspace_tab_strip_styles,
 )
 from ads1292_studio.plot_theme import new_export_figure, style_export_axes
+
+
+class _FakeLabel:
+    def __init__(self, *, style: str) -> None:
+        self.values = {"style": style}
+        self.configure_calls = 0
+
+    def cget(self, key: str) -> str:
+        return self.values[key]
+
+    def configure(self, **values: str) -> None:
+        self.values = {**self.values, **values}
+        self.configure_calls += 1
 
 
 def test_gui_layout_keeps_primary_toolbar_focused_on_acquisition() -> None:
@@ -560,6 +574,25 @@ def test_sidebar_tab_selection_uses_stacked_frames() -> None:
     assert "app.sidebar_notebook" not in select_source + sync_source
 
 
+def test_sidebar_tab_style_sync_skips_redundant_tk_writes() -> None:
+    from ads1292_studio.gui_sidebar import _sync_sidebar_tab_styles
+
+    styles = sidebar_tab_strip_styles()
+    current = _FakeLabel(style=str(styles["selected_tab"]))
+    stale = _FakeLabel(style=str(styles["tab"]))
+    app = SimpleNamespace(
+        sidebar_tab_labels={"current": current, "stale": stale},
+        selected_sidebar_tab="current",
+        sidebar_tab_hovered={"current": False, "stale": True},
+    )
+
+    _sync_sidebar_tab_styles(app)
+
+    assert current.configure_calls == 0
+    assert stale.configure_calls == 1
+    assert stale.cget("style") == styles["hover_tab"]
+
+
 def test_sidebar_layout_spec_stabilizes_control_column() -> None:
     assert sidebar_layout_spec() == {
         "shell": "SidebarShell.TFrame",
@@ -722,6 +755,25 @@ def test_workspace_tab_selection_uses_stacked_frames() -> None:
     assert "selected_hover_tab" in sync_source
     assert "hover_tab" in sync_source
     assert "app.notebook" not in select_source + sync_source
+
+
+def test_workspace_tab_style_sync_skips_redundant_tk_writes() -> None:
+    from ads1292_studio.gui_layout import _sync_workspace_tab_styles
+
+    styles = workspace_tab_strip_styles()
+    current = _FakeLabel(style=str(styles["selected_tab"]))
+    stale = _FakeLabel(style=str(styles["tab"]))
+    app = SimpleNamespace(
+        workspace_tab_labels={"current": current, "stale": stale},
+        selected_workspace_tab="current",
+        workspace_tab_hovered={"current": False, "stale": True},
+    )
+
+    _sync_workspace_tab_styles(app)
+
+    assert current.configure_calls == 0
+    assert stale.configure_calls == 1
+    assert stale.cget("style") == styles["hover_tab"]
 
 
 def test_selecting_live_workspace_tab_flushes_pending_live_canvas_draw() -> None:

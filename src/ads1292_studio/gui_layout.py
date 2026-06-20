@@ -5,6 +5,7 @@ from tkinter import ttk
 from typing import Any
 
 from ads1292_studio.display import display_gain_labels, display_window_labels, sweep_speed_labels
+from ads1292_studio.gui_state import configure_widget_option_if_changed
 from ads1292_studio.gui_specs import (
     ADS1292R_ECG_SOURCE,
     SIGNAL_CARD_LABELS,
@@ -568,7 +569,7 @@ def _sync_workspace_tab_styles(app: Any) -> None:
             style = tab_strip_style["selected_hover_tab"] if is_hovered else tab_strip_style["selected_tab"]
         else:
             style = tab_strip_style["hover_tab"] if is_hovered else tab_strip_style["tab"]
-        label.configure(style=str(style))
+        configure_widget_option_if_changed(label, "style", str(style))
 
 
 def register_control_buttons(app: Any) -> None:
