@@ -10,11 +10,13 @@ from ads1292_studio.gui_plots import (
     calibration_pulse_needs_update,
     draw_calibration_pulse,
     draw_pqrst_review,
+    live_contact_trace_color,
     restore_data_axis_chrome,
     show_empty_plot_state,
 )
 from ads1292_studio.live_render import LiveRenderFrame
 from ads1292_studio.models import HeartRateSummary, PqrstReview
+from ads1292_studio.plot_theme import APP_VISUAL_TOKENS, PLOT_TRACE_COLORS
 
 
 class FakeCanvas:
@@ -192,9 +194,16 @@ def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
     assert peak_line.get_ydata().tolist() == [2.0]
     assert resp_line.get_ydata().tolist() == [10.0, 11.0, 12.0]
     assert status_line.get_ydata().tolist() == [0.0, 2.0, 2.0]
+    assert status_line.get_color() == APP_VISUAL_TOKENS["warning"]
     assert ax_ecg.get_xlim() == (1.0, 9.0)
     assert ax_status.get_ylim() == (-0.5, 2.5)
     assert canvas.draw_idle_calls == 1
+
+
+def test_live_contact_trace_color_flags_visible_lead_off() -> None:
+    assert live_contact_trace_color(np.array([], dtype=float)) == PLOT_TRACE_COLORS["contact"]
+    assert live_contact_trace_color(np.array([0.0, 0.0])) == PLOT_TRACE_COLORS["contact"]
+    assert live_contact_trace_color(np.array([0.0, 2.0])) == APP_VISUAL_TOKENS["warning"]
 
 
 def test_apply_review_render_frame_updates_review_lines_axes_and_pqrst() -> None:

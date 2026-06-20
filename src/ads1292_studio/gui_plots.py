@@ -7,6 +7,7 @@ from typing import Any
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.ticker import MultipleLocator
+import numpy as np
 import seaborn as sns
 
 from ads1292_studio.display import (
@@ -141,6 +142,7 @@ def apply_live_render_frame(
     app.live_peak_line.set_data(frame.peaks_x, frame.peaks_y)
     app.live_resp_line.set_data(frame.plot_resp_x, frame.plot_resp)
     app.live_status_line.set_data(frame.plot_status_x, frame.plot_status)
+    app.live_status_line.set_color(live_contact_trace_color(frame.visible_status))
     for ax in (app.ax_live_ecg, app.ax_live_resp, app.ax_live_status):
         set_axis_xlim_if_changed(ax, (frame.left, frame.right))
     if autoscale:
@@ -164,6 +166,12 @@ def apply_live_render_frame(
             app.calibration_pulse_cache,
         )
     app.live_canvas.draw_idle()
+
+
+def live_contact_trace_color(status_values: np.ndarray) -> str:
+    if status_values.size and np.any(status_values != 0.0):
+        return APP_VISUAL_TOKENS["warning"]
+    return PLOT_TRACE_COLORS["contact"]
 
 
 def apply_live_axis_titles(

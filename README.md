@@ -162,6 +162,9 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   smoothing so the rolling view reads as a continuous waveform; reserve
   extrema-preserving decimation for offline review and reports where narrow
   spike preservation matters more than live visual smoothness.
+- Keep the live contact/status trace state-aware: use the neutral contact
+  color when the visible window is clean and the warning color when any
+  lead-off bit is visible.
 - Check duplicate live render keys before building render frames, and only
   clear empty-state artists after a frame is available, so idle or failed GUI
   ticks do not touch Matplotlib unnecessarily or flash blank axes.
