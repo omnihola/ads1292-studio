@@ -21,7 +21,6 @@ from ads1292_studio.gui_specs import (
     safety_notice_styles,
     scrollbar_chrome_spec,
     section_heading_styles,
-    sidebar_notebook_styles,
     sidebar_tab_strip_styles,
     status_detail_styles,
     status_label_spec,
@@ -31,7 +30,6 @@ from ads1292_studio.gui_specs import (
     toolbar_hint_styles,
     toolbar_label_spec,
     workflow_hint_styles,
-    workspace_notebook_styles,
     workspace_tab_strip_styles,
 )
 
@@ -477,45 +475,8 @@ def configure_notebook_chrome(style: ttk.Style) -> None:
         relief=base_notebook["tab_relief"],
     )
 
-    _configure_named_notebook(style, "Sidebar.TNotebook", "Sidebar.TNotebook.Tab", sidebar_notebook_styles())
-    _configure_named_notebook(style, "Workspace.TNotebook", "Workspace.TNotebook.Tab", workspace_notebook_styles())
     _configure_tab_strip(style, sidebar_tab_strip_styles())
     _configure_tab_strip(style, workspace_tab_strip_styles())
-    style.layout("Sidebar.TNotebook.Tab", [])
-    style.layout("Workspace.TNotebook.Tab", [])
-
-
-def _configure_named_notebook(
-    style: ttk.Style,
-    notebook_style: str,
-    tab_style: str,
-    chrome: dict[str, object],
-) -> None:
-    style.configure(
-        notebook_style,
-        background=chrome["background"],
-        borderwidth=chrome["borderwidth"],
-    )
-    style.configure(
-        tab_style,
-        padding=chrome["tab_padding"],
-        font=chrome["tab_font"],
-        foreground=chrome["inactive_foreground"],
-        background=chrome["tab_background"],
-        borderwidth=chrome["tab_borderwidth"],
-        relief=chrome["tab_relief"],
-    )
-    style.map(
-        tab_style,
-        foreground=[
-            ("selected", chrome["selected_foreground"]),
-            ("active", chrome["active_foreground"]),
-        ],
-        background=[
-            ("selected", chrome["active_background"]),
-            ("active", chrome["active_background"]),
-        ],
-    )
 
 
 def _configure_tab_strip(style: ttk.Style, chrome: dict[str, object]) -> None:

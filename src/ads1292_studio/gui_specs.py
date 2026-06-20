@@ -484,21 +484,6 @@ ACTION_SECTION_STYLES = {
     "background": "#EEF3FA",
     "foreground": "#293247",
 }
-SIDEBAR_NOTEBOOK_STYLES = {
-    "notebook": "Sidebar.TNotebook",
-    "tab": "Sidebar.TNotebook.Tab",
-    "background": "#F6F8FB",
-    "borderwidth": 0,
-    "tab_padding": (11, 6),
-    "tab_font": ("Aptos", 10, "bold"),
-    "tab_background": "#EEF3FA",
-    "selected_foreground": "#2F6FED",
-    "inactive_foreground": "#657084",
-    "active_foreground": "#172033",
-    "active_background": "#FFFFFF",
-    "tab_borderwidth": 0,
-    "tab_relief": "flat",
-}
 SIDEBAR_TAB_STRIP_STYLES = {
     "frame": "SidebarTabStrip.TFrame",
     "tab": "SidebarTab.TLabel",
@@ -512,21 +497,6 @@ SIDEBAR_TAB_STRIP_STYLES = {
     "padding": (0, 0, 0, 5),
     "tab_padding": (7, 6),
     "tab_gap": (0, 2),
-}
-WORKSPACE_NOTEBOOK_STYLES = {
-    "notebook": "Workspace.TNotebook",
-    "tab": "Workspace.TNotebook.Tab",
-    "background": "#F6F8FB",
-    "borderwidth": 0,
-    "tab_padding": (18, 7),
-    "tab_font": ("Aptos", 12, "bold"),
-    "tab_background": "#F6F8FB",
-    "selected_foreground": "#2F6FED",
-    "inactive_foreground": "#657084",
-    "active_foreground": "#172033",
-    "active_background": "#FFFFFF",
-    "tab_borderwidth": 0,
-    "tab_relief": "flat",
 }
 WORKSPACE_TAB_STRIP_STYLES = {
     "frame": "WorkspaceTabStrip.TFrame",
@@ -764,20 +734,12 @@ def action_section_styles() -> dict[str, str]:
     return dict(ACTION_SECTION_STYLES)
 
 
-def sidebar_notebook_styles() -> dict[str, object]:
-    return dict(SIDEBAR_NOTEBOOK_STYLES)
-
-
 def sidebar_tab_strip_styles() -> dict[str, object]:
     return dict(SIDEBAR_TAB_STRIP_STYLES)
 
 
 def sidebar_layout_spec() -> dict[str, object]:
     return dict(SIDEBAR_LAYOUT_SPEC)
-
-
-def workspace_notebook_styles() -> dict[str, object]:
-    return dict(WORKSPACE_NOTEBOOK_STYLES)
 
 
 def workspace_tab_strip_styles() -> dict[str, object]:

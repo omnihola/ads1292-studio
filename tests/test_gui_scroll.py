@@ -27,6 +27,8 @@ def test_app_imports_scrollable_frame_instead_of_defining_it_inline() -> None:
     assert "class ScrollableFrame" not in source
     assert "ScrollableFrame(tab" in sidebar_source
     assert "app.sidebar_scrolls: dict[str, ScrollableFrame]" in sidebar_source
+    assert "app.sidebar_stack" in sidebar_source
+    assert "app.sidebar_notebook" not in sidebar_source
 
 
 def test_scrollable_frame_uses_single_global_mousewheel_dispatcher() -> None:

@@ -44,7 +44,6 @@ from ads1292_studio.app import (
     sidebar_action_button_style,
     sidebar_field_styles,
     sidebar_layout_spec,
-    sidebar_notebook_styles,
     sidebar_tab_labels,
     sidebar_tab_strip_styles,
     sidebar_text_card_spec,
@@ -60,7 +59,6 @@ from ads1292_studio.app import (
     toolbar_layout_spec,
     workflow_hint_styles,
     workspace_layout_spec,
-    workspace_notebook_styles,
     workspace_tab_strip_styles,
 )
 from ads1292_studio.plot_theme import new_export_figure, style_export_axes
@@ -387,24 +385,6 @@ def test_base_checkbutton_style_keeps_default_toggles_consistent() -> None:
     }
 
 
-def test_sidebar_notebook_styles_make_navigation_compact() -> None:
-    assert sidebar_notebook_styles() == {
-        "notebook": "Sidebar.TNotebook",
-        "tab": "Sidebar.TNotebook.Tab",
-        "background": "#F6F8FB",
-        "borderwidth": 0,
-        "tab_padding": (11, 6),
-        "tab_font": ("Aptos", 10, "bold"),
-        "tab_background": "#EEF3FA",
-        "selected_foreground": "#2F6FED",
-        "inactive_foreground": "#657084",
-        "active_foreground": "#172033",
-        "active_background": "#FFFFFF",
-        "tab_borderwidth": 0,
-        "tab_relief": "flat",
-    }
-
-
 def test_sidebar_tab_strip_styles_replace_native_tab_chrome() -> None:
     assert sidebar_tab_strip_styles() == {
         "frame": "SidebarTabStrip.TFrame",
@@ -429,8 +409,22 @@ def test_sidebar_uses_custom_segmented_tab_strip() -> None:
 
     assert "app.sidebar_tab_strip" in source
     assert "app.sidebar_tab_labels" in source
+    assert "app.sidebar_stack" in source
     assert "_select_sidebar_tab(app, target)" in source
-    assert "<<NotebookTabChanged>>" in source
+    assert "ttk.Notebook" not in source
+    assert "<<NotebookTabChanged>>" not in source
+
+
+def test_sidebar_tab_selection_uses_stacked_frames() -> None:
+    from ads1292_studio.gui_sidebar import _select_sidebar_tab, _sync_sidebar_tab_styles
+
+    select_source = inspect.getsource(_select_sidebar_tab)
+    sync_source = inspect.getsource(_sync_sidebar_tab_styles)
+
+    assert "tab.pack_forget()" in select_source
+    assert "target.pack(fill=tk.BOTH, expand=True)" in select_source
+    assert "app.selected_sidebar_tab = str(target)" in select_source
+    assert "app.sidebar_notebook" not in select_source + sync_source
 
 
 def test_sidebar_layout_spec_stabilizes_control_column() -> None:
@@ -529,24 +523,6 @@ def test_header_text_styles_keep_title_and_context_readable() -> None:
     }
 
 
-def test_workspace_notebook_styles_make_selected_tabs_visible() -> None:
-    assert workspace_notebook_styles() == {
-        "notebook": "Workspace.TNotebook",
-        "tab": "Workspace.TNotebook.Tab",
-        "background": "#F6F8FB",
-        "borderwidth": 0,
-        "tab_padding": (18, 7),
-        "tab_font": ("Aptos", 12, "bold"),
-        "tab_background": "#F6F8FB",
-        "selected_foreground": "#2F6FED",
-        "inactive_foreground": "#657084",
-        "active_foreground": "#172033",
-        "active_background": "#FFFFFF",
-        "tab_borderwidth": 0,
-        "tab_relief": "flat",
-    }
-
-
 def test_workspace_tab_strip_styles_replace_native_tab_chrome() -> None:
     assert workspace_tab_strip_styles() == {
         "frame": "WorkspaceTabStrip.TFrame",
@@ -589,13 +565,14 @@ def test_workspace_tab_selection_uses_stacked_frames() -> None:
     assert "app.notebook" not in select_source + sync_source
 
 
-def test_workspace_notebook_native_tabs_are_hidden() -> None:
+def test_native_sidebar_and_workspace_notebook_styles_are_not_configured() -> None:
     from ads1292_studio.gui_style import configure_notebook_chrome
 
     source = inspect.getsource(configure_notebook_chrome)
 
-    assert 'style.layout("Sidebar.TNotebook.Tab", [])' in source
-    assert 'style.layout("Workspace.TNotebook.Tab", [])' in source
+    assert "Sidebar.TNotebook" not in source
+    assert "Workspace.TNotebook" not in source
+    assert "_configure_named_notebook" not in source
 
 
 def test_sidebar_field_styles_make_forms_consistent() -> None:

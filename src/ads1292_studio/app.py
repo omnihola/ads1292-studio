@@ -162,7 +162,6 @@ from ads1292_studio.gui_specs import (
     sidebar_action_button_style,
     sidebar_field_styles,
     sidebar_layout_spec,
-    sidebar_notebook_styles,
     sidebar_tab_labels,
     sidebar_tab_strip_styles,
     sidebar_text_card_spec,
@@ -181,7 +180,6 @@ from ads1292_studio.gui_specs import (
     toolbar_layout_spec,
     workflow_hint_styles,
     workspace_layout_spec,
-    workspace_notebook_styles,
     workspace_tab_strip_styles,
 )
 from ads1292_studio.live_render import build_live_render_frame, display_signal_values
