@@ -11,6 +11,9 @@ from ads1292_studio.plots import decimate_extrema_for_plot, decimate_for_plot, s
 from ads1292_studio.signal_processing import HeartRateSummary, apply_software_filters, detect_r_peaks, heart_rate_summary
 
 
+MIN_PEAK_DETECTION_SECONDS = 1.0
+
+
 @dataclass(frozen=True)
 class LiveRenderFrame:
     source: str
@@ -103,13 +106,16 @@ def build_live_render_frame(
     visible_ecg_plot = smooth_for_plot(visible_ecg, window=smoothing_window)
     visible_resp_plot = smooth_for_plot(visible_resp, window=smoothing_window)
     visible_status = deque_tail_array(status, visible_count, dtype=float)
-    peaks = tuple(
-        detect_r_peaks(
-            visible_ecg,
-            sample_rate_hz,
-            prefiltered=bool(filter_settings.bandpass_enabled),
+    if visible_count >= int(MIN_PEAK_DETECTION_SECONDS * sample_rate_hz):
+        peaks = tuple(
+            detect_r_peaks(
+                visible_ecg,
+                sample_rate_hz,
+                prefiltered=bool(filter_settings.bandpass_enabled),
+            )
         )
-    )
+    else:
+        peaks = ()
     peak_indices = list(peaks)
     peaks_x = visible_x[peak_indices] if peaks else np.array([], dtype=float)
     peaks_y = visible_ecg_plot[peak_indices] if peaks else np.array([], dtype=float)

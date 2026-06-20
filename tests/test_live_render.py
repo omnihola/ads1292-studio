@@ -2,8 +2,10 @@ from collections import deque
 import inspect
 
 import numpy as np
+import pytest
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
+import ads1292_studio.live_render as live_render
 from ads1292_studio.live_render import build_live_render_frame, deque_tail_array, display_signal_values
 
 
@@ -114,6 +116,31 @@ def test_build_live_render_frame_returns_none_without_samples() -> None:
     )
 
     assert frame is None
+
+
+def test_live_render_skips_peak_detection_before_one_second(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_detect(*_args: object, **_kwargs: object) -> tuple[int, ...]:
+        raise AssertionError("R peak detection should wait for a stable one-second live window")
+
+    monkeypatch.setattr(live_render, "detect_r_peaks", fail_detect)
+
+    frame = build_live_render_frame(
+        indices=deque(range(20), maxlen=20),
+        ch1=deque((0.0 for _ in range(20)), maxlen=20),
+        ch2=deque((0.0 for _ in range(20)), maxlen=20),
+        status=deque((0 for _ in range(20)), maxlen=20),
+        display_settings=EcgDisplaySettings(time_window_seconds=8.0),
+        filter_settings=SoftwareFilterSettings(),
+        source="CH2",
+        sample_rate_hz=500.0,
+        smoothing_window=1,
+        max_render_points=100,
+        ecg_inverted=False,
+    )
+
+    assert frame is not None
+    assert frame.peaks == ()
+    assert frame.heart_rate.valid_rr_count == 0
 
 
 def test_live_render_reuses_bandpass_display_for_peak_detection() -> None:
