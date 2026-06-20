@@ -360,11 +360,11 @@ def test_gui_layout_frames_toolbar_channel_hint_as_chip() -> None:
         "background": "#EAF1FF",
         "foreground": "#293247",
         "font": ("Aptos", 10, "bold"),
-        "border": "#EAF1FF",
-        "borderwidth": 0,
+        "border": "#CFE0FF",
+        "borderwidth": 1,
         "relief": "flat",
-        "width": 58,
-        "wraplength": 470,
+        "width": 46,
+        "wraplength": 380,
     }
 
 

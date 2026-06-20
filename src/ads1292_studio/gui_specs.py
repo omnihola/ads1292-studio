@@ -192,11 +192,11 @@ TOOLBAR_HINT_STYLES = {
     "background": "#EAF1FF",
     "foreground": "#293247",
     "font": ("Aptos", 10, "bold"),
-    "border": "#EAF1FF",
-    "borderwidth": 0,
+    "border": "#CFE0FF",
+    "borderwidth": 1,
     "relief": "flat",
-    "width": 58,
-    "wraplength": 470,
+    "width": 46,
+    "wraplength": 380,
 }
 TOOLBAR_GROUP_PADDING = {
     "separator": (8, 6),
@@ -879,7 +879,7 @@ def toolbar_group_label_spec() -> dict[str, object]:
     return dict(TOOLBAR_GROUP_LABEL_SPEC)
 
 
-def toolbar_hint_styles() -> dict[str, str]:
+def toolbar_hint_styles() -> dict[str, object]:
     return dict(TOOLBAR_HINT_STYLES)
 
 
