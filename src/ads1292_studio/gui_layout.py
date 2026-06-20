@@ -464,6 +464,7 @@ def build_workspace_tabs(app: Any, main: ttk.Frame) -> None:
     tab_strip.pack(fill=tk.X)
     app.workspace_tab_strip = tab_strip
     app.workspace_tab_labels = {}
+    app.workspace_tab_hovered = {}
     app.workspace_stack = ttk.Frame(main, style=str(workspace_spec["main"]))
     app.workspace_stack.pack(fill=tk.BOTH, expand=True)
     app.live_tab = ttk.Frame(app.workspace_stack, style=str(workspace_spec["main"]))
@@ -484,12 +485,19 @@ def build_workspace_tabs(app: Any, main: ttk.Frame) -> None:
             text=label,
             style=str(tab_strip_style["tab"]),
             cursor="hand2",
+            takefocus=True,
         )
         tab_label.pack(side=tk.LEFT, padx=tab_strip_style["tab_gap"])
+        tab_id = str(tab)
+        app.workspace_tab_hovered[tab_id] = False
+        tab_label.bind("<Enter>", lambda _event, target=tab: _set_workspace_tab_hovered(app, target, True))
+        tab_label.bind("<Leave>", lambda _event, target=tab: _set_workspace_tab_hovered(app, target, False))
+        tab_label.bind("<FocusIn>", lambda _event, target=tab: _set_workspace_tab_hovered(app, target, True))
+        tab_label.bind("<FocusOut>", lambda _event, target=tab: _set_workspace_tab_hovered(app, target, False))
         tab_label.bind("<Button-1>", lambda _event, target=tab: _select_workspace_tab(app, target))
         tab_label.bind("<Return>", lambda _event, target=tab: _select_workspace_tab(app, target))
         tab_label.bind("<space>", lambda _event, target=tab: _select_workspace_tab(app, target))
-        app.workspace_tab_labels[str(tab)] = tab_label
+        app.workspace_tab_labels[tab_id] = tab_label
     app.live_tab.pack(fill=tk.BOTH, expand=True)
     _sync_workspace_tab_styles(app)
 
@@ -504,10 +512,20 @@ def _select_workspace_tab(app: Any, target: ttk.Frame) -> str:
     return "break"
 
 
+def _set_workspace_tab_hovered(app: Any, target: ttk.Frame, value: bool) -> None:
+    app.workspace_tab_hovered[str(target)] = value
+    _sync_workspace_tab_styles(app)
+
+
 def _sync_workspace_tab_styles(app: Any) -> None:
     tab_strip_style = workspace_tab_strip_styles()
     for tab_id, label in app.workspace_tab_labels.items():
-        style = tab_strip_style["selected_tab"] if tab_id == app.selected_workspace_tab else tab_strip_style["tab"]
+        is_selected = tab_id == app.selected_workspace_tab
+        is_hovered = bool(app.workspace_tab_hovered.get(tab_id, False))
+        if is_selected:
+            style = tab_strip_style["selected_hover_tab"] if is_hovered else tab_strip_style["selected_tab"]
+        else:
+            style = tab_strip_style["hover_tab"] if is_hovered else tab_strip_style["tab"]
         label.configure(style=str(style))
 
 

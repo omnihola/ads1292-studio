@@ -402,10 +402,13 @@ def test_sidebar_tab_strip_styles_replace_native_tab_chrome() -> None:
     assert sidebar_tab_strip_styles() == {
         "frame": "SidebarTabStrip.TFrame",
         "tab": "SidebarTab.TLabel",
+        "hover_tab": "Hover.SidebarTab.TLabel",
         "selected_tab": "Selected.SidebarTab.TLabel",
+        "selected_hover_tab": "SelectedHover.SidebarTab.TLabel",
         "background": "#F6F8FB",
         "selected_background": "#EAF1FF",
         "hover_background": "#EAF1FF",
+        "selected_hover_background": "#DDEBFF",
         "foreground": "#657084",
         "selected_foreground": "#2F6FED",
         "font": ("Aptos", 10, "bold"),
@@ -422,7 +425,13 @@ def test_sidebar_uses_custom_segmented_tab_strip() -> None:
 
     assert "app.sidebar_tab_strip" in source
     assert "app.sidebar_tab_labels" in source
+    assert "app.sidebar_tab_hovered" in source
     assert "app.sidebar_stack" in source
+    assert "takefocus=True" in source
+    assert "tab_label.bind(\"<Enter>\"" in source
+    assert "tab_label.bind(\"<Leave>\"" in source
+    assert "tab_label.bind(\"<FocusIn>\"" in source
+    assert "tab_label.bind(\"<FocusOut>\"" in source
     assert "_select_sidebar_tab(app, target)" in source
     assert "ttk.Notebook" not in source
     assert "<<NotebookTabChanged>>" not in source
@@ -437,6 +446,8 @@ def test_sidebar_tab_selection_uses_stacked_frames() -> None:
     assert "tab.pack_forget()" in select_source
     assert "target.pack(fill=tk.BOTH, expand=True)" in select_source
     assert "app.selected_sidebar_tab = str(target)" in select_source
+    assert "selected_hover_tab" in sync_source
+    assert "hover_tab" in sync_source
     assert "app.sidebar_notebook" not in select_source + sync_source
 
 
@@ -540,10 +551,13 @@ def test_workspace_tab_strip_styles_replace_native_tab_chrome() -> None:
     assert workspace_tab_strip_styles() == {
         "frame": "WorkspaceTabStrip.TFrame",
         "tab": "WorkspaceTab.TLabel",
+        "hover_tab": "Hover.WorkspaceTab.TLabel",
         "selected_tab": "Selected.WorkspaceTab.TLabel",
+        "selected_hover_tab": "SelectedHover.WorkspaceTab.TLabel",
         "background": "#F6F8FB",
         "selected_background": "#2F6FED",
         "hover_background": "#EAF1FF",
+        "selected_hover_background": "#1F4FB2",
         "foreground": "#657084",
         "selected_foreground": "#FFFFFF",
         "font": ("Aptos", 12, "bold"),
@@ -560,7 +574,13 @@ def test_workspace_tabs_use_custom_segmented_strip() -> None:
 
     assert "app.workspace_tab_strip" in source
     assert "app.workspace_tab_labels" in source
+    assert "app.workspace_tab_hovered" in source
     assert "app.workspace_stack" in source
+    assert "takefocus=True" in source
+    assert "tab_label.bind(\"<Enter>\"" in source
+    assert "tab_label.bind(\"<Leave>\"" in source
+    assert "tab_label.bind(\"<FocusIn>\"" in source
+    assert "tab_label.bind(\"<FocusOut>\"" in source
     assert "_select_workspace_tab(app, target)" in source
     assert "ttk.Notebook" not in source
     assert "<<NotebookTabChanged>>" not in source
@@ -575,6 +595,8 @@ def test_workspace_tab_selection_uses_stacked_frames() -> None:
     assert "tab.pack_forget()" in select_source
     assert "target.pack(fill=tk.BOTH, expand=True)" in select_source
     assert "app.selected_workspace_tab = str(target)" in select_source
+    assert "selected_hover_tab" in sync_source
+    assert "hover_tab" in sync_source
     assert "app.notebook" not in select_source + sync_source
 
 

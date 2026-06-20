@@ -159,6 +159,8 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   background worker so GUI ticks do not accumulate queued analysis jobs.
 - Keep toolbar toggle chips mouse- and keyboard-accessible, with visible hover
   and focus feedback, because they replace heavier checkbutton chrome.
+- Keep custom sidebar/workspace tab strips keyboard-accessible, with visible
+  hover and focus states, because they replace native notebook tabs.
 
 ## Safety
 

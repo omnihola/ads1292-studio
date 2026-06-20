@@ -519,8 +519,26 @@ def _configure_tab_strip(style: ttk.Style, chrome: dict[str, object]) -> None:
         relief="flat",
     )
     style.configure(
+        chrome["hover_tab"],
+        background=chrome["hover_background"],
+        foreground=chrome["selected_foreground"],
+        font=chrome["font"],
+        padding=chrome["tab_padding"],
+        borderwidth=0,
+        relief="flat",
+    )
+    style.configure(
         chrome["selected_tab"],
         background=chrome["selected_background"],
+        foreground=chrome["selected_foreground"],
+        font=chrome["font"],
+        padding=chrome["tab_padding"],
+        borderwidth=0,
+        relief="flat",
+    )
+    style.configure(
+        chrome["selected_hover_tab"],
+        background=chrome["selected_hover_background"],
         foreground=chrome["selected_foreground"],
         font=chrome["font"],
         padding=chrome["tab_padding"],
