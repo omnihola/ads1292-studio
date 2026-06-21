@@ -2,6 +2,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
 from ads1292_studio.calibration import Calibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_json
@@ -43,6 +44,18 @@ def _write_session_files(path: Path) -> None:
         path.with_suffix(".quality-gate.json"),
         QualityGate(min_duration_seconds=0.5, min_r_peaks=1, require_qrs_clear=False),
     )
+    write_acquisition_json(
+        path.with_suffix(".acquisition.json"),
+        build_acquisition_provenance(
+            csv_path=path,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem214301",
+            sample_rate_hz=500.0,
+            calibration=Calibration(label="bench-cal"),
+            live_calibration=None,
+            started_at="2026-06-21T12:00:00",
+        ),
+    )
 
 
 def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Path) -> None:
@@ -62,6 +75,7 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
         "metadata",
         "events",
         "calibration",
+        "acquisition",
         "protocol",
         "quality_gate",
         "report_html",

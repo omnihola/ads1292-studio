@@ -21,6 +21,7 @@ matplotlib.use("TkAgg")
 
 from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.app_icon import apply_app_icon
+from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
 from ads1292_studio.calibration import (
     Calibration,
     LiveStreamCalibration,
@@ -554,15 +555,33 @@ class App(tk.Tk):
         csv_path = None
         acquisition_mode = self._acquisition_mode()
         if self.save_var.get():
-            stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+            started_at = datetime.now()
+            stamp = started_at.strftime("%Y-%m-%d-%H%M%S")
             suffix = "ads1292-raw" if acquisition_mode is AcquisitionMode.RAW else "ads1292-studio"
             csv_path = Path("recordings") / f"{stamp}-{suffix}.csv"
             self.recording_path = csv_path
+            live_calibration = (
+                self.live_stream_calibration
+                if acquisition_mode is AcquisitionMode.LIVE
+                else None
+            )
             write_metadata_json(csv_path.with_suffix(".json"), self._metadata())
             write_events_json(self._events_path(csv_path), self.event_markers)
             write_calibration_json(self._calibration_path(csv_path), self._calibration())
             write_protocol_json(self._protocol_path(csv_path), self._protocol())
             write_quality_gate_json(self._quality_gate_path(csv_path), self._quality_gate())
+            write_acquisition_json(
+                self._acquisition_path(csv_path),
+                build_acquisition_provenance(
+                    csv_path=csv_path,
+                    acquisition_mode=acquisition_mode.value,
+                    port=port,
+                    sample_rate_hz=SAMPLE_RATE_HZ,
+                    calibration=self._calibration(),
+                    live_calibration=live_calibration,
+                    started_at=started_at.isoformat(timespec="seconds"),
+                ),
+            )
             self.path_var.set(f"CSV: {csv_path}")
         self.is_starting = True
         self.connection_var.set("Starting raw acquisition..." if acquisition_mode is AcquisitionMode.RAW else "Starting stream...")
@@ -992,6 +1011,9 @@ class App(tk.Tk):
 
     def _quality_gate_path(self, csv_path: Path) -> Path:
         return csv_path.with_suffix(".quality-gate.json")
+
+    def _acquisition_path(self, csv_path: Path) -> Path:
+        return csv_path.with_suffix(".acquisition.json")
 
     def _load_event_sidecar(self, csv_path: Path) -> None:
         path = self._events_path(csv_path)

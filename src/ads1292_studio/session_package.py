@@ -55,6 +55,7 @@ def export_session_package(
         ("metadata", source_csv.with_suffix(".json")),
         ("events", source_csv.with_suffix(".events.json")),
         ("calibration", source_csv.with_suffix(".calibration.json")),
+        ("acquisition", source_csv.with_suffix(".acquisition.json")),
         ("protocol", source_csv.with_suffix(".protocol.json")),
         ("quality_gate", source_csv.with_suffix(".quality-gate.json")),
     )
