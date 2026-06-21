@@ -9,11 +9,14 @@ def recording_csv_path(
     *,
     started_at: datetime,
     acquisition_mode: Any,
-    root: Path | str = Path("recordings"),
+    root: Path | str | None = None,
 ) -> Path:
     stamp = started_at.strftime("%Y-%m-%d-%H%M%S-%f")
-    suffix = "ads1292-raw" if _mode_text(acquisition_mode).startswith("raw") else "ads1292-studio"
-    return Path(root) / f"{stamp}-{suffix}.csv"
+    is_raw = _mode_text(acquisition_mode).startswith("raw")
+    mode_folder = "raw" if is_raw else "live"
+    suffix = "ads1292-raw" if is_raw else "ads1292-studio"
+    base = Path.home() / "Documents" / "ECG" if root is None else Path(root)
+    return base / mode_folder / f"{stamp}-{suffix}.csv"
 
 
 def _mode_text(value: Any) -> str:
