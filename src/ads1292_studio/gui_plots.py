@@ -356,25 +356,21 @@ def apply_review_render_frame(
     draw_pqrst_review_if_changed(app, frame.pqrst)
 
 
-def apply_event_overlay_artists(
-    app: Any,
+def _draw_event_overlay(
+    axes: tuple,
+    label_axis: object,
     items: tuple[EventOverlayItem, ...],
-    *,
-    key: tuple,
-) -> bool:
-    """Draw event annotations on the shared-x review axes (changed-only).
+    prior_artists: list,
+) -> list:
+    """Replace ``prior_artists`` with span/line/label artists for ``items``.
 
     Interval annotations become shaded spans and point annotations become dashed
-    vertical lines across the ECG, respiration, and contact axes so an annotated
-    window is visible across every signal at once; the text label is placed once
-    on the ECG axis. Returns ``True`` when the overlay was rebuilt, ``False`` when
-    the cached key matched and nothing was touched.
+    vertical lines across every supplied axis so an annotated window is visible
+    across each signal at once; the text label is placed once on ``label_axis``.
+    Artists live in data coordinates, so a rolling x-axis scrolls them for free.
     """
-    if getattr(app, "review_event_overlay_key", None) == key:
-        return False
-    for artist in getattr(app, "review_event_overlay_artists", []):
+    for artist in prior_artists:
         artist.remove()
-    axes = (app.ax_review_ecg, app.ax_review_resp, app.ax_review_status)
     new_artists: list = []
     for item in items:
         if item.is_interval:
@@ -400,11 +396,11 @@ def apply_event_overlay_artists(
                     )
                 )
         new_artists.append(
-            app.ax_review_ecg.text(
+            label_axis.text(
                 item.label_x,
                 EVENT_LABEL_Y,
                 item.label,
-                transform=app.ax_review_ecg.get_xaxis_transform(),
+                transform=label_axis.get_xaxis_transform(),
                 ha="center",
                 va="top",
                 fontsize=8,
@@ -412,8 +408,53 @@ def apply_event_overlay_artists(
                 rotation=0,
             )
         )
-    app.review_event_overlay_artists = new_artists
+    return new_artists
+
+
+def apply_event_overlay_artists(
+    app: Any,
+    items: tuple[EventOverlayItem, ...],
+    *,
+    key: tuple,
+) -> bool:
+    """Draw event annotations on the shared-x offline review axes (changed-only).
+
+    Returns ``True`` when the overlay was rebuilt, ``False`` when the cached key
+    matched and nothing was touched.
+    """
+    if getattr(app, "review_event_overlay_key", None) == key:
+        return False
+    app.review_event_overlay_artists = _draw_event_overlay(
+        (app.ax_review_ecg, app.ax_review_resp, app.ax_review_status),
+        app.ax_review_ecg,
+        items,
+        getattr(app, "review_event_overlay_artists", []),
+    )
     app.review_event_overlay_key = key
+    return True
+
+
+def apply_live_event_overlay_artists(
+    app: Any,
+    items: tuple[EventOverlayItem, ...],
+    *,
+    key: tuple,
+) -> bool:
+    """Draw event annotations on the shared-x live axes (changed-only).
+
+    Artists are placed in data coordinates, so they scroll with the rolling live
+    window for free as the x-limits advance each frame; the overlay is only
+    rebuilt when the annotation set changes, never per render frame.
+    """
+    if getattr(app, "live_event_overlay_key", None) == key:
+        return False
+    app.live_event_overlay_artists = _draw_event_overlay(
+        (app.ax_live_ecg, app.ax_live_resp, app.ax_live_status),
+        app.ax_live_ecg,
+        items,
+        getattr(app, "live_event_overlay_artists", []),
+    )
+    app.live_event_overlay_key = key
     return True
 
 

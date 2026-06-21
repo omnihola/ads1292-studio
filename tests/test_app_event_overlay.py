@@ -77,3 +77,67 @@ def test_refresh_review_event_overlay_clears_overlay_when_events_removed() -> No
 
     assert len(app.ax_review_ecg.patches) == 0
     assert app.review_event_overlay_artists == []
+
+
+def _make_live_app(*, is_streaming: bool, sample_index: int, event_markers) -> SimpleNamespace:
+    fig = Figure()
+    ax_ecg = fig.add_subplot(311)
+    ax_resp = fig.add_subplot(312)
+    ax_status = fig.add_subplot(313)
+    return SimpleNamespace(
+        is_streaming=is_streaming,
+        sample_index=sample_index,
+        event_markers=event_markers,
+        ax_live_ecg=ax_ecg,
+        ax_live_resp=ax_resp,
+        ax_live_status=ax_status,
+        live_event_overlay_artists=[],
+        live_event_overlay_key=None,
+        live_canvas=_FakeCanvas(),
+        live_tab=None,
+    )
+
+
+def test_refresh_live_event_overlay_draws_while_streaming() -> None:
+    app = _make_live_app(
+        is_streaming=True,
+        sample_index=15000,
+        event_markers=[event_from_interval(start_seconds=10.0, end_seconds=20.0, label="motion")],
+    )
+
+    App._refresh_live_event_overlay(app)
+
+    assert app.live_event_overlay_key is not None
+    assert len(app.ax_live_ecg.patches) == 1
+    assert app.live_canvas.draw_idle_calls == 1
+
+
+def test_refresh_live_event_overlay_is_noop_when_not_streaming() -> None:
+    app = _make_live_app(
+        is_streaming=False,
+        sample_index=0,
+        event_markers=[event_from_interval(start_seconds=10.0, end_seconds=20.0, label="motion")],
+    )
+
+    App._refresh_live_event_overlay(app)
+
+    assert app.live_event_overlay_key is None
+    assert app.live_event_overlay_artists == []
+    assert app.live_canvas.draw_idle_calls == 0
+
+
+def test_clear_live_event_overlay_removes_artists() -> None:
+    app = _make_live_app(
+        is_streaming=True,
+        sample_index=15000,
+        event_markers=[event_from_interval(start_seconds=10.0, end_seconds=20.0, label="motion")],
+    )
+    App._refresh_live_event_overlay(app)
+    artists = list(app.live_event_overlay_artists)
+    assert artists
+
+    App._clear_live_event_overlay(app)
+
+    assert app.live_event_overlay_artists == []
+    assert app.live_event_overlay_key is None
+    assert all(artist.axes is None for artist in artists)

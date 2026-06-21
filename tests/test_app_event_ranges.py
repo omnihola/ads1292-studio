@@ -43,6 +43,7 @@ def _fake_app(*, current_time: float) -> SimpleNamespace:
         _set_event_count=lambda: calls.append("count"),
         _save_event_sidecar=lambda: calls.append("save"),
         _refresh_review_event_overlay=lambda: calls.append("overlay"),
+        _refresh_live_event_overlay=lambda: calls.append("live-overlay"),
         _log=lambda message: calls.append(message),
         calls=calls,
     )
@@ -85,6 +86,7 @@ def test_add_event_refreshes_review_overlay() -> None:
     assert len(app.event_markers) == 1
     assert app.event_markers[0].timestamp_seconds == 7.0
     assert "overlay" in app.calls
+    assert "live-overlay" in app.calls
 
 
 def test_add_manual_event_range_uses_explicit_seconds() -> None:

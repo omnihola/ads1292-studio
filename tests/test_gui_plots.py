@@ -1186,3 +1186,74 @@ def test_apply_event_overlay_artists_replaces_artists_when_key_changes() -> None
     assert changed is True
     assert all(artist.axes is None for artist in old_artists)
     assert app.review_event_overlay_key == second_key
+
+
+def _make_live_overlay_app() -> SimpleNamespace:
+    fig = Figure()
+    ax_ecg = fig.add_subplot(311)
+    ax_resp = fig.add_subplot(312)
+    ax_status = fig.add_subplot(313)
+    ax_ecg.plot([], [])
+    return SimpleNamespace(
+        ax_live_ecg=ax_ecg,
+        ax_live_resp=ax_resp,
+        ax_live_status=ax_status,
+        live_event_overlay_artists=[],
+        live_event_overlay_key=None,
+    )
+
+
+def test_apply_live_event_overlay_artists_draws_on_live_axes() -> None:
+    from ads1292_studio.event_overlay import build_event_overlay_items
+    from ads1292_studio.events import EventMarker, event_from_interval
+    from ads1292_studio.gui_plots import apply_live_event_overlay_artists
+
+    app = _make_live_overlay_app()
+    events = (
+        event_from_interval(start_seconds=10.0, end_seconds=20.0, label="motion"),
+        EventMarker(timestamp_seconds=4.0, label="touch"),
+    )
+    items = build_event_overlay_items(events, x_max_seconds=30.0)
+    key = ("live", 2)
+
+    changed = apply_live_event_overlay_artists(app, items, key=key)
+
+    assert changed is True
+    assert len(app.live_event_overlay_artists) == 3 + 3 + 2
+    assert app.live_event_overlay_key == key
+    assert len(app.ax_live_ecg.patches) == 1
+    assert len(app.ax_live_resp.patches) == 1
+
+
+def test_apply_live_event_overlay_artists_is_changed_only() -> None:
+    from ads1292_studio.event_overlay import build_event_overlay_items
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.gui_plots import apply_live_event_overlay_artists
+
+    app = _make_live_overlay_app()
+    items = build_event_overlay_items((EventMarker(timestamp_seconds=4.0, label="touch"),), x_max_seconds=30.0)
+    key = ("live", 1)
+
+    apply_live_event_overlay_artists(app, items, key=key)
+    artists_after_first = list(app.live_event_overlay_artists)
+    changed = apply_live_event_overlay_artists(app, items, key=key)
+
+    assert changed is False
+    assert app.live_event_overlay_artists == artists_after_first
+
+
+def test_apply_live_event_overlay_artists_clears_on_empty() -> None:
+    from ads1292_studio.event_overlay import build_event_overlay_items
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.gui_plots import apply_live_event_overlay_artists
+
+    app = _make_live_overlay_app()
+    items = build_event_overlay_items((EventMarker(timestamp_seconds=4.0, label="touch"),), x_max_seconds=30.0)
+    apply_live_event_overlay_artists(app, items, key=("live", 1))
+    old_artists = list(app.live_event_overlay_artists)
+
+    changed = apply_live_event_overlay_artists(app, (), key=("live", 0))
+
+    assert changed is True
+    assert app.live_event_overlay_artists == []
+    assert all(artist.axes is None for artist in old_artists)

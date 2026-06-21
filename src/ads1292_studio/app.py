@@ -138,6 +138,7 @@ from ads1292_studio.gui_workers import (
 )
 from ads1292_studio.gui_plots import (
     apply_event_overlay_artists,
+    apply_live_event_overlay_artists,
     apply_live_axis_titles,
     apply_live_render_frame,
     apply_review_render_frame,
@@ -300,6 +301,8 @@ class App(tk.Tk):
         self.event_markers: list[EventMarker] = []
         self.review_event_overlay_artists: list = []
         self.review_event_overlay_key: tuple | None = None
+        self.live_event_overlay_artists: list = []
+        self.live_event_overlay_key: tuple | None = None
         self.event_range_start_seconds: float | None = None
         self.is_streaming = False
         self.is_loading_csv = False
@@ -765,6 +768,7 @@ class App(tk.Tk):
         self._set_event_count()
         self._save_event_sidecar()
         self._refresh_review_event_overlay()
+        self._refresh_live_event_overlay()
         self._log(f"Event {marker.timestamp_seconds:.2f}s: {marker.label} {marker.notes}".strip())
 
     def mark_event_range_start(self) -> None:
@@ -790,6 +794,7 @@ class App(tk.Tk):
         self._set_event_count()
         self._save_event_sidecar()
         self._refresh_review_event_overlay()
+        self._refresh_live_event_overlay()
         self._log(
             f"Event range {marker.timestamp_seconds:.2f}-{marker.end_seconds:.2f}s: "
             f"{marker.label} {marker.notes}".strip()
@@ -814,6 +819,7 @@ class App(tk.Tk):
         self._set_event_count()
         self._save_event_sidecar()
         self._refresh_review_event_overlay()
+        self._refresh_live_event_overlay()
         self._log(
             f"Manual event range {marker.timestamp_seconds:.2f}-{marker.end_seconds:.2f}s: "
             f"{marker.label} {marker.notes}".strip()
@@ -828,6 +834,7 @@ class App(tk.Tk):
         self._set_event_count()
         self._save_event_sidecar()
         self._refresh_review_event_overlay()
+        self._refresh_live_event_overlay()
         self._log(
             f"Removed event {removed.timestamp_seconds:.2f}-{removed.end_seconds:.2f}s "
             f"{removed.label} {removed.notes}".strip()
@@ -961,6 +968,7 @@ class App(tk.Tk):
     def _clear_signal_buffers(self) -> None:
         for buffer in (self.ch1, self.ch2, self.status, self.indices, self.board_hr, self.board_rr):
             buffer.clear()
+        self._clear_live_event_overlay()
         self.last_display_refresh_key = None
         self.last_live_render_key = None
         self.live_quality_generation += 1
@@ -1086,6 +1094,34 @@ class App(tk.Tk):
         key = event_overlay_key(markers, x_max_seconds=x_max_seconds)
         if apply_event_overlay_artists(self, items, key=key):
             draw_canvas_idle_if_visible(self.review_canvas, getattr(self, "review_tab", None))
+
+    def _refresh_live_event_overlay(self) -> None:
+        """Draw event annotations on the live rolling waveform.
+
+        Only applies while streaming. The live x-axis is in absolute seconds from
+        recording start, so annotation spans/markers are placed at their true
+        positions in data coordinates and scroll with the rolling window for free
+        as the per-frame x-limits advance; the overlay is rebuilt only when the
+        annotation set changes, keyed on the markers themselves rather than the
+        moving window so a render frame never rebuilds it.
+        """
+        if not self.is_streaming:
+            return
+        markers = tuple(self.event_markers)
+        x_max_seconds = max(1.0, self.sample_index / SAMPLE_RATE_HZ)
+        items = build_event_overlay_items(markers, x_max_seconds=x_max_seconds)
+        key = tuple(
+            (marker.normalized().timestamp_seconds, marker.normalized().end_seconds, marker.label)
+            for marker in markers
+        )
+        if apply_live_event_overlay_artists(self, items, key=key):
+            draw_canvas_idle_if_visible(self.live_canvas, getattr(self, "live_tab", None))
+
+    def _clear_live_event_overlay(self) -> None:
+        for artist in self.live_event_overlay_artists:
+            artist.remove()
+        self.live_event_overlay_artists = []
+        self.live_event_overlay_key = None
 
     def _events_path(self, csv_path: Path) -> Path:
         return csv_path.with_suffix(".events.json")
