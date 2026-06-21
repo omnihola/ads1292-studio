@@ -96,6 +96,21 @@ def test_add_manual_event_range_uses_explicit_seconds() -> None:
     assert any("Manual event range 73.00-77.25s" in call for call in app.calls)
 
 
+def test_remove_last_event_updates_sidecar_and_log() -> None:
+    app = _fake_app(current_time=18.0)
+    app.event_markers = [
+        EventMarker(2.0, label="baseline", notes="quiet"),
+        EventMarker(12.5, duration_seconds=5.5, label="motion", notes="arm motion"),
+    ]
+
+    App.remove_last_event(app)
+
+    assert app.event_markers == [EventMarker(2.0, label="baseline", notes="quiet")]
+    assert "count" in app.calls
+    assert "save" in app.calls
+    assert any("Removed event 12.50-18.00s motion" in call for call in app.calls)
+
+
 def test_set_event_count_shows_latest_event_details() -> None:
     app = SimpleNamespace(
         event_count_var=_Var(),

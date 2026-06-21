@@ -807,6 +807,19 @@ class App(tk.Tk):
             f"{marker.label} {marker.notes}".strip()
         )
 
+    def remove_last_event(self) -> None:
+        if not self.event_markers:
+            self._log("No event annotations to remove")
+            return
+        removed = self.event_markers[-1].normalized()
+        self.event_markers = [*self.event_markers[:-1]]
+        self._set_event_count()
+        self._save_event_sidecar()
+        self._log(
+            f"Removed event {removed.timestamp_seconds:.2f}-{removed.end_seconds:.2f}s "
+            f"{removed.label} {removed.notes}".strip()
+        )
+
     def export_report(self) -> None:
         if self.loaded_samples:
             samples = self.loaded_samples

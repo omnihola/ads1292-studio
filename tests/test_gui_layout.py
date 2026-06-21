@@ -132,9 +132,11 @@ def test_sidebar_exposes_event_range_actions() -> None:
     assert "mark_event_range_start_button" in sidebar_source
     assert "add_event_range_button" in sidebar_source
     assert "add_manual_event_range_button" in sidebar_source
+    assert "remove_last_event_button" in sidebar_source
     assert "Range start s" in sidebar_source
     assert "Range end s" in sidebar_source
     assert "Add Exact Range" in sidebar_source
+    assert "Remove Last Event" in sidebar_source
 
 
 def test_sidebar_exposes_acquisition_provenance_summary() -> None:

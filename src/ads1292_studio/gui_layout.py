@@ -480,6 +480,7 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
     metadata_entry(app, session_side, "Range start s", app.manual_event_start_var)
     metadata_entry(app, session_side, "Range end s", app.manual_event_end_var)
     app.add_manual_event_range_button = _sidebar_button(session_side, "Add Exact Range", app.add_manual_event_range)
+    app.remove_last_event_button = _sidebar_button(session_side, "Remove Last Event", app.remove_last_event)
     ttk.Label(
         session_side,
         textvariable=app.event_range_start_var,
