@@ -61,6 +61,18 @@ class _FakeStreamingDevice:
     def stop_stream(self) -> None:
         return None
 
+    def read_stream_sample_batch(self):
+        return (
+            StreamSample(
+                timestamp=0.0,
+                ch1=0,
+                ch2=0,
+                board_heart_rate=0,
+                board_respiration_rate=0,
+                status_byte=0,
+            ),
+        )
+
     def iter_stream_samples(self):
         for index in range(3):
             yield StreamSample(
@@ -119,6 +131,94 @@ def test_live_worker_posts_failure_result_when_start_stream_raises(monkeypatch) 
     assert "device not responding" in (result.error or "")
 
 
+class _NoFramesThenFramesDevice:
+    instances: list["_NoFramesThenFramesDevice"] = []
+
+    def __init__(self, port: str) -> None:
+        self.port = port
+        self.start_calls = 0
+        _NoFramesThenFramesDevice.instances.append(self)
+
+    def __enter__(self) -> "_NoFramesThenFramesDevice":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def query_firmware(self) -> str:
+        return "1.0"
+
+    def start_stream(self) -> None:
+        self.start_calls += 1
+
+    def stop_stream(self) -> None:
+        return None
+
+    def read_stream_sample_batch(self):
+        if self.start_calls < 2:
+            return ()
+        return (
+            StreamSample(
+                timestamp=0.0,
+                ch1=11,
+                ch2=22,
+                board_heart_rate=0,
+                board_respiration_rate=0,
+                status_byte=0,
+            ),
+        )
+
+    def iter_stream_samples(self, *, should_continue=None):
+        return
+        yield
+
+
+class _NeverFramesDevice(_NoFramesThenFramesDevice):
+    def read_stream_sample_batch(self):
+        return ()
+
+
+def test_live_worker_retries_toggle_when_start_produces_no_frames(monkeypatch) -> None:
+    monkeypatch.setattr(workers, "Ads1x9xDevice", _NoFramesThenFramesDevice)
+    _NoFramesThenFramesDevice.instances.clear()
+    sample_queue: queue.Queue = queue.Queue()
+    start_queue: queue.Queue = queue.Queue()
+    worker = LiveWorker(
+        sample_queue,
+        queue.Queue(),
+        start_queue,
+        stream_start_timeout_seconds=0.01,
+    )
+
+    worker.start("fake-port", None)
+    result = start_queue.get(timeout=2.0)
+    if worker.thread:
+        worker.thread.join(timeout=2.0)
+
+    assert result == StreamStartResult(ok=True)
+    assert _NoFramesThenFramesDevice.instances[0].start_calls == 2
+    assert sample_queue.get_nowait().ch2 == 22
+
+
+def test_live_worker_reports_start_failure_when_no_stream_frames_arrive(monkeypatch) -> None:
+    monkeypatch.setattr(workers, "Ads1x9xDevice", _NeverFramesDevice)
+    start_queue: queue.Queue = queue.Queue()
+    worker = LiveWorker(
+        queue.Queue(),
+        queue.Queue(),
+        start_queue,
+        stream_start_timeout_seconds=0.01,
+    )
+
+    worker.start("fake-port", None)
+    result = start_queue.get(timeout=2.0)
+    if worker.thread:
+        worker.thread.join(timeout=2.0)
+
+    assert result.ok is False
+    assert "No streaming data" in (result.error or "")
+
+
 class _StreamSpyDevice:
     instances: list["_StreamSpyDevice"] = []
 
@@ -141,6 +241,18 @@ class _StreamSpyDevice:
 
     def stop_stream(self) -> None:
         return None
+
+    def read_stream_sample_batch(self):
+        return (
+            StreamSample(
+                timestamp=0.0,
+                ch1=0,
+                ch2=0,
+                board_heart_rate=0,
+                board_respiration_rate=0,
+                status_byte=0,
+            ),
+        )
 
     def iter_stream_samples(self, *, should_continue=None):
         self.should_continue = should_continue

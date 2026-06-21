@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import time
 from typing import Callable, Iterable
 
@@ -12,9 +13,11 @@ from ads1292_studio.models import AdsPort, StreamSample
 VID_TI = 0x2047
 PID_ADS1X9X = 0x0300
 SERIAL_CANDIDATE_MARKERS = ("usbmodem", "usbserial")
+MACOS_USB_CANDIDATE_PATTERNS = ("cu.usbmodem*", "cu.usbserial*")
 
 START = 0x02
 END = 0x03
+STREAM_TRAILERS = (bytes([END, END]), bytes([END, 0x0A]))
 
 CMD_REG_READ = 0x92
 CMD_DATA_STREAMING = 0x93
@@ -37,6 +40,19 @@ def _is_ads_candidate_port(port: object) -> bool:
     return is_ti_ads or is_named_ads or is_usb_serial_candidate
 
 
+def _macos_usb_candidate_paths() -> tuple[Path, ...]:
+    dev_root = Path("/dev")
+    return tuple(
+        sorted(
+            {
+                path
+                for pattern in MACOS_USB_CANDIDATE_PATTERNS
+                for path in dev_root.glob(pattern)
+            }
+        )
+    )
+
+
 def _int16_le(lo: int, hi: int) -> int:
     value = (hi << 8) | lo
     if value & 0x8000:
@@ -45,11 +61,18 @@ def _int16_le(lo: int, hi: int) -> int:
 
 
 def list_ads_ports() -> list[AdsPort]:
-    ports: list[AdsPort] = []
-    for port in list_ports.comports():
-        if _is_ads_candidate_port(port):
-            ports.append(AdsPort(port.device, port.description or "", port.hwid or ""))
-    return ports
+    pyserial_ports = tuple(
+        AdsPort(port.device, port.description or "", port.hwid or "")
+        for port in list_ports.comports()
+        if _is_ads_candidate_port(port)
+    )
+    pyserial_devices = {port.device for port in pyserial_ports}
+    macos_fallback_ports = tuple(
+        AdsPort(str(path), "macOS USB serial device", "")
+        for path in _macos_usb_candidate_paths()
+        if str(path) not in pyserial_devices
+    )
+    return list(pyserial_ports + macos_fallback_ports)
 
 
 def find_ads_port() -> str | None:
@@ -67,7 +90,7 @@ def parse_stream_payload(
 ) -> tuple[StreamSample, ...]:
     if len(payload) < 61:
         raise ValueError(f"stream payload too short: {len(payload)} bytes")
-    if payload[-2:] != bytes([END, END]):
+    if payload[-2:] not in STREAM_TRAILERS:
         raise ValueError(f"bad stream trailer: {payload[-2:].hex(' ')}")
     board_heart_rate = payload[0]
     board_respiration_rate = payload[1]
@@ -209,6 +232,24 @@ class Ads1x9xDevice:
         self.write_cmd(CMD_DATA_STREAMING, 0, 0)
         self.streaming = False
 
+    def read_stream_sample_batch(self) -> tuple[StreamSample, ...]:
+        try:
+            frame_type, payload = self.read_frame()
+        except TimeoutError:
+            return tuple()
+        if frame_type != CMD_DATA_STREAMING or len(payload) < 61:
+            return tuple()
+        if self._stream_t0 is None:
+            self._stream_t0 = time.time()
+        samples = parse_stream_payload(
+            payload,
+            start_timestamp=self._stream_t0,
+            sample_rate_hz=self.sample_rate_hz,
+            start_index=self._stream_sample_index,
+        )
+        self._stream_sample_index += len(samples)
+        return samples
+
     def iter_stream_samples(
         self,
         *,
@@ -217,22 +258,7 @@ class Ads1x9xDevice:
         while True:
             if should_continue is not None and not should_continue():
                 return
-            try:
-                frame_type, payload = self.read_frame()
-            except TimeoutError:
-                # A transient gap (USB scheduling jitter or a brief device pause)
-                # must not end the recording. Keep waiting; a real disconnect
-                # surfaces as serial.SerialException and still propagates.
+            samples = self.read_stream_sample_batch()
+            if not samples:
                 continue
-            if frame_type != CMD_DATA_STREAMING or len(payload) < 61:
-                continue
-            if self._stream_t0 is None:
-                self._stream_t0 = time.time()
-            samples = parse_stream_payload(
-                payload,
-                start_timestamp=self._stream_t0,
-                sample_rate_hz=self.sample_rate_hz,
-                start_index=self._stream_sample_index,
-            )
-            self._stream_sample_index += len(samples)
             yield from samples

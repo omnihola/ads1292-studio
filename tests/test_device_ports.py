@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 from ads1292_studio import device
@@ -23,6 +24,7 @@ def _port(
 
 
 def test_list_ads_ports_includes_macos_usbmodem_candidate(monkeypatch) -> None:
+    monkeypatch.setattr(device, "_macos_usb_candidate_paths", lambda: ())
     monkeypatch.setattr(
         device.list_ports,
         "comports",
@@ -38,6 +40,7 @@ def test_list_ads_ports_includes_macos_usbmodem_candidate(monkeypatch) -> None:
 
 
 def test_list_ads_ports_keeps_exact_ti_ads_identity(monkeypatch) -> None:
+    monkeypatch.setattr(device, "_macos_usb_candidate_paths", lambda: ())
     monkeypatch.setattr(
         device.list_ports,
         "comports",
@@ -55,3 +58,16 @@ def test_list_ads_ports_keeps_exact_ti_ads_identity(monkeypatch) -> None:
     ports = device.list_ads_ports()
 
     assert [port.device for port in ports] == ["/dev/cu.debug", "/dev/cu.usbserial110"]
+
+
+def test_list_ads_ports_falls_back_to_macos_dev_nodes_when_pyserial_returns_empty(monkeypatch) -> None:
+    monkeypatch.setattr(device.list_ports, "comports", lambda: [])
+    monkeypatch.setattr(
+        device,
+        "_macos_usb_candidate_paths",
+        lambda: (Path("/dev/cu.usbmodem214301"), Path("/dev/cu.usbserial110")),
+    )
+
+    ports = device.list_ads_ports()
+
+    assert [port.device for port in ports] == ["/dev/cu.usbmodem214301", "/dev/cu.usbserial110"]
