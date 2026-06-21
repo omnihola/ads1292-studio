@@ -18,6 +18,12 @@ from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.metadata import SessionMetadata, read_metadata_json
 from ads1292_studio.plot_theme import PLOT_TRACE_COLORS, new_export_figure, style_export_axes
 from ads1292_studio.quality import compute_quality_metrics
+from ads1292_studio.recording_bundle import (
+    is_recording_bundle_path,
+    metadata_from_bundle,
+    read_recording_bundle,
+    recording_bundle_path,
+)
 
 
 @dataclass(frozen=True)
@@ -137,6 +143,9 @@ def export_batch_summary(
 
 
 def _metadata_for(csv_path: Path) -> SessionMetadata:
+    bundle_path = recording_bundle_path(csv_path)
+    if is_recording_bundle_path(bundle_path):
+        return metadata_from_bundle(read_recording_bundle(bundle_path))
     sidecar = csv_path.with_suffix(".json")
     if sidecar.exists():
         return read_metadata_json(sidecar)

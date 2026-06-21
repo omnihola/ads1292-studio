@@ -24,6 +24,14 @@ from ads1292_studio.processing import build_processing_settings, write_processin
 from ads1292_studio.protocol import protocol_template, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import quality_gate_template, write_quality_gate_json
+from ads1292_studio.recording_bundle import (
+    acquisition_from_bundle,
+    events_from_bundle,
+    is_recording_bundle_path,
+    metadata_from_bundle,
+    read_recording_bundle,
+    recording_bundle_path,
+)
 from ads1292_studio.recording_manifest import verify_recording_manifest
 
 
@@ -407,6 +415,9 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
 
 
 def _metadata_for(csv_path: Path) -> SessionMetadata:
+    bundle_path = recording_bundle_path(csv_path)
+    if is_recording_bundle_path(bundle_path):
+        return metadata_from_bundle(read_recording_bundle(bundle_path))
     sidecar = csv_path.with_suffix(".json")
     if sidecar.exists():
         return read_metadata_json(sidecar)
@@ -420,6 +431,8 @@ def _status_for_quality(quality_label: str) -> str:
 
 
 def _sidecar_status(csv_path: Path) -> tuple[str, str]:
+    if is_recording_bundle_path(recording_bundle_path(csv_path)):
+        return "complete", ""
     expected = (
         ("metadata", (csv_path.with_suffix(".json"),)),
         ("events", (csv_path.with_suffix(".events.json"), csv_path.with_suffix(".events.csv"))),
@@ -434,6 +447,9 @@ def _sidecar_status(csv_path: Path) -> tuple[str, str]:
 
 
 def _event_summary_for(csv_path: Path, sample_rate_hz: float = DEFAULT_EVENT_SAMPLE_RATE_HZ) -> EventAnnotationSummary:
+    bundle_path = recording_bundle_path(csv_path)
+    if is_recording_bundle_path(bundle_path):
+        return _summarize_events(events_from_bundle(read_recording_bundle(bundle_path)), sample_rate_hz=sample_rate_hz)
     events_json = csv_path.with_suffix(".events.json")
     events_csv = csv_path.with_suffix(".events.csv")
     if events_json.exists():
@@ -444,6 +460,17 @@ def _event_summary_for(csv_path: Path, sample_rate_hz: float = DEFAULT_EVENT_SAM
 
 
 def _completion_summary_for(csv_path: Path) -> AcquisitionCompletionSummary:
+    bundle_path = recording_bundle_path(csv_path)
+    if is_recording_bundle_path(bundle_path):
+        completion = acquisition_from_bundle(read_recording_bundle(bundle_path)).completion
+        status = str(completion.get("status", "unknown")).strip() or "unknown"
+        if status not in {"finalized", "open"}:
+            status = "unknown"
+        return AcquisitionCompletionSummary(
+            status=status,
+            sample_count=max(0, int(float(completion.get("sample_count", 0) or 0))),
+            span_seconds=round(float(completion.get("sample_span_seconds", 0.0) or 0.0), 6),
+        )
     acquisition_path = csv_path.with_suffix(".acquisition.json")
     if not acquisition_path.exists():
         return AcquisitionCompletionSummary()

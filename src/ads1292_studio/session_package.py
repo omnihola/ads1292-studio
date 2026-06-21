@@ -23,12 +23,25 @@ from ads1292_studio.metadata import read_metadata_json
 from ads1292_studio.processing import build_processing_settings, read_processing_json
 from ads1292_studio.protocol import read_protocol_json
 from ads1292_studio.quality_gate import quality_gate_template, read_quality_gate_json
+from ads1292_studio.recording_bundle import (
+    acquisition_from_bundle,
+    calibration_from_bundle,
+    events_from_bundle,
+    is_recording_bundle_path,
+    metadata_from_bundle,
+    processing_from_bundle,
+    protocol_from_bundle,
+    quality_gate_from_bundle,
+    read_recording_bundle,
+    recording_bundle_path,
+)
 from ads1292_studio.recording_manifest import (
     recording_sample_index_summary,
     verify_recording_manifest,
     write_recording_manifest,
 )
 from ads1292_studio.report import export_review_report
+from ads1292_studio.xlsx_io import recording_xlsx_path
 
 
 REQUIRED_SIDECAR_ROLES = (
@@ -72,6 +85,11 @@ def export_session_package(
     copied_csv = package_dir / source_csv.name
     shutil.copy2(source_csv, copied_csv)
     files = [_file_entry("raw_csv", copied_csv, package_dir)]
+    xlsx_path = recording_xlsx_path(source_csv)
+    if xlsx_path.exists():
+        copied_xlsx = package_dir / xlsx_path.name
+        shutil.copy2(xlsx_path, copied_xlsx)
+        files.append(_file_entry("recording_xlsx", copied_xlsx, package_dir))
 
     metadata = None
     events = tuple()
@@ -82,6 +100,22 @@ def export_session_package(
     protocol = None
     quality_gate = quality_gate_template()
     processing = build_processing_settings()
+    bundle_path = recording_bundle_path(source_csv)
+    has_bundle = is_recording_bundle_path(bundle_path)
+    if has_bundle:
+        bundle = read_recording_bundle(bundle_path)
+        copied = package_dir / bundle_path.name
+        shutil.copy2(bundle_path, copied)
+        files.append(_file_entry("recording_bundle", copied, package_dir))
+        metadata = metadata_from_bundle(bundle)
+        events = events_from_bundle(bundle)
+        event_source_role = "recording_bundle"
+        event_source_path = copied.name
+        acquisition = acquisition_from_bundle(bundle)
+        calibration = calibration_from_bundle(bundle)
+        protocol = protocol_from_bundle(bundle)
+        quality_gate = quality_gate_from_bundle(bundle)
+        processing = processing_from_bundle(bundle)
     sidecars = (
         ("metadata", source_csv.with_suffix(".json")),
         ("events", source_csv.with_suffix(".events.json")),
@@ -94,6 +128,8 @@ def export_session_package(
         ("recording_manifest", recording_manifest_path),
     )
     for role, sidecar in sidecars:
+        if has_bundle and role != "recording_manifest":
+            continue
         if not sidecar.exists():
             continue
         copied = package_dir / sidecar.name
@@ -297,6 +333,13 @@ def _event_annotation_entry(event, *, sample_rate_hz: float) -> dict:
 
 def _sidecar_completeness(files: list[dict]) -> dict:
     present = {str(item.get("role", "")) for item in files}
+    if "recording_bundle" in present:
+        return {
+            "required_roles": list(REQUIRED_SIDECAR_ROLES),
+            "present_roles": list(REQUIRED_SIDECAR_ROLES),
+            "missing_roles": [],
+            "complete": True,
+        }
     present_required = tuple(role for role in REQUIRED_SIDECAR_ROLES if _required_role_present(role, present))
     missing = tuple(role for role in REQUIRED_SIDECAR_ROLES if role not in present_required)
     return {

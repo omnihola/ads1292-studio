@@ -7,26 +7,31 @@ from ads1292_studio.acquisition import build_acquisition_provenance, read_acquis
 from ads1292_studio.app import App
 from ads1292_studio.calibration import Calibration
 from ads1292_studio.csv_io import write_recording_csv
+from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.models import StreamSample
+from ads1292_studio.processing import build_processing_settings
+from ads1292_studio.protocol import TestProtocol
+from ads1292_studio.quality_gate import QualityGate
+from ads1292_studio.recording_bundle import acquisition_from_bundle, read_recording_bundle, write_recording_bundle
 
 
 def test_start_updates_acquisition_summary_when_recording_csv() -> None:
     source = inspect.getsource(App.start)
 
-    assert "write_acquisition_json" in source
+    assert "_write_current_sidecars" in source
+    assert "recording_bundle_path" in source
     assert "acquisition_var.set(format_acquisition_summary" in source
 
 
-def test_start_and_finalize_persist_processing_sidecar() -> None:
+def test_start_and_finalize_persist_processing_bundle() -> None:
     start_source = inspect.getsource(App.start)
     current_sidecars_source = inspect.getsource(App._write_current_sidecars)
     load_source = inspect.getsource(App._finish_csv_load)
 
-    assert "write_processing_json(self._processing_path(csv_path), self._processing_settings())" in start_source
-    assert (
-        "write_processing_json(self._processing_path(self.recording_path), self._processing_settings())"
-        in current_sidecars_source
-    )
+    assert "_write_current_sidecars" in start_source
+    assert "write_recording_bundle" in current_sidecars_source
+    assert "processing=self._processing_settings()" in current_sidecars_source
+    assert "self._load_recording_bundle(result.path)" in load_source
     assert "self._load_processing_sidecar(result.path)" in load_source
 
 
@@ -57,11 +62,34 @@ def test_finalize_recording_sidecars_uses_csv_sample_span(tmp_path: Path) -> Non
         ),
     )
     logs = []
+    def write_bundle(**kwargs):
+        write_recording_bundle(
+            csv_path,
+            metadata=SessionMetadata(session_id="test"),
+            events=tuple(),
+            calibration=Calibration(),
+            acquisition=kwargs["acquisition"],
+            protocol=TestProtocol(),
+            quality_gate=QualityGate(),
+            processing=build_processing_settings(),
+        )
+        logs.append(("bundle", ""))
+
     fake = SimpleNamespace(
         recording_path=csv_path,
         acquisition_var=SimpleNamespace(set=lambda value: logs.append(("summary", value))),
         _acquisition_path=lambda path: path.with_suffix(".acquisition.json"),
-        _write_current_sidecars=lambda: logs.append(("sidecars", "")),
+        _acquisition_for_recording_bundle=lambda _path: build_acquisition_provenance(
+            csv_path=csv_path,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem214301",
+            sample_rate_hz=500.0,
+            calibration=Calibration(),
+            live_calibration=None,
+            started_at="2026-06-21T12:00:00",
+        ),
+        _write_current_sidecars=write_bundle,
+        _write_recording_xlsx_if_ready=lambda: logs.append(("xlsx", "")) or None,
         _log=lambda message: logs.append(("log", message)),
     )
 
@@ -71,21 +99,18 @@ def test_finalize_recording_sidecars_uses_csv_sample_span(tmp_path: Path) -> Non
         finalized_at="2026-06-21T12:00:03",
     )
 
-    loaded = read_acquisition_json(csv_path.with_suffix(".acquisition.json"))
+    loaded = acquisition_from_bundle(read_recording_bundle(csv_path))
     assert loaded.completion["status"] == "finalized"
     assert loaded.completion["sample_count"] == 5
     assert loaded.completion["first_timestamp_seconds"] == 0.0
     assert loaded.completion["last_timestamp_seconds"] == 0.008
     assert loaded.completion["sample_span_seconds"] == 0.008
-    manifest = json.loads(csv_path.with_suffix(".manifest.json").read_text())
-    assert manifest["source_csv"] == "recording.csv"
-    assert manifest["recording"]["sample_count"] == 5
-    assert manifest["acquisition"]["completion_audit"] == "pass"
-    assert any(kind == "sidecars" for kind, _ in logs)
+    assert any(kind == "bundle" for kind, _ in logs)
+    assert any(kind == "xlsx" for kind, _ in logs)
     assert any("finalized" in message for kind, message in logs if kind == "summary")
 
 
-def test_finalize_recording_sidecars_clears_pending_when_acquisition_sidecar_missing(
+def test_finalize_recording_sidecars_creates_bundle_when_legacy_acquisition_sidecar_missing(
     tmp_path: Path,
 ) -> None:
     csv_path = tmp_path / "recording.csv"
@@ -103,15 +128,39 @@ def test_finalize_recording_sidecars_clears_pending_when_acquisition_sidecar_mis
         ),
     )
     logs = []
+    def write_bundle(**kwargs):
+        write_recording_bundle(
+            csv_path,
+            metadata=SessionMetadata(session_id="test"),
+            events=tuple(),
+            calibration=Calibration(),
+            acquisition=kwargs["acquisition"],
+            protocol=TestProtocol(),
+            quality_gate=QualityGate(),
+            processing=build_processing_settings(),
+        )
+        logs.append(("bundle", ""))
+
     fake = SimpleNamespace(
         recording_path=csv_path,
         recording_finalization_pending=True,
+        acquisition_var=SimpleNamespace(set=lambda value: logs.append(("summary", value))),
         _acquisition_path=lambda path: path.with_suffix(".acquisition.json"),
-        _write_current_sidecars=lambda: logs.append(("sidecars", "")),
+        _acquisition_for_recording_bundle=lambda _path: build_acquisition_provenance(
+            csv_path=csv_path,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem214301",
+            sample_rate_hz=500.0,
+            calibration=Calibration(),
+            live_calibration=None,
+            started_at="2026-06-21T12:00:00",
+        ),
+        _write_current_sidecars=write_bundle,
+        _write_recording_xlsx_if_ready=lambda: None,
         _log=lambda message: logs.append(("log", message)),
     )
 
     App._finalize_recording_sidecars(fake)
 
     assert fake.recording_finalization_pending is False
-    assert any("missing acquisition sidecar" in message for kind, message in logs if kind == "log")
+    assert acquisition_from_bundle(read_recording_bundle(csv_path)).completion["status"] == "finalized"

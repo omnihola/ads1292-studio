@@ -19,6 +19,15 @@ from ads1292_studio.events import (
     read_events_json,
 )
 from ads1292_studio.processing import read_processing_json
+from ads1292_studio.recording_bundle import (
+    acquisition_from_bundle,
+    events_from_bundle,
+    is_recording_bundle_path,
+    processing_from_bundle,
+    read_recording_bundle,
+    recording_bundle_path,
+)
+from ads1292_studio.xlsx_io import recording_xlsx_path
 
 
 RECORDING_MANIFEST_SCHEMA = "ads1292-recording-manifest-v1"
@@ -61,31 +70,46 @@ def build_recording_manifest(
     source_csv = Path(csv_path)
     recording = read_recording_csv(source_csv)
     files = [_file_entry("raw_csv", source_csv)]
+    xlsx_path = recording_xlsx_path(source_csv)
+    if xlsx_path.exists():
+        files.append(_file_entry("recording_xlsx", xlsx_path))
     present_roles = {"raw_csv"}
     events: tuple[EventMarker, ...] = tuple()
     event_source_role = "none"
     event_source_path = ""
     acquisition = None
     processing = None
+    bundle_path = recording_bundle_path(source_csv)
+    if is_recording_bundle_path(bundle_path):
+        bundle = read_recording_bundle(bundle_path)
+        files.append(_file_entry("recording_bundle", bundle_path))
+        present_roles.add("recording_bundle")
+        present_roles.update(REQUIRED_SIDECAR_ROLES)
+        events = events_from_bundle(bundle)
+        event_source_role = "recording_bundle"
+        event_source_path = bundle_path.name
+        acquisition = acquisition_from_bundle(bundle)
+        processing = processing_from_bundle(bundle)
 
-    for role, suffix in SIDECAR_PATHS:
-        path = source_csv.with_suffix(suffix)
-        if not path.exists():
-            continue
-        files.append(_file_entry(role, path))
-        present_roles.add(role)
-        if role == "events":
-            events = read_events_json(path)
-            event_source_role = role
-            event_source_path = path.name
-        elif role == "events_csv" and not events:
-            events = read_events_csv(path)
-            event_source_role = role
-            event_source_path = path.name
-        elif role == "acquisition":
-            acquisition = read_acquisition_json(path)
-        elif role == "processing":
-            processing = read_processing_json(path)
+    if "recording_bundle" not in present_roles:
+        for role, suffix in SIDECAR_PATHS:
+            path = source_csv.with_suffix(suffix)
+            if not path.exists():
+                continue
+            files.append(_file_entry(role, path))
+            present_roles.add(role)
+            if role == "events":
+                events = read_events_json(path)
+                event_source_role = role
+                event_source_path = path.name
+            elif role == "events_csv" and not events:
+                events = read_events_csv(path)
+                event_source_role = role
+                event_source_path = path.name
+            elif role == "acquisition":
+                acquisition = read_acquisition_json(path)
+            elif role == "processing":
+                processing = read_processing_json(path)
 
     return {
         "schema": RECORDING_MANIFEST_SCHEMA,

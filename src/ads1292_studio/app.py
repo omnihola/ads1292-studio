@@ -26,13 +26,11 @@ from ads1292_studio.acquisition import (
     finalize_acquisition_provenance,
     format_acquisition_summary,
     read_acquisition_json,
-    write_acquisition_json,
 )
 from ads1292_studio.calibration import (
     Calibration,
     LiveStreamCalibration,
     read_calibration_json,
-    write_calibration_json,
 )
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
@@ -51,8 +49,6 @@ from ads1292_studio.events import (
     read_events_csv,
     read_events_json,
     remove_event_at_index,
-    write_events_csv,
-    write_events_json,
 )
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_samples import append_live_sample_batch
@@ -238,12 +234,24 @@ from ads1292_studio.gui_specs import (
 )
 from ads1292_studio.live_render import build_live_render_frame, display_signal_values
 from ads1292_studio.macos_stderr import install_macos_stderr_filter
-from ads1292_studio.metadata import SessionMetadata, write_metadata_json
+from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.plot_theme import APP_VISUAL_TOKENS
-from ads1292_studio.processing import build_processing_settings, read_processing_json, write_processing_json
-from ads1292_studio.protocol import TestProtocol, protocol_template, read_protocol_json, write_protocol_json
-from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
+from ads1292_studio.processing import build_processing_settings, read_processing_json
+from ads1292_studio.protocol import TestProtocol, protocol_template, read_protocol_json
+from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json
+from ads1292_studio.recording_bundle import (
+    acquisition_from_bundle,
+    calibration_from_bundle,
+    events_from_bundle,
+    is_recording_bundle_path,
+    processing_from_bundle,
+    protocol_from_bundle,
+    quality_gate_from_bundle,
+    read_recording_bundle,
+    recording_bundle_path,
+    write_recording_bundle,
+)
 from ads1292_studio.recording_manifest import write_recording_manifest
 from ads1292_studio.recording_paths import recording_csv_path
 from ads1292_studio.report import export_review_report
@@ -252,6 +260,7 @@ from ads1292_studio.spectrum import build_spectrum_analysis
 from ads1292_studio.session_index import export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.workers import AcquisitionMode, LiveWorker
+from ads1292_studio.xlsx_io import write_recording_xlsx
 
 
 MAX_POINTS = 10000
@@ -593,13 +602,6 @@ class App(tk.Tk):
                 if acquisition_mode is AcquisitionMode.LIVE
                 else None
             )
-            write_metadata_json(csv_path.with_suffix(".json"), self._metadata())
-            write_events_json(self._events_path(csv_path), self.event_markers, sample_rate_hz=SAMPLE_RATE_HZ)
-            write_events_csv(self._events_csv_path(csv_path), self.event_markers, sample_rate_hz=SAMPLE_RATE_HZ)
-            write_calibration_json(self._calibration_path(csv_path), self._calibration())
-            write_protocol_json(self._protocol_path(csv_path), self._protocol())
-            write_quality_gate_json(self._quality_gate_path(csv_path), self._quality_gate())
-            write_processing_json(self._processing_path(csv_path), self._processing_settings())
             acquisition = build_acquisition_provenance(
                 csv_path=csv_path,
                 acquisition_mode=acquisition_mode.value,
@@ -609,9 +611,12 @@ class App(tk.Tk):
                 live_calibration=live_calibration,
                 started_at=started_at.isoformat(timespec="seconds"),
             )
-            write_acquisition_json(self._acquisition_path(csv_path), acquisition)
+            self._write_current_sidecars(
+                acquisition=acquisition,
+                created_at=started_at.isoformat(timespec="seconds"),
+            )
             self.acquisition_var.set(format_acquisition_summary(acquisition))
-            self.path_var.set(f"CSV: {csv_path}")
+            self.path_var.set(f"CSV: {csv_path} | JSON: {recording_bundle_path(csv_path)}")
             self.recording_finalization_pending = True
         self.is_starting = True
         self.connection_var.set("Starting raw acquisition..." if acquisition_mode is AcquisitionMode.RAW else "Starting stream...")
@@ -736,12 +741,13 @@ class App(tk.Tk):
         try:
             self.recording_path = result.path
             self.loaded_samples = result.recording.samples
-            self._load_event_sidecar(result.path)
-            self._load_calibration_sidecar(result.path)
-            self._load_protocol_sidecar(result.path)
-            self._load_quality_gate_sidecar(result.path)
-            self._load_acquisition_sidecar(result.path)
-            self._load_processing_sidecar(result.path)
+            if not self._load_recording_bundle(result.path):
+                self._load_event_sidecar(result.path)
+                self._load_calibration_sidecar(result.path)
+                self._load_protocol_sidecar(result.path)
+                self._load_quality_gate_sidecar(result.path)
+                self._load_acquisition_sidecar(result.path)
+                self._load_processing_sidecar(result.path)
             if (
                 result.review_frame is not None
                 and result.display_settings == self._display_settings()
@@ -1190,16 +1196,8 @@ class App(tk.Tk):
     def _save_event_sidecar(self) -> None:
         if self.recording_path is None:
             return
-        write_events_json(
-            self._events_path(self.recording_path),
-            self.event_markers,
-            sample_rate_hz=SAMPLE_RATE_HZ,
-        )
-        write_events_csv(
-            self._events_csv_path(self.recording_path),
-            self.event_markers,
-            sample_rate_hz=SAMPLE_RATE_HZ,
-        )
+        self._write_current_sidecars()
+        self._write_recording_xlsx_if_ready()
         App._refresh_recording_manifest_if_present(self)
 
     def _refresh_recording_manifest_if_present(self) -> None:
@@ -1267,6 +1265,47 @@ class App(tk.Tk):
             smoothing_window=DISPLAY_SMOOTHING_WINDOW,
         )
 
+    def _load_recording_bundle(self, csv_path: Path) -> bool:
+        bundle_path = recording_bundle_path(csv_path)
+        if not is_recording_bundle_path(bundle_path):
+            return False
+        bundle = read_recording_bundle(bundle_path)
+        self.event_markers = list(events_from_bundle(bundle))
+        self._set_event_count()
+        calibration = calibration_from_bundle(bundle)
+        self.calibration_label_var.set(calibration.label)
+        self.vref_mv_var.set(f"{calibration.vref_mv:g}")
+        self.pga_gain_var.set(f"{calibration.pga_gain:g}")
+        protocol = protocol_from_bundle(bundle)
+        self.protocol_name_var.set(protocol.name)
+        self.protocol_objective_var.set(protocol.objective)
+        self.protocol_steps_var.set(_format_protocol_steps(protocol.steps))
+        self.protocol_acceptance_var.set(protocol.acceptance_notes)
+        values = _quality_gate_to_values(quality_gate_from_bundle(bundle))
+        self.gate_min_duration_var.set(str(values["min_duration_seconds"]))
+        self.gate_min_contact_var.set(str(values["min_contact_ok_percent"]))
+        self.gate_min_r_peaks_var.set(str(values["min_r_peaks"]))
+        self.gate_min_hr_var.set(str(values["min_hr_bpm"]))
+        self.gate_max_hr_var.set(str(values["max_hr_bpm"]))
+        self.gate_require_qrs_var.set(bool(values["require_qrs_clear"]))
+        self.gate_max_drift_var.set(str(values["max_baseline_drift_counts"]))
+        self.gate_max_noise_var.set(str(values["max_noise_rms_counts"]))
+        self.gate_max_ptp_var.set(str(values["max_peak_to_peak_counts"]))
+        acquisition = acquisition_from_bundle(bundle)
+        self.acquisition_var.set(format_acquisition_summary(acquisition))
+        processing = processing_from_bundle(bundle)
+        display = processing.display or {}
+        filters = processing.software_filters or {}
+        self.display_window_var.set(f"{float(display.get('time_window_seconds', 8.0)):g} s")
+        self.display_gain_var.set(f"{float(display.get('gain', 1.0)):g}x")
+        self.sweep_speed_var.set(f"{int(display.get('sweep_speed_mm_s', 25))} mm/s")
+        self.highpass_filter_var.set(bool(filters.get("highpass_enabled", False)))
+        self.notch_filter_var.set(bool(filters.get("notch_enabled", False)))
+        self.lowpass_filter_var.set(bool(filters.get("lowpass_enabled", False)))
+        self.filter_var.set(bool(filters.get("bandpass_enabled", False)))
+        self._log(f"Loaded recording JSON: {bundle_path}")
+        return True
+
     def _load_calibration_sidecar(self, csv_path: Path) -> None:
         path = self._calibration_path(csv_path)
         if not path.exists():
@@ -1329,24 +1368,60 @@ class App(tk.Tk):
         self.filter_var.set(bool(filters.get("bandpass_enabled", False)))
         self._log(f"Loaded processing settings: {path}")
 
-    def _write_current_sidecars(self) -> None:
+    def _write_current_sidecars(
+        self,
+        *,
+        acquisition=None,
+        created_at: str = "",
+    ) -> None:
         if self.recording_path is None:
             return
-        write_metadata_json(self.recording_path.with_suffix(".json"), self._metadata())
-        write_events_json(
-            self._events_path(self.recording_path),
-            self.event_markers,
+        write_recording_bundle(
+            self.recording_path,
+            metadata=self._metadata(),
+            events=tuple(self.event_markers),
+            calibration=self._calibration(),
+            acquisition=acquisition or self._acquisition_for_recording_bundle(self.recording_path),
+            protocol=self._protocol(),
+            quality_gate=self._quality_gate(),
+            processing=self._processing_settings(),
+            sample_rate_hz=SAMPLE_RATE_HZ,
+            created_at=created_at,
+        )
+
+    def _acquisition_for_recording_bundle(self, csv_path: Path):
+        bundle_path = recording_bundle_path(csv_path)
+        if is_recording_bundle_path(bundle_path):
+            return acquisition_from_bundle(read_recording_bundle(bundle_path))
+        acquisition_path = self._acquisition_path(csv_path)
+        if acquisition_path.exists():
+            return read_acquisition_json(acquisition_path)
+        mode = self._acquisition_mode()
+        live_calibration = self.live_stream_calibration if mode is AcquisitionMode.LIVE else None
+        return build_acquisition_provenance(
+            csv_path=csv_path,
+            acquisition_mode=mode.value,
+            port=self.connected_port or self._selected_port_text(),
+            sample_rate_hz=SAMPLE_RATE_HZ,
+            calibration=self._calibration(),
+            live_calibration=live_calibration,
+            started_at=datetime.now().isoformat(timespec="seconds"),
+        )
+
+    def _write_recording_xlsx_if_ready(self) -> Path | None:
+        if self.recording_path is None:
+            return None
+        worker = getattr(self, "worker", None)
+        thread = getattr(worker, "thread", None)
+        if thread is not None and thread.is_alive():
+            return None
+        if not self.recording_path.exists():
+            return None
+        return write_recording_xlsx(
+            self.recording_path,
+            events=tuple(self.event_markers),
             sample_rate_hz=SAMPLE_RATE_HZ,
         )
-        write_events_csv(
-            self._events_csv_path(self.recording_path),
-            self.event_markers,
-            sample_rate_hz=SAMPLE_RATE_HZ,
-        )
-        write_calibration_json(self._calibration_path(self.recording_path), self._calibration())
-        write_protocol_json(self._protocol_path(self.recording_path), self._protocol())
-        write_quality_gate_json(self._quality_gate_path(self.recording_path), self._quality_gate())
-        write_processing_json(self._processing_path(self.recording_path), self._processing_settings())
 
     def _finalize_recording_sidecars(
         self,
@@ -1361,31 +1436,31 @@ class App(tk.Tk):
         if thread is not None and thread.is_alive():
             self._log("Recording finalization deferred until CSV writer stops")
             return
-        self._write_current_sidecars()
-        acquisition_path = self._acquisition_path(self.recording_path)
-        if not acquisition_path.exists():
-            self._log(f"Recording finalization skipped: missing acquisition sidecar {acquisition_path}")
-            self.recording_finalization_pending = False
-            return
         try:
             sample_count, first_timestamp, last_timestamp = App._recording_csv_span(self.recording_path)
             now = datetime.now().isoformat(timespec="seconds")
             ended = ended_at or now
             finalized = finalized_at or now
             provenance = finalize_acquisition_provenance(
-                read_acquisition_json(acquisition_path),
+                self._acquisition_for_recording_bundle(self.recording_path),
                 ended_at=ended,
                 finalized_at=finalized,
                 sample_count=sample_count,
                 first_timestamp_seconds=first_timestamp,
                 last_timestamp_seconds=last_timestamp,
             )
-            write_acquisition_json(acquisition_path, provenance)
-            manifest_path = write_recording_manifest(self.recording_path, created_at=finalized)
+            self._write_current_sidecars(acquisition=provenance, created_at=finalized)
+            xlsx_path = self._write_recording_xlsx_if_ready()
+            manifest_path = self.recording_path.with_suffix(".manifest.json")
+            if manifest_path.exists():
+                manifest_path = write_recording_manifest(self.recording_path, created_at=finalized)
+                self._log(f"Recording manifest refreshed: {manifest_path}")
             self.acquisition_var.set(format_acquisition_summary(provenance))
             self.recording_finalization_pending = False
             self._log(f"Recording finalized: {sample_count} samples, span {last_timestamp - first_timestamp:.6g}s")
-            self._log(f"Recording manifest written: {manifest_path}")
+            self._log(f"Recording JSON written: {recording_bundle_path(self.recording_path)}")
+            if xlsx_path is not None:
+                self._log(f"Recording XLSX written: {xlsx_path}")
         except Exception as exc:
             self._log(f"Recording finalization failed: {exc}")
 
