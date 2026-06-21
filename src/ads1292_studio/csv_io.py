@@ -11,6 +11,7 @@ from ads1292_studio.models import RawSample, Recording, StreamSample
 
 CANONICAL_HEADER = [
     "timestamp",
+    "sample_index",
     "ch1_counts",
     "ch2_counts",
     "board_heart_rate",
@@ -124,10 +125,11 @@ def write_recording_csv(path: Path | str, samples: Iterable[StreamSample]) -> No
     with csv_path.open("w", newline="", buffering=1) as handle:
         writer = csv.writer(handle)
         writer.writerow(CANONICAL_HEADER)
-        for sample in samples:
+        for sample_index, sample in enumerate(samples):
             writer.writerow(
                 [
                     f"{sample.timestamp:.6f}",
+                    sample_index,
                     sample.ch1,
                     sample.ch2,
                     sample.board_heart_rate,
@@ -213,6 +215,7 @@ class CsvRecorder:
             raise RuntimeError("CSV recorder is not open")
         row = [
             f"{sample.timestamp:.6f}",
+            self.rows_written,
             sample.ch1,
             sample.ch2,
             sample.board_heart_rate,

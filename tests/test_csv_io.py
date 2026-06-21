@@ -35,7 +35,11 @@ def test_csv_round_trip_preserves_raw_channels_and_lead_bits(tmp_path: Path) -> 
 
     write_recording_csv(path, samples)
     loaded = read_recording_csv(path)
+    text = path.read_text()
 
+    assert text.splitlines()[0].startswith("timestamp,sample_index,ch1_counts")
+    assert "1.000000,0,-12,345" in text
+    assert "1.002000,1,-10,355" in text
     assert [sample.ch1 for sample in loaded.samples] == [-12, -10]
     assert [sample.ch2 for sample in loaded.samples] == [345, 355]
     assert [sample.status_byte for sample in loaded.samples] == [0x10, 0x05]
@@ -56,6 +60,21 @@ def test_csv_reader_accepts_legacy_ecg_resp_headers(tmp_path: Path) -> None:
     assert loaded.samples[0].ch2 == 99
     assert loaded.samples[0].status_byte == 16
     assert loaded.samples[0].lead_off_bits == 0
+
+
+def test_csv_reader_accepts_new_live_sample_index_column(tmp_path: Path) -> None:
+    path = tmp_path / "indexed.csv"
+    path.write_text(
+        "timestamp,sample_index,ch1_counts,ch2_counts,board_heart_rate,board_respiration_rate,status_byte,lead_off_bits\n"
+        "1.0,500,7,99,80,20,16,0\n"
+    )
+
+    loaded = read_recording_csv(path)
+
+    assert len(loaded.samples) == 1
+    assert loaded.samples[0].timestamp == 1.0
+    assert loaded.samples[0].ch1 == 7
+    assert loaded.samples[0].ch2 == 99
 
 
 def test_csv_reader_combines_canonical_lead_off_bits_when_status_byte_omits_them(tmp_path: Path) -> None:
@@ -119,6 +138,10 @@ def test_csv_recorder_flushes_in_batches_and_on_close(tmp_path: Path, monkeypatc
     assert len(loaded.samples) == 5
     assert loaded.samples[-1].ch2 == 104
     assert loaded.samples[-1].lead_off_bits == 4
+    lines = path.read_text().splitlines()
+    assert lines[0].startswith("timestamp,sample_index,ch1_counts")
+    assert lines[1].startswith("0.000000,0,0,100")
+    assert lines[-1].startswith("4.000000,4,4,104")
 
 
 def test_csv_recorder_normalizes_flush_batch_size(tmp_path: Path) -> None:
