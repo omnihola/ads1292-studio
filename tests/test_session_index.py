@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
 from ads1292_studio.calibration import Calibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_csv, write_events_json
@@ -71,6 +72,18 @@ def _write_complete_sidecars(path: Path, events: tuple[EventMarker, ...] | None 
     markers = events or (EventMarker(0.5, "baseline", "quiet"),)
     write_events_json(path.with_suffix(".events.json"), markers)
     write_calibration_json(path.with_suffix(".calibration.json"), Calibration(label="bench-cal"))
+    write_acquisition_json(
+        path.with_suffix(".acquisition.json"),
+        build_acquisition_provenance(
+            csv_path=path,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem-test",
+            sample_rate_hz=500.0,
+            calibration=Calibration(label="bench-cal"),
+            live_calibration=None,
+            started_at="2026-06-21T00:00:00",
+        ),
+    )
     write_protocol_json(
         path.with_suffix(".protocol.json"),
         TestProtocol(
@@ -104,7 +117,27 @@ def test_scan_recording_directory_reports_sidecar_completeness(tmp_path: Path) -
     assert rows["complete"].sidecar_status == "complete"
     assert rows["complete"].missing_sidecars == ""
     assert rows["partial"].sidecar_status == "missing"
-    assert rows["partial"].missing_sidecars == "events;calibration;protocol;quality_gate"
+    assert rows["partial"].missing_sidecars == "events;calibration;acquisition;protocol;quality_gate"
+
+
+def test_scan_recording_directory_requires_acquisition_provenance_sidecar(tmp_path: Path) -> None:
+    path = _write_recording(tmp_path, "missing-acquisition.csv", "MOTAC gel + Ag/AgCl")
+    write_events_json(path.with_suffix(".events.json"), (EventMarker(0.5, "baseline", "quiet"),))
+    write_calibration_json(path.with_suffix(".calibration.json"), Calibration(label="bench-cal"))
+    write_protocol_json(
+        path.with_suffix(".protocol.json"),
+        TestProtocol(
+            name="session-index-protocol",
+            steps=(ProtocolStep(start_seconds=0.0, duration_seconds=1.0, label="baseline", instruction="sit still"),),
+        ),
+    )
+    write_quality_gate_json(path.with_suffix(".quality-gate.json"), QualityGate(min_duration_seconds=1.0))
+
+    rows = {row.session_id: row for row in scan_recording_directory(tmp_path)}
+
+    assert rows["missing-acquisition"].sidecar_status == "missing"
+    assert rows["missing-acquisition"].missing_sidecars == "acquisition"
+    assert rows["missing-acquisition"].package_ready_status == "incomplete_record"
 
 
 def test_scan_recording_directory_reports_package_ready_status(tmp_path: Path) -> None:
@@ -269,13 +302,17 @@ def test_export_session_index_writes_sidecar_completion_plan(tmp_path: Path) -> 
 
     assert export.sidecar_plan_csv_path.exists()
     assert export.sidecar_plan_html_path.exists()
-    assert len(export.sidecar_plan_rows) == 4
+    assert len(export.sidecar_plan_rows) == 5
     plan_text = export.sidecar_plan_csv_path.read_text()
     assert "relative_path,sidecar,target_path,template_path,suggested_action" in plan_text
     assert "partial.csv,events," in plan_text
     assert str(partial.with_suffix(".events.json")) in plan_text
     assert str(export.sidecar_template_dir / "partial.events.json") in plan_text
+    assert "partial.csv,acquisition," in plan_text
+    assert str(partial.with_suffix(".acquisition.json")) in plan_text
+    assert str(export.sidecar_template_dir / "partial.acquisition.json") in plan_text
     assert "Create events sidecar" in plan_text
+    assert "Create acquisition sidecar" in plan_text
     assert "quality_gate" in plan_text
     assert "ready.csv" not in plan_text
     html = export.sidecar_plan_html_path.read_text()
@@ -310,16 +347,21 @@ def test_export_session_index_writes_sidecar_template_bundle(tmp_path: Path) -> 
     export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Template Bundle")
 
     assert export.sidecar_template_dir.exists()
-    assert len(export.sidecar_template_paths) == 4
+    assert len(export.sidecar_template_paths) == 5
     template_names = {path.name for path in export.sidecar_template_paths}
     assert template_names == {
         "partial.events.json",
         "partial.calibration.json",
+        "partial.acquisition.json",
         "partial.protocol.json",
         "partial.quality-gate.json",
     }
     assert not partial.with_suffix(".events.json").exists()
+    acquisition_text = (export.sidecar_template_dir / "partial.acquisition.json").read_text()
     protocol_text = (export.sidecar_template_dir / "partial.protocol.json").read_text()
     gate_text = (export.sidecar_template_dir / "partial.quality-gate.json").read_text()
+    assert "ads1292-acquisition-provenance-v1" in acquisition_text
+    assert '"csv_name": "partial.csv"' in acquisition_text
+    assert "csv_columns" in acquisition_text
     assert "MOTAC ECG validation" in protocol_text
     assert "min_contact_ok_percent" in gate_text

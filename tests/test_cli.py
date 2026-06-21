@@ -139,18 +139,21 @@ def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
     assert "action_review_signal=0" in captured
     assert "sidecar_plan_csv=" in captured
     assert "sidecar_plan_html=" in captured
-    assert "sidecar_plan_rows=5" in captured
+    assert "sidecar_plan_rows=6" in captured
     assert "sidecar_template_dir=" in captured
-    assert "sidecar_template_files=5" in captured
+    assert "sidecar_template_files=6" in captured
     assert "sidecar_apply_script=" in captured
     sidecar_plan = next(out_dir.glob("*-sidecar-plan.csv"))
     apply_script = next(out_dir.glob("*-apply-sidecars.sh"))
     template_dir = next(out_dir.glob("*-sidecar-templates"))
     sidecar_plan_text = sidecar_plan.read_text()
     assert "recording.csv,metadata," in sidecar_plan_text
+    assert "recording.csv,acquisition," in sidecar_plan_text
     assert str(template_dir / "recording.json") in sidecar_plan_text
+    assert str(template_dir / "recording.acquisition.json") in sidecar_plan_text
     assert str(template_dir / "recording.protocol.json") in sidecar_plan_text
     assert (template_dir / "recording.json").exists()
+    assert (template_dir / "recording.acquisition.json").exists()
     assert (template_dir / "recording.protocol.json").exists()
     assert str(template_dir / "recording.json") in apply_script.read_text()
 

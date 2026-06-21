@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
 from ads1292_studio.calibration import Calibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_json
@@ -60,6 +61,18 @@ def _write_complete_sidecars(path: Path, events: tuple[EventMarker, ...] | None 
     markers = events or (EventMarker(0.5, "baseline", "quiet"),)
     write_events_json(path.with_suffix(".events.json"), markers)
     write_calibration_json(path.with_suffix(".calibration.json"), Calibration(label="bench-cal"))
+    write_acquisition_json(
+        path.with_suffix(".acquisition.json"),
+        build_acquisition_provenance(
+            csv_path=path,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem-test",
+            sample_rate_hz=500.0,
+            calibration=Calibration(label="bench-cal"),
+            live_calibration=None,
+            started_at="2026-06-21T00:00:00",
+        ),
+    )
     write_protocol_json(
         path.with_suffix(".protocol.json"),
         TestProtocol(
@@ -103,10 +116,10 @@ def test_build_session_index_message_includes_action_queue_counts(tmp_path: Path
     assert "Event annotations: 3" in message
     assert "Interval annotations: 2" in message
     assert "Annotated seconds: 6.00" in message
-    assert "Sidecar plan rows: 4" in message
+    assert "Sidecar plan rows: 5" in message
     assert str(export.sidecar_plan_csv_path) in message
     assert str(export.sidecar_plan_html_path) in message
-    assert "Sidecar template files: 4" in message
+    assert "Sidecar template files: 5" in message
     assert str(export.sidecar_template_dir) in message
     assert "Apply sidecars script:" in message
     assert str(export.sidecar_apply_script_path) in message

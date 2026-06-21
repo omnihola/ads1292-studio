@@ -7,6 +7,7 @@ from html import escape
 from pathlib import Path
 from shlex import quote
 
+from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
 from ads1292_studio.calibration import calibration_template, write_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.events import EventMarker, event_template, read_events_csv, read_events_json, write_events_json
@@ -290,6 +291,7 @@ def _sidecar_status(csv_path: Path) -> tuple[str, str]:
         "metadata": csv_path.with_suffix(".json"),
         "events": csv_path.with_suffix(".events.json"),
         "calibration": csv_path.with_suffix(".calibration.json"),
+        "acquisition": csv_path.with_suffix(".acquisition.json"),
         "protocol": csv_path.with_suffix(".protocol.json"),
         "quality_gate": csv_path.with_suffix(".quality-gate.json"),
     }
@@ -333,6 +335,8 @@ def _expected_sidecar_path(csv_path: Path, sidecar: str) -> Path:
         return csv_path.with_suffix(".events.json")
     if sidecar == "calibration":
         return csv_path.with_suffix(".calibration.json")
+    if sidecar == "acquisition":
+        return csv_path.with_suffix(".acquisition.json")
     if sidecar == "protocol":
         return csv_path.with_suffix(".protocol.json")
     if sidecar == "quality_gate":
@@ -372,11 +376,38 @@ def _write_sidecar_template(path: Path, row: SessionIndexRow, sidecar: str) -> N
     if sidecar == "calibration":
         write_calibration_json(path, calibration_template())
         return
+    if sidecar == "acquisition":
+        write_acquisition_json(path, _acquisition_template(row))
+        return
     if sidecar == "protocol":
         write_protocol_json(path, protocol_template())
         return
     if sidecar == "quality_gate":
         write_quality_gate_json(path, quality_gate_template())
+
+
+def _acquisition_template(row: SessionIndexRow):
+    return build_acquisition_provenance(
+        csv_path=row.path,
+        acquisition_mode=_acquisition_mode_for_csv(row.path),
+        port="review-required",
+        sample_rate_hz=500.0,
+        calibration=calibration_template(),
+        live_calibration=None,
+        started_at="review-required",
+    )
+
+
+def _acquisition_mode_for_csv(path: Path) -> str:
+    try:
+        with path.open(newline="") as handle:
+            header = next(csv.reader(handle), [])
+    except (OSError, StopIteration):
+        return "live_stream"
+    fields = set(header)
+    if {"ch1_raw24", "ch2_raw24"} & fields or "raw_lsb_uv_per_count" in fields:
+        return "raw_adc_24bit"
+    return "live_stream"
 
 
 def _package_ready_status(waveform_status: str, sidecar_status: str) -> str:
