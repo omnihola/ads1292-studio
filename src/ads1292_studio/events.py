@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import csv
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 import json
 from pathlib import Path
 from typing import Iterable
@@ -39,9 +39,8 @@ def read_events_json(path: Path | str) -> tuple[EventMarker, ...]:
     data = json.loads(Path(path).read_text())
     if isinstance(data, dict):
         data = data.get("events", [])
-    allowed = {field.name for field in EventMarker.__dataclass_fields__.values()}
     return tuple(
-        EventMarker(**{key: value for key, value in item.items() if key in allowed}).normalized()
+        _event_from_mapping(item)
         for item in data
         if isinstance(item, dict)
     )
@@ -50,7 +49,7 @@ def read_events_json(path: Path | str) -> tuple[EventMarker, ...]:
 def write_events_json(path: Path | str, events: Iterable[EventMarker]) -> None:
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    normalized = [asdict(event.normalized()) for event in events]
+    normalized = [_event_json_entry(event) for event in events]
     payload = {
         "schema": EVENT_ANNOTATIONS_SCHEMA,
         "timestamp_reference": EVENT_TIMESTAMP_REFERENCE,
@@ -59,7 +58,7 @@ def write_events_json(path: Path | str, events: Iterable[EventMarker]) -> None:
     output.write_text(json.dumps(payload, indent=2) + "\n")
 
 
-EVENTS_CSV_HEADER = ["start_seconds", "end_seconds", "duration_seconds", "label", "notes"]
+EVENTS_CSV_HEADER = ["start_seconds", "end_seconds", "duration_seconds", "event_type", "label", "notes"]
 
 
 def write_events_csv(path: Path | str, events: Iterable[EventMarker]) -> None:
@@ -75,6 +74,7 @@ def write_events_csv(path: Path | str, events: Iterable[EventMarker]) -> None:
                     "start_seconds": f"{marker.timestamp_seconds:.6f}",
                     "end_seconds": f"{marker.end_seconds:.6f}",
                     "duration_seconds": f"{marker.duration_seconds:.6f}",
+                    "event_type": _event_type(marker),
                     "label": marker.label,
                     "notes": marker.notes,
                 }
@@ -85,14 +85,42 @@ def read_events_csv(path: Path | str) -> tuple[EventMarker, ...]:
     csv_path = Path(path)
     with csv_path.open(newline="") as handle:
         return tuple(
-            EventMarker(
-                timestamp_seconds=float(row.get("start_seconds", 0.0) or 0.0),
-                duration_seconds=float(row.get("duration_seconds", 0.0) or 0.0),
-                label=row.get("label", ""),
-                notes=row.get("notes", ""),
-            ).normalized()
+            _event_from_mapping(row)
             for row in csv.DictReader(handle)
         )
+
+
+def _event_type(event: EventMarker) -> str:
+    return "interval" if event.normalized().duration_seconds > 0 else "point"
+
+
+def _event_json_entry(event: EventMarker) -> dict[str, object]:
+    marker = event.normalized()
+    return {
+        "timestamp_seconds": marker.timestamp_seconds,
+        "start_seconds": marker.timestamp_seconds,
+        "end_seconds": marker.end_seconds,
+        "duration_seconds": marker.duration_seconds,
+        "event_type": _event_type(marker),
+        "label": marker.label,
+        "notes": marker.notes,
+    }
+
+
+def _event_from_mapping(item: dict) -> EventMarker:
+    timestamp = item.get("timestamp_seconds", item.get("start_seconds", 0.0))
+    duration = item.get("duration_seconds")
+    if duration in (None, ""):
+        start = float(item.get("start_seconds", timestamp) or 0.0)
+        end = float(item.get("end_seconds", start) or start)
+        duration = max(0.0, end - start)
+        timestamp = start
+    return EventMarker(
+        timestamp_seconds=float(timestamp or 0.0),
+        duration_seconds=float(duration or 0.0),
+        label=str(item.get("label", "")),
+        notes=str(item.get("notes", "")),
+    ).normalized()
 
 
 def event_from_interval(

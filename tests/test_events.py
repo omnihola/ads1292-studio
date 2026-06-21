@@ -69,10 +69,41 @@ def test_event_marker_supports_duration_and_end_seconds(tmp_path: Path) -> None:
 
     write_events_json(path, events)
     loaded = read_events_json(path)
+    data = json.loads(path.read_text())
 
     assert loaded[0].duration_seconds == 3.5
     assert loaded[0].end_seconds == 15.5
     assert "duration_seconds" in path.read_text()
+    assert data["events"][0]["start_seconds"] == 12.0
+    assert data["events"][0]["end_seconds"] == 15.5
+    assert data["events"][0]["event_type"] == "interval"
+
+
+def test_events_json_reader_accepts_start_end_seconds_without_duration(tmp_path: Path) -> None:
+    path = tmp_path / "edited.events.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "ads1292-event-annotations-v1",
+                "timestamp_reference": "relative_seconds_from_recording_start",
+                "events": [
+                    {
+                        "start_seconds": 12.0,
+                        "end_seconds": 15.5,
+                        "event_type": "interval",
+                        "label": "motion",
+                        "notes": "spreadsheet-style edit",
+                    }
+                ],
+            }
+        )
+    )
+
+    loaded = read_events_json(path)
+
+    assert loaded == (
+        EventMarker(12.0, duration_seconds=3.5, label="motion", notes="spreadsheet-style edit"),
+    )
 
 
 def test_event_markers_csv_round_trip_includes_start_end_duration(tmp_path: Path) -> None:
@@ -92,9 +123,25 @@ def test_event_markers_csv_round_trip_includes_start_end_duration(tmp_path: Path
     text = path.read_text()
 
     assert loaded == tuple(event.normalized() for event in events)
-    assert "start_seconds,end_seconds,duration_seconds,label,notes" in text
+    assert "start_seconds,end_seconds,duration_seconds,event_type,label,notes" in text
     assert "15.500000" in text
+    assert ",interval,motion segment," in text
+    assert ",point,electrode touch," in text
     assert "motion segment" in text
+
+
+def test_events_csv_reader_accepts_start_end_seconds_without_duration(tmp_path: Path) -> None:
+    path = tmp_path / "edited.events.csv"
+    path.write_text(
+        "start_seconds,end_seconds,event_type,label,notes\n"
+        "12.000000,15.500000,interval,motion,spreadsheet-style edit\n"
+    )
+
+    loaded = read_events_csv(path)
+
+    assert loaded == (
+        EventMarker(12.0, duration_seconds=3.5, label="motion", notes="spreadsheet-style edit"),
+    )
 
 
 def test_event_marker_normalizes_negative_duration_to_point_event() -> None:
