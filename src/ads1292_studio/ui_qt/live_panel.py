@@ -32,6 +32,7 @@ class LivePanel(FigureCanvasQTAgg):
         self.ax_resp.set_ylabel("Impedance (counts)", fontsize=8)
         self.ax_resp.set_xlabel("Time (s)", fontsize=8)
         self._empty_text = None
+        self._event_artists: list = []
         self.show_empty("Connect, then Start for CH2 ECG")
 
     def _style_axes(self) -> None:
@@ -69,6 +70,26 @@ class LivePanel(FigureCanvasQTAgg):
         self._resp_line.set_data(resp_x, resp_y)
         self._autoscale(self.ax_ecg, ecg_x, ecg_y)
         self._autoscale(self.ax_resp, resp_x, resp_y)
+        self.draw_idle()
+
+    def set_event_markers(self, markers) -> None:
+        """Overlay point events (dotted line) and range events (shaded span) on the ECG axis."""
+        for art in self._event_artists:
+            try:
+                art.remove()
+            except (ValueError, AttributeError):
+                pass
+        self._event_artists = []
+        for m in markers:
+            if getattr(m, "duration_seconds", 0.0) > 0:
+                span = self.ax_ecg.axvspan(
+                    m.timestamp_seconds, m.timestamp_seconds + m.duration_seconds,
+                    color=_T["warn"], alpha=0.16,
+                )
+                self._event_artists.append(span)
+            else:
+                line = self.ax_ecg.axvline(m.timestamp_seconds, color=_T["warn"], linewidth=1.0, linestyle=":")
+                self._event_artists.append(line)
         self.draw_idle()
 
     @staticmethod

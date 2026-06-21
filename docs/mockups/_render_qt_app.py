@@ -33,7 +33,8 @@ for i in range(2000):
     win.controller.samples.put(
         StreamSample(timestamp=t, ch1=int(resp), ch2=int(ecg), board_heart_rate=72, board_respiration_rate=15, status_byte=0, sample_index=i)
     )
-win._events.append({"label": "motion", "t": 4.0, "kind": "point"})
+from ads1292_studio.events import EventMarker
+win.controller.event_markers.append(EventMarker(timestamp_seconds=4.0, label="motion").normalized())
 win._tick()
 win._refresh_events()
 win._refresh_state()

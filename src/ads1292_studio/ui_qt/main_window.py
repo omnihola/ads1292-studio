@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from ads1292_studio.device import find_ads_port, list_ads_ports
+from ads1292_studio.events import EventMarker, event_from_interval
 from ads1292_studio.gui_state import gui_control_states, gui_signal_quality_cards
 from ads1292_studio.quality import compute_quality_metrics, estimate_realtime_snr
 from ads1292_studio.ui_qt.analysis_panels import EventLogPanel, PqrstPanel, SpectrumPanel
@@ -56,7 +57,6 @@ class MainWindow(QMainWindow):
         self._ch1: deque[float] = deque(maxlen=MAX_POINTS)
         self._ch2: deque[float] = deque(maxlen=MAX_POINTS)
         self._sample_count = 0
-        self._events: list[dict] = []
         self._range_start_s: float | None = None
 
         root = QWidget()
@@ -293,12 +293,22 @@ class MainWindow(QMainWindow):
     def _on_calibrate(self) -> None:
         QMessageBox.information(self, "Calibrate Live", "Live calibration wiring lands in Phase 44.3.")
 
-    # event console (MVP: in-memory; sidecar/overlay wiring is Phase 44.3)
+    # ---- event annotations (real EventMarkers; persisted at finalize, overlaid on plot) ----
     def _now_seconds(self) -> float:
         return self._sample_count / SAMPLE_RATE_HZ
 
+    def _event_label(self) -> str:
+        return self.event_console.label_edit.text().strip() or "event"
+
+    def _event_notes(self) -> str:
+        return self.event_console.notes_edit.text().strip()
+
     def _on_add_point(self) -> None:
-        self._events.append({"label": self.event_console.label_edit.text(), "t": self._now_seconds(), "kind": "point"})
+        marker = EventMarker(
+            timestamp_seconds=self._now_seconds(), label=self._event_label(), notes=self._event_notes()
+        ).normalized()
+        self.controller.event_markers.append(marker)
+        self.event_log_panel.append_line(f"Event {marker.timestamp_seconds:.2f}s: {marker.label}")
         self._refresh_events()
 
     def _on_start_range(self) -> None:
@@ -307,7 +317,14 @@ class MainWindow(QMainWindow):
 
     def _on_end_range(self) -> None:
         if self._range_start_s is not None:
-            self._events.append({"label": self.event_console.label_edit.text(), "start": self._range_start_s, "end": self._now_seconds(), "kind": "range"})
+            marker = event_from_interval(
+                start_seconds=self._range_start_s, end_seconds=self._now_seconds(),
+                label=self._event_label(), notes=self._event_notes(),
+            )
+            self.controller.event_markers.append(marker)
+            self.event_log_panel.append_line(
+                f"Range {marker.timestamp_seconds:.2f}-{marker.timestamp_seconds + marker.duration_seconds:.2f}s: {marker.label}"
+            )
             self._range_start_s = None
         self._refresh_events()
 
@@ -318,12 +335,14 @@ class MainWindow(QMainWindow):
         except ValueError:
             QMessageBox.warning(self, "Manual range", "Enter numeric start and end seconds.")
             return
-        self._events.append({"label": self.event_console.label_edit.text(), "start": start, "end": end, "kind": "range"})
+        self.controller.event_markers.append(
+            event_from_interval(start_seconds=start, end_seconds=end, label=self._event_label(), notes=self._event_notes())
+        )
         self._refresh_events()
 
     def _on_remove_last(self) -> None:
-        if self._events:
-            self._events.pop()
+        if self.controller.event_markers:
+            self.controller.event_markers.pop()
         self._refresh_events()
 
     def _on_remove_by_number(self) -> None:
@@ -331,12 +350,14 @@ class MainWindow(QMainWindow):
             idx = int(self.event_console.remove_index_edit.text()) - 1
         except ValueError:
             return
-        if 0 <= idx < len(self._events):
-            self._events.pop(idx)
+        if 0 <= idx < len(self.controller.event_markers):
+            self.controller.event_markers.pop(idx)
         self._refresh_events()
 
     def _refresh_events(self) -> None:
-        self.event_console.set_event_status(len(self._events), self._range_start_s)
+        markers = self.controller.event_markers
+        self.event_console.set_event_status(len(markers), self._range_start_s)
+        self.live_panel.set_event_markers(markers)
 
     # ---------- tick ----------
     def _set_timer_active(self, active: bool) -> None:

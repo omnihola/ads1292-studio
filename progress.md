@@ -804,6 +804,11 @@
 - Files modified: `src/ads1292_studio/ui_qt/{controller,main_window,status_panel,sidebar_forms}.py`, `tests/test_ui_qt_smoke.py`, planning files.
 - Still to do in 44.2: PQRST / Spectrum / Event Log tabs; backport reliable finalization to the Tk app (optional); real-hardware smoke.
 
+### Phase 44.3 (started): functional event annotations
+- **Status:** event create/persist/overlay done; remaining 44.3 = archive actions + Validation/Protocol forms + Calibrate Live.
+- Real-hardware smoke confirmed by user: `~/Documents/ECG/live/2026-06-21-181633` (after the close-finalize fix) wrote csv + json + xlsx; the prior 17:41 session was csv-only. Fix verified on hardware.
+- Event buttons were clickable but in-memory only (not saved, not overlaid). Now: handlers build real `EventMarker`/`event_from_interval` on `controller.event_markers`, overlay on the live ECG axis (`LivePanel.set_event_markers`: dotted line for points, shaded span for ranges), append to the Event Log, and are persisted into the recording JSON bundle + XLSX at finalize (events cleared on Start). Test `test_finalize_writes_csv_json_and_xlsx` extended to assert the event round-trips through the bundle. 535 tests pass.
+
 ### Phase 44.2 (complete): analysis tabs + Tk finalize backport
 - **Status:** complete (offscreen + real-recording verified; real-hardware smoke pending)
 - Actions taken:

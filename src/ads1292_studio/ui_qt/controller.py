@@ -25,6 +25,7 @@ from ads1292_studio.acquisition import (
 from ads1292_studio.calibration import Calibration
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice
+from ads1292_studio.events import EventMarker
 from ads1292_studio.gui_state import GuiState
 from ads1292_studio.gui_workers import ConnectResult, CsvLoadResult
 from ads1292_studio.metadata import SessionMetadata
@@ -73,6 +74,7 @@ class AcquisitionController:
         self._record_metadata = SessionMetadata()
         self._record_provenance = None
         self._record_started_iso = ""
+        self.event_markers: list[EventMarker] = []
 
     # ---- state snapshot (drives the whole UI via gui_state) ----
     def snapshot(self) -> GuiState:
@@ -117,6 +119,7 @@ class AcquisitionController:
             return
         self.recording_path = None
         self._finalization_pending = False
+        self.event_markers = []
         csv_path = None
         if save_csv:
             started_at = datetime.now()
@@ -199,10 +202,11 @@ class AcquisitionController:
                 first_timestamp_seconds=first_ts,
                 last_timestamp_seconds=last_ts,
             )
+            events = tuple(self.event_markers)
             write_recording_bundle(
                 self.recording_path,
                 metadata=self._record_metadata,
-                events=(),
+                events=events,
                 calibration=Calibration(),
                 acquisition=provenance,
                 protocol=protocol_template(),
@@ -211,7 +215,7 @@ class AcquisitionController:
                 sample_rate_hz=SAMPLE_RATE_HZ,
                 created_at=finalized,
             )
-            xlsx_path = write_recording_xlsx(self.recording_path, events=(), sample_rate_hz=SAMPLE_RATE_HZ)
+            xlsx_path = write_recording_xlsx(self.recording_path, events=events, sample_rate_hz=SAMPLE_RATE_HZ)
             out.logs.append(f"Recording finalized: {sample_count} samples")
             out.logs.append(f"Recording JSON written: {recording_bundle_path(self.recording_path)}")
             out.logs.append(f"Recording XLSX written: {xlsx_path}")

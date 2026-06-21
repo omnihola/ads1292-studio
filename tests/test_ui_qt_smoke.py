@@ -119,8 +119,12 @@ def test_finalize_writes_csv_json_and_xlsx(tmp_path) -> None:
                 )
             )
 
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.recording_bundle import events_from_bundle, read_recording_bundle
+
     ctrl = AcquisitionController()
     ctrl.recording_path = csv_path
+    ctrl.event_markers = [EventMarker(timestamp_seconds=0.05, label="motion", notes="step").normalized()]
     ctrl._record_provenance = build_acquisition_provenance(
         csv_path=csv_path,
         acquisition_mode="live",
@@ -140,6 +144,11 @@ def test_finalize_writes_csv_json_and_xlsx(tmp_path) -> None:
     assert csv_path.with_suffix(".xlsx").exists(), "XLSX written"
     assert ctrl.has_pending_recording is False
     assert any("XLSX written" in line for line in out.logs)
+
+    # events are persisted into the JSON bundle
+    bundle = read_recording_bundle(csv_path.with_suffix(".json"))
+    events = events_from_bundle(bundle)
+    assert len(events) == 1 and events[0].label == "motion"
 
 
 def test_connect_failure_surfaces_without_crashing(qapp) -> None:
