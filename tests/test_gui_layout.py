@@ -573,7 +573,11 @@ def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:
 
 
 def test_gui_layout_uses_task_based_sidebar_tabs() -> None:
-    assert sidebar_tab_labels() == ("Status", "Session", "Validation", "Protocol", "Actions")
+    import ads1292_studio.gui_specs as gui_specs
+
+    assert hasattr(gui_specs, "sidebar_status_label")
+    assert gui_specs.sidebar_status_label() == "Status"
+    assert sidebar_tab_labels() == ("Session", "Validation", "Protocol", "Actions")
 
 
 def test_sidebar_tabs_use_fixed_width_labels() -> None:
@@ -582,6 +586,8 @@ def test_sidebar_tabs_use_fixed_width_labels() -> None:
     source = inspect.getsource(build_sidebar)
 
     assert "width=int(tab_strip_style[\"tab_width\"])" in source
+    assert "for label in SIDEBAR_TABS" in source
+    assert "Status" not in sidebar_tab_labels()
 
 
 def test_base_notebook_styles_keep_tab_defaults_consistent() -> None:
@@ -646,6 +652,21 @@ def test_sidebar_uses_custom_segmented_tab_strip() -> None:
     assert "_select_sidebar_tab(app, target)" in source
     assert "ttk.Notebook" not in source
     assert "<<NotebookTabChanged>>" not in source
+
+
+def test_sidebar_status_is_fixed_outside_tab_strip() -> None:
+    from ads1292_studio.gui_layout import build_body_shell
+    from ads1292_studio.gui_sidebar import build_fixed_status_panel
+
+    body_source = inspect.getsource(build_body_shell)
+    status_source = inspect.getsource(build_fixed_status_panel)
+
+    assert "app.sidebar_status_shell" in body_source
+    assert "status_shell.pack(side=tk.RIGHT, fill=tk.Y)" in body_source
+    assert "build_fixed_status_panel(app, status_shell)" in body_source
+    assert 'sidebar["Status"] = status_side' in body_source
+    assert "app.sidebar_status_scroll" in status_source
+    assert "app.sidebar_tab_strip" not in status_source
 
 
 def test_sidebar_tab_selection_uses_stacked_frames() -> None:
@@ -721,8 +742,10 @@ def test_sidebar_layout_spec_stabilizes_control_column() -> None:
     assert sidebar_layout_spec() == {
         "shell": "SidebarShell.TFrame",
         "width": 320,
+        "status_width": 320,
         "padding": (8, 10),
         "scroll_width": 292,
+        "status_scroll_width": 292,
     }
 
 
@@ -745,7 +768,9 @@ def test_body_shell_uses_fixed_sidebar_without_native_paned_sash() -> None:
     assert "ttk.PanedWindow" not in source
     assert "app.body_shell" in source
     assert "side_shell.pack(side=tk.LEFT, fill=tk.Y)" in source
+    assert "status_shell.pack(side=tk.RIGHT, fill=tk.Y)" in source
     assert "side_shell.pack_propagate(False)" in source
+    assert "status_shell.pack_propagate(False)" in source
     assert "main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)" in source
 
 

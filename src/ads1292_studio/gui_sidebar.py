@@ -305,6 +305,14 @@ def build_sidebar(app: Any, parent: ttk.Frame) -> dict[str, ttk.Frame]:
     return sections
 
 
+def build_fixed_status_panel(app: Any, parent: ttk.Frame) -> ttk.Frame:
+    spec = sidebar_layout_spec()
+    scroll = ScrollableFrame(parent, width=int(spec["status_scroll_width"]))
+    scroll.frame.pack(fill=tk.BOTH, expand=True)
+    app.sidebar_status_scroll = scroll
+    return scroll.content
+
+
 def _select_sidebar_tab(app: Any, target: ttk.Frame) -> str:
     if str(target) == app.selected_sidebar_tab:
         return "break"

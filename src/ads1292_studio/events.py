@@ -141,6 +141,13 @@ def format_event_log_text(events: Iterable[EventMarker]) -> str:
     return "\n".join(rows) + "\n"
 
 
+def event_sample_indices(
+    event: EventMarker,
+    sample_rate_hz: float = DEFAULT_EVENT_SAMPLE_RATE_HZ,
+) -> dict[str, int]:
+    return _event_sample_indices(event, _normalized_sample_rate(sample_rate_hz))
+
+
 def _event_type(event: EventMarker) -> str:
     return "interval" if event.normalized().duration_seconds > 0 else "point"
 

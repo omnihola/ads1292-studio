@@ -33,6 +33,7 @@ from ads1292_studio.gui_sidebar import (
     build_action_section_heading,
     build_channel_map_cards,
     build_event_count_card,
+    build_fixed_status_panel,
     build_protocol_note_card,
     build_safety_notice,
     build_sidebar,
@@ -381,6 +382,17 @@ def build_body_shell(app: Any) -> tuple[dict[str, ttk.Frame], ttk.Frame]:
     side_shell.pack(side=tk.LEFT, fill=tk.Y)
     side_shell.pack_propagate(False)
     sidebar = build_sidebar(app, side_shell)
+    status_shell = ttk.Frame(
+        body,
+        width=sidebar_spec["status_width"],
+        padding=sidebar_spec["padding"],
+        style=str(sidebar_spec["shell"]),
+    )
+    app.sidebar_status_shell = status_shell
+    status_shell.pack(side=tk.RIGHT, fill=tk.Y)
+    status_shell.pack_propagate(False)
+    status_side = build_fixed_status_panel(app, status_shell)
+    sidebar["Status"] = status_side
     main = ttk.Frame(body, padding=workspace_spec["main_padding"], style=str(workspace_spec["main"]))
     app.main_workspace = main
     main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)

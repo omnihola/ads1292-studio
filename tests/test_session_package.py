@@ -137,13 +137,28 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     annotations = manifest["metrics"]["event_annotations"]
     assert annotations["schema"] == "ads1292-event-annotations-v1"
     assert annotations["timestamp_reference"] == "relative_seconds_from_recording_start"
+    assert annotations["sample_rate_hz"] == 500.0
+    assert annotations["sample_index_reference"] == "zero_based_sample_index_at_recording_sample_rate"
     assert annotations["count"] == 1
     assert annotations["point_events"] == 1
     assert annotations["interval_events"] == 0
     assert annotations["total_annotated_seconds"] == 0.0
+    assert annotations["total_annotated_samples"] == 0
     assert annotations["labels"] == {"motion": 1}
     assert annotations["source_role"] == "events"
     assert annotations["source_path"] == "pkg-001.events.json"
+    assert annotations["events"] == [
+        {
+            "start_seconds": 0.5,
+            "end_seconds": 0.5,
+            "duration_seconds": 0.0,
+            "start_sample_index": 250,
+            "end_sample_index": 250,
+            "duration_samples": 0,
+            "label": "motion",
+            "notes": "arm moved",
+        }
+    ]
     acquisition = manifest["metrics"]["acquisition"]
     assert acquisition["mode"] == "live_stream"
     assert acquisition["sample_rate_hz"] == 500.0
@@ -206,6 +221,7 @@ def test_export_session_package_refreshes_stale_recording_manifest(tmp_path: Pat
     annotations = package_manifest["metrics"]["event_annotations"]
     assert annotations["count"] == 2
     assert annotations["interval_events"] == 1
+    assert annotations["total_annotated_samples"] == 125
     assert annotations["labels"] == {"electrode touch": 1, "motion": 1}
 
 
@@ -265,12 +281,16 @@ def test_export_session_package_summarizes_event_annotation_intervals(tmp_path: 
     assert annotations["interval_events"] == 2
     assert annotations["point_events"] == 1
     assert annotations["total_annotated_seconds"] == 0.75
+    assert annotations["total_annotated_samples"] == 375
     assert annotations["labels"] == {"electrode touch": 1, "motion": 2}
     assert annotations["events"] == [
         {
             "start_seconds": 0.5,
             "end_seconds": 0.75,
             "duration_seconds": 0.25,
+            "start_sample_index": 250,
+            "end_sample_index": 375,
+            "duration_samples": 125,
             "label": "motion",
             "notes": "small movement",
         },
@@ -278,6 +298,9 @@ def test_export_session_package_summarizes_event_annotation_intervals(tmp_path: 
             "start_seconds": 1.0,
             "end_seconds": 1.5,
             "duration_seconds": 0.5,
+            "start_sample_index": 500,
+            "end_sample_index": 750,
+            "duration_samples": 250,
             "label": "motion",
             "notes": "large movement",
         },
@@ -285,6 +308,9 @@ def test_export_session_package_summarizes_event_annotation_intervals(tmp_path: 
             "start_seconds": 2.0,
             "end_seconds": 2.0,
             "duration_seconds": 0.0,
+            "start_sample_index": 1000,
+            "end_sample_index": 1000,
+            "duration_samples": 0,
             "label": "electrode touch",
             "notes": "adjust LA",
         },

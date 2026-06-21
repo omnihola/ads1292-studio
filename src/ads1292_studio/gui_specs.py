@@ -232,12 +232,15 @@ SECONDARY_ACTION_BUTTONS = (
     "Batch Compare",
     "Session Index",
 )
-SIDEBAR_TABS = ("Status", "Session", "Validation", "Protocol", "Actions")
+SIDEBAR_STATUS_LABEL = "Status"
+SIDEBAR_TABS = ("Session", "Validation", "Protocol", "Actions")
 SIDEBAR_LAYOUT_SPEC = {
     "shell": "SidebarShell.TFrame",
     "width": 320,
+    "status_width": 320,
     "padding": (8, 10),
     "scroll_width": 292,
+    "status_scroll_width": 292,
 }
 WORKSPACE_LAYOUT_SPEC = {
     "main": "Main.TFrame",
@@ -926,6 +929,10 @@ def secondary_action_button_labels() -> tuple[str, ...]:
 
 def sidebar_tab_labels() -> tuple[str, ...]:
     return SIDEBAR_TABS
+
+
+def sidebar_status_label() -> str:
+    return SIDEBAR_STATUS_LABEL
 
 
 def main_tab_labels() -> tuple[str, ...]:

@@ -9,9 +9,12 @@ from pathlib import Path
 from ads1292_studio.acquisition import read_acquisition_json
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.events import (
+    DEFAULT_EVENT_SAMPLE_RATE_HZ,
     EVENT_ANNOTATIONS_SCHEMA,
+    EVENT_SAMPLE_INDEX_REFERENCE,
     EVENT_TIMESTAMP_REFERENCE,
     EventMarker,
+    event_sample_indices,
     read_events_csv,
     read_events_json,
 )
@@ -100,6 +103,7 @@ def build_recording_manifest(
             events,
             source_role=event_source_role,
             source_path=event_source_path,
+            sample_rate_hz=recording.sample_rate_hz,
         ),
         "acquisition": _acquisition_summary(
             acquisition,
@@ -204,26 +208,46 @@ def _event_annotation_summary(
     *,
     source_role: str,
     source_path: str,
+    sample_rate_hz: float = DEFAULT_EVENT_SAMPLE_RATE_HZ,
 ) -> dict:
     labels: dict[str, int] = {}
     interval_events = 0
     total_annotated_seconds = 0.0
-    for event in events:
-        marker = event.normalized()
+    total_annotated_samples = 0
+    sample_rate = sample_rate_hz if sample_rate_hz > 0 else DEFAULT_EVENT_SAMPLE_RATE_HZ
+    normalized_events = tuple(event.normalized() for event in events)
+    for marker in normalized_events:
         labels[marker.label] = labels.get(marker.label, 0) + 1
         if marker.duration_seconds > 0:
             interval_events += 1
             total_annotated_seconds += marker.duration_seconds
+            total_annotated_samples += event_sample_indices(marker, sample_rate)["duration_samples"]
     return {
         "schema": EVENT_ANNOTATIONS_SCHEMA,
         "timestamp_reference": EVENT_TIMESTAMP_REFERENCE,
-        "count": len(events),
-        "point_events": len(events) - interval_events,
+        "sample_rate_hz": sample_rate,
+        "sample_index_reference": EVENT_SAMPLE_INDEX_REFERENCE,
+        "count": len(normalized_events),
+        "point_events": len(normalized_events) - interval_events,
         "interval_events": interval_events,
         "total_annotated_seconds": round(total_annotated_seconds, 6),
+        "total_annotated_samples": total_annotated_samples,
         "labels": {label: labels[label] for label in sorted(labels)},
         "source_role": source_role,
         "source_path": source_path,
+        "events": [_event_annotation_entry(event, sample_rate_hz=sample_rate) for event in normalized_events],
+    }
+
+
+def _event_annotation_entry(event: EventMarker, *, sample_rate_hz: float) -> dict:
+    marker = event.normalized()
+    return {
+        "start_seconds": round(marker.timestamp_seconds, 6),
+        "end_seconds": round(marker.end_seconds, 6),
+        "duration_seconds": round(marker.duration_seconds, 6),
+        **event_sample_indices(marker, sample_rate_hz),
+        "label": marker.label,
+        "notes": marker.notes,
     }
 
 

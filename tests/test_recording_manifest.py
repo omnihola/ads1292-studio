@@ -113,9 +113,37 @@ def test_write_recording_manifest_lists_files_and_scientific_context(tmp_path: P
     assert raw_csv["path"] == "recording.csv"
     assert raw_csv["sha256"] == hashlib.sha256(csv_path.read_bytes()).hexdigest()
     assert payload["event_annotations"]["count"] == 2
+    assert payload["event_annotations"]["sample_rate_hz"] == 500.0
+    assert (
+        payload["event_annotations"]["sample_index_reference"]
+        == "zero_based_sample_index_at_recording_sample_rate"
+    )
     assert payload["event_annotations"]["interval_events"] == 1
     assert payload["event_annotations"]["total_annotated_seconds"] == 0.25
+    assert payload["event_annotations"]["total_annotated_samples"] == 125
     assert payload["event_annotations"]["labels"] == {"baseline": 1, "motion": 1}
+    assert payload["event_annotations"]["events"] == [
+        {
+            "start_seconds": 0.5,
+            "end_seconds": 0.5,
+            "duration_seconds": 0.0,
+            "start_sample_index": 250,
+            "end_sample_index": 250,
+            "duration_samples": 0,
+            "label": "baseline",
+            "notes": "quiet",
+        },
+        {
+            "start_seconds": 0.75,
+            "end_seconds": 1.0,
+            "duration_seconds": 0.25,
+            "start_sample_index": 375,
+            "end_sample_index": 500,
+            "duration_samples": 125,
+            "label": "motion",
+            "notes": "arm motion",
+        },
+    ]
     assert payload["acquisition"]["completion_status"] == "finalized"
     assert payload["acquisition"]["completion_audit"] == "pass"
     assert payload["acquisition"]["sample_count_delta"] == 0
