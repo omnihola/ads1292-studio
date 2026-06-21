@@ -4,9 +4,12 @@ import numpy as np
 
 from ads1292_studio.calibration import (
     Calibration,
+    LiveStreamCalibration,
     calibration_template,
     counts_to_microvolts,
+    live_stream_peak_to_peak_counts,
     read_calibration_json,
+    summarize_live_stream_calibration,
     write_calibration_json,
 )
 
@@ -47,3 +50,24 @@ def test_calibration_template_is_writable(tmp_path: Path) -> None:
     write_calibration_json(path, calibration_template())
 
     assert read_calibration_json(path).label == "ADS1292 default"
+
+
+def test_summarize_live_stream_calibration_uses_run_peak_to_peak_counts() -> None:
+    calibration = summarize_live_stream_calibration(
+        (1064.0, 1064.5, 1064.0, 1065.0, 1063.5),
+        test_signal_pp_uv=2016.6666666667,
+    )
+
+    assert isinstance(calibration, LiveStreamCalibration)
+    assert calibration.runs == 5
+    assert 1.89 < calibration.mean_uv_per_count < 1.90
+    assert calibration.std_uv_per_count < 0.002
+    assert calibration.scale_type == "live_processed"
+
+
+def test_live_stream_peak_to_peak_counts_uses_robust_low_high_levels() -> None:
+    values = [0.0, 1.0, -1.0, 1064.0, 1065.0, 1063.0] * 20
+
+    peak_to_peak = live_stream_peak_to_peak_counts(values)
+
+    assert 1063.0 <= peak_to_peak <= 1067.0

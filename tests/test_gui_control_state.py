@@ -1041,10 +1041,29 @@ def test_gui_control_states_disable_conflicting_actions_while_loading_csv() -> N
     assert gui_workflow_hint(state=state) == "Loading CSV: review updates when parsing finishes."
 
 
+def test_gui_control_states_disable_conflicting_actions_while_calibrating_live() -> None:
+    state = GuiState(
+        connected=True,
+        streaming=False,
+        has_data=False,
+        has_recording_path=False,
+        calibrating_live=True,
+    )
+
+    states = gui_control_states(state=state)
+
+    assert states["Calibrate Live"] == "disabled"
+    assert states["Start"] == "disabled"
+    assert states["Connect"] == "disabled"
+    assert states["Load CSV"] == "disabled"
+    assert gui_workflow_hint(state=state) == "Calibrating live stream scale: using the internal test signal."
+
+
 def test_gui_state_busy_is_true_for_connecting_starting_or_loading() -> None:
     assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, connecting=True).busy is True
     assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, starting=True).busy is True
     assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False, loading_csv=True).busy is True
+    assert GuiState(connected=True, streaming=False, has_data=False, has_recording_path=False, calibrating_live=True).busy is True
     assert GuiState(connected=False, streaming=False, has_data=False, has_recording_path=False).busy is False
 
 

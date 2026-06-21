@@ -6,6 +6,7 @@ from pathlib import Path
 import queue
 from typing import Protocol, TypeVar
 
+from ads1292_studio.calibration import LiveStreamCalibration
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
 from ads1292_studio.gui_specs import ADS1292R_ECG_SOURCE
 from ads1292_studio.models import Recording, StreamSample
@@ -42,6 +43,13 @@ class CsvLoadResult:
 class ConnectResult:
     port: str
     detail: str | None = None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class LiveCalibrationResult:
+    port: str
+    calibration: LiveStreamCalibration | None = None
     error: str | None = None
 
 

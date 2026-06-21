@@ -25,3 +25,9 @@ def test_metadata_normalizes_blank_fields() -> None:
 
     assert metadata.normalized().session_id == "run 1"
     assert metadata.normalized().subject_id == "anonymous"
+
+
+def test_metadata_records_acquisition_mode() -> None:
+    metadata = SessionMetadata(session_id="run-raw", acquisition_mode=" raw_adc_24bit ")
+
+    assert metadata.normalized().acquisition_mode == "raw_adc_24bit"

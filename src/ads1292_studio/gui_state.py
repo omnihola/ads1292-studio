@@ -44,10 +44,11 @@ class GuiState:
     loading_csv: bool = False
     connecting: bool = False
     starting: bool = False
+    calibrating_live: bool = False
 
     @property
     def busy(self) -> bool:
-        return self.loading_csv or self.connecting or self.starting
+        return self.loading_csv or self.connecting or self.starting or self.calibrating_live
 
     @property
     def package_ready(self) -> bool:
@@ -78,6 +79,7 @@ def _gui_state(
     loading_csv: bool = False,
     connecting: bool = False,
     starting: bool = False,
+    calibrating_live: bool = False,
 ) -> GuiState:
     if state is not None:
         return state
@@ -91,6 +93,7 @@ def _gui_state(
         loading_csv=loading_csv,
         connecting=connecting,
         starting=starting,
+        calibrating_live=calibrating_live,
     )
 
 
@@ -151,6 +154,8 @@ def gui_control_states(
             "Connect": tk.DISABLED,
             "Start": tk.DISABLED,
             "Stop": tk.NORMAL if current.streaming else tk.DISABLED,
+            "Mode": tk.DISABLED,
+            "Calibrate Live": tk.DISABLED,
             "Save CSV": tk.DISABLED,
             "Load CSV": tk.DISABLED,
             "Export Report": tk.DISABLED,
@@ -165,6 +170,8 @@ def gui_control_states(
         "Connect": tk.NORMAL if current.port_available and not current.connected and not current.streaming else tk.DISABLED,
         "Start": tk.NORMAL if current.connected and not current.streaming else tk.DISABLED,
         "Stop": tk.NORMAL if current.streaming else tk.DISABLED,
+        "Mode": tk.DISABLED if current.streaming else "readonly",
+        "Calibrate Live": tk.NORMAL if current.connected and not current.streaming else tk.DISABLED,
         "Save CSV": tk.NORMAL if not current.streaming else tk.DISABLED,
         "Load CSV": tk.NORMAL if not current.streaming else tk.DISABLED,
         "Export Report": tk.NORMAL if current.has_data else tk.DISABLED,
@@ -261,6 +268,8 @@ def gui_workflow_hint(
         return "Connecting: probing the selected port."
     if current.starting:
         return "Starting stream: waiting for the device to confirm."
+    if current.calibrating_live:
+        return "Calibrating live stream scale: using the internal test signal."
     if current.loading_csv:
         return "Loading CSV: review updates when parsing finishes."
     if current.streaming:
@@ -450,6 +459,7 @@ def header_connection_tone(
     loading_csv: bool = False,
     connecting: bool = False,
     starting: bool = False,
+    calibrating_live: bool = False,
 ) -> str:
     current = _gui_state(
         state=state,
@@ -460,8 +470,9 @@ def header_connection_tone(
         loading_csv=loading_csv,
         connecting=connecting,
         starting=starting,
+        calibrating_live=calibrating_live,
     )
-    if current.connecting or current.starting or current.streaming or current.loading_csv:
+    if current.connecting or current.starting or current.streaming or current.loading_csv or current.calibrating_live:
         return "running"
     if current.connected:
         return "ready"
@@ -501,6 +512,9 @@ def gui_status_cards(
         acquisition_tone = "running"
     elif current.starting:
         acquisition_value = "starting stream"
+        acquisition_tone = "running"
+    elif current.calibrating_live:
+        acquisition_value = "calibrating live"
         acquisition_tone = "running"
     elif current.loading_csv:
         acquisition_value = "loading CSV"

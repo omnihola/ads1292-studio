@@ -13,6 +13,7 @@ class SessionMetadata:
     montage: str = "RA/LA/RL torso"
     operator: str = ""
     notes: str = ""
+    acquisition_mode: str = "live_stream"
 
     def normalized(self) -> "SessionMetadata":
         return SessionMetadata(
@@ -22,6 +23,7 @@ class SessionMetadata:
             montage=_clean(self.montage, "unspecified montage"),
             operator=_clean(self.operator, "unspecified operator"),
             notes=self.notes.strip(),
+            acquisition_mode=_clean(self.acquisition_mode, "live_stream"),
         )
 
 

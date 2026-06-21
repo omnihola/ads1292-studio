@@ -137,6 +137,25 @@ def build_acquisition_toolbar(app: Any) -> None:
         padx=toolbar_group_padding()["separator"],
     )
 
+    _toolbar_group_label(toolbar, "Mode")
+    app.mode_var = tk.StringVar(value="Live Monitor")
+    app.mode_combo = ttk.Combobox(
+        toolbar,
+        textvariable=app.mode_var,
+        values=("Live Monitor", "Raw Record"),
+        width=14,
+        state="readonly",
+        style=toolbar_styles["port"],
+    )
+    app.mode_combo.pack(side=tk.LEFT, padx=(0, 10))
+    app.calibrate_live_button = _build_toolbar_button(
+        toolbar,
+        text="Calibrate Live",
+        command=app.calibrate_live,
+        spec=toolbar_spec,
+    )
+    app.calibrate_live_button.pack(side=tk.LEFT, padx=toolbar_spec["inline_action_padding"])
+
     _toolbar_group_label(toolbar, "Record")
     app.save_var = tk.BooleanVar(value=True)
     app.save_check = ttk.Checkbutton(
@@ -598,6 +617,8 @@ def register_control_buttons(app: Any) -> None:
         "Connect": app.connect_button,
         "Start": app.start_button,
         "Stop": app.stop_button,
+        "Mode": app.mode_combo,
+        "Calibrate Live": app.calibrate_live_button,
         "Save CSV": app.save_check,
         "Load CSV": app.load_csv_button,
         "Export Report": app.export_report_button,

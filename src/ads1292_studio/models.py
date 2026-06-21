@@ -32,6 +32,31 @@ class StreamSample:
 
 
 @dataclass(frozen=True)
+class RawSample:
+    timestamp: float
+    sample_index: int
+    ch1_raw24: int
+    ch2_raw24: int
+    status_byte: int
+    ch1_uv: float | None = None
+    ch2_uv: float | None = None
+
+    @property
+    def lead_off_bits(self) -> int:
+        return self.status_byte & 0x0F
+
+    def as_stream_sample(self) -> StreamSample:
+        return StreamSample(
+            timestamp=self.timestamp,
+            ch1=self.ch1_raw24,
+            ch2=self.ch2_raw24,
+            board_heart_rate=0,
+            board_respiration_rate=0,
+            status_byte=self.status_byte,
+        )
+
+
+@dataclass(frozen=True)
 class Recording:
     path: Path | None
     samples: tuple[StreamSample, ...]

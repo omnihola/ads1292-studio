@@ -21,7 +21,12 @@ matplotlib.use("TkAgg")
 
 from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.app_icon import apply_app_icon
-from ads1292_studio.calibration import Calibration, read_calibration_json, write_calibration_json
+from ads1292_studio.calibration import (
+    Calibration,
+    LiveStreamCalibration,
+    read_calibration_json,
+    write_calibration_json,
+)
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
 from ads1292_studio.display import (
@@ -100,6 +105,7 @@ from ads1292_studio.gui_style import (
 from ads1292_studio.gui_workers import (
     ConnectResult,
     CsvLoadResult,
+    LiveCalibrationResult,
     LiveQualityResult,
     ReviewRenderResult,
     build_live_quality_samples,
@@ -221,7 +227,7 @@ from ads1292_studio.review_render import ReviewRenderFrame, build_review_render_
 from ads1292_studio.spectrum import build_spectrum_analysis
 from ads1292_studio.session_index import export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
-from ads1292_studio.workers import LiveWorker
+from ads1292_studio.workers import AcquisitionMode, LiveWorker
 
 
 MAX_POINTS = 10000
@@ -251,6 +257,7 @@ class App(tk.Tk):
         self.logs: queue.Queue[str] = queue.Queue()
         self.csv_load_results: queue.Queue[CsvLoadResult] = queue.Queue()
         self.connect_results: queue.Queue[ConnectResult] = queue.Queue()
+        self.live_calibration_results: queue.Queue[LiveCalibrationResult] = queue.Queue()
         self.live_quality_results: queue.Queue[LiveQualityResult] = queue.Queue()
         self.live_quality_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ads1292-quality")
         self.live_quality_future: Future[LiveQualityResult] | None = None
@@ -271,7 +278,9 @@ class App(tk.Tk):
         self.is_streaming = False
         self.is_loading_csv = False
         self.is_starting = False
+        self.is_calibrating_live = False
         self.is_closing = False
+        self.live_stream_calibration: LiveStreamCalibration | None = None
         self.tick_after_id: str | None = None
         self.last_live_redraw_monotonic = 0.0
 
@@ -462,6 +471,75 @@ class App(tk.Tk):
             self._log(f"Connected to {result.port}: {result.detail}")
         self._apply_control_states()
 
+    def calibrate_live(self) -> None:
+        port = self._selected_port_text()
+        if not port:
+            messagebox.showerror("No port", "Select a port and press Connect first.")
+            return
+        if self.connected_port != port:
+            messagebox.showerror("Not connected", "Press Connect before live calibration.")
+            return
+        if self.is_streaming or self.is_starting:
+            messagebox.showerror("Streaming", "Stop streaming before live calibration.")
+            return
+        if self.is_calibrating_live:
+            self._log("Live calibration already in progress")
+            return
+        self.is_calibrating_live = True
+        self.connection_var.set("Calibrating live stream scale...")
+        self.metrics_var.set("Live calibration: running internal test signal")
+        self._log("Live calibration started: CH2 internal test signal, 5 runs")
+        self._apply_control_states()
+        threading.Thread(
+            target=self._calibrate_live_in_background,
+            args=(port,),
+            daemon=True,
+        ).start()
+
+    def _calibrate_live_in_background(self, port: str) -> None:
+        try:
+            with Ads1x9xDevice(port, timeout=0.35) as device:
+                calibration = device.run_live_stream_calibration(runs=5, seconds_per_run=4.0)
+            self.live_calibration_results.put(
+                LiveCalibrationResult(port=port, calibration=calibration)
+            )
+        except Exception as exc:
+            self.live_calibration_results.put(LiveCalibrationResult(port=port, error=str(exc)))
+
+    def _drain_live_calibration_results(self) -> None:
+        while True:
+            try:
+                result = self.live_calibration_results.get_nowait()
+            except queue.Empty:
+                return
+            self._finish_live_calibration(result)
+
+    def _finish_live_calibration(self, result: LiveCalibrationResult) -> None:
+        self.is_calibrating_live = False
+        if result.error or result.calibration is None:
+            self.connection_var.set(f"Connected: {self.connected_port}" if self.connected_port else "Calibration failed")
+            self._log(f"Live calibration failed on {result.port}: {result.error}")
+            self._apply_control_states()
+            messagebox.showerror("Live calibration failed", result.error or "Unknown live calibration error")
+            return
+        calibration = result.calibration.normalized()
+        self.live_stream_calibration = calibration
+        self.connection_var.set(
+            f"Live scale {calibration.mean_uv_per_count:.4g} uV/count"
+        )
+        self.metrics_var.set(
+            f"Live calibration: {calibration.mean_uv_per_count:.4g} uV/count | "
+            f"SD {calibration.std_uv_per_count:.3g} | CV {calibration.cv_percent:.2f}% | "
+            f"{calibration.runs} runs"
+        )
+        self._log(
+            "Live calibration complete: "
+            f"{calibration.mean_uv_per_count:.6g} uV/count, "
+            f"SD {calibration.std_uv_per_count:.3g}, CV {calibration.cv_percent:.2f}%, "
+            f"{calibration.runs} runs"
+        )
+        self._apply_control_states()
+
     def start(self) -> None:
         port = self._selected_port_text()
         if not port:
@@ -473,9 +551,11 @@ class App(tk.Tk):
         self._clear_buffers()
         self.recording_path = None
         csv_path = None
+        acquisition_mode = self._acquisition_mode()
         if self.save_var.get():
             stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-            csv_path = Path("recordings") / f"{stamp}-ads1292-studio.csv"
+            suffix = "ads1292-raw" if acquisition_mode is AcquisitionMode.RAW else "ads1292-studio"
+            csv_path = Path("recordings") / f"{stamp}-{suffix}.csv"
             self.recording_path = csv_path
             write_metadata_json(csv_path.with_suffix(".json"), self._metadata())
             write_events_json(self._events_path(csv_path), self.event_markers)
@@ -484,9 +564,24 @@ class App(tk.Tk):
             write_quality_gate_json(self._quality_gate_path(csv_path), self._quality_gate())
             self.path_var.set(f"CSV: {csv_path}")
         self.is_starting = True
-        self.connection_var.set("Starting stream...")
-        self.worker.start(port, csv_path)
+        self.connection_var.set("Starting raw acquisition..." if acquisition_mode is AcquisitionMode.RAW else "Starting stream...")
+        live_calibration = (
+            self.live_stream_calibration
+            if acquisition_mode is AcquisitionMode.LIVE
+            else None
+        )
+        self.worker.start(
+            port,
+            csv_path,
+            mode=acquisition_mode,
+            calibration=self._calibration(),
+            live_calibration=live_calibration,
+        )
         self._apply_control_states()
+
+    def _acquisition_mode(self) -> AcquisitionMode:
+        label = getattr(self, "mode_var", tk.StringVar(value="Live Monitor")).get()
+        return AcquisitionMode.RAW if label.strip().lower().startswith("raw") else AcquisitionMode.LIVE
 
     def stop(self) -> None:
         self.worker.stop()
@@ -506,7 +601,7 @@ class App(tk.Tk):
         self.is_starting = False
         if result.ok:
             self.is_streaming = True
-            self.connection_var.set("Streaming")
+            self.connection_var.set("Raw recording" if self._acquisition_mode() is AcquisitionMode.RAW else "Streaming")
         else:
             self.is_streaming = False
             self.connection_var.set(f"Connected: {self.connected_port}" if self.connected_port else "Stopped")
@@ -781,6 +876,7 @@ class App(tk.Tk):
             loading_csv=self.is_loading_csv,
             connecting=self.is_connecting,
             starting=self.is_starting,
+            calibrating_live=self.is_calibrating_live,
         )
 
     def _apply_control_states(self, *, force: bool = False) -> None:
@@ -831,13 +927,23 @@ class App(tk.Tk):
             )
 
     def _metadata(self) -> SessionMetadata:
-        return _metadata_from_values(
+        metadata = _metadata_from_values(
             session_id=self.session_id_var.get(),
             subject_id=self.subject_id_var.get(),
             electrode=self.electrode_var.get(),
             montage=self.montage_var.get(),
             operator=self.operator_var.get(),
             notes=self.notes_var.get(),
+        ).normalized()
+        mode_label = "raw_adc_24bit" if self._acquisition_mode() is AcquisitionMode.RAW else "live_stream"
+        return SessionMetadata(
+            session_id=metadata.session_id,
+            subject_id=metadata.subject_id,
+            electrode=metadata.electrode,
+            montage=metadata.montage,
+            operator=metadata.operator,
+            notes=metadata.notes,
+            acquisition_mode=mode_label,
         ).normalized()
 
     def _current_event_time(self) -> float:
@@ -977,6 +1083,7 @@ class App(tk.Tk):
         self._drain_csv_load_results()
         self._drain_review_render_results()
         self._drain_connect_results()
+        self._drain_live_calibration_results()
         self._drain_stream_start_results()
         self._sync_worker_stream_state()
         self._drain_live_quality_results()

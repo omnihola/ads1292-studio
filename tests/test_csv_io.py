@@ -1,7 +1,15 @@
 from pathlib import Path
 
-from ads1292_studio.csv_io import CsvRecorder, read_recording_csv, write_recording_csv
-from ads1292_studio.models import StreamSample
+from ads1292_studio.calibration import Calibration, LiveStreamCalibration
+from ads1292_studio.csv_io import (
+    CsvRecorder,
+    RawCsvRecorder,
+    read_recording_csv,
+    read_raw_recording_csv,
+    write_recording_csv,
+    write_raw_recording_csv,
+)
+from ads1292_studio.models import RawSample, StreamSample
 
 
 def test_csv_round_trip_preserves_raw_channels_and_lead_bits(tmp_path: Path) -> None:
@@ -119,3 +127,76 @@ def test_csv_recorder_normalizes_flush_batch_size(tmp_path: Path) -> None:
     recorder = CsvRecorder(path, flush_every_rows=0)
 
     assert recorder.flush_every_rows == 1
+
+
+def test_csv_recorder_writes_live_stream_calibration_columns(tmp_path: Path) -> None:
+    path = tmp_path / "live-calibrated.csv"
+    calibration = LiveStreamCalibration(
+        mean_uv_per_count=1.895,
+        std_uv_per_count=0.001,
+        cv_percent=0.05,
+        runs=5,
+        test_signal_pp_uv=2016.6666667,
+    )
+
+    with CsvRecorder(path, live_calibration=calibration) as recorder:
+        recorder.write(
+            StreamSample(
+                timestamp=0.0,
+                ch1=1,
+                ch2=2,
+                board_heart_rate=0,
+                board_respiration_rate=0,
+                status_byte=0,
+            )
+        )
+
+    text = path.read_text()
+
+    assert "live_scale_uv_per_count" in text
+    assert "live_scale_type" in text
+    assert "1.895" in text
+    assert "live_processed" in text
+
+
+def test_raw_csv_round_trip_preserves_24_bit_counts_and_microvolts(tmp_path: Path) -> None:
+    path = tmp_path / "raw.csv"
+    calibration = Calibration(vref_mv=2420.0, pga_gain=6.0, adc_bits=24, label="raw test")
+    samples = (
+        RawSample(timestamp=0.0, sample_index=0, ch1_raw24=-1000, ch2_raw24=2000, status_byte=0x10),
+        RawSample(timestamp=0.002, sample_index=1, ch1_raw24=-999, ch2_raw24=1999, status_byte=0x15),
+    )
+
+    write_raw_recording_csv(path, samples, calibration=calibration)
+    loaded = read_raw_recording_csv(path)
+
+    assert [sample.ch1_raw24 for sample in loaded.samples] == [-1000, -999]
+    assert [sample.ch2_raw24 for sample in loaded.samples] == [2000, 1999]
+    assert [sample.status_byte for sample in loaded.samples] == [0x10, 0x15]
+    assert loaded.samples[0].ch2_uv == 2000 * calibration.microvolts_per_count
+
+
+def test_raw_csv_recorder_flushes_and_writes_raw_header(tmp_path: Path) -> None:
+    path = tmp_path / "raw.csv"
+    with RawCsvRecorder(path, calibration=Calibration(), flush_every_rows=1) as recorder:
+        recorder.write(RawSample(timestamp=0.0, sample_index=0, ch1_raw24=1, ch2_raw24=-2, status_byte=0))
+
+    text = path.read_text()
+
+    assert "ch1_raw24,ch2_raw24,ch1_uv,ch2_uv" in text
+    assert recorder.rows_written == 1
+
+
+def test_canonical_csv_loader_accepts_raw_acquisition_files_for_review(tmp_path: Path) -> None:
+    path = tmp_path / "raw.csv"
+    write_raw_recording_csv(
+        path,
+        (RawSample(timestamp=0.0, sample_index=0, ch1_raw24=123, ch2_raw24=-456, status_byte=0x05),),
+        calibration=Calibration(),
+    )
+
+    loaded = read_recording_csv(path)
+
+    assert loaded.samples[0].ch1 == 123
+    assert loaded.samples[0].ch2 == -456
+    assert loaded.samples[0].lead_off_bits == 5

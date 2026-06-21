@@ -7,7 +7,12 @@ from typing import Callable, Iterable
 import serial
 from serial.tools import list_ports
 
-from ads1292_studio.models import AdsPort, StreamSample
+from ads1292_studio.calibration import (
+    LiveStreamCalibration,
+    live_stream_peak_to_peak_counts,
+    summarize_live_stream_calibration,
+)
+from ads1292_studio.models import AdsPort, RawSample, StreamSample
 
 
 VID_TI = 0x2047
@@ -20,9 +25,13 @@ END = 0x03
 STREAM_TRAILERS = (bytes([END, END]), bytes([END, 0x0A]))
 
 CMD_REG_READ = 0x92
+CMD_REG_WRITE = 0x91
 CMD_DATA_STREAMING = 0x93
 CMD_ACQUIRE_DATA = 0x94
 CMD_QUERY_FIRMWARE_VERSION = 0x99
+REG_CONFIG2 = 0x02
+REG_CH2SET = 0x05
+DEFAULT_TEST_SIGNAL_PP_UV = 2016.6666666667
 
 
 def _is_ads_candidate_port(port: object) -> bool:
@@ -57,6 +66,15 @@ def _int16_le(lo: int, hi: int) -> int:
     value = (hi << 8) | lo
     if value & 0x8000:
         value -= 0x10000
+    return value
+
+
+def _int24_be(data: bytes) -> int:
+    if len(data) != 3:
+        raise ValueError(f"24-bit field requires 3 bytes, got {len(data)}")
+    value = (data[0] << 16) | (data[1] << 8) | data[2]
+    if value & 0x800000:
+        value -= 0x1000000
     return value
 
 
@@ -106,6 +124,34 @@ def parse_stream_payload(
                 ch2=_int16_le(payload[base + 2], payload[base + 3]),
                 board_heart_rate=board_heart_rate,
                 board_respiration_rate=board_respiration_rate,
+                status_byte=status_byte,
+            )
+        )
+    return tuple(samples)
+
+
+def parse_acquire_payload(
+    payload: bytes,
+    start_timestamp: float,
+    sample_rate_hz: float,
+    start_index: int,
+) -> tuple[RawSample, ...]:
+    if len(payload) < 51:
+        raise ValueError(f"acquire payload too short: {len(payload)} bytes")
+    if payload[-1] != END:
+        raise ValueError(f"bad acquire trailer: 0x{payload[-1]:02X}")
+    status_byte = (payload[0] << 8) | payload[1]
+    samples: list[RawSample] = []
+    for index in range(8):
+        sample_index = start_index + index
+        base = 2 + index * 6
+        timestamp = round(start_timestamp + (sample_index / sample_rate_hz), 6)
+        samples.append(
+            RawSample(
+                timestamp=timestamp,
+                sample_index=sample_index,
+                ch1_raw24=_int24_be(payload[base : base + 3]),
+                ch2_raw24=_int24_be(payload[base + 3 : base + 6]),
                 status_byte=status_byte,
             )
         )
@@ -181,6 +227,19 @@ class Ads1x9xDevice:
             raise TimeoutError(f"Expected {nbytes} bytes, got {len(data)}")
         return data
 
+    def _read_exact_until(self, nbytes: int, deadline: float) -> bytes:
+        ser = self._require_serial()
+        chunks = bytearray()
+        while len(chunks) < nbytes:
+            remaining_time = deadline - time.monotonic()
+            if remaining_time <= 0:
+                raise TimeoutError(f"Timed out waiting for {nbytes} bytes, got {len(chunks)}")
+            chunk = ser.read(nbytes - len(chunks))
+            if not chunk:
+                continue
+            chunks.extend(chunk)
+        return bytes(chunks)
+
     def read_frame(self) -> tuple[int, bytes]:
         while True:
             byte = self._read_exact(1)[0]
@@ -195,6 +254,48 @@ class Ads1x9xDevice:
             payload = self._read_exact(51)
         else:
             payload = self._read_exact(1)
+        return frame_type, payload
+
+    def _read_frame_until_end(self) -> tuple[int, bytes]:
+        while True:
+            byte = self._read_exact(1)[0]
+            if byte == START:
+                break
+        frame_type = self._read_exact(1)[0]
+        payload = bytearray()
+        while True:
+            byte = self._read_exact(1)[0]
+            if byte == END:
+                return frame_type, bytes(payload)
+            payload.append(byte)
+
+    def _read_frame_until_end_by(self, deadline: float) -> tuple[int, bytes]:
+        while True:
+            byte = self._read_exact_until(1, deadline)[0]
+            if byte == START:
+                break
+        frame_type = self._read_exact_until(1, deadline)[0]
+        payload = bytearray()
+        while True:
+            byte = self._read_exact_until(1, deadline)[0]
+            if byte == END:
+                return frame_type, bytes(payload)
+            payload.append(byte)
+
+    def _read_frame_by(self, deadline: float) -> tuple[int, bytes]:
+        while True:
+            byte = self._read_exact_until(1, deadline)[0]
+            if byte == START:
+                break
+        frame_type = self._read_exact_until(1, deadline)[0]
+        if frame_type == CMD_DATA_STREAMING:
+            payload = self._read_exact_until(61, deadline)
+        elif frame_type in (CMD_REG_READ, CMD_QUERY_FIRMWARE_VERSION):
+            payload = self._read_exact_until(5, deadline)
+        elif frame_type == CMD_ACQUIRE_DATA:
+            payload = self._read_exact_until(51, deadline)
+        else:
+            payload = self._read_exact_until(1, deadline)
         return frame_type, payload
 
     def query_firmware(self) -> str:
@@ -216,6 +317,45 @@ class Ads1x9xDevice:
         if frame_type != CMD_REG_READ or len(payload) < 2:
             raise RuntimeError(f"Unexpected register response: 0x{frame_type:02X} {payload.hex(' ')}")
         return payload[1]
+
+    def write_register(self, register: int, value: int) -> None:
+        ser = self._require_serial()
+        ser.reset_input_buffer()
+        self.write_cmd(CMD_REG_WRITE, register, value)
+        time.sleep(0.05)
+        ser.reset_input_buffer()
+
+    def acquire_raw_samples(self, sample_count: int) -> tuple[RawSample, ...]:
+        requested = int(sample_count)
+        if requested <= 0 or requested % 8 != 0:
+            raise ValueError("raw acquisition sample_count must be a positive multiple of 8")
+        ser = self._require_serial()
+        ser.reset_input_buffer()
+        start_timestamp = time.time()
+        acquisition_seconds = requested / self.sample_rate_hz
+        deadline = time.monotonic() + max(3.0, acquisition_seconds + 2.0)
+        self.write_cmd(CMD_ACQUIRE_DATA, requested >> 8, requested & 0xFF)
+        ack_type, ack_payload = self._read_frame_until_end_by(deadline)
+        if ack_type != CMD_ACQUIRE_DATA or len(ack_payload) < 2:
+            raise RuntimeError(f"Unexpected acquire ACK: 0x{ack_type:02X} {ack_payload.hex(' ')}")
+        ack_count = (ack_payload[0] << 8) | ack_payload[1]
+        if ack_count != requested:
+            raise RuntimeError(f"Acquire ACK sample count mismatch: requested {requested}, got {ack_count}")
+        samples: list[RawSample] = []
+        expected_frames = requested // 8
+        for _ in range(expected_frames):
+            frame_type, payload = self._read_frame_by(deadline)
+            if frame_type != CMD_ACQUIRE_DATA:
+                continue
+            samples.extend(
+                parse_acquire_payload(
+                    payload,
+                    start_timestamp=start_timestamp,
+                    sample_rate_hz=self.sample_rate_hz,
+                    start_index=len(samples),
+                )
+            )
+        return tuple(samples[:requested])
 
     def start_stream(self) -> None:
         self._stream_t0 = time.time()
@@ -249,6 +389,64 @@ class Ads1x9xDevice:
         )
         self._stream_sample_index += len(samples)
         return samples
+
+    def run_live_stream_calibration(
+        self,
+        *,
+        runs: int = 5,
+        seconds_per_run: float = 10.0,
+        samples_per_run: int | None = None,
+        test_signal_pp_uv: float = DEFAULT_TEST_SIGNAL_PP_UV,
+    ) -> LiveStreamCalibration:
+        original_config2 = self.read_register(REG_CONFIG2)
+        original_ch2set = self.read_register(REG_CH2SET)
+        peak_to_peak_counts: list[float] = []
+        try:
+            self.write_register(REG_CONFIG2, self._config2_with_internal_test_signal(original_config2))
+            self.write_register(REG_CH2SET, self._channel_set_to_test_signal(original_ch2set))
+            for _ in range(max(1, int(runs))):
+                values = self._collect_live_calibration_ch2_counts(
+                    seconds_per_run=seconds_per_run,
+                    samples_per_run=samples_per_run,
+                )
+                peak_to_peak_counts.append(live_stream_peak_to_peak_counts(values))
+        finally:
+            self.write_register(REG_CH2SET, original_ch2set)
+            self.write_register(REG_CONFIG2, original_config2)
+        return summarize_live_stream_calibration(
+            peak_to_peak_counts,
+            test_signal_pp_uv=test_signal_pp_uv,
+        )
+
+    def _collect_live_calibration_ch2_counts(
+        self,
+        *,
+        seconds_per_run: float,
+        samples_per_run: int | None,
+    ) -> tuple[float, ...]:
+        target_samples = samples_per_run or max(14, int(self.sample_rate_hz * max(0.5, float(seconds_per_run))))
+        deadline = time.monotonic() + max(2.0, (target_samples / self.sample_rate_hz) + 2.0)
+        values: list[float] = []
+        self.start_stream()
+        try:
+            while len(values) < target_samples and time.monotonic() < deadline:
+                batch = self.read_stream_sample_batch()
+                if not batch:
+                    continue
+                values.extend(float(sample.ch2) for sample in batch)
+        finally:
+            self.stop_stream()
+        if len(values) < max(4, min(14, target_samples)):
+            raise TimeoutError(f"Live calibration got too few samples: {len(values)}")
+        return tuple(values[:target_samples])
+
+    @staticmethod
+    def _config2_with_internal_test_signal(value: int) -> int:
+        return (int(value) | 0x03) & ~0x04
+
+    @staticmethod
+    def _channel_set_to_test_signal(value: int) -> int:
+        return (int(value) & 0xF0) | 0x05
 
     def iter_stream_samples(
         self,

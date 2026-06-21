@@ -101,6 +101,25 @@ def test_gui_layout_keeps_primary_toolbar_focused_on_acquisition() -> None:
     assert "Session Index" not in primary_toolbar_button_labels()
 
 
+def test_acquisition_toolbar_exposes_live_and_raw_modes() -> None:
+    from ads1292_studio.gui_layout import build_acquisition_toolbar
+
+    source = inspect.getsource(build_acquisition_toolbar)
+
+    assert "mode_combo" in source
+    assert "Live Monitor" in source
+    assert "Raw Record" in source
+
+
+def test_acquisition_toolbar_exposes_live_calibration_action() -> None:
+    from ads1292_studio.gui_layout import build_acquisition_toolbar
+
+    source = inspect.getsource(build_acquisition_toolbar)
+
+    assert "calibrate_live_button" in source
+    assert "Calibrate Live" in source
+
+
 def test_app_window_spec_prevents_cramped_signal_views() -> None:
     assert app_window_spec() == {
         "geometry": "1440x900",
@@ -418,7 +437,7 @@ def test_primary_toolbar_buttons_use_stable_widths() -> None:
     source = inspect.getsource(build_acquisition_toolbar)
     helper_source = inspect.getsource(_build_toolbar_button)
 
-    assert source.count("_build_toolbar_button(") == 4
+    assert source.count("_build_toolbar_button(") == 5
     assert "ttk.Button(" not in source
     assert "width=toolbar_button_width(text, spec)" in helper_source
     assert 'cursor="hand2"' in helper_source

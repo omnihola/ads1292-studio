@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
 import queue
 
+from ads1292_studio.calibration import LiveStreamCalibration
 from ads1292_studio.app import ConnectResult
-from ads1292_studio.models import StreamSample, StreamStartResult
-from ads1292_studio.workers import LiveWorker
+from ads1292_studio.models import RawSample, StreamSample, StreamStartResult
+from ads1292_studio.workers import AcquisitionMode, LiveWorker, reindex_raw_samples
 import ads1292_studio.workers as workers
 
 
@@ -277,3 +279,130 @@ def test_live_worker_passes_stop_predicate_to_stream(monkeypatch) -> None:
 
     assert _StreamSpyDevice.instances, "worker never constructed a device"
     assert callable(_StreamSpyDevice.instances[0].should_continue)
+
+
+class _FakeRawDevice:
+    instances: list["_FakeRawDevice"] = []
+
+    def __init__(self, port: str, *args, **kwargs) -> None:
+        self.port = port
+        self.query_calls = 0
+        self.stream_calls = 0
+        self.raw_calls: list[int] = []
+        _FakeRawDevice.instances.append(self)
+
+    def __enter__(self) -> "_FakeRawDevice":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def query_firmware(self) -> str:
+        self.query_calls += 1
+        return "1.0"
+
+    def start_stream(self) -> None:
+        self.stream_calls += 1
+
+    def acquire_raw_samples(self, sample_count: int):
+        self.raw_calls.append(sample_count)
+        return (
+            RawSample(timestamp=0.0, sample_index=0, ch1_raw24=111, ch2_raw24=222, status_byte=0),
+            RawSample(timestamp=0.002, sample_index=1, ch1_raw24=112, ch2_raw24=223, status_byte=1),
+        )
+
+
+class _RawTimeoutThenSamplesDevice(_FakeRawDevice):
+    def acquire_raw_samples(self, sample_count: int):
+        self.raw_calls.append(sample_count)
+        if len(self.raw_calls) == 1:
+            raise TimeoutError("Expected 1 bytes, got 0")
+        return (
+            RawSample(timestamp=0.0, sample_index=0, ch1_raw24=11, ch2_raw24=22, status_byte=0),
+        )
+
+
+def test_worker_raw_mode_acquires_raw_samples_without_starting_live_stream(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(workers, "Ads1x9xDevice", _FakeRawDevice)
+    _FakeRawDevice.instances.clear()
+    sample_queue: queue.Queue = queue.Queue()
+    start_queue: queue.Queue = queue.Queue()
+    csv_path = tmp_path / "raw.csv"
+    worker = LiveWorker(sample_queue, queue.Queue(), start_queue, raw_chunk_samples=8)
+
+    worker.start("fake-port", csv_path, mode=AcquisitionMode.RAW)
+    result = start_queue.get(timeout=2.0)
+    worker.stop()
+    if worker.thread:
+        worker.thread.join(timeout=2.0)
+
+    assert result == StreamStartResult(ok=True)
+    assert _FakeRawDevice.instances[0].stream_calls == 0
+    assert _FakeRawDevice.instances[0].raw_calls
+    assert set(_FakeRawDevice.instances[0].raw_calls) == {8}
+    assert sample_queue.get_nowait().ch1 == 111
+    assert "ch1_raw24,ch2_raw24" in csv_path.read_text()
+
+
+def test_worker_raw_mode_retries_transient_raw_timeout(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(workers, "Ads1x9xDevice", _RawTimeoutThenSamplesDevice)
+    _RawTimeoutThenSamplesDevice.instances.clear()
+    sample_queue: queue.Queue = queue.Queue()
+    log_queue: queue.Queue = queue.Queue()
+    start_queue: queue.Queue = queue.Queue()
+    worker = LiveWorker(sample_queue, log_queue, start_queue, raw_chunk_samples=8)
+
+    worker.start("fake-port", tmp_path / "raw.csv", mode=AcquisitionMode.RAW)
+    result = start_queue.get(timeout=2.0)
+    worker.stop()
+    if worker.thread:
+        worker.thread.join(timeout=2.0)
+    logs = [log_queue.get_nowait() for _ in range(log_queue.qsize())]
+
+    assert result == StreamStartResult(ok=True)
+    assert _RawTimeoutThenSamplesDevice.instances[0].raw_calls == [8, 8]
+    assert sample_queue.get_nowait().ch2 == 22
+    assert any("Raw acquisition timeout; retrying" in log for log in logs)
+
+
+def test_worker_live_mode_writes_live_calibration_columns(tmp_path: Path) -> None:
+    csv_path = tmp_path / "live.csv"
+    calibration = LiveStreamCalibration(
+        mean_uv_per_count=1.895,
+        std_uv_per_count=0.001,
+        cv_percent=0.05,
+        runs=5,
+        test_signal_pp_uv=2016.6666666667,
+    )
+    worker = LiveWorker(queue.Queue(), queue.Queue(), queue.Queue())
+
+    recorder = worker._recorder(csv_path, AcquisitionMode.LIVE, None, calibration)
+    assert recorder is not None
+    with recorder:
+        recorder.write(
+            StreamSample(
+                timestamp=0.0,
+                ch1=0,
+                ch2=123,
+                board_heart_rate=0,
+                board_respiration_rate=0,
+                status_byte=0,
+            )
+        )
+
+    text = csv_path.read_text()
+    assert "live_scale_uv_per_count" in text
+    assert "live_processed" in text
+
+
+def test_reindex_raw_samples_keeps_chunked_raw_recording_monotonic() -> None:
+    samples = (
+        RawSample(timestamp=10.0, sample_index=0, ch1_raw24=1, ch2_raw24=2, status_byte=0),
+        RawSample(timestamp=10.002, sample_index=1, ch1_raw24=3, ch2_raw24=4, status_byte=0),
+    )
+
+    reindexed = reindex_raw_samples(samples, start_index=8, sample_rate_hz=500.0)
+
+    assert [sample.sample_index for sample in reindexed] == [8, 9]
+    assert [sample.timestamp for sample in reindexed] == [0.016, 0.018]
+    assert [sample.ch2_raw24 for sample in reindexed] == [2, 4]
