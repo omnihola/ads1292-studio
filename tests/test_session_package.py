@@ -94,6 +94,12 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert manifest["metrics"]["segment_gate"]["segment_results"][0]["label"] == "baseline"
     assert manifest["metrics"]["quality_gate"]["min_duration_seconds"] == 0.5
     assert manifest["metrics"]["quality_gate"]["require_qrs_clear"] is False
+    annotations = manifest["metrics"]["event_annotations"]
+    assert annotations["count"] == 1
+    assert annotations["point_events"] == 1
+    assert annotations["interval_events"] == 0
+    assert annotations["total_annotated_seconds"] == 0.0
+    assert annotations["labels"] == {"motion": 1}
     raw_entry = next(file_info for file_info in manifest["files"] if file_info["role"] == "raw_csv")
     copied_csv = export.package_dir / raw_entry["path"]
     expected_sha = hashlib.sha256(copied_csv.read_bytes()).hexdigest()
@@ -131,6 +137,27 @@ def test_export_session_package_uses_events_csv_when_json_missing(tmp_path: Path
     assert "events" not in roles
     assert "csv-only motion" in html
     assert "spreadsheet edited" in html
+
+
+def test_export_session_package_summarizes_event_annotation_intervals(tmp_path: Path) -> None:
+    csv_path = tmp_path / "pkg-001.csv"
+    _write_session_files(csv_path)
+    events = (
+        EventMarker(0.5, duration_seconds=0.25, label="motion", notes="small movement"),
+        EventMarker(1.0, duration_seconds=0.5, label="motion", notes="large movement"),
+        EventMarker(2.0, label="electrode touch", notes="adjust LA"),
+    )
+    write_events_json(csv_path.with_suffix(".events.json"), events)
+    write_events_csv(csv_path.with_suffix(".events.csv"), events)
+
+    export = export_session_package(csv_path=csv_path, out_dir=tmp_path / "packages", title="Package Test")
+
+    annotations = json.loads(export.manifest_path.read_text())["metrics"]["event_annotations"]
+    assert annotations["count"] == 3
+    assert annotations["interval_events"] == 2
+    assert annotations["point_events"] == 1
+    assert annotations["total_annotated_seconds"] == 0.75
+    assert annotations["labels"] == {"electrode touch": 1, "motion": 2}
 
 
 def test_verify_session_package_fails_after_file_tamper(tmp_path: Path) -> None:

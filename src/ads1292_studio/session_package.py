@@ -117,6 +117,7 @@ def export_session_package(
             "noise_rms_counts": report.metrics.noise_rms_counts,
             "peak_to_peak_counts": report.metrics.peak_to_peak_counts,
             "quality_gate": asdict(quality_gate.normalized()),
+            "event_annotations": _event_annotation_summary(events),
             "segment_metrics": tuple(asdict(segment) for segment in report.segment_metrics),
             "segment_gate": _segment_gate_entry(report.segment_gate_result),
         },
@@ -179,6 +180,25 @@ def _segment_gate_entry(result) -> dict | None:
             }
             for segment in result.segment_results
         ),
+    }
+
+
+def _event_annotation_summary(events) -> dict:
+    normalized = tuple(event.normalized() for event in events)
+    labels: dict[str, int] = {}
+    interval_events = 0
+    total_annotated_seconds = 0.0
+    for event in normalized:
+        labels[event.label] = labels.get(event.label, 0) + 1
+        if event.duration_seconds > 0:
+            interval_events += 1
+            total_annotated_seconds += event.duration_seconds
+    return {
+        "count": len(normalized),
+        "point_events": len(normalized) - interval_events,
+        "interval_events": interval_events,
+        "total_annotated_seconds": round(total_annotated_seconds, 6),
+        "labels": {label: labels[label] for label in sorted(labels)},
     }
 
 
