@@ -56,8 +56,9 @@ def _write_recording(root: Path, name: str, samples: tuple[StreamSample, ...]) -
     return path
 
 
-def _write_complete_sidecars(path: Path) -> None:
-    write_events_json(path.with_suffix(".events.json"), (EventMarker(0.5, "baseline", "quiet"),))
+def _write_complete_sidecars(path: Path, events: tuple[EventMarker, ...] | None = None) -> None:
+    markers = events or (EventMarker(0.5, "baseline", "quiet"),)
+    write_events_json(path.with_suffix(".events.json"), markers)
     write_calibration_json(path.with_suffix(".calibration.json"), Calibration(label="bench-cal"))
     write_protocol_json(
         path.with_suffix(".protocol.json"),
@@ -73,8 +74,19 @@ def test_build_session_index_message_includes_action_queue_counts(tmp_path: Path
     ready = _write_recording(tmp_path, "ready.csv", _samples())
     _write_recording(tmp_path, "incomplete.csv", _samples())
     review = _write_recording(tmp_path, "review.csv", _review_samples())
-    _write_complete_sidecars(ready)
-    _write_complete_sidecars(review)
+    _write_complete_sidecars(
+        ready,
+        (
+            EventMarker(timestamp_seconds=0.5, duration_seconds=2.0, label="baseline", notes="quiet"),
+            EventMarker(timestamp_seconds=3.0, label="tap", notes="single tap"),
+        ),
+    )
+    _write_complete_sidecars(
+        review,
+        (
+            EventMarker(timestamp_seconds=1.0, duration_seconds=4.0, label="motion", notes="arm moved"),
+        ),
+    )
     export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="GUI Session Index")
 
     message = build_session_index_message(export)
@@ -87,6 +99,10 @@ def test_build_session_index_message_includes_action_queue_counts(tmp_path: Path
     assert "Package record: 1" in message
     assert "Complete sidecars: 1" in message
     assert "Review signal: 1" in message
+    assert "Annotated recordings: 2" in message
+    assert "Event annotations: 3" in message
+    assert "Interval annotations: 2" in message
+    assert "Annotated seconds: 6.00" in message
     assert "Sidecar plan rows: 4" in message
     assert str(export.sidecar_plan_csv_path) in message
     assert str(export.sidecar_plan_html_path) in message

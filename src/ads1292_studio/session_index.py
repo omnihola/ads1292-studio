@@ -51,6 +51,10 @@ class SessionIndexSummary:
     package_ready: int
     incomplete_records: int
     needs_signal_review: int
+    annotated_recordings: int
+    event_annotations: int
+    interval_event_annotations: int
+    total_annotated_seconds: float
     action_package_record: int
     action_complete_sidecars: int
     action_review_signal: int
@@ -203,6 +207,10 @@ def summarize_rows(rows: tuple[SessionIndexRow, ...]) -> SessionIndexSummary:
         package_ready=sum(1 for row in rows if row.package_ready_status == "package_ready"),
         incomplete_records=sum(1 for row in rows if row.package_ready_status == "incomplete_record"),
         needs_signal_review=sum(1 for row in rows if row.package_ready_status == "needs_signal_review"),
+        annotated_recordings=sum(1 for row in rows if row.event_count > 0),
+        event_annotations=sum(row.event_count for row in rows),
+        interval_event_annotations=sum(row.interval_event_count for row in rows),
+        total_annotated_seconds=round(sum(row.total_annotated_seconds for row in rows), 6),
         action_package_record=sum(1 for row in rows if row.next_action == "package_record"),
         action_complete_sidecars=sum(1 for row in rows if row.next_action == "complete_sidecars"),
         action_review_signal=sum(1 for row in rows if row.next_action == "review_signal"),
@@ -497,6 +505,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
   <h1>{escape(title)}</h1>
   <p>Recordings: {summary.recordings} | Usable recordings: {summary.usable_recordings}</p>
   <p>Package-ready recordings: {summary.package_ready} | Incomplete records: {summary.incomplete_records} | Need signal review: {summary.needs_signal_review}</p>
+  <p>Annotated recordings: {summary.annotated_recordings} | Event annotations: {summary.event_annotations} | Interval annotations: {summary.interval_event_annotations} | Annotated seconds: {summary.total_annotated_seconds:.2f}</p>
   <p>Next actions: package record {summary.action_package_record} | complete sidecars {summary.action_complete_sidecars} | review signal {summary.action_review_signal}</p>
   <table>
     <tr>{"".join(f"<th>{escape(item)}</th>" for item in header)}</tr>

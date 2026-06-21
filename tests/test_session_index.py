@@ -229,6 +229,37 @@ def test_export_session_index_summarizes_package_readiness(tmp_path: Path) -> No
     assert "Next actions: package record 1 | complete sidecars 1 | review signal 1" in html
 
 
+def test_export_session_index_summarizes_event_annotation_coverage(tmp_path: Path) -> None:
+    baseline = _write_recording(tmp_path, "baseline.csv", "MOTAC gel + Ag/AgCl")
+    movement = _write_recording(tmp_path, "movement.csv", "MOTAC gel + Ag/AgCl")
+    _write_recording(tmp_path, "unmarked.csv", "MOTAC gel + Ag/AgCl")
+    _write_complete_sidecars(
+        baseline,
+        (
+            EventMarker(timestamp_seconds=0.5, duration_seconds=2.0, label="baseline", notes="quiet"),
+        ),
+    )
+    _write_complete_sidecars(
+        movement,
+        (
+            EventMarker(timestamp_seconds=1.0, duration_seconds=3.5, label="motion", notes="arm moved"),
+            EventMarker(timestamp_seconds=6.0, label="tap", notes="single tap"),
+        ),
+    )
+
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Annotation Coverage")
+
+    assert export.summary.annotated_recordings == 2
+    assert export.summary.event_annotations == 3
+    assert export.summary.interval_event_annotations == 2
+    assert export.summary.total_annotated_seconds == 5.5
+    html = export.html_path.read_text()
+    assert "Annotated recordings: 2" in html
+    assert "Event annotations: 3" in html
+    assert "Interval annotations: 2" in html
+    assert "Annotated seconds: 5.50" in html
+
+
 def test_export_session_index_writes_sidecar_completion_plan(tmp_path: Path) -> None:
     partial = _write_recording(tmp_path, "partial.csv", "commercial Ag/AgCl")
     ready = _write_recording(tmp_path, "ready.csv", "MOTAC gel + Ag/AgCl")
