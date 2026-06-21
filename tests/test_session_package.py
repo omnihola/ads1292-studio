@@ -150,6 +150,11 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert acquisition["sample_count"] == 600
     assert acquisition["sample_span_seconds"] == 1.198
     assert acquisition["ended_at"] == "2026-06-21T12:00:02"
+    assert acquisition["actual_sample_count"] == 600
+    assert acquisition["actual_span_seconds"] == 1.198
+    assert acquisition["completion_audit"] == "pass"
+    assert acquisition["sample_count_delta"] == 0
+    assert acquisition["sample_span_delta_seconds"] == 0.0
     raw_entry = next(file_info for file_info in manifest["files"] if file_info["role"] == "raw_csv")
     copied_csv = export.package_dir / raw_entry["path"]
     expected_sha = hashlib.sha256(copied_csv.read_bytes()).hexdigest()
@@ -268,3 +273,67 @@ def test_verify_session_package_fails_when_required_sidecar_was_missing(tmp_path
 
     assert result.ok is False
     assert "required sidecars missing: acquisition" in result.failures
+
+
+def test_verify_session_package_fails_when_acquisition_completion_mismatches_csv(
+    tmp_path: Path,
+) -> None:
+    csv_path = tmp_path / "pkg-001.csv"
+    _write_session_files(csv_path)
+    acquisition = build_acquisition_provenance(
+        csv_path=csv_path,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem214301",
+        sample_rate_hz=500.0,
+        calibration=Calibration(label="bench-cal"),
+        live_calibration=None,
+        started_at="2026-06-21T12:00:00",
+    )
+    write_acquisition_json(
+        csv_path.with_suffix(".acquisition.json"),
+        finalize_acquisition_provenance(
+            acquisition,
+            ended_at="2026-06-21T12:00:02",
+            finalized_at="2026-06-21T12:00:03",
+            sample_count=598,
+            first_timestamp_seconds=0.0,
+            last_timestamp_seconds=1.0,
+        ),
+    )
+
+    export = export_session_package(csv_path=csv_path, out_dir=tmp_path / "packages", title="Package Test")
+
+    acquisition_metrics = json.loads(export.manifest_path.read_text())["metrics"]["acquisition"]
+    assert acquisition_metrics["completion_audit"] == "fail"
+    assert acquisition_metrics["sample_count_delta"] == -2
+    assert acquisition_metrics["sample_span_delta_seconds"] == -0.198
+    result = verify_session_package(export.manifest_path)
+    assert result.ok is False
+    assert "acquisition completion audit failed: fail" in result.failures
+
+
+def test_verify_session_package_fails_when_acquisition_completion_is_open(
+    tmp_path: Path,
+) -> None:
+    csv_path = tmp_path / "pkg-001.csv"
+    _write_session_files(csv_path)
+    write_acquisition_json(
+        csv_path.with_suffix(".acquisition.json"),
+        build_acquisition_provenance(
+            csv_path=csv_path,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem214301",
+            sample_rate_hz=500.0,
+            calibration=Calibration(label="bench-cal"),
+            live_calibration=None,
+            started_at="2026-06-21T12:00:00",
+        ),
+    )
+
+    export = export_session_package(csv_path=csv_path, out_dir=tmp_path / "packages", title="Package Test")
+
+    acquisition_metrics = json.loads(export.manifest_path.read_text())["metrics"]["acquisition"]
+    assert acquisition_metrics["completion_audit"] == "pending"
+    result = verify_session_package(export.manifest_path)
+    assert result.ok is False
+    assert "acquisition completion audit failed: pending" in result.failures

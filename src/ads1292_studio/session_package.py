@@ -148,7 +148,7 @@ def export_session_package(
                 source_role=event_source_role,
                 source_path=event_source_path,
             ),
-            "acquisition": _acquisition_summary(acquisition),
+            "acquisition": _acquisition_summary(acquisition, recording),
             "segment_metrics": tuple(asdict(segment) for segment in report.segment_metrics),
             "segment_gate": _segment_gate_entry(report.segment_gate_result),
         },
@@ -190,6 +190,13 @@ def verify_session_package(manifest_path: Path | str) -> PackageVerification:
     missing_roles = tuple(data.get("sidecar_completeness", {}).get("missing_roles", ()))
     if missing_roles:
         failures.append(f"required sidecars missing: {', '.join(missing_roles)}")
+    acquisition_audit = str(
+        data.get("metrics", {})
+        .get("acquisition", {})
+        .get("completion_audit", "unknown")
+    )
+    if acquisition_audit != "pass":
+        failures.append(f"acquisition completion audit failed: {acquisition_audit}")
     return PackageVerification(manifest_path=manifest, ok=not failures, checked_files=checked, failures=tuple(failures))
 
 
@@ -270,7 +277,9 @@ def _required_role_present(role: str, present_file_roles: set[str]) -> bool:
     return role in present_file_roles
 
 
-def _acquisition_summary(provenance: AcquisitionProvenance | None) -> dict:
+def _acquisition_summary(provenance: AcquisitionProvenance | None, recording=None) -> dict:
+    actual_sample_count = len(recording.samples) if recording is not None else 0
+    actual_span_seconds = round(float(recording.duration_seconds), 6) if recording is not None else 0.0
     if provenance is None:
         return {
             "mode": "unknown",
@@ -287,11 +296,21 @@ def _acquisition_summary(provenance: AcquisitionProvenance | None) -> dict:
             "sample_span_seconds": 0.0,
             "ended_at": "",
             "finalized_at": "",
+            "actual_sample_count": actual_sample_count,
+            "actual_span_seconds": actual_span_seconds,
+            "completion_audit": "unknown",
+            "sample_count_delta": 0,
+            "sample_span_delta_seconds": 0.0,
         }
     normalized = provenance.normalized()
     raw_adc = normalized.raw_adc
     live = normalized.live_calibration
     completion = normalized.completion
+    audit, sample_delta, span_delta = _completion_audit(
+        completion,
+        actual_sample_count=actual_sample_count,
+        actual_span_seconds=actual_span_seconds,
+    )
     return {
         "mode": normalized.acquisition_mode,
         "sample_rate_hz": normalized.sample_rate_hz,
@@ -307,7 +326,32 @@ def _acquisition_summary(provenance: AcquisitionProvenance | None) -> dict:
         "sample_span_seconds": completion.get("sample_span_seconds", 0.0),
         "ended_at": completion.get("ended_at", ""),
         "finalized_at": completion.get("finalized_at", ""),
+        "actual_sample_count": actual_sample_count,
+        "actual_span_seconds": actual_span_seconds,
+        "completion_audit": audit,
+        "sample_count_delta": sample_delta,
+        "sample_span_delta_seconds": span_delta,
     }
+
+
+def _completion_audit(
+    completion: dict,
+    *,
+    actual_sample_count: int,
+    actual_span_seconds: float,
+) -> tuple[str, int, float]:
+    status = str(completion.get("status", "unknown"))
+    if status == "open":
+        return "pending", 0, 0.0
+    if status != "finalized":
+        return "unknown", 0, 0.0
+    sample_count = max(0, int(float(completion.get("sample_count", 0) or 0)))
+    span_seconds = round(float(completion.get("sample_span_seconds", 0.0) or 0.0), 6)
+    sample_delta = sample_count - int(actual_sample_count)
+    span_delta = round(span_seconds - float(actual_span_seconds), 6)
+    if sample_delta == 0 and abs(span_delta) <= 0.001:
+        return "pass", sample_delta, span_delta
+    return "fail", sample_delta, span_delta
 
 
 def _file_entry(role: str, path: Path, package_dir: Path) -> dict[str, str | int]:

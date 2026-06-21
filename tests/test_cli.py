@@ -1,6 +1,10 @@
 from pathlib import Path
 
-from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
+from ads1292_studio.acquisition import (
+    build_acquisition_provenance,
+    finalize_acquisition_provenance,
+    write_acquisition_json,
+)
 from ads1292_studio import cli
 from ads1292_studio.calibration import Calibration, read_calibration_json, write_calibration_json
 from ads1292_studio.cli import main
@@ -29,19 +33,27 @@ def _write_small_csv(path: Path) -> None:
 
 def _write_complete_sidecars(path: Path) -> None:
     calibration = Calibration(label="cli-bench-cal")
+    acquisition = build_acquisition_provenance(
+        csv_path=path,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem-test",
+        sample_rate_hz=500.0,
+        calibration=calibration,
+        live_calibration=None,
+        started_at="2026-06-21T00:00:00",
+    )
     write_metadata_json(path.with_suffix(".json"), SessionMetadata(session_id=path.stem, electrode="MOTAC gel"))
     write_events_json(path.with_suffix(".events.json"), (EventMarker(0.5, "baseline", "quiet"),))
     write_calibration_json(path.with_suffix(".calibration.json"), calibration)
     write_acquisition_json(
         path.with_suffix(".acquisition.json"),
-        build_acquisition_provenance(
-            csv_path=path,
-            acquisition_mode="live_stream",
-            port="/dev/cu.usbmodem-test",
-            sample_rate_hz=500.0,
-            calibration=calibration,
-            live_calibration=None,
-            started_at="2026-06-21T00:00:00",
+        finalize_acquisition_provenance(
+            acquisition,
+            ended_at="2026-06-21T00:00:01",
+            finalized_at="2026-06-21T00:00:01",
+            sample_count=500,
+            first_timestamp_seconds=0.0,
+            last_timestamp_seconds=0.998,
         ),
     )
     write_protocol_json(
