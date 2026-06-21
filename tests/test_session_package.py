@@ -111,6 +111,7 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert acquisition["sample_rate_hz"] == 500.0
     assert acquisition["port"] == "/dev/cu.usbmodem214301"
     assert acquisition["csv_schema"] == "ads1292-studio-live-stream-v1"
+    assert acquisition["timestamp_reference"] == "relative_seconds_from_recording_start"
     assert acquisition["raw_lsb_uv_per_count"] == Calibration(label="bench-cal").microvolts_per_count
     assert acquisition["live_scale_uv_per_count"] == 1.895
     assert acquisition["live_scale_runs"] == 5

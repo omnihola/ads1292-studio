@@ -11,6 +11,7 @@ from ads1292_studio.calibration import Calibration, LiveStreamCalibration
 ACQUISITION_SCHEMA = "ads1292-acquisition-provenance-v1"
 LIVE_CSV_SCHEMA = "ads1292-studio-live-stream-v1"
 RAW_CSV_SCHEMA = "ads1292-studio-raw-adc-v1"
+TIMESTAMP_REFERENCE = "relative_seconds_from_recording_start"
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,7 @@ class AcquisitionProvenance:
     port: str = ""
     sample_rate_hz: float = 500.0
     started_at: str = ""
+    timestamp_reference: str = TIMESTAMP_REFERENCE
     channel_map: dict[str, str] = field(default_factory=dict)
     raw_adc: dict[str, Any] = field(default_factory=dict)
     live_calibration: dict[str, Any] = field(default_factory=dict)
@@ -37,6 +39,7 @@ class AcquisitionProvenance:
             port=self.port.strip(),
             sample_rate_hz=float(self.sample_rate_hz) if self.sample_rate_hz > 0 else 500.0,
             started_at=self.started_at.strip(),
+            timestamp_reference=_clean_timestamp_reference(self.timestamp_reference),
             channel_map=_clean_string_map(self.channel_map) or default_channel_map(),
             raw_adc=dict(self.raw_adc),
             live_calibration=dict(self.live_calibration),
@@ -73,6 +76,7 @@ def build_acquisition_provenance(
         port=port,
         sample_rate_hz=sample_rate_hz,
         started_at=started_at,
+        timestamp_reference=TIMESTAMP_REFERENCE,
         channel_map=default_channel_map(),
         raw_adc={
             "vref_mv": raw_calibration.vref_mv,
@@ -117,6 +121,7 @@ def format_acquisition_summary(provenance: AcquisitionProvenance | None) -> str:
     return (
         f"{normalized.acquisition_mode} | {normalized.sample_rate_hz:g} Hz | "
         f"{normalized.port or 'port unknown'}\n"
+        f"timestamps relative to recording start ({normalized.timestamp_reference})\n"
         f"{live_text}\n"
         f"{raw_text}"
     )
@@ -137,6 +142,11 @@ def _clean_string_map(values: dict[str, str]) -> dict[str, str]:
         for key, value in values.items()
         if str(key).strip() and str(value).strip()
     }
+
+
+def _clean_timestamp_reference(value: str) -> str:
+    text = str(value).strip()
+    return text if text else TIMESTAMP_REFERENCE
 
 
 def _live_calibration_entry(calibration: LiveStreamCalibration | None) -> dict[str, Any]:

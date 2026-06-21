@@ -42,6 +42,7 @@ def test_acquisition_provenance_round_trip_preserves_live_and_raw_scale(
     assert loaded.csv_schema == "ads1292-studio-live-stream-v1"
     assert loaded.port == "/dev/cu.usbmodem214301"
     assert loaded.sample_rate_hz == 500.0
+    assert loaded.timestamp_reference == "relative_seconds_from_recording_start"
     assert loaded.channel_map["ch2_counts"] == "CH2 ECG Lead I (LA-RA)"
     assert loaded.channel_map["ch1_counts"] == "CH1 respiration/raw impedance"
     assert loaded.live_calibration["mean_uv_per_count"] == 1.895
@@ -65,6 +66,7 @@ def test_acquisition_provenance_marks_raw_adc_schema(tmp_path: Path) -> None:
 
     assert provenance.acquisition_mode == "raw_adc_24bit"
     assert provenance.csv_schema == "ads1292-studio-raw-adc-v1"
+    assert provenance.timestamp_reference == "relative_seconds_from_recording_start"
     assert provenance.live_calibration == {}
 
 
@@ -91,5 +93,6 @@ def test_format_acquisition_summary_exposes_scientific_record_fields(tmp_path: P
     assert "live_stream" in summary
     assert "/dev/cu.usbmodem214301" in summary
     assert "500 Hz" in summary
+    assert "timestamps relative to recording start" in summary
     assert "Live scale 1.895 uV/count" in summary
     assert "Raw LSB 0.048081 uV/count" in summary
