@@ -12,6 +12,7 @@ from ads1292_studio.calibration import calibration_template, write_calibration_j
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.events import EventMarker, event_template, read_events_csv, read_events_json, write_events_json
 from ads1292_studio.metadata import SessionMetadata, read_metadata_json, write_metadata_json
+from ads1292_studio.processing import build_processing_settings, write_processing_json
 from ads1292_studio.protocol import protocol_template, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import quality_gate_template, write_quality_gate_json
@@ -413,6 +414,7 @@ def _sidecar_status(csv_path: Path) -> tuple[str, str]:
         ("acquisition", (csv_path.with_suffix(".acquisition.json"),)),
         ("protocol", (csv_path.with_suffix(".protocol.json"),)),
         ("quality_gate", (csv_path.with_suffix(".quality-gate.json"),)),
+        ("processing", (csv_path.with_suffix(".processing.json"),)),
     )
     missing = tuple(name for name, paths in expected if not any(path.exists() for path in paths))
     return ("complete", "") if not missing else ("missing", ";".join(missing))
@@ -508,6 +510,8 @@ def _expected_sidecar_path(csv_path: Path, sidecar: str) -> Path:
         return csv_path.with_suffix(".protocol.json")
     if sidecar == "quality_gate":
         return csv_path.with_suffix(".quality-gate.json")
+    if sidecar == "processing":
+        return csv_path.with_suffix(".processing.json")
     return csv_path.with_suffix(f".{sidecar}.json")
 
 
@@ -551,6 +555,9 @@ def _write_sidecar_template(path: Path, row: SessionIndexRow, sidecar: str) -> N
         return
     if sidecar == "quality_gate":
         write_quality_gate_json(path, quality_gate_template())
+        return
+    if sidecar == "processing":
+        write_processing_json(path, build_processing_settings())
 
 
 def _acquisition_template(row: SessionIndexRow):

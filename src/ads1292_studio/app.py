@@ -235,6 +235,7 @@ from ads1292_studio.macos_stderr import install_macos_stderr_filter
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.plot_theme import APP_VISUAL_TOKENS
+from ads1292_studio.processing import build_processing_settings, read_processing_json, write_processing_json
 from ads1292_studio.protocol import TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
 from ads1292_studio.recording_manifest import write_recording_manifest
@@ -588,6 +589,7 @@ class App(tk.Tk):
             write_calibration_json(self._calibration_path(csv_path), self._calibration())
             write_protocol_json(self._protocol_path(csv_path), self._protocol())
             write_quality_gate_json(self._quality_gate_path(csv_path), self._quality_gate())
+            write_processing_json(self._processing_path(csv_path), self._processing_settings())
             acquisition = build_acquisition_provenance(
                 csv_path=csv_path,
                 acquisition_mode=acquisition_mode.value,
@@ -729,6 +731,7 @@ class App(tk.Tk):
             self._load_protocol_sidecar(result.path)
             self._load_quality_gate_sidecar(result.path)
             self._load_acquisition_sidecar(result.path)
+            self._load_processing_sidecar(result.path)
             if (
                 result.review_frame is not None
                 and result.display_settings == self._display_settings()
@@ -1075,6 +1078,9 @@ class App(tk.Tk):
     def _acquisition_path(self, csv_path: Path) -> Path:
         return csv_path.with_suffix(".acquisition.json")
 
+    def _processing_path(self, csv_path: Path) -> Path:
+        return csv_path.with_suffix(".processing.json")
+
     def _load_event_sidecar(self, csv_path: Path) -> None:
         path = self._events_path(csv_path)
         if not path.exists():
@@ -1151,6 +1157,15 @@ class App(tk.Tk):
             }
         )
 
+    def _processing_settings(self):
+        return build_processing_settings(
+            display_settings=self._display_settings(),
+            filter_settings=self._software_filter_settings(),
+            sample_rate_hz=SAMPLE_RATE_HZ,
+            ecg_inverted=DEFAULT_ECG_INVERTED,
+            smoothing_window=DISPLAY_SMOOTHING_WINDOW,
+        )
+
     def _load_calibration_sidecar(self, csv_path: Path) -> None:
         path = self._calibration_path(csv_path)
         if not path.exists():
@@ -1197,6 +1212,22 @@ class App(tk.Tk):
         self.acquisition_var.set(format_acquisition_summary(provenance))
         self._log(f"Loaded acquisition provenance: {path}")
 
+    def _load_processing_sidecar(self, csv_path: Path) -> None:
+        path = self._processing_path(csv_path)
+        if not path.exists():
+            return
+        processing = read_processing_json(path)
+        display = processing.display or {}
+        filters = processing.software_filters or {}
+        self.display_window_var.set(f"{float(display.get('time_window_seconds', 8.0)):g} s")
+        self.display_gain_var.set(f"{float(display.get('gain', 1.0)):g}x")
+        self.sweep_speed_var.set(f"{int(display.get('sweep_speed_mm_s', 25))} mm/s")
+        self.highpass_filter_var.set(bool(filters.get("highpass_enabled", False)))
+        self.notch_filter_var.set(bool(filters.get("notch_enabled", False)))
+        self.lowpass_filter_var.set(bool(filters.get("lowpass_enabled", False)))
+        self.filter_var.set(bool(filters.get("bandpass_enabled", False)))
+        self._log(f"Loaded processing settings: {path}")
+
     def _write_current_sidecars(self) -> None:
         if self.recording_path is None:
             return
@@ -1206,6 +1237,7 @@ class App(tk.Tk):
         write_calibration_json(self._calibration_path(self.recording_path), self._calibration())
         write_protocol_json(self._protocol_path(self.recording_path), self._protocol())
         write_quality_gate_json(self._quality_gate_path(self.recording_path), self._quality_gate())
+        write_processing_json(self._processing_path(self.recording_path), self._processing_settings())
 
     def _finalize_recording_sidecars(
         self,

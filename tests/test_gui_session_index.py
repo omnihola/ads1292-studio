@@ -13,6 +13,7 @@ from ads1292_studio.events import EventMarker, write_events_json
 from ads1292_studio.gui_session_index import build_session_index_message
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
+from ads1292_studio.processing import build_processing_settings, write_processing_json
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
 from ads1292_studio.session_index import export_session_index
@@ -85,6 +86,7 @@ def _write_complete_sidecars(path: Path, events: tuple[EventMarker, ...] | None 
         ),
     )
     write_quality_gate_json(path.with_suffix(".quality-gate.json"), QualityGate(min_duration_seconds=1.0))
+    write_processing_json(path.with_suffix(".processing.json"), build_processing_settings())
 
 
 def test_build_session_index_message_includes_action_queue_counts(tmp_path: Path) -> None:
@@ -120,10 +122,10 @@ def test_build_session_index_message_includes_action_queue_counts(tmp_path: Path
     assert "Event annotations: 3" in message
     assert "Interval annotations: 2" in message
     assert "Annotated seconds: 6.00" in message
-    assert "Sidecar plan rows: 5" in message
+    assert "Sidecar plan rows: 6" in message
     assert str(export.sidecar_plan_csv_path) in message
     assert str(export.sidecar_plan_html_path) in message
-    assert "Sidecar template files: 5" in message
+    assert "Sidecar template files: 6" in message
     assert str(export.sidecar_template_dir) in message
     assert "Apply sidecars script:" in message
     assert str(export.sidecar_apply_script_path) in message

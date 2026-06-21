@@ -11,6 +11,7 @@ from ads1292_studio.calibration import Calibration, LiveStreamCalibration, write
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_csv, write_events_json
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
+from ads1292_studio.processing import build_processing_settings, write_processing_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
@@ -50,6 +51,7 @@ def _write_session_files(path: Path) -> None:
         path.with_suffix(".quality-gate.json"),
         QualityGate(min_duration_seconds=0.5, min_r_peaks=1, require_qrs_clear=False),
     )
+    write_processing_json(path.with_suffix(".processing.json"), build_processing_settings())
     acquisition = build_acquisition_provenance(
         csv_path=path,
         acquisition_mode="live_stream",
@@ -100,6 +102,7 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
         "acquisition",
         "protocol",
         "quality_gate",
+        "processing",
     ]
     roles = {file_info["role"] for file_info in manifest["files"]}
     assert {
@@ -111,6 +114,7 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
         "acquisition",
         "protocol",
         "quality_gate",
+        "processing",
         "recording_manifest",
         "report_html",
         "report_ecg_png",
@@ -162,6 +166,10 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert acquisition["completion_audit"] == "pass"
     assert acquisition["sample_count_delta"] == 0
     assert acquisition["sample_span_delta_seconds"] == 0.0
+    processing = manifest["metrics"]["processing"]
+    assert processing["schema"] == "ads1292-processing-settings-v1"
+    assert processing["display"]["time_window_seconds"] == 8.0
+    assert processing["software_filters"]["bandpass_enabled"] is False
     raw_entry = next(file_info for file_info in manifest["files"] if file_info["role"] == "raw_csv")
     copied_csv = export.package_dir / raw_entry["path"]
     expected_sha = hashlib.sha256(copied_csv.read_bytes()).hexdigest()

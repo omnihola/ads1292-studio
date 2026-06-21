@@ -11,6 +11,7 @@ from ads1292_studio.calibration import Calibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_csv, write_events_json
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
+from ads1292_studio.processing import build_processing_settings, write_processing_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
@@ -57,6 +58,7 @@ def _write_complete_sidecars(path: Path) -> None:
         ),
     )
     write_quality_gate_json(path.with_suffix(".quality-gate.json"), QualityGate(min_duration_seconds=0.5))
+    write_processing_json(path.with_suffix(".processing.json"), build_processing_settings())
     acquisition = build_acquisition_provenance(
         csv_path=path,
         acquisition_mode="live_stream",
@@ -105,6 +107,7 @@ def test_write_recording_manifest_lists_files_and_scientific_context(tmp_path: P
         "acquisition",
         "protocol",
         "quality_gate",
+        "processing",
     } <= roles
     raw_csv = next(item for item in payload["files"] if item["role"] == "raw_csv")
     assert raw_csv["path"] == "recording.csv"
@@ -153,7 +156,7 @@ def test_verify_recording_manifest_accepts_unchanged_recording(tmp_path: Path) -
     result = verify_recording_manifest(manifest_path)
 
     assert result.ok is True
-    assert result.checked_files == 8
+    assert result.checked_files == 9
     assert result.failures == tuple()
 
 
@@ -192,5 +195,8 @@ def test_verify_recording_manifest_rejects_pending_acquisition_completion(tmp_pa
     result = verify_recording_manifest(manifest_path)
 
     assert result.ok is False
-    assert "required sidecars missing: metadata, event_annotations, calibration, protocol, quality_gate" in result.failures
+    assert (
+        "required sidecars missing: metadata, event_annotations, calibration, protocol, quality_gate, processing"
+        in result.failures
+    )
     assert "acquisition completion audit failed: pending" in result.failures

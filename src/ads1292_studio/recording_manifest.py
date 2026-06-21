@@ -15,6 +15,7 @@ from ads1292_studio.events import (
     read_events_csv,
     read_events_json,
 )
+from ads1292_studio.processing import read_processing_json
 
 
 RECORDING_MANIFEST_SCHEMA = "ads1292-recording-manifest-v1"
@@ -26,6 +27,7 @@ REQUIRED_SIDECAR_ROLES = (
     "acquisition",
     "protocol",
     "quality_gate",
+    "processing",
 )
 
 SIDECAR_PATHS = (
@@ -36,6 +38,7 @@ SIDECAR_PATHS = (
     ("acquisition", ".acquisition.json"),
     ("protocol", ".protocol.json"),
     ("quality_gate", ".quality-gate.json"),
+    ("processing", ".processing.json"),
 )
 
 
@@ -60,6 +63,7 @@ def build_recording_manifest(
     event_source_role = "none"
     event_source_path = ""
     acquisition = None
+    processing = None
 
     for role, suffix in SIDECAR_PATHS:
         path = source_csv.with_suffix(suffix)
@@ -77,6 +81,8 @@ def build_recording_manifest(
             event_source_path = path.name
         elif role == "acquisition":
             acquisition = read_acquisition_json(path)
+        elif role == "processing":
+            processing = read_processing_json(path)
 
     return {
         "schema": RECORDING_MANIFEST_SCHEMA,
@@ -100,6 +106,7 @@ def build_recording_manifest(
             actual_sample_count=len(recording.samples),
             actual_span_seconds=round(float(recording.duration_seconds), 6),
         ),
+        "processing": _processing_summary(processing),
         "files": files,
     }
 
@@ -249,6 +256,21 @@ def _acquisition_summary(
         "completion_audit": audit,
         "sample_count_delta": sample_delta,
         "sample_span_delta_seconds": span_delta,
+    }
+
+
+def _processing_summary(processing) -> dict:
+    if processing is None:
+        return {}
+    normalized = processing.normalized()
+    return {
+        "schema": normalized.schema,
+        "display": normalized.display,
+        "software_filters": normalized.software_filters,
+        "sample_rate_hz": normalized.sample_rate_hz,
+        "ecg_inverted": normalized.ecg_inverted,
+        "smoothing_window": normalized.smoothing_window,
+        "processing_notes": normalized.processing_notes,
     }
 
 

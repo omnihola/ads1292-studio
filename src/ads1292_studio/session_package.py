@@ -17,6 +17,7 @@ from ads1292_studio.events import (
     read_events_json,
 )
 from ads1292_studio.metadata import read_metadata_json
+from ads1292_studio.processing import build_processing_settings, read_processing_json
 from ads1292_studio.protocol import read_protocol_json
 from ads1292_studio.quality_gate import quality_gate_template, read_quality_gate_json
 from ads1292_studio.recording_manifest import verify_recording_manifest, write_recording_manifest
@@ -30,6 +31,7 @@ REQUIRED_SIDECAR_ROLES = (
     "acquisition",
     "protocol",
     "quality_gate",
+    "processing",
 )
 
 
@@ -72,6 +74,7 @@ def export_session_package(
     calibration = calibration_template()
     protocol = None
     quality_gate = quality_gate_template()
+    processing = build_processing_settings()
     sidecars = (
         ("metadata", source_csv.with_suffix(".json")),
         ("events", source_csv.with_suffix(".events.json")),
@@ -80,6 +83,7 @@ def export_session_package(
         ("acquisition", source_csv.with_suffix(".acquisition.json")),
         ("protocol", source_csv.with_suffix(".protocol.json")),
         ("quality_gate", source_csv.with_suffix(".quality-gate.json")),
+        ("processing", source_csv.with_suffix(".processing.json")),
         ("recording_manifest", recording_manifest_path),
     )
     for role, sidecar in sidecars:
@@ -106,6 +110,8 @@ def export_session_package(
             protocol = read_protocol_json(copied)
         elif role == "quality_gate":
             quality_gate = read_quality_gate_json(copied)
+        elif role == "processing":
+            processing = read_processing_json(copied)
 
     recording = read_recording_csv(copied_csv)
     report_dir = package_dir / "report"
@@ -152,6 +158,7 @@ def export_session_package(
                 source_path=event_source_path,
             ),
             "acquisition": _acquisition_summary(acquisition, recording),
+            "processing": asdict(processing.normalized()),
             "segment_metrics": tuple(asdict(segment) for segment in report.segment_metrics),
             "segment_gate": _segment_gate_entry(report.segment_gate_result),
         },

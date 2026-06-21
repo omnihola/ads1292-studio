@@ -12,6 +12,7 @@ from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_json
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
+from ads1292_studio.processing import build_processing_settings, write_processing_json
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, read_protocol_json, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
 from ads1292_studio.recording_manifest import write_recording_manifest
@@ -65,6 +66,7 @@ def _write_complete_sidecars(path: Path) -> None:
         ),
     )
     write_quality_gate_json(path.with_suffix(".quality-gate.json"), QualityGate(min_duration_seconds=0.5))
+    write_processing_json(path.with_suffix(".processing.json"), build_processing_settings())
 
 
 def test_cli_writes_calibration_template(tmp_path: Path) -> None:
@@ -170,7 +172,7 @@ def test_cli_verify_recording_returns_success(tmp_path: Path, capsys) -> None:
 
     output = capsys.readouterr().out
     assert "ok=True" in output
-    assert "checked_files=7" in output
+    assert "checked_files=8" in output
 
 
 def test_cli_verify_recording_returns_failure_for_stale_manifest(tmp_path: Path, capsys) -> None:
@@ -233,9 +235,9 @@ def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
     assert "action_review_signal=0" in captured
     assert "sidecar_plan_csv=" in captured
     assert "sidecar_plan_html=" in captured
-    assert "sidecar_plan_rows=6" in captured
+    assert "sidecar_plan_rows=7" in captured
     assert "sidecar_template_dir=" in captured
-    assert "sidecar_template_files=6" in captured
+    assert "sidecar_template_files=7" in captured
     assert "sidecar_apply_script=" in captured
     assert "manifest_plan_csv=" in captured
     assert "manifest_plan_html=" in captured

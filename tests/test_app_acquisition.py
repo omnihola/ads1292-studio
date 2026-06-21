@@ -17,6 +17,19 @@ def test_start_updates_acquisition_summary_when_recording_csv() -> None:
     assert "acquisition_var.set(format_acquisition_summary" in source
 
 
+def test_start_and_finalize_persist_processing_sidecar() -> None:
+    start_source = inspect.getsource(App.start)
+    current_sidecars_source = inspect.getsource(App._write_current_sidecars)
+    load_source = inspect.getsource(App._finish_csv_load)
+
+    assert "write_processing_json(self._processing_path(csv_path), self._processing_settings())" in start_source
+    assert (
+        "write_processing_json(self._processing_path(self.recording_path), self._processing_settings())"
+        in current_sidecars_source
+    )
+    assert "self._load_processing_sidecar(result.path)" in load_source
+
+
 def test_finalize_recording_sidecars_uses_csv_sample_span(tmp_path: Path) -> None:
     csv_path = tmp_path / "recording.csv"
     samples = tuple(
