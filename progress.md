@@ -804,8 +804,14 @@
 - Files modified: `src/ads1292_studio/ui_qt/{controller,main_window,status_panel,sidebar_forms}.py`, `tests/test_ui_qt_smoke.py`, planning files.
 - Still to do in 44.2: PQRST / Spectrum / Event Log tabs; backport reliable finalization to the Tk app (optional); real-hardware smoke.
 
+### Phase 44.3 (mostly done): events + archive actions + Calibrate Live
+- **Status:** events + archive actions + Calibrate Live wired; remaining 44.3 = Validation/Protocol form contents.
+- Archive actions wired to the existing core exporters (output under `~/Documents/ECG/{reports,packages,batch,session-index}`): Export Report (`export_review_report`), Export Package (`export_session_package`), Verify Package (`verify_session_package`, file dialog), Batch Compare (`export_batch_summary`, multi-file dialog), Session Index (`export_session_index` + `build_session_index_message`, folder dialog). Each shows a result/error dialog.
+- Calibrate Live wired: `controller.calibrate(port)` runs `device.run_live_stream_calibration(runs=5, seconds_per_run=4.0)` on a background thread; the drained `LiveCalibrationResult` sets `controller.live_calibration`, which is passed to `worker.start(live_calibration=...)` on the next LIVE Start. Button gated by `gui_control_states` (connected + not streaming).
+- Export source helper prefers loaded-CSV samples, else reads the current `recording_path`. Added `test_export_report_writes_files_from_loaded_recording` (monkeypatches QMessageBox to avoid modal block; asserts report files written from the real baseline recording). 536 tests pass.
+
 ### Phase 44.3 (started): functional event annotations
-- **Status:** event create/persist/overlay done; remaining 44.3 = archive actions + Validation/Protocol forms + Calibrate Live.
+- **Status:** event create/persist/overlay done.
 - Real-hardware smoke confirmed by user: `~/Documents/ECG/live/2026-06-21-181633` (after the close-finalize fix) wrote csv + json + xlsx; the prior 17:41 session was csv-only. Fix verified on hardware.
 - Event buttons were clickable but in-memory only (not saved, not overlaid). Now: handlers build real `EventMarker`/`event_from_interval` on `controller.event_markers`, overlay on the live ECG axis (`LivePanel.set_event_markers`: dotted line for points, shaded span for ranges), append to the Event Log, and are persisted into the recording JSON bundle + XLSX at finalize (events cleared on Start). Test `test_finalize_writes_csv_json_and_xlsx` extended to assert the event round-trips through the bundle. 535 tests pass.
 

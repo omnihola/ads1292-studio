@@ -22,12 +22,12 @@ from ads1292_studio.acquisition import (
     build_acquisition_provenance,
     finalize_acquisition_provenance,
 )
-from ads1292_studio.calibration import Calibration
+from ads1292_studio.calibration import Calibration, LiveStreamCalibration
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice
 from ads1292_studio.events import EventMarker
 from ads1292_studio.gui_state import GuiState
-from ads1292_studio.gui_workers import ConnectResult, CsvLoadResult
+from ads1292_studio.gui_workers import ConnectResult, CsvLoadResult, LiveCalibrationResult
 from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.processing import build_processing_settings
@@ -59,6 +59,7 @@ class AcquisitionController:
         self.connect_results: queue.Queue[ConnectResult] = queue.Queue()
         self.stream_start_results: queue.Queue[StreamStartResult] = queue.Queue()
         self.csv_load_results: queue.Queue[CsvLoadResult] = queue.Queue()
+        self.calibration_results: queue.Queue[LiveCalibrationResult] = queue.Queue()
         self.worker = LiveWorker(self.samples, self.logs, self.stream_start_results)
 
         self.connected_port: str | None = None
@@ -68,7 +69,11 @@ class AcquisitionController:
         self.is_starting = False
         self.is_streaming = False
         self.is_loading_csv = False
+        self.is_calibrating_live = False
         self.has_data = False
+        self.live_calibration: LiveStreamCalibration | None = None
+        self.loaded_samples: tuple = ()
+        self.loaded_csv_path: Path | None = None
 
         self._finalization_pending = False
         self._record_metadata = SessionMetadata()
@@ -88,6 +93,7 @@ class AcquisitionController:
             loading_csv=self.is_loading_csv,
             connecting=self.is_connecting,
             starting=self.is_starting,
+            calibrating_live=self.is_calibrating_live,
         )
 
     # ---- connect ----
@@ -105,6 +111,21 @@ class AcquisitionController:
             self.connect_results.put(ConnectResult(port=port, detail=f"firmware {firmware}"))
         except Exception as exc:  # noqa: BLE001 - surfaced to the UI
             self.connect_results.put(ConnectResult(port=port, error=str(exc)))
+
+    # ---- live calibration ----
+    def calibrate(self, port: str) -> None:
+        if self.is_calibrating_live or self.connected_port != port or self.is_streaming:
+            return
+        self.is_calibrating_live = True
+        threading.Thread(target=self._calibrate_bg, args=(port,), daemon=True).start()
+
+    def _calibrate_bg(self, port: str) -> None:
+        try:
+            with Ads1x9xDevice(port, timeout=0.35) as device:
+                calibration = device.run_live_stream_calibration(runs=5, seconds_per_run=4.0)
+            self.calibration_results.put(LiveCalibrationResult(port=port, calibration=calibration))
+        except Exception as exc:  # noqa: BLE001
+            self.calibration_results.put(LiveCalibrationResult(port=port, error=str(exc)))
 
     # ---- start / stop ----
     def start(
@@ -138,7 +159,8 @@ class AcquisitionController:
             )
             self._finalization_pending = True
         self.is_starting = True
-        self.worker.start(port, csv_path, mode=mode, calibration=Calibration())
+        live_calibration = self.live_calibration if mode is AcquisitionMode.LIVE else None
+        self.worker.start(port, csv_path, mode=mode, calibration=Calibration(), live_calibration=live_calibration)
 
     def stop(self) -> None:
         self.worker.stop()
@@ -268,8 +290,25 @@ class AcquisitionController:
                 out.errors.append(f"Load CSV failed: {res.error or 'no data'}")
             else:
                 self.has_data = True
+                self.loaded_samples = res.recording.samples
+                self.loaded_csv_path = res.path
                 out.loaded_recording = res.recording
                 out.logs.append(f"Loaded {len(res.recording.samples)} samples from {res.path.name}")
+        while True:
+            try:
+                res = self.calibration_results.get_nowait()
+            except queue.Empty:
+                break
+            self.is_calibrating_live = False
+            out.state_changed = True
+            if res.error or res.calibration is None:
+                out.errors.append(f"Live calibration failed: {res.error or 'unknown error'}")
+            else:
+                self.live_calibration = res.calibration.normalized()
+                out.logs.append(
+                    f"Live calibration: {self.live_calibration.mean_uv_per_count:.4g} uV/count "
+                    f"(CV {self.live_calibration.cv_percent:.2f}%)"
+                )
         # finalize a stopped recording once the CSV writer thread has ended
         if self._finalization_pending and not self.is_streaming and not self._worker_alive():
             self._finalize_recording(out)

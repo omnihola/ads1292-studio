@@ -172,6 +172,11 @@ class MainWindow(QMainWindow):
         for name, btn in self.sidebar.buttons.items():
             self.controls[name] = btn
         self.sidebar.buttons["Load CSV"].clicked.connect(self._on_load_csv)
+        self.sidebar.buttons["Export Report"].clicked.connect(self._on_export_report)
+        self.sidebar.buttons["Export Package"].clicked.connect(self._on_export_package)
+        self.sidebar.buttons["Verify Package"].clicked.connect(self._on_verify_package)
+        self.sidebar.buttons["Batch Compare"].clicked.connect(self._on_batch_compare)
+        self.sidebar.buttons["Session Index"].clicked.connect(self._on_session_index)
         lay.addWidget(self.sidebar)
 
         center = QWidget()
@@ -290,8 +295,96 @@ class MainWindow(QMainWindow):
             self.controller.load_csv(Path(path))
             self._refresh_state()
 
+    # ---- archive actions (reuse existing core exporters) ----
+    _ECG_ROOT = Path.home() / "Documents" / "ECG"
+
+    def _export_source(self):
+        """Return (samples, csv_path) for export: prefer loaded CSV, else the recording."""
+        if self.controller.loaded_samples:
+            return self.controller.loaded_samples, self.controller.loaded_csv_path
+        if self.controller.recording_path and self.controller.recording_path.exists():
+            from ads1292_studio.csv_io import read_recording_csv
+            return read_recording_csv(self.controller.recording_path).samples, self.controller.recording_path
+        return (), None
+
+    def _on_export_report(self) -> None:
+        from ads1292_studio.report import export_review_report
+        samples, _ = self._export_source()
+        if not samples:
+            QMessageBox.warning(self, "Export Report", "Load a CSV or finish a recording first.")
+            return
+        out = self._ECG_ROOT / "reports"
+        try:
+            result = export_review_report(samples, out, sample_rate_hz=SAMPLE_RATE_HZ, metadata=self.sidebar.metadata())
+            self.event_log_panel.append_line(f"Report exported: {getattr(result, 'html_path', out)}")
+            QMessageBox.information(self, "Export Report", f"Report written under:\n{out}")
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.critical(self, "Export Report", str(exc))
+
+    def _on_export_package(self) -> None:
+        from ads1292_studio.session_package import export_session_package
+        _, csv_path = self._export_source()
+        if csv_path is None:
+            QMessageBox.warning(self, "Export Package", "Load a saved CSV or record with Record CSV first.")
+            return
+        out = self._ECG_ROOT / "packages"
+        try:
+            result = export_session_package(csv_path, out)
+            self.event_log_panel.append_line(f"Package exported: {getattr(result, 'package_dir', out)}")
+            QMessageBox.information(self, "Export Package", f"Package written under:\n{out}")
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.critical(self, "Export Package", str(exc))
+
+    def _on_verify_package(self) -> None:
+        from ads1292_studio.session_package import verify_session_package
+        path, _ = QFileDialog.getOpenFileName(self, "Select package manifest", str(self._ECG_ROOT), "Manifest (manifest.json);;JSON (*.json)")
+        if not path:
+            return
+        try:
+            result = verify_session_package(Path(path))
+            ok = getattr(result, "ok", None)
+            msg = "Package OK" if ok else f"Verification failed:\n" + "\n".join(getattr(result, "failures", []) or ["unknown"])
+            QMessageBox.information(self, "Verify Package", msg)
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.critical(self, "Verify Package", str(exc))
+
+    def _on_batch_compare(self) -> None:
+        from ads1292_studio.batch import export_batch_summary
+        paths, _ = QFileDialog.getOpenFileNames(self, "Select recording CSVs", str(self._ECG_ROOT), "CSV files (*.csv)")
+        if not paths:
+            return
+        out = self._ECG_ROOT / "batch"
+        try:
+            export_batch_summary([Path(p) for p in paths], out)
+            QMessageBox.information(self, "Batch Compare", f"Batch summary written under:\n{out}")
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.critical(self, "Batch Compare", str(exc))
+
+    def _on_session_index(self) -> None:
+        from ads1292_studio.session_index import export_session_index
+        from ads1292_studio.gui_session_index import build_session_index_message
+        folder = QFileDialog.getExistingDirectory(self, "Select recordings folder", str(self._ECG_ROOT))
+        if not folder:
+            return
+        out = self._ECG_ROOT / "session-index"
+        try:
+            result = export_session_index(Path(folder), out)
+            try:
+                msg = build_session_index_message(result)
+            except Exception:
+                msg = f"Session index written under:\n{out}"
+            QMessageBox.information(self, "Session Index", msg)
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.critical(self, "Session Index", str(exc))
+
     def _on_calibrate(self) -> None:
-        QMessageBox.information(self, "Calibrate Live", "Live calibration wiring lands in Phase 44.3.")
+        port = self.port_combo.currentText().strip()
+        if self.controller.connected_port != port:
+            QMessageBox.warning(self, "Calibrate Live", "Press Connect before live calibration.")
+            return
+        self.controller.calibrate(port)
+        self.event_log_panel.append_line("Live calibration started (CH2 internal test signal, 5 runs)…")
+        self._refresh_state()
 
     # ---- event annotations (real EventMarkers; persisted at finalize, overlaid on plot) ----
     def _now_seconds(self) -> float:

@@ -151,6 +151,34 @@ def test_finalize_writes_csv_json_and_xlsx(tmp_path) -> None:
     assert len(events) == 1 and events[0].label == "motion"
 
 
+def test_export_report_writes_files_from_loaded_recording(qapp, tmp_path, monkeypatch) -> None:
+    """The Export Report archive action reuses the core exporter and writes output."""
+    from pathlib import Path
+
+    from PySide6.QtWidgets import QMessageBox
+
+    from ads1292_studio.csv_io import read_recording_csv
+
+    # archive handlers pop modal dialogs; stub them so the test does not block
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: None))
+    monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *a, **k: None))
+    monkeypatch.setattr(QMessageBox, "critical", staticmethod(lambda *a, **k: None))
+
+    src = Path("recordings/2026-06-18-221342-ads1292-studio.csv")
+    if not src.exists():
+        pytest.skip("baseline recording not available")
+
+    win = _make_window(qapp)
+    try:
+        win.controller.loaded_samples = read_recording_csv(src).samples
+        win._ECG_ROOT = tmp_path
+        win._on_export_report()
+        out = tmp_path / "reports"
+        assert out.exists() and any(out.iterdir()), "report files were written"
+    finally:
+        win.deleteLater()
+
+
 def test_connect_failure_surfaces_without_crashing(qapp) -> None:
     win = _make_window(qapp)
     try:

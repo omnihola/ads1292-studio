@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 44: GUI Modernization (PySide6 / Qt) — 44.2 complete (offline review + PQRST/Spectrum/Event-Log + reliable finalization); 535 tests pass. Next: real-hardware smoke + 44.3 (left-form actions).
+Phase 44: GUI Modernization (PySide6 / Qt) — 44.3 mostly done (events + archive actions + Calibrate Live wired); 536 tests pass. Qt app now ~feature-equivalent to Tk. Remaining: Validation/Protocol forms + 44.4 polish.
 
 ## Phases
 
@@ -416,8 +416,14 @@ retained.
       quality cards (Good ECG/QRS, CH2, 86.7 bpm, 129 R — matches baseline) + PQRST (beats=129)
       + spectrum all render. Backported the reliable-finalization fix to the Tk app `_close()`.
       535 tests pass.
-- [ ] Phase 44.3: left-panel forms (Session/Validation/Protocol) + archive actions (report,
-      package, verify, batch, session index) wired to existing core modules.
+- [x] Phase 44.3 (mostly done): functional event annotations (create/overlay/persist into
+      bundle+xlsx); archive actions wired to core exporters — Export Report (`export_review_report`),
+      Export Package (`export_session_package`), Verify Package (`verify_session_package`), Batch
+      Compare (`export_batch_summary`), Session Index (`export_session_index` + message), all
+      writing under `~/Documents/ECG/{reports,packages,batch,session-index}`; Calibrate Live wired
+      (`run_live_stream_calibration` in a background thread -> `live_calibration` applied to the next
+      Start). Added a monkeypatched Export-Report functional test. 536 tests pass. Remaining:
+      Validation/Protocol form contents.
 - [ ] Phase 44.4: polish (focus/hover states, keyboard shortcuts, density, dark-mode pass).
 - [ ] Tests: token->QSS snapshot, controller logic via `gui_state`, offscreen QApplication smoke.
 - [ ] Commit on a feature branch and push to GitHub (confirm before push).
