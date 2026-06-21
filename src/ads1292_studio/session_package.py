@@ -54,6 +54,8 @@ def export_session_package(
 
     metadata = None
     events = tuple()
+    event_source_role = "none"
+    event_source_path = ""
     acquisition = None
     calibration = calibration_template()
     protocol = None
@@ -77,8 +79,12 @@ def export_session_package(
             metadata = read_metadata_json(copied)
         elif role == "events":
             events = read_events_json(copied)
+            event_source_role = role
+            event_source_path = copied.name
         elif role == "events_csv" and not events:
             events = read_events_csv(copied)
+            event_source_role = role
+            event_source_path = copied.name
         elif role == "acquisition":
             acquisition = read_acquisition_json(copied)
         elif role == "calibration":
@@ -126,7 +132,11 @@ def export_session_package(
             "noise_rms_counts": report.metrics.noise_rms_counts,
             "peak_to_peak_counts": report.metrics.peak_to_peak_counts,
             "quality_gate": asdict(quality_gate.normalized()),
-            "event_annotations": _event_annotation_summary(events),
+            "event_annotations": _event_annotation_summary(
+                events,
+                source_role=event_source_role,
+                source_path=event_source_path,
+            ),
             "acquisition": _acquisition_summary(acquisition),
             "segment_metrics": tuple(asdict(segment) for segment in report.segment_metrics),
             "segment_gate": _segment_gate_entry(report.segment_gate_result),
@@ -193,7 +203,7 @@ def _segment_gate_entry(result) -> dict | None:
     }
 
 
-def _event_annotation_summary(events) -> dict:
+def _event_annotation_summary(events, *, source_role: str = "none", source_path: str = "") -> dict:
     normalized = tuple(event.normalized() for event in events)
     labels: dict[str, int] = {}
     interval_events = 0
@@ -211,6 +221,8 @@ def _event_annotation_summary(events) -> dict:
         "interval_events": interval_events,
         "total_annotated_seconds": round(total_annotated_seconds, 6),
         "labels": {label: labels[label] for label in sorted(labels)},
+        "source_role": source_role,
+        "source_path": source_path,
         "events": tuple(_event_annotation_entry(event) for event in normalized),
     }
 

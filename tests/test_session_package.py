@@ -108,6 +108,8 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert annotations["interval_events"] == 0
     assert annotations["total_annotated_seconds"] == 0.0
     assert annotations["labels"] == {"motion": 1}
+    assert annotations["source_role"] == "events"
+    assert annotations["source_path"] == "pkg-001.events.json"
     acquisition = manifest["metrics"]["acquisition"]
     assert acquisition["mode"] == "live_stream"
     assert acquisition["sample_rate_hz"] == 500.0
@@ -156,6 +158,8 @@ def test_export_session_package_uses_events_csv_when_json_missing(tmp_path: Path
     html = export.report_html_path.read_text()
     assert "events_csv" in roles
     assert "events" not in roles
+    assert manifest["metrics"]["event_annotations"]["source_role"] == "events_csv"
+    assert manifest["metrics"]["event_annotations"]["source_path"] == "pkg-001.events.csv"
     assert "csv-only motion" in html
     assert "spreadsheet edited" in html
 
