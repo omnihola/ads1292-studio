@@ -15,8 +15,12 @@ dependencies = [
   "scipy",
 ]
 
+[project.optional-dependencies]
+qt = ["PySide6"]
+
 [project.scripts]
 ads1292-studio = "ads1292_studio.app:main"
+ads1292-studio-qt = "ads1292_studio.app_qt:main"
 ads1292-studio-cli = "ads1292_studio.cli:main"
 
 [tool.setuptools.packages.find]

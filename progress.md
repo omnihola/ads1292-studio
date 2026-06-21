@@ -774,14 +774,29 @@
 - Files created/modified:
   - `docs/mockups/2026-06-21-pyqt-modernization-mockup-v1..v5.html` (+ rendered `.png`)
   - `task_plan.md`, `findings.md`, `progress.md`
+  - `docs/superpowers/specs/2026-06-21-pyqt-modernization-design.md`
+- Baseline smoke (pre-implementation, 2026-06-21): full suite **521 passed**; offline data-integrity on `recordings/2026-06-18-221342-ads1292-studio.csv` = 44,884 samples / 500 Hz / 89.768 s, CH1+CH2 complete; CLI `review` reproduced ecg_source=CH2, r_peaks=129, hr_median=86.7 bpm, drift=44.0, noise_rms=50.5, p2p=8709.0. Locks the data-pipeline baseline the Qt rewrite must preserve. Env: PySide6 + matplotlib present in `sensor`.
 - Next:
   - Write design spec to `docs/superpowers/specs/2026-06-21-pyqt-modernization-design.md` and have the user review it.
   - Implement Phase 44.1 MVP (PySide6 shell + token/QSS theme + connect/start/stop/calibrate flow + 2-panel live plot via FigureCanvasQTAgg + 3-column layout + Status panel + SNR/Event console) with reused `gui_state`/`gui_workers` and a QTimer queue drain; then push to GitHub on a feature branch (confirm before push).
 
+### Phase 44.1: PySide6 MVP — implemented
+- **Status:** complete (offscreen-tested; pending real-hardware smoke)
+- Actions taken:
+  - Added `src/ads1292_studio/ui_qt/` package: `tokens.py` (light-first design tokens, seeded from `APP_VISUAL_TOKENS`), `theme.py` (tokens -> QSS), `widgets.py` (card/status_row/pill atoms), `live_panel.py` (2-axis `FigureCanvasQTAgg`), `event_console.py` (regrouped SNR + Annotate/Manual range/Manage), `status_panel.py` (Status cards driven by `gui_state`), `sidebar_forms.py` (Session/Validation/Protocol tabs), `controller.py` (owns `LiveWorker` + queues + connect/start/stop), `main_window.py` (3-column assembly + QTimer tick).
+  - Added entry point `ads1292-studio-qt` (`app_qt.py`) and optional `[qt]` extra in `pyproject.toml`. The existing Tk `ads1292-studio` app is untouched and still runs.
+  - Reused the toolkit-agnostic core and `gui_state`/`gui_workers` unchanged: control gating via `gui_control_states`, Status via `gui_status_cards`/`gui_workflow_hint`, queue drain via QTimer (drop-in for the Tk `after()` loop).
+  - TDD: `tests/test_ui_qt_theme.py` (9, pure token->QSS) and `tests/test_ui_qt_smoke.py` (4, offscreen QApplication: construction, control gating, connect->start->samples->stop flow, connect-failure). RED verified before implementing tokens/theme.
+  - Rendered the real app offscreen to `docs/mockups/2026-06-21-pyqt-app-actual.png` (matches the v5 baseline) and fixed a connection-pill ghost by updating the label in place.
+- Verification: full suite **534 passed** (521 prior + 13 new), 0 regressions.
+- Files created/modified: `src/ads1292_studio/ui_qt/*.py`, `src/ads1292_studio/app_qt.py`, `pyproject.toml`, `tests/test_ui_qt_theme.py`, `tests/test_ui_qt_smoke.py`, `docs/mockups/_render_qt_app.py` (+ rendered PNG), `task_plan.md`, `findings.md`, `progress.md`.
+- Deferred to later sub-phases: Calibrate Live wiring (44.3), live SNR/filters/peaks/calibrated units (44.2), event sidecar persistence + plot overlay (44.3), Review/PQRST/Spectrum/Event-Log tabs (44.2), left-form archive actions (44.3).
+- Next: real-hardware smoke with `ads1292-studio-qt` against the board to confirm complete data capture + smooth live rendering; then continue 44.2.
+
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 44 (GUI modernization to PySide6) — design approved by the user (visual baseline = `docs/mockups/2026-06-21-pyqt-modernization-mockup-v5.html`); about to write the spec and start the Phase 44.1 MVP. Phase 43 and earlier are complete. Channel-label confirmation (which exact Einthoven lead CH2 represents) is still pending the user's electrode-disconnect hardware test. |
+| Where am I? | Phase 44.1 (PySide6 MVP) implemented and offscreen-tested: new `ui_qt/` package, 3-column window, live 2-panel plot, event console, Status panel, all reusing the unchanged core + `gui_state`; full suite 534 passed. Entry point `ads1292-studio-qt`. Real-hardware live smoke and sub-phases 44.2/44.3 are next. Phase 43 and earlier complete. Channel-label confirmation (which exact Einthoven lead CH2 represents) is still pending the user's electrode-disconnect hardware test. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. The ADS1292R chip datasheet (SBAS502C) confirms respiration demodulation hardware exists only on Channel 1 and TI states Channel 1 cannot do ECG while respiration is enabled on it — this independently corroborates the existing CH1=respiration/CH2=ECG assignment that was originally reached empirically. The original GUI bugs were concurrency/state bugs (blocking calls on the GUI thread, a cross-thread close/read race, an optimistic Start state, and an offline-review window capped at the live-display buffer size), not datasheet-correctness bugs. |

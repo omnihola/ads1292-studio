@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 44: GUI Modernization (PySide6 / Qt) — design approved, implementation starting
+Phase 44: GUI Modernization (PySide6 / Qt) — 44.1 MVP implemented and tested (534 tests pass)
 
 ## Phases
 
@@ -396,10 +396,14 @@ retained.
 - [x] Confirm clean UI/core separation via codegraph (only ~6 files are Tk-bound).
 - [x] Produce and iterate light-first visual mockups (v1 -> v5) until user-approved.
 - [x] Record Phase 44 design and decisions in planning files.
-- [ ] Write design spec to `docs/superpowers/specs/2026-06-21-pyqt-modernization-design.md`; user review.
-- [ ] Phase 44.1 MVP: PySide6 app shell + token/QSS theme system + connect/start/stop/calibrate
-      flow + 2-panel live plot (FigureCanvasQTAgg) + 3-column layout + Status panel + SNR/Event
-      console, driven by reused `gui_state`/`gui_workers` and a QTimer queue drain.
+- [x] Write design spec to `docs/superpowers/specs/2026-06-21-pyqt-modernization-design.md`.
+- [x] Baseline smoke before implementation: 521 tests pass; real recording data integrity + metrics reproduced.
+- [x] Phase 44.1 MVP: PySide6 app shell + token/QSS theme system + 3-column layout + control/display
+      toolbars + 2-panel live plot (FigureCanvasQTAgg) + Status panel + SNR/Event console, driven by
+      reused `gui_state`/`gui_workers` and a QTimer queue drain. New entry point `ads1292-studio-qt`
+      and optional `[qt]` extra. Tests: token->QSS (9) + offscreen QApplication smoke (4); full suite
+      534 passed. Real app rendered offscreen to `docs/mockups/2026-06-21-pyqt-app-actual.png`.
+      Deferred to later sub-phases: Calibrate Live wiring, live SNR/filters/peaks, event sidecar+overlay.
 - [ ] Phase 44.2: Review CSV / PQRST / Spectrum / Event Log tabs.
 - [ ] Phase 44.3: left-panel forms (Session/Validation/Protocol) + archive actions (report,
       package, verify, batch, session index) wired to existing core modules.
