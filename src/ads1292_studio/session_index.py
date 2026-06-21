@@ -9,7 +9,7 @@ from shlex import quote
 
 from ads1292_studio.calibration import calibration_template, write_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
-from ads1292_studio.events import event_template, write_events_json
+from ads1292_studio.events import EventMarker, event_template, read_events_csv, read_events_json, write_events_json
 from ads1292_studio.metadata import SessionMetadata, read_metadata_json, write_metadata_json
 from ads1292_studio.protocol import protocol_template, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
@@ -36,6 +36,10 @@ class SessionIndexRow:
     status: str
     sidecar_status: str
     missing_sidecars: str
+    event_count: int
+    interval_event_count: int
+    total_annotated_seconds: float
+    event_labels: str
     package_ready_status: str
     next_action: str
 
@@ -50,6 +54,14 @@ class SessionIndexSummary:
     action_package_record: int
     action_complete_sidecars: int
     action_review_signal: int
+
+
+@dataclass(frozen=True)
+class EventAnnotationSummary:
+    count: int = 0
+    interval_count: int = 0
+    total_annotated_seconds: float = 0.0
+    labels: str = ""
 
 
 @dataclass(frozen=True)
@@ -221,6 +233,7 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
     metadata = _metadata_for(path)
     metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz)
     sidecar_status, missing_sidecars = _sidecar_status(path)
+    event_summary = _event_summary_for(path)
     waveform_status = _status_for_quality(metrics.quality_label)
     package_ready_status = _package_ready_status(waveform_status, sidecar_status)
     return SessionIndexRow(
@@ -242,6 +255,10 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
         status=waveform_status,
         sidecar_status=sidecar_status,
         missing_sidecars=missing_sidecars,
+        event_count=event_summary.count,
+        interval_event_count=event_summary.interval_count,
+        total_annotated_seconds=event_summary.total_annotated_seconds,
+        event_labels=event_summary.labels,
         package_ready_status=package_ready_status,
         next_action=_next_action(package_ready_status),
     )
@@ -270,6 +287,35 @@ def _sidecar_status(csv_path: Path) -> tuple[str, str]:
     }
     missing = tuple(name for name, path in expected.items() if not path.exists())
     return ("complete", "") if not missing else ("missing", ";".join(missing))
+
+
+def _event_summary_for(csv_path: Path) -> EventAnnotationSummary:
+    events_json = csv_path.with_suffix(".events.json")
+    events_csv = csv_path.with_suffix(".events.csv")
+    if events_json.exists():
+        return _summarize_events(read_events_json(events_json))
+    if events_csv.exists():
+        return _summarize_events(read_events_csv(events_csv))
+    return EventAnnotationSummary()
+
+
+def _summarize_events(events: tuple[EventMarker, ...]) -> EventAnnotationSummary:
+    labels: dict[str, int] = {}
+    interval_count = 0
+    total_annotated_seconds = 0.0
+    for event in events:
+        marker = event.normalized()
+        labels[marker.label] = labels.get(marker.label, 0) + 1
+        if marker.duration_seconds > 0:
+            interval_count += 1
+            total_annotated_seconds += marker.duration_seconds
+    label_text = ";".join(f"{label}:{labels[label]}" for label in sorted(labels))
+    return EventAnnotationSummary(
+        count=len(events),
+        interval_count=interval_count,
+        total_annotated_seconds=round(total_annotated_seconds, 6),
+        labels=label_text,
+    )
 
 
 def _expected_sidecar_path(csv_path: Path, sidecar: str) -> Path:
@@ -360,6 +406,10 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
         "status",
         "sidecar_status",
         "missing_sidecars",
+        "event_count",
+        "interval_event_count",
+        "total_annotated_seconds",
+        "event_labels",
         "package_ready_status",
         "next_action",
     ]
@@ -401,6 +451,10 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
         "Status",
         "Sidecars",
         "Missing Sidecars",
+        "Events",
+        "Interval Events",
+        "Annotated Seconds",
+        "Event Labels",
         "Package Ready",
         "Next Action",
     ]
@@ -419,6 +473,10 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
             row.status,
             row.sidecar_status,
             row.missing_sidecars,
+            str(row.event_count),
+            str(row.interval_event_count),
+            f"{row.total_annotated_seconds:.2f}",
+            row.event_labels,
             row.package_ready_status,
             row.next_action,
         ]

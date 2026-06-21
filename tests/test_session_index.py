@@ -4,7 +4,7 @@ import numpy as np
 
 from ads1292_studio.calibration import Calibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
-from ads1292_studio.events import EventMarker, write_events_json
+from ads1292_studio.events import EventMarker, write_events_csv, write_events_json
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, write_protocol_json
@@ -67,8 +67,9 @@ def _write_recording(
     return path
 
 
-def _write_complete_sidecars(path: Path) -> None:
-    write_events_json(path.with_suffix(".events.json"), (EventMarker(0.5, "baseline", "quiet"),))
+def _write_complete_sidecars(path: Path, events: tuple[EventMarker, ...] | None = None) -> None:
+    markers = events or (EventMarker(0.5, "baseline", "quiet"),)
+    write_events_json(path.with_suffix(".events.json"), markers)
     write_calibration_json(path.with_suffix(".calibration.json"), Calibration(label="bench-cal"))
     write_protocol_json(
         path.with_suffix(".protocol.json"),
@@ -134,6 +135,45 @@ def test_scan_recording_directory_reports_next_action(tmp_path: Path) -> None:
     assert rows["review"].next_action == "review_signal"
 
 
+def test_scan_recording_directory_summarizes_event_annotations(tmp_path: Path) -> None:
+    marked = _write_recording(tmp_path, "marked.csv", "MOTAC gel + Ag/AgCl")
+    _write_recording(tmp_path, "unmarked.csv", "MOTAC gel + Ag/AgCl")
+    _write_complete_sidecars(
+        marked,
+        (
+            EventMarker(timestamp_seconds=0.5, label="baseline", notes="quiet"),
+            EventMarker(timestamp_seconds=2.0, duration_seconds=3.25, label="motion", notes="arm moved"),
+            EventMarker(timestamp_seconds=6.0, label="motion", notes="tap"),
+        ),
+    )
+
+    rows = {row.session_id: row for row in scan_recording_directory(tmp_path)}
+
+    assert rows["marked"].event_count == 3
+    assert rows["marked"].interval_event_count == 1
+    assert rows["marked"].total_annotated_seconds == 3.25
+    assert rows["marked"].event_labels == "baseline:1;motion:2"
+    assert rows["unmarked"].event_count == 0
+    assert rows["unmarked"].interval_event_count == 0
+    assert rows["unmarked"].total_annotated_seconds == 0.0
+    assert rows["unmarked"].event_labels == ""
+
+
+def test_scan_recording_directory_uses_events_csv_when_json_is_missing(tmp_path: Path) -> None:
+    marked = _write_recording(tmp_path, "marked-csv.csv", "MOTAC gel + Ag/AgCl")
+    events = (
+        EventMarker(timestamp_seconds=1.0, duration_seconds=2.5, label="deep breath", notes="inhale"),
+    )
+    write_events_csv(marked.with_suffix(".events.csv"), events)
+
+    rows = {row.session_id: row for row in scan_recording_directory(tmp_path)}
+
+    assert rows["marked-csv"].event_count == 1
+    assert rows["marked-csv"].interval_event_count == 1
+    assert rows["marked-csv"].total_annotated_seconds == 2.5
+    assert rows["marked-csv"].event_labels == "deep breath:1"
+
+
 def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     _write_recording(tmp_path, "control.csv", "commercial Ag/AgCl")
     motac = _write_recording(tmp_path, "motac.csv", "MOTAC gel + Ag/AgCl")
@@ -150,6 +190,8 @@ def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     assert "relative_path,session_id,subject_id,electrode" in csv_text
     assert "commercial Ag/AgCl" in csv_text
     assert "sidecar_status,missing_sidecars" in csv_text
+    assert "event_count,interval_event_count,total_annotated_seconds,event_labels" in csv_text
+    assert "baseline:1" in csv_text
     assert "package_ready_status" in csv_text
     assert "next_action" in csv_text
     assert "package_ready" in csv_text
@@ -158,6 +200,8 @@ def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     assert "MOTAC Session Library" in html
     assert "Usable recordings" in html
     assert "Sidecars" in html
+    assert "Events" in html
+    assert "baseline:1" in html
     assert "Package Ready" in html
     assert "Next Action" in html
 
