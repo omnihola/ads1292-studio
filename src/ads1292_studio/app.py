@@ -584,8 +584,8 @@ class App(tk.Tk):
                 else None
             )
             write_metadata_json(csv_path.with_suffix(".json"), self._metadata())
-            write_events_json(self._events_path(csv_path), self.event_markers)
-            write_events_csv(self._events_csv_path(csv_path), self.event_markers)
+            write_events_json(self._events_path(csv_path), self.event_markers, sample_rate_hz=SAMPLE_RATE_HZ)
+            write_events_csv(self._events_csv_path(csv_path), self.event_markers, sample_rate_hz=SAMPLE_RATE_HZ)
             write_calibration_json(self._calibration_path(csv_path), self._calibration())
             write_protocol_json(self._protocol_path(csv_path), self._protocol())
             write_quality_gate_json(self._quality_gate_path(csv_path), self._quality_gate())
@@ -1100,8 +1100,16 @@ class App(tk.Tk):
     def _save_event_sidecar(self) -> None:
         if self.recording_path is None:
             return
-        write_events_json(self._events_path(self.recording_path), self.event_markers)
-        write_events_csv(self._events_csv_path(self.recording_path), self.event_markers)
+        write_events_json(
+            self._events_path(self.recording_path),
+            self.event_markers,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+        )
+        write_events_csv(
+            self._events_csv_path(self.recording_path),
+            self.event_markers,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+        )
         App._refresh_recording_manifest_if_present(self)
 
     def _refresh_recording_manifest_if_present(self) -> None:
@@ -1232,8 +1240,16 @@ class App(tk.Tk):
         if self.recording_path is None:
             return
         write_metadata_json(self.recording_path.with_suffix(".json"), self._metadata())
-        write_events_json(self._events_path(self.recording_path), self.event_markers)
-        write_events_csv(self._events_csv_path(self.recording_path), self.event_markers)
+        write_events_json(
+            self._events_path(self.recording_path),
+            self.event_markers,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+        )
+        write_events_csv(
+            self._events_csv_path(self.recording_path),
+            self.event_markers,
+            sample_rate_hz=SAMPLE_RATE_HZ,
+        )
         write_calibration_json(self._calibration_path(self.recording_path), self._calibration())
         write_protocol_json(self._protocol_path(self.recording_path), self._protocol())
         write_quality_gate_json(self._quality_gate_path(self.recording_path), self._quality_gate())

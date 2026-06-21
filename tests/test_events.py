@@ -79,6 +79,37 @@ def test_event_marker_supports_duration_and_end_seconds(tmp_path: Path) -> None:
     assert data["events"][0]["event_type"] == "interval"
 
 
+def test_event_sidecars_include_sample_indices_for_reproducible_segments(
+    tmp_path: Path,
+) -> None:
+    json_path = tmp_path / "recording.events.json"
+    csv_path = tmp_path / "recording.events.csv"
+    events = (
+        EventMarker(
+            timestamp_seconds=73.0,
+            duration_seconds=4.25,
+            label="artifact",
+            notes="motion artifact excluded from HRV",
+        ),
+    )
+
+    write_events_json(json_path, events, sample_rate_hz=500.0)
+    write_events_csv(csv_path, events, sample_rate_hz=500.0)
+
+    payload = json.loads(json_path.read_text())
+    csv_text = csv_path.read_text()
+    event = payload["events"][0]
+    assert payload["sample_rate_hz"] == 500.0
+    assert payload["sample_index_reference"] == "zero_based_sample_index_at_recording_sample_rate"
+    assert event["start_sample_index"] == 36500
+    assert event["end_sample_index"] == 38625
+    assert event["duration_samples"] == 2125
+    assert "start_sample_index,end_sample_index,duration_samples" in csv_text
+    assert "36500,38625,2125" in csv_text
+    assert read_events_json(json_path) == tuple(event.normalized() for event in events)
+    assert read_events_csv(csv_path) == tuple(event.normalized() for event in events)
+
+
 def test_events_json_reader_accepts_start_end_seconds_without_duration(tmp_path: Path) -> None:
     path = tmp_path / "edited.events.json"
     path.write_text(
@@ -123,7 +154,11 @@ def test_event_markers_csv_round_trip_includes_start_end_duration(tmp_path: Path
     text = path.read_text()
 
     assert loaded == tuple(event.normalized() for event in events)
-    assert "start_seconds,end_seconds,duration_seconds,event_type,label,notes" in text
+    assert (
+        "start_seconds,end_seconds,duration_seconds,start_sample_index,end_sample_index,duration_samples,event_type,label,notes"
+        in text
+    )
+    assert "6000,7750,1750" in text
     assert "15.500000" in text
     assert ",interval,motion segment," in text
     assert ",point,electrode touch," in text

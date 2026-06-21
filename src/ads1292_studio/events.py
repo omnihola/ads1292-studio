@@ -9,6 +9,8 @@ from typing import Iterable
 
 EVENT_ANNOTATIONS_SCHEMA = "ads1292-event-annotations-v1"
 EVENT_TIMESTAMP_REFERENCE = "relative_seconds_from_recording_start"
+EVENT_SAMPLE_INDEX_REFERENCE = "zero_based_sample_index_at_recording_sample_rate"
+DEFAULT_EVENT_SAMPLE_RATE_HZ = 500.0
 
 
 @dataclass(frozen=True)
@@ -46,34 +48,62 @@ def read_events_json(path: Path | str) -> tuple[EventMarker, ...]:
     )
 
 
-def write_events_json(path: Path | str, events: Iterable[EventMarker]) -> None:
+def write_events_json(
+    path: Path | str,
+    events: Iterable[EventMarker],
+    *,
+    sample_rate_hz: float = DEFAULT_EVENT_SAMPLE_RATE_HZ,
+) -> None:
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    normalized = [_event_json_entry(event) for event in events]
+    sample_rate = _normalized_sample_rate(sample_rate_hz)
+    normalized = [_event_json_entry(event, sample_rate_hz=sample_rate) for event in events]
     payload = {
         "schema": EVENT_ANNOTATIONS_SCHEMA,
         "timestamp_reference": EVENT_TIMESTAMP_REFERENCE,
+        "sample_rate_hz": sample_rate,
+        "sample_index_reference": EVENT_SAMPLE_INDEX_REFERENCE,
         "events": normalized,
     }
     output.write_text(json.dumps(payload, indent=2) + "\n")
 
 
-EVENTS_CSV_HEADER = ["start_seconds", "end_seconds", "duration_seconds", "event_type", "label", "notes"]
+EVENTS_CSV_HEADER = [
+    "start_seconds",
+    "end_seconds",
+    "duration_seconds",
+    "start_sample_index",
+    "end_sample_index",
+    "duration_samples",
+    "event_type",
+    "label",
+    "notes",
+]
 
 
-def write_events_csv(path: Path | str, events: Iterable[EventMarker]) -> None:
+def write_events_csv(
+    path: Path | str,
+    events: Iterable[EventMarker],
+    *,
+    sample_rate_hz: float = DEFAULT_EVENT_SAMPLE_RATE_HZ,
+) -> None:
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
+    sample_rate = _normalized_sample_rate(sample_rate_hz)
     with output.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=EVENTS_CSV_HEADER)
         writer.writeheader()
         for event in events:
             marker = event.normalized()
+            sample_indices = _event_sample_indices(marker, sample_rate)
             writer.writerow(
                 {
                     "start_seconds": f"{marker.timestamp_seconds:.6f}",
                     "end_seconds": f"{marker.end_seconds:.6f}",
                     "duration_seconds": f"{marker.duration_seconds:.6f}",
+                    "start_sample_index": sample_indices["start_sample_index"],
+                    "end_sample_index": sample_indices["end_sample_index"],
+                    "duration_samples": sample_indices["duration_samples"],
                     "event_type": _event_type(marker),
                     "label": marker.label,
                     "notes": marker.notes,
@@ -115,13 +145,18 @@ def _event_type(event: EventMarker) -> str:
     return "interval" if event.normalized().duration_seconds > 0 else "point"
 
 
-def _event_json_entry(event: EventMarker) -> dict[str, object]:
+def _event_json_entry(
+    event: EventMarker,
+    *,
+    sample_rate_hz: float = DEFAULT_EVENT_SAMPLE_RATE_HZ,
+) -> dict[str, object]:
     marker = event.normalized()
     return {
         "timestamp_seconds": marker.timestamp_seconds,
         "start_seconds": marker.timestamp_seconds,
         "end_seconds": marker.end_seconds,
         "duration_seconds": marker.duration_seconds,
+        **_event_sample_indices(marker, _normalized_sample_rate(sample_rate_hz)),
         "event_type": _event_type(marker),
         "label": marker.label,
         "notes": marker.notes,
@@ -168,3 +203,23 @@ def event_template() -> tuple[EventMarker, ...]:
         EventMarker(timestamp_seconds=5.0, duration_seconds=3.0, label="motion", notes="subject moved arm"),
         EventMarker(timestamp_seconds=20.0, duration_seconds=5.0, label="deep breath", notes="respiration challenge"),
     )
+
+
+def _event_sample_indices(event: EventMarker, sample_rate_hz: float) -> dict[str, int]:
+    marker = event.normalized()
+    start_index = _seconds_to_sample_index(marker.timestamp_seconds, sample_rate_hz)
+    end_index = _seconds_to_sample_index(marker.end_seconds, sample_rate_hz)
+    return {
+        "start_sample_index": start_index,
+        "end_sample_index": end_index,
+        "duration_samples": max(0, end_index - start_index),
+    }
+
+
+def _seconds_to_sample_index(seconds: float, sample_rate_hz: float) -> int:
+    return max(0, int(round(float(seconds) * sample_rate_hz)))
+
+
+def _normalized_sample_rate(sample_rate_hz: float) -> float:
+    rate = float(sample_rate_hz)
+    return rate if rate > 0 else DEFAULT_EVENT_SAMPLE_RATE_HZ

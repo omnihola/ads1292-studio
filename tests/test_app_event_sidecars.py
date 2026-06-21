@@ -11,7 +11,25 @@ def test_start_initializes_events_csv_sidecar() -> None:
 
     source = inspect.getsource(App.start)
 
-    assert "write_events_csv(self._events_csv_path(csv_path), self.event_markers)" in source
+    assert "write_events_csv(" in source
+    assert "self._events_csv_path(csv_path)" in source
+    assert "sample_rate_hz=SAMPLE_RATE_HZ" in source
+
+
+def test_event_sidecar_writes_use_app_sample_rate() -> None:
+    import inspect
+
+    start_source = inspect.getsource(App.start)
+    save_source = inspect.getsource(App._save_event_sidecar)
+    current_sidecars_source = inspect.getsource(App._write_current_sidecars)
+
+    assert "self._events_path(csv_path)" in start_source
+    assert "self._events_csv_path(csv_path)" in start_source
+    assert "sample_rate_hz=SAMPLE_RATE_HZ" in start_source
+    assert "self._events_path(self.recording_path)" in save_source
+    assert "self._events_csv_path(self.recording_path)" in save_source
+    assert "sample_rate_hz=SAMPLE_RATE_HZ" in save_source
+    assert "sample_rate_hz=SAMPLE_RATE_HZ" in current_sidecars_source
 
 
 def test_save_event_sidecar_writes_json_and_csv(monkeypatch) -> None:
@@ -20,12 +38,12 @@ def test_save_event_sidecar_writes_json_and_csv(monkeypatch) -> None:
     monkeypatch.setattr(
         app_module,
         "write_events_json",
-        lambda path, events: calls.append(("json", Path(path).name, tuple(events))),
+        lambda path, events, **_kwargs: calls.append(("json", Path(path).name, tuple(events))),
     )
     monkeypatch.setattr(
         app_module,
         "write_events_csv",
-        lambda path, events: calls.append(("csv", Path(path).name, tuple(events))),
+        lambda path, events, **_kwargs: calls.append(("csv", Path(path).name, tuple(events))),
         raising=False,
     )
     fake = SimpleNamespace(
@@ -49,8 +67,8 @@ def test_save_event_sidecar_refreshes_existing_recording_manifest(
     csv_path = tmp_path / "recording.csv"
     csv_path.with_suffix(".manifest.json").write_text("{}\n")
 
-    monkeypatch.setattr(app_module, "write_events_json", lambda _path, _events: None)
-    monkeypatch.setattr(app_module, "write_events_csv", lambda _path, _events: None)
+    monkeypatch.setattr(app_module, "write_events_json", lambda _path, _events, **_kwargs: None)
+    monkeypatch.setattr(app_module, "write_events_csv", lambda _path, _events, **_kwargs: None)
     monkeypatch.setattr(
         app_module,
         "write_recording_manifest",
@@ -77,8 +95,8 @@ def test_save_event_sidecar_does_not_create_manifest_before_finalization(
     calls = []
     csv_path = tmp_path / "recording.csv"
 
-    monkeypatch.setattr(app_module, "write_events_json", lambda _path, _events: None)
-    monkeypatch.setattr(app_module, "write_events_csv", lambda _path, _events: None)
+    monkeypatch.setattr(app_module, "write_events_json", lambda _path, _events, **_kwargs: None)
+    monkeypatch.setattr(app_module, "write_events_csv", lambda _path, _events, **_kwargs: None)
     monkeypatch.setattr(app_module, "write_recording_manifest", lambda path: calls.append(Path(path)))
     fake = SimpleNamespace(
         recording_path=csv_path,
