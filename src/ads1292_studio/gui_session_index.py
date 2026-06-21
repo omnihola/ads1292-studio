@@ -31,6 +31,7 @@ def build_session_index_message(export: SessionIndexExport) -> str:
             f"Event annotations: {summary.event_annotations}",
             f"Interval annotations: {summary.interval_event_annotations}",
             f"Annotated seconds: {summary.total_annotated_seconds:.2f}",
+            f"Annotated samples: {summary.total_annotated_samples}",
             "",
             f"Sidecar plan rows: {len(export.sidecar_plan_rows)}",
             str(export.sidecar_plan_csv_path),

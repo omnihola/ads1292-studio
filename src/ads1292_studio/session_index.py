@@ -10,7 +10,15 @@ from shlex import quote
 from ads1292_studio.acquisition import build_acquisition_provenance, read_acquisition_json, write_acquisition_json
 from ads1292_studio.calibration import calibration_template, write_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
-from ads1292_studio.events import EventMarker, event_template, read_events_csv, read_events_json, write_events_json
+from ads1292_studio.events import (
+    DEFAULT_EVENT_SAMPLE_RATE_HZ,
+    EventMarker,
+    event_sample_indices,
+    event_template,
+    read_events_csv,
+    read_events_json,
+    write_events_json,
+)
 from ads1292_studio.metadata import SessionMetadata, read_metadata_json, write_metadata_json
 from ads1292_studio.processing import build_processing_settings, write_processing_json
 from ads1292_studio.protocol import protocol_template, write_protocol_json
@@ -48,6 +56,7 @@ class SessionIndexRow:
     event_count: int
     interval_event_count: int
     total_annotated_seconds: float
+    total_annotated_samples: int
     event_labels: str
     recording_manifest_status: str
     recording_manifest_failures: str
@@ -77,6 +86,7 @@ class SessionIndexSummary:
     event_annotations: int
     interval_event_annotations: int
     total_annotated_seconds: float
+    total_annotated_samples: int
     action_package_record: int
     action_complete_sidecars: int
     action_review_signal: int
@@ -87,6 +97,7 @@ class EventAnnotationSummary:
     count: int = 0
     interval_count: int = 0
     total_annotated_seconds: float = 0.0
+    total_annotated_samples: int = 0
     labels: str = ""
 
 
@@ -317,6 +328,7 @@ def summarize_rows(rows: tuple[SessionIndexRow, ...]) -> SessionIndexSummary:
         event_annotations=sum(row.event_count for row in rows),
         interval_event_annotations=sum(row.interval_event_count for row in rows),
         total_annotated_seconds=round(sum(row.total_annotated_seconds for row in rows), 6),
+        total_annotated_samples=sum(row.total_annotated_samples for row in rows),
         action_package_record=sum(1 for row in rows if row.next_action == "package_record"),
         action_complete_sidecars=sum(1 for row in rows if row.next_action == "complete_sidecars"),
         action_review_signal=sum(1 for row in rows if row.next_action == "review_signal"),
@@ -347,7 +359,7 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
     metadata = _metadata_for(path)
     metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz)
     sidecar_status, missing_sidecars = _sidecar_status(path)
-    event_summary = _event_summary_for(path)
+    event_summary = _event_summary_for(path, recording.sample_rate_hz)
     completion = _completion_summary_for(path)
     audit, count_delta, span_delta = _completion_audit(
         completion,
@@ -385,6 +397,7 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
         event_count=event_summary.count,
         interval_event_count=event_summary.interval_count,
         total_annotated_seconds=event_summary.total_annotated_seconds,
+        total_annotated_samples=event_summary.total_annotated_samples,
         event_labels=event_summary.labels,
         recording_manifest_status=manifest_status,
         recording_manifest_failures=manifest_failures,
@@ -420,13 +433,13 @@ def _sidecar_status(csv_path: Path) -> tuple[str, str]:
     return ("complete", "") if not missing else ("missing", ";".join(missing))
 
 
-def _event_summary_for(csv_path: Path) -> EventAnnotationSummary:
+def _event_summary_for(csv_path: Path, sample_rate_hz: float = DEFAULT_EVENT_SAMPLE_RATE_HZ) -> EventAnnotationSummary:
     events_json = csv_path.with_suffix(".events.json")
     events_csv = csv_path.with_suffix(".events.csv")
     if events_json.exists():
-        return _summarize_events(read_events_json(events_json))
+        return _summarize_events(read_events_json(events_json), sample_rate_hz=sample_rate_hz)
     if events_csv.exists():
-        return _summarize_events(read_events_csv(events_csv))
+        return _summarize_events(read_events_csv(events_csv), sample_rate_hz=sample_rate_hz)
     return EventAnnotationSummary()
 
 
@@ -478,21 +491,28 @@ def _recording_manifest_audit(csv_path: Path) -> tuple[str, str]:
     return "fail", ";".join(result.failures)
 
 
-def _summarize_events(events: tuple[EventMarker, ...]) -> EventAnnotationSummary:
+def _summarize_events(
+    events: tuple[EventMarker, ...],
+    *,
+    sample_rate_hz: float = DEFAULT_EVENT_SAMPLE_RATE_HZ,
+) -> EventAnnotationSummary:
     labels: dict[str, int] = {}
     interval_count = 0
     total_annotated_seconds = 0.0
+    total_annotated_samples = 0
     for event in events:
         marker = event.normalized()
         labels[marker.label] = labels.get(marker.label, 0) + 1
         if marker.duration_seconds > 0:
             interval_count += 1
             total_annotated_seconds += marker.duration_seconds
+            total_annotated_samples += event_sample_indices(marker, sample_rate_hz)["duration_samples"]
     label_text = ";".join(f"{label}:{labels[label]}" for label in sorted(labels))
     return EventAnnotationSummary(
         count=len(events),
         interval_count=interval_count,
         total_annotated_seconds=round(total_annotated_seconds, 6),
+        total_annotated_samples=total_annotated_samples,
         labels=label_text,
     )
 
@@ -628,6 +648,7 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
         "event_count",
         "interval_event_count",
         "total_annotated_seconds",
+        "total_annotated_samples",
         "event_labels",
         "recording_manifest_status",
         "recording_manifest_failures",
@@ -697,6 +718,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
         "Events",
         "Interval Events",
         "Annotated Seconds",
+        "Annotated Samples",
         "Event Labels",
         "Manifest",
         "Manifest Failures",
@@ -727,6 +749,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
             str(row.event_count),
             str(row.interval_event_count),
             f"{row.total_annotated_seconds:.2f}",
+            str(row.total_annotated_samples),
             row.event_labels,
             row.recording_manifest_status,
             row.recording_manifest_failures,
@@ -753,7 +776,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
   <p>Finalized recordings: {summary.finalized_recordings} | Open/unfinalized recordings: {summary.open_recordings} | Unknown completion: {summary.unknown_completion_records}</p>
   <p>Completion audit: pass {summary.completion_audit_pass} | fail {summary.completion_audit_fail} | pending {summary.completion_audit_pending} | unknown {summary.completion_audit_unknown}</p>
   <p>Manifest audit: pass {summary.recording_manifest_pass} | fail {summary.recording_manifest_fail} | missing {summary.recording_manifest_missing} | unknown {summary.recording_manifest_unknown}</p>
-  <p>Annotated recordings: {summary.annotated_recordings} | Event annotations: {summary.event_annotations} | Interval annotations: {summary.interval_event_annotations} | Annotated seconds: {summary.total_annotated_seconds:.2f}</p>
+  <p>Annotated recordings: {summary.annotated_recordings} | Event annotations: {summary.event_annotations} | Interval annotations: {summary.interval_event_annotations} | Annotated seconds: {summary.total_annotated_seconds:.2f} | Annotated samples: {summary.total_annotated_samples}</p>
   <p>Next actions: package record {summary.action_package_record} | complete sidecars {summary.action_complete_sidecars} | review signal {summary.action_review_signal}</p>
   <table>
     <tr>{"".join(f"<th>{escape(item)}</th>" for item in header)}</tr>

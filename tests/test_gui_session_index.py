@@ -122,6 +122,7 @@ def test_build_session_index_message_includes_action_queue_counts(tmp_path: Path
     assert "Event annotations: 3" in message
     assert "Interval annotations: 2" in message
     assert "Annotated seconds: 6.00" in message
+    assert "Annotated samples: 3000" in message
     assert "Sidecar plan rows: 6" in message
     assert str(export.sidecar_plan_csv_path) in message
     assert str(export.sidecar_plan_html_path) in message

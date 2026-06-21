@@ -192,10 +192,12 @@ def test_scan_recording_directory_summarizes_event_annotations(tmp_path: Path) -
     assert rows["marked"].event_count == 3
     assert rows["marked"].interval_event_count == 1
     assert rows["marked"].total_annotated_seconds == 3.25
+    assert rows["marked"].total_annotated_samples == 1625
     assert rows["marked"].event_labels == "baseline:1;motion:2"
     assert rows["unmarked"].event_count == 0
     assert rows["unmarked"].interval_event_count == 0
     assert rows["unmarked"].total_annotated_seconds == 0.0
+    assert rows["unmarked"].total_annotated_samples == 0
     assert rows["unmarked"].event_labels == ""
 
 
@@ -235,6 +237,7 @@ def test_scan_recording_directory_uses_events_csv_when_json_is_missing(tmp_path:
     assert rows["marked-csv"].event_count == 1
     assert rows["marked-csv"].interval_event_count == 1
     assert rows["marked-csv"].total_annotated_seconds == 2.5
+    assert rows["marked-csv"].total_annotated_samples == 1250
     assert rows["marked-csv"].event_labels == "deep breath:1"
 
 
@@ -254,7 +257,7 @@ def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     assert "relative_path,session_id,subject_id,electrode" in csv_text
     assert "commercial Ag/AgCl" in csv_text
     assert "sidecar_status,missing_sidecars" in csv_text
-    assert "event_count,interval_event_count,total_annotated_seconds,event_labels" in csv_text
+    assert "event_count,interval_event_count,total_annotated_seconds,total_annotated_samples,event_labels" in csv_text
     assert "baseline:1" in csv_text
     assert "package_ready_status" in csv_text
     assert "next_action" in csv_text
@@ -265,6 +268,7 @@ def test_export_session_index_writes_csv_and_html(tmp_path: Path) -> None:
     assert "Usable recordings" in html
     assert "Sidecars" in html
     assert "Events" in html
+    assert "Annotated Samples" in html
     assert "baseline:1" in html
     assert "Package Ready" in html
     assert "Next Action" in html
@@ -317,11 +321,13 @@ def test_export_session_index_summarizes_event_annotation_coverage(tmp_path: Pat
     assert export.summary.event_annotations == 3
     assert export.summary.interval_event_annotations == 2
     assert export.summary.total_annotated_seconds == 5.5
+    assert export.summary.total_annotated_samples == 2750
     html = export.html_path.read_text()
     assert "Annotated recordings: 2" in html
     assert "Event annotations: 3" in html
     assert "Interval annotations: 2" in html
     assert "Annotated seconds: 5.50" in html
+    assert "Annotated samples: 2750" in html
 
 
 def test_export_session_index_surfaces_acquisition_completion(tmp_path: Path) -> None:
