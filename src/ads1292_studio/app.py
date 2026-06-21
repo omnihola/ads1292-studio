@@ -1134,7 +1134,10 @@ class App(tk.Tk):
         if not hasattr(self, "event_log_text"):
             return
         self.event_log_text.delete("1.0", tk.END)
-        self.event_log_text.insert(tk.END, format_event_log_text(self.event_markers))
+        self.event_log_text.insert(
+            tk.END,
+            format_event_log_text(self.event_markers, sample_rate_hz=SAMPLE_RATE_HZ),
+        )
 
     def _calibration(self) -> Calibration:
         return _calibration_from_values(

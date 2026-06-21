@@ -120,24 +120,36 @@ def read_events_csv(path: Path | str) -> tuple[EventMarker, ...]:
         )
 
 
-def format_event_log_text(events: Iterable[EventMarker]) -> str:
+def format_event_log_text(
+    events: Iterable[EventMarker],
+    *,
+    sample_rate_hz: float = DEFAULT_EVENT_SAMPLE_RATE_HZ,
+) -> str:
     normalized = tuple(event.normalized() for event in events)
     if not normalized:
         return "No event annotations.\n"
-    rows = ["Start (s)\tEnd (s)\tDuration (s)\tType\tLabel\tNotes"]
-    rows.extend(
-        "\t".join(
-            (
-                f"{event.timestamp_seconds:.2f}",
-                f"{event.end_seconds:.2f}",
-                f"{event.duration_seconds:.2f}",
-                _event_type(event),
-                event.label,
-                event.notes,
+    rows = [
+        "Start (s)\tEnd (s)\tDuration (s)\t"
+        "Start sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
+    ]
+    sample_rate = _normalized_sample_rate(sample_rate_hz)
+    for event in normalized:
+        sample_indices = event_sample_indices(event, sample_rate)
+        rows.append(
+            "\t".join(
+                (
+                    f"{event.timestamp_seconds:.2f}",
+                    f"{event.end_seconds:.2f}",
+                    f"{event.duration_seconds:.2f}",
+                    str(sample_indices["start_sample_index"]),
+                    str(sample_indices["end_sample_index"]),
+                    str(sample_indices["duration_samples"]),
+                    _event_type(event),
+                    event.label,
+                    event.notes,
+                )
             )
         )
-        for event in normalized
-    )
     return "\n".join(rows) + "\n"
 
 

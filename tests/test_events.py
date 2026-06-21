@@ -186,12 +186,29 @@ def test_format_event_log_text_lists_point_and_interval_rows() -> None:
         (
             EventMarker(2.0, label="baseline", notes="quiet"),
             EventMarker(12.5, duration_seconds=5.5, label="motion", notes="arm motion"),
-        )
+        ),
+        sample_rate_hz=500.0,
     )
 
-    assert "Start (s)\tEnd (s)\tDuration (s)\tType\tLabel\tNotes" in text
-    assert "2.00\t2.00\t0.00\tpoint\tbaseline\tquiet" in text
-    assert "12.50\t18.00\t5.50\tinterval\tmotion\tarm motion" in text
+    assert (
+        "Start (s)\tEnd (s)\tDuration (s)\tStart sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
+        in text
+    )
+    assert "2.00\t2.00\t0.00\t1000\t1000\t0\tpoint\tbaseline\tquiet" in text
+    assert "12.50\t18.00\t5.50\t6250\t9000\t2750\tinterval\tmotion\tarm motion" in text
+
+
+def test_format_event_log_text_uses_requested_sample_rate_for_sample_indices() -> None:
+    from ads1292_studio.events import format_event_log_text
+
+    text = format_event_log_text(
+        (
+            EventMarker(1.0, duration_seconds=2.0, label="challenge", notes="paced breathing"),
+        ),
+        sample_rate_hz=250.0,
+    )
+
+    assert "1.00\t3.00\t2.00\t250\t750\t500\tinterval\tchallenge\tpaced breathing" in text
 
 
 def test_event_marker_normalizes_negative_duration_to_point_event() -> None:
