@@ -129,6 +129,17 @@ def test_sidebar_exposes_event_range_actions() -> None:
     assert "event_range_start_var" in init_source
     assert "mark_event_range_start_button" in sidebar_source
     assert "add_event_range_button" in sidebar_source
+
+
+def test_sidebar_exposes_acquisition_provenance_summary() -> None:
+    from ads1292_studio.gui_layout import initialize_sidebar_state, populate_sidebar
+
+    init_source = inspect.getsource(initialize_sidebar_state)
+    sidebar_source = inspect.getsource(populate_sidebar)
+
+    assert "acquisition_var" in init_source
+    assert '"Acquisition"' in sidebar_source
+    assert "Acquisition provenance" in sidebar_source
     assert "Mark Range Start" in sidebar_source
     assert "Add Event Range" in sidebar_source
 

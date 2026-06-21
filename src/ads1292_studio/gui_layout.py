@@ -391,6 +391,7 @@ def initialize_sidebar_state(app: Any, *, protocol_steps_text: str) -> None:
     app.metrics_var = tk.StringVar(value="No session")
     app.quality_var = tk.StringVar(value="Quality: --")
     app.path_var = tk.StringVar(value="CSV: --")
+    app.acquisition_var = tk.StringVar(value="Acquisition: no CSV loaded")
     app.workflow_hint_var = tk.StringVar(value="")
     app.status_overview_var = tk.StringVar(value="")
     app.status_card_vars = {label: tk.StringVar(value="") for label in STATUS_CARD_LABELS}
@@ -451,7 +452,12 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
     build_channel_map_cards(app, status_side)
     ttk.Label(status_side, text="Signal Quality", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 6))
     build_signal_quality_cards(app, status_side)
-    for label, var in (("Session", app.metrics_var), ("Quality", app.quality_var), ("Storage", app.path_var)):
+    for label, var in (
+        ("Session", app.metrics_var),
+        ("Quality", app.quality_var),
+        ("Acquisition", app.acquisition_var),
+        ("Storage", app.path_var),
+    ):
         build_status_detail_card(app, status_side, label, var)
 
     ttk.Label(session_side, text="Recording Notes", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
@@ -461,6 +467,8 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
     metadata_entry(app, session_side, "Montage", app.montage_var)
     metadata_entry(app, session_side, "Operator", app.operator_var)
     metadata_entry(app, session_side, "Notes", app.notes_var)
+    ttk.Label(session_side, text="Acquisition provenance", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
+    build_protocol_note_card(app, session_side, "Acquisition", app.acquisition_var)
     ttk.Label(session_side, text="Events", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
     metadata_entry(app, session_side, "Event label", app.event_label_var)
     metadata_entry(app, session_side, "Event notes", app.event_notes_var)

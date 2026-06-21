@@ -99,6 +99,29 @@ def write_acquisition_json(path: Path | str, provenance: AcquisitionProvenance) 
     output.write_text(json.dumps(asdict(normalized), indent=2) + "\n")
 
 
+def format_acquisition_summary(provenance: AcquisitionProvenance | None) -> str:
+    if provenance is None:
+        return "Acquisition: no provenance sidecar"
+    normalized = provenance.normalized()
+    live = normalized.live_calibration
+    raw = normalized.raw_adc
+    live_text = "Live scale not calibrated"
+    if live:
+        live_text = (
+            f"Live scale {float(live['mean_uv_per_count']):.6g} uV/count"
+            f" ({int(live['runs'])} runs, CV {float(live['cv_percent']):.3g}%)"
+        )
+    raw_text = "Raw LSB unavailable"
+    if raw.get("raw_lsb_uv_per_count") is not None:
+        raw_text = f"Raw LSB {float(raw['raw_lsb_uv_per_count']):.6f} uV/count"
+    return (
+        f"{normalized.acquisition_mode} | {normalized.sample_rate_hz:g} Hz | "
+        f"{normalized.port or 'port unknown'}\n"
+        f"{live_text}\n"
+        f"{raw_text}"
+    )
+
+
 def _normalized_mode(value: str) -> str:
     text = str(value).strip().lower()
     if text.startswith("acquisitionmode."):

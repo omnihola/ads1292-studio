@@ -21,7 +21,12 @@ matplotlib.use("TkAgg")
 
 from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.app_icon import apply_app_icon
-from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
+from ads1292_studio.acquisition import (
+    build_acquisition_provenance,
+    format_acquisition_summary,
+    read_acquisition_json,
+    write_acquisition_json,
+)
 from ads1292_studio.calibration import (
     Calibration,
     LiveStreamCalibration,
@@ -570,18 +575,17 @@ class App(tk.Tk):
             write_calibration_json(self._calibration_path(csv_path), self._calibration())
             write_protocol_json(self._protocol_path(csv_path), self._protocol())
             write_quality_gate_json(self._quality_gate_path(csv_path), self._quality_gate())
-            write_acquisition_json(
-                self._acquisition_path(csv_path),
-                build_acquisition_provenance(
-                    csv_path=csv_path,
-                    acquisition_mode=acquisition_mode.value,
-                    port=port,
-                    sample_rate_hz=SAMPLE_RATE_HZ,
-                    calibration=self._calibration(),
-                    live_calibration=live_calibration,
-                    started_at=started_at.isoformat(timespec="seconds"),
-                ),
+            acquisition = build_acquisition_provenance(
+                csv_path=csv_path,
+                acquisition_mode=acquisition_mode.value,
+                port=port,
+                sample_rate_hz=SAMPLE_RATE_HZ,
+                calibration=self._calibration(),
+                live_calibration=live_calibration,
+                started_at=started_at.isoformat(timespec="seconds"),
             )
+            write_acquisition_json(self._acquisition_path(csv_path), acquisition)
+            self.acquisition_var.set(format_acquisition_summary(acquisition))
             self.path_var.set(f"CSV: {csv_path}")
         self.is_starting = True
         self.connection_var.set("Starting raw acquisition..." if acquisition_mode is AcquisitionMode.RAW else "Starting stream...")
@@ -708,6 +712,7 @@ class App(tk.Tk):
             self._load_calibration_sidecar(result.path)
             self._load_protocol_sidecar(result.path)
             self._load_quality_gate_sidecar(result.path)
+            self._load_acquisition_sidecar(result.path)
             if (
                 result.review_frame is not None
                 and result.display_settings == self._display_settings()
@@ -1099,6 +1104,15 @@ class App(tk.Tk):
         self.gate_max_noise_var.set(str(values["max_noise_rms_counts"]))
         self.gate_max_ptp_var.set(str(values["max_peak_to_peak_counts"]))
         self._log(f"Loaded quality gate: {path}")
+
+    def _load_acquisition_sidecar(self, csv_path: Path) -> None:
+        path = self._acquisition_path(csv_path)
+        if not path.exists():
+            self.acquisition_var.set(format_acquisition_summary(None))
+            return
+        provenance = read_acquisition_json(path)
+        self.acquisition_var.set(format_acquisition_summary(provenance))
+        self._log(f"Loaded acquisition provenance: {path}")
 
     def _write_current_sidecars(self) -> None:
         if self.recording_path is None:

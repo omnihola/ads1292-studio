@@ -3,6 +3,7 @@ from pathlib import Path
 from ads1292_studio.acquisition import (
     ACQUISITION_SCHEMA,
     build_acquisition_provenance,
+    format_acquisition_summary,
     read_acquisition_json,
     write_acquisition_json,
 )
@@ -65,3 +66,30 @@ def test_acquisition_provenance_marks_raw_adc_schema(tmp_path: Path) -> None:
     assert provenance.acquisition_mode == "raw_adc_24bit"
     assert provenance.csv_schema == "ads1292-studio-raw-adc-v1"
     assert provenance.live_calibration == {}
+
+
+def test_format_acquisition_summary_exposes_scientific_record_fields(tmp_path: Path) -> None:
+    csv_path = tmp_path / "2026-06-21-120000-ads1292-studio.csv"
+    provenance = build_acquisition_provenance(
+        csv_path=csv_path,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem214301",
+        sample_rate_hz=500.0,
+        calibration=Calibration(vref_mv=2420.0, pga_gain=6.0, adc_bits=24, label="ADS1292 raw"),
+        live_calibration=LiveStreamCalibration(
+            mean_uv_per_count=1.895,
+            std_uv_per_count=0.002,
+            cv_percent=0.11,
+            runs=5,
+            test_signal_pp_uv=2016.6666667,
+        ),
+        started_at="2026-06-21T12:00:00",
+    )
+
+    summary = format_acquisition_summary(provenance)
+
+    assert "live_stream" in summary
+    assert "/dev/cu.usbmodem214301" in summary
+    assert "500 Hz" in summary
+    assert "Live scale 1.895 uV/count" in summary
+    assert "Raw LSB 0.048081 uV/count" in summary
