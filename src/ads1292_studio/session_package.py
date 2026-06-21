@@ -211,6 +211,18 @@ def _event_annotation_summary(events) -> dict:
         "interval_events": interval_events,
         "total_annotated_seconds": round(total_annotated_seconds, 6),
         "labels": {label: labels[label] for label in sorted(labels)},
+        "events": tuple(_event_annotation_entry(event) for event in normalized),
+    }
+
+
+def _event_annotation_entry(event) -> dict:
+    normalized = event.normalized()
+    return {
+        "start_seconds": round(normalized.timestamp_seconds, 6),
+        "end_seconds": round(normalized.end_seconds, 6),
+        "duration_seconds": round(normalized.duration_seconds, 6),
+        "label": normalized.label,
+        "notes": normalized.notes,
     }
 
 

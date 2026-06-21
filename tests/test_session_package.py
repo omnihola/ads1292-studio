@@ -179,6 +179,29 @@ def test_export_session_package_summarizes_event_annotation_intervals(tmp_path: 
     assert annotations["point_events"] == 1
     assert annotations["total_annotated_seconds"] == 0.75
     assert annotations["labels"] == {"electrode touch": 1, "motion": 2}
+    assert annotations["events"] == [
+        {
+            "start_seconds": 0.5,
+            "end_seconds": 0.75,
+            "duration_seconds": 0.25,
+            "label": "motion",
+            "notes": "small movement",
+        },
+        {
+            "start_seconds": 1.0,
+            "end_seconds": 1.5,
+            "duration_seconds": 0.5,
+            "label": "motion",
+            "notes": "large movement",
+        },
+        {
+            "start_seconds": 2.0,
+            "end_seconds": 2.0,
+            "duration_seconds": 0.0,
+            "label": "electrode touch",
+            "notes": "adjust LA",
+        },
+    ]
 
 
 def test_verify_session_package_fails_after_file_tamper(tmp_path: Path) -> None:
