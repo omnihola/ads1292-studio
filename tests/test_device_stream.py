@@ -94,6 +94,19 @@ def test_iter_stream_samples_stops_when_should_continue_returns_false() -> None:
     assert calls["n"] == 2
 
 
+def test_stream_started_samples_use_relative_timestamps() -> None:
+    device = Ads1x9xDevice("fake-port")
+    device.serial = _ScriptedSerial(
+        [bytes([_START]), bytes([_DATA_STREAMING]), _data_payload(ch1_base=0)]
+    )
+
+    device.start_stream()
+    samples = device.read_stream_sample_batch()
+
+    assert samples[0].timestamp == 0.0
+    assert samples[1].timestamp == 0.002
+
+
 def test_iter_stream_samples_propagates_non_timeout_errors() -> None:
     device = Ads1x9xDevice("fake-port")
     device.serial = _RaisingSerial(RuntimeError("device disconnected"))

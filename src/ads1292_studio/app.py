@@ -235,6 +235,7 @@ from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.plot_theme import APP_VISUAL_TOKENS
 from ads1292_studio.protocol import TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
+from ads1292_studio.recording_paths import recording_csv_path
 from ads1292_studio.report import export_review_report
 from ads1292_studio.review_render import ReviewRenderFrame, build_review_render_frame
 from ads1292_studio.spectrum import build_spectrum_analysis
@@ -568,9 +569,7 @@ class App(tk.Tk):
         acquisition_mode = self._acquisition_mode()
         if self.save_var.get():
             started_at = datetime.now()
-            stamp = started_at.strftime("%Y-%m-%d-%H%M%S")
-            suffix = "ads1292-raw" if acquisition_mode is AcquisitionMode.RAW else "ads1292-studio"
-            csv_path = Path("recordings") / f"{stamp}-{suffix}.csv"
+            csv_path = recording_csv_path(started_at=started_at, acquisition_mode=acquisition_mode)
             self.recording_path = csv_path
             live_calibration = (
                 self.live_stream_calibration

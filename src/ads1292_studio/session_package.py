@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import shutil
 
+from ads1292_studio.acquisition import AcquisitionProvenance, read_acquisition_json
 from ads1292_studio.calibration import calibration_template, read_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.events import read_events_csv, read_events_json
@@ -48,6 +49,7 @@ def export_session_package(
 
     metadata = None
     events = tuple()
+    acquisition = None
     calibration = calibration_template()
     protocol = None
     quality_gate = quality_gate_template()
@@ -72,6 +74,8 @@ def export_session_package(
             events = read_events_json(copied)
         elif role == "events_csv" and not events:
             events = read_events_csv(copied)
+        elif role == "acquisition":
+            acquisition = read_acquisition_json(copied)
         elif role == "calibration":
             calibration = read_calibration_json(copied)
         elif role == "protocol":
@@ -118,6 +122,7 @@ def export_session_package(
             "peak_to_peak_counts": report.metrics.peak_to_peak_counts,
             "quality_gate": asdict(quality_gate.normalized()),
             "event_annotations": _event_annotation_summary(events),
+            "acquisition": _acquisition_summary(acquisition),
             "segment_metrics": tuple(asdict(segment) for segment in report.segment_metrics),
             "segment_gate": _segment_gate_entry(report.segment_gate_result),
         },
@@ -199,6 +204,31 @@ def _event_annotation_summary(events) -> dict:
         "interval_events": interval_events,
         "total_annotated_seconds": round(total_annotated_seconds, 6),
         "labels": {label: labels[label] for label in sorted(labels)},
+    }
+
+
+def _acquisition_summary(provenance: AcquisitionProvenance | None) -> dict:
+    if provenance is None:
+        return {
+            "mode": "unknown",
+            "sample_rate_hz": None,
+            "port": "",
+            "csv_schema": "",
+            "raw_lsb_uv_per_count": None,
+            "live_scale_uv_per_count": None,
+            "live_scale_runs": 0,
+        }
+    normalized = provenance.normalized()
+    raw_adc = normalized.raw_adc
+    live = normalized.live_calibration
+    return {
+        "mode": normalized.acquisition_mode,
+        "sample_rate_hz": normalized.sample_rate_hz,
+        "port": normalized.port,
+        "csv_schema": normalized.csv_schema,
+        "raw_lsb_uv_per_count": raw_adc.get("raw_lsb_uv_per_count"),
+        "live_scale_uv_per_count": live.get("mean_uv_per_count") if live else None,
+        "live_scale_runs": live.get("runs", 0) if live else 0,
     }
 
 

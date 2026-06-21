@@ -358,7 +358,7 @@ class Ads1x9xDevice:
         return tuple(samples[:requested])
 
     def start_stream(self) -> None:
-        self._stream_t0 = time.time()
+        self._stream_t0 = 0.0
         self._stream_sample_index = 0
         self.write_cmd(CMD_DATA_STREAMING, 0, 0)
         self.streaming = True

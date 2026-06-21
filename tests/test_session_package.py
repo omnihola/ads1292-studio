@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
-from ads1292_studio.calibration import Calibration, write_calibration_json
+from ads1292_studio.calibration import Calibration, LiveStreamCalibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_csv, write_events_json
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
@@ -53,7 +53,13 @@ def _write_session_files(path: Path) -> None:
             port="/dev/cu.usbmodem214301",
             sample_rate_hz=500.0,
             calibration=Calibration(label="bench-cal"),
-            live_calibration=None,
+            live_calibration=LiveStreamCalibration(
+                mean_uv_per_count=1.895,
+                std_uv_per_count=0.002,
+                cv_percent=0.11,
+                runs=5,
+                test_signal_pp_uv=2016.6666667,
+            ),
             started_at="2026-06-21T12:00:00",
         ),
     )
@@ -100,6 +106,14 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert annotations["interval_events"] == 0
     assert annotations["total_annotated_seconds"] == 0.0
     assert annotations["labels"] == {"motion": 1}
+    acquisition = manifest["metrics"]["acquisition"]
+    assert acquisition["mode"] == "live_stream"
+    assert acquisition["sample_rate_hz"] == 500.0
+    assert acquisition["port"] == "/dev/cu.usbmodem214301"
+    assert acquisition["csv_schema"] == "ads1292-studio-live-stream-v1"
+    assert acquisition["raw_lsb_uv_per_count"] == Calibration(label="bench-cal").microvolts_per_count
+    assert acquisition["live_scale_uv_per_count"] == 1.895
+    assert acquisition["live_scale_runs"] == 5
     raw_entry = next(file_info for file_info in manifest["files"] if file_info["role"] == "raw_csv")
     copied_csv = export.package_dir / raw_entry["path"]
     expected_sha = hashlib.sha256(copied_csv.read_bytes()).hexdigest()
