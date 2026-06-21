@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 from ads1292_studio.device import find_ads_port, list_ads_ports
 from ads1292_studio.gui_state import gui_control_states, gui_signal_quality_cards
 from ads1292_studio.quality import compute_quality_metrics, estimate_realtime_snr
+from ads1292_studio.ui_qt.analysis_panels import EventLogPanel, PqrstPanel, SpectrumPanel
 from ads1292_studio.ui_qt.controller import AcquisitionController
 from ads1292_studio.ui_qt.event_console import EventConsole
 from ads1292_studio.ui_qt.live_panel import LivePanel
@@ -202,11 +203,12 @@ class MainWindow(QMainWindow):
         self.review_panel.show_empty("Load a CSV to review a recording")
         review_lay.addWidget(self.review_panel, 1)
         self.tabs.addTab(review_tab, "Review CSV")
-        for name in ("PQRST Beat", "Spectrum", "Event Log"):
-            placeholder = QLabel(f"{name} — Phase 44.2 (next)")
-            placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            placeholder.setObjectName("Faint")
-            self.tabs.addTab(placeholder, name)
+        self.pqrst_panel = PqrstPanel()
+        self.tabs.addTab(self._tab_with(self.pqrst_panel), "PQRST Beat")
+        self.spectrum_panel = SpectrumPanel()
+        self.tabs.addTab(self._tab_with(self.spectrum_panel), "Spectrum")
+        self.event_log_panel = EventLogPanel()
+        self.tabs.addTab(self._tab_with(self.event_log_panel, margins=(8, 8, 8, 8)), "Event Log")
         clay.addWidget(self.tabs, 1)
         lay.addWidget(center, 1)
 
@@ -219,6 +221,13 @@ class MainWindow(QMainWindow):
         label = QLabel(text.upper())
         label.setObjectName("CardHead")
         return label
+
+    def _tab_with(self, widget: QWidget, margins: tuple[int, int, int, int] = (0, 8, 0, 0)) -> QWidget:
+        tab = QWidget()
+        lay = QVBoxLayout(tab)
+        lay.setContentsMargins(*margins)
+        lay.addWidget(widget, 1)
+        return tab
 
     def _add_control(self, layout, name: str, slot, *, object_name: str | None = None) -> None:
         btn = QPushButton(name)
@@ -335,6 +344,8 @@ class MainWindow(QMainWindow):
 
     def _tick(self) -> None:
         outcome = self.controller.drain_results()
+        for line in outcome.logs:
+            self.event_log_panel.append_line(line)
         samples = self.controller.drain_samples()
         if samples:
             for s in samples:
@@ -383,9 +394,14 @@ class MainWindow(QMainWindow):
         resp = [float(s.ch1) for s in samples[::step]]
         self.review_panel.update_traces(xs, ecg, xs, resp)
         self.tabs.setCurrentWidget(self.tabs.widget(1))  # Review CSV
-        self._update_quality(samples, fs)
+        metrics = self._update_quality(samples, fs)
+        try:
+            self.pqrst_panel.show_recording(samples, fs)
+            self.spectrum_panel.show_recording(samples, metrics.ecg_source, fs)
+        except Exception as exc:  # noqa: BLE001 - analysis is best-effort
+            self.event_log_panel.append_line(f"Analysis render failed: {exc}")
 
-    def _update_quality(self, samples, sample_rate_hz: float) -> None:
+    def _update_quality(self, samples, sample_rate_hz: float):
         metrics = compute_quality_metrics(tuple(samples), sample_rate_hz=sample_rate_hz)
         cards = gui_signal_quality_cards(
             quality_label=metrics.quality_label,
@@ -399,6 +415,7 @@ class MainWindow(QMainWindow):
             peak_to_peak_counts=metrics.peak_to_peak_counts,
         )
         self.status_panel.update_quality(cards)
+        return metrics
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt override
         # Never leave a recording CSV-only: finalize json+xlsx before exit.

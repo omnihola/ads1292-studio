@@ -804,10 +804,20 @@
 - Files modified: `src/ads1292_studio/ui_qt/{controller,main_window,status_panel,sidebar_forms}.py`, `tests/test_ui_qt_smoke.py`, planning files.
 - Still to do in 44.2: PQRST / Spectrum / Event Log tabs; backport reliable finalization to the Tk app (optional); real-hardware smoke.
 
+### Phase 44.2 (complete): analysis tabs + Tk finalize backport
+- **Status:** complete (offscreen + real-recording verified; real-hardware smoke pending)
+- Actions taken:
+  - Added `ui_qt/analysis_panels.py`: `PqrstPanel` (R-aligned average beat via `pqrst_review`/`review_channels`), `SpectrumPanel` (FFT power + amplitude histogram via `build_spectrum_analysis`), `EventLogPanel` (runtime log). Wired into the PQRST Beat / Spectrum / Event Log tabs.
+  - `_show_recording` now also renders PQRST + spectrum and feeds the runtime log; Event Log tab receives drained log lines each tick.
+  - Backported the reliable-finalization fix to the Tk app: `app.py _close()` joins the writer thread and finalizes json+xlsx before destroy (root cause: `_close` previously stopped the worker and destroyed immediately, so closing during/after a recording left it CSV-only).
+  - Verified end-to-end on the real 44,884-sample recording: offline Review + Signal-quality cards (Good ECG/QRS, CH2, 99.9% contact, 86.7 bpm, 129 R — matches the documented baseline), PQRST (beats=129), and spectrum all render. Screenshots: `docs/mockups/2026-06-21-pyqt-{spectrum,pqrst}.png`.
+- Verification: full suite **535 passed**.
+- Next: real-hardware smoke (`ads1292-studio-qt`: record -> close window without Stop -> confirm csv+json+xlsx in `~/Documents/ECG/live`); Phase 44.3 (wire left-form archive actions: Export Report/Package/Verify/Batch/Session Index; Validation/Protocol forms; event sidecar persistence + plot overlay); Phase 44.4 polish.
+
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 44.2 in progress: Qt app now does offline Load CSV -> Review + quality cards, live SNR, and reliable CSV+JSON+XLSX recording finalization (on Stop and on window close) writing to `~/Documents/ECG/{live,raw}`. Verified the real save format on disk and fixed the actual defect (newest sessions were CSV-only because finalization never ran). 535 tests pass. Next: PQRST/Spectrum/Event-Log tabs + real-hardware smoke. Phase 44.1 and earlier complete. Channel-label confirmation (which exact Einthoven lead CH2 represents) is still pending the user's electrode-disconnect hardware test. |
+| Where am I? | Phase 44.2 complete: Qt app has offline Load CSV -> Review + quality cards + PQRST + Spectrum + Event Log, live SNR, and reliable CSV+JSON+XLSX finalization (on Stop and on window close) to `~/Documents/ECG/{live,raw}`; the same finalize fix is backported to the Tk app. Verified end-to-end on the real 44,884-sample recording (metrics match baseline). 535 tests pass. Next: real-hardware smoke + Phase 44.3 (left-form archive actions, Validation/Protocol forms, event persistence/overlay). Phase 44.1 and earlier complete. Channel-label confirmation (which exact Einthoven lead CH2 represents) is still pending the user's electrode-disconnect hardware test. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. The ADS1292R chip datasheet (SBAS502C) confirms respiration demodulation hardware exists only on Channel 1 and TI states Channel 1 cannot do ECG while respiration is enabled on it — this independently corroborates the existing CH1=respiration/CH2=ECG assignment that was originally reached empirically. The original GUI bugs were concurrency/state bugs (blocking calls on the GUI thread, a cross-thread close/read race, an optimistic Start state, and an offline-review window capped at the live-display buffer size), not datasheet-correctness bugs. |

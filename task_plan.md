@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 44: GUI Modernization (PySide6 / Qt) — 44.2 in progress (offline review + reliable json+xlsx finalization); 535 tests pass
+Phase 44: GUI Modernization (PySide6 / Qt) — 44.2 complete (offline review + PQRST/Spectrum/Event-Log + reliable finalization); 535 tests pass. Next: real-hardware smoke + 44.3 (left-form actions).
 
 ## Phases
 
@@ -409,8 +409,13 @@ retained.
       `estimate_realtime_snr`. Recording output verified to match the real app: writes to
       `~/Documents/ECG/{live,raw}` and produces CSV + JSON bundle + XLSX. Made finalization
       bulletproof (finalize on Stop AND on window close via `closeEvent`/`finalize_now`) so
-      recordings are never left CSV-only (the loss seen in the user's newest sessions). Still
-      to do: PQRST / Spectrum / Event Log tabs.
+      recordings are never left CSV-only (the loss seen in the user's newest sessions).
+- [x] Phase 44.2 done: added PQRST (R-aligned average beat via `pqrst_review`), Spectrum
+      (FFT power + amplitude histogram via `build_spectrum_analysis`), and Event Log (runtime
+      log) tabs. Verified end-to-end on the real 44,884-sample recording: offline Review +
+      quality cards (Good ECG/QRS, CH2, 86.7 bpm, 129 R — matches baseline) + PQRST (beats=129)
+      + spectrum all render. Backported the reliable-finalization fix to the Tk app `_close()`.
+      535 tests pass.
 - [ ] Phase 44.3: left-panel forms (Session/Validation/Protocol) + archive actions (report,
       package, verify, batch, session index) wired to existing core modules.
 - [ ] Phase 44.4: polish (focus/hover states, keyboard shortcuts, density, dark-mode pass).
