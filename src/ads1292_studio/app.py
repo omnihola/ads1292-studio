@@ -43,6 +43,7 @@ from ads1292_studio.display import (
     parse_display_window,
     parse_sweep_speed,
 )
+from ads1292_studio.event_overlay import build_event_overlay_items, event_overlay_key
 from ads1292_studio.events import (
     EventMarker,
     event_from_interval,
@@ -136,6 +137,7 @@ from ads1292_studio.gui_workers import (
     review_render_update_plan,
 )
 from ads1292_studio.gui_plots import (
+    apply_event_overlay_artists,
     apply_live_axis_titles,
     apply_live_render_frame,
     apply_review_render_frame,
@@ -144,6 +146,7 @@ from ads1292_studio.gui_plots import (
     build_log_panel,
     build_pqrst_plot_panel,
     build_review_plot_panel,
+    draw_canvas_idle_if_visible,
     draw_spectrum_analysis,
     flush_pending_pqrst_review,
     flush_pending_review_render,
@@ -295,6 +298,8 @@ class App(tk.Tk):
         self.recording_finalization_pending = False
         self.loaded_samples: tuple[StreamSample, ...] = tuple()
         self.event_markers: list[EventMarker] = []
+        self.review_event_overlay_artists: list = []
+        self.review_event_overlay_key: tuple | None = None
         self.event_range_start_seconds: float | None = None
         self.is_streaming = False
         self.is_loading_csv = False
@@ -759,6 +764,7 @@ class App(tk.Tk):
         self.event_markers = [*self.event_markers, marker]
         self._set_event_count()
         self._save_event_sidecar()
+        self._refresh_review_event_overlay()
         self._log(f"Event {marker.timestamp_seconds:.2f}s: {marker.label} {marker.notes}".strip())
 
     def mark_event_range_start(self) -> None:
@@ -783,6 +789,7 @@ class App(tk.Tk):
         self.event_range_start_var.set("Range start: --")
         self._set_event_count()
         self._save_event_sidecar()
+        self._refresh_review_event_overlay()
         self._log(
             f"Event range {marker.timestamp_seconds:.2f}-{marker.end_seconds:.2f}s: "
             f"{marker.label} {marker.notes}".strip()
@@ -806,6 +813,7 @@ class App(tk.Tk):
         self.manual_event_end_var.set("")
         self._set_event_count()
         self._save_event_sidecar()
+        self._refresh_review_event_overlay()
         self._log(
             f"Manual event range {marker.timestamp_seconds:.2f}-{marker.end_seconds:.2f}s: "
             f"{marker.label} {marker.notes}".strip()
@@ -819,6 +827,7 @@ class App(tk.Tk):
         self.event_markers = [*self.event_markers[:-1]]
         self._set_event_count()
         self._save_event_sidecar()
+        self._refresh_review_event_overlay()
         self._log(
             f"Removed event {removed.timestamp_seconds:.2f}-{removed.end_seconds:.2f}s "
             f"{removed.label} {removed.notes}".strip()
@@ -1060,6 +1069,23 @@ class App(tk.Tk):
         if self.loaded_samples:
             return len(self.loaded_samples) / SAMPLE_RATE_HZ
         return 0.0
+
+    def _refresh_review_event_overlay(self) -> None:
+        """Redraw event annotations on the offline review waveform.
+
+        Only applies while a recording is loaded; the review x-axis is then in
+        absolute seconds (0 -> duration), so annotation timestamps map directly
+        onto the displayed traces. No-op during live streaming, where the rolling
+        window has no fixed absolute-time origin.
+        """
+        if not self.loaded_samples:
+            return
+        x_max_seconds = float(self.ax_review_ecg.get_xlim()[1])
+        markers = tuple(self.event_markers)
+        items = build_event_overlay_items(markers, x_max_seconds=x_max_seconds)
+        key = event_overlay_key(markers, x_max_seconds=x_max_seconds)
+        if apply_event_overlay_artists(self, items, key=key):
+            draw_canvas_idle_if_visible(self.review_canvas, getattr(self, "review_tab", None))
 
     def _events_path(self, csv_path: Path) -> Path:
         return csv_path.with_suffix(".events.json")
@@ -1728,6 +1754,11 @@ class App(tk.Tk):
             contact_label=contact_label,
             ecg_inverted=DEFAULT_ECG_INVERTED,
         )
+        overlay_markers = tuple(self.event_markers)
+        overlay_items = build_event_overlay_items(overlay_markers, x_max_seconds=frame.x_right)
+        overlay_key = event_overlay_key(overlay_markers, x_max_seconds=frame.x_right)
+        if apply_event_overlay_artists(self, overlay_items, key=overlay_key):
+            draw_canvas_idle_if_visible(self.review_canvas, getattr(self, "review_tab", None))
         spectrum = build_spectrum_analysis(
             samples,
             source=frame.metrics.ecg_source,

@@ -1104,3 +1104,85 @@ def test_apply_review_render_frame_skips_unchanged_peak_marker_writes() -> None:
         )
 
     assert peak_line.set_data_calls == 1
+
+
+def _make_review_overlay_app() -> SimpleNamespace:
+    fig = Figure()
+    ax_ecg = fig.add_subplot(311)
+    ax_resp = fig.add_subplot(312)
+    ax_status = fig.add_subplot(313)
+    ax_ecg.plot([], [])
+    return SimpleNamespace(
+        ax_review_ecg=ax_ecg,
+        ax_review_resp=ax_resp,
+        ax_review_status=ax_status,
+        review_event_overlay_artists=[],
+        review_event_overlay_key=None,
+    )
+
+
+def test_apply_event_overlay_artists_draws_spans_lines_and_labels() -> None:
+    from ads1292_studio.event_overlay import build_event_overlay_items, event_overlay_key
+    from ads1292_studio.events import EventMarker, event_from_interval
+    from ads1292_studio.gui_plots import apply_event_overlay_artists
+
+    app = _make_review_overlay_app()
+    events = (
+        event_from_interval(start_seconds=10.0, end_seconds=20.0, label="motion"),
+        EventMarker(timestamp_seconds=4.0, label="touch"),
+    )
+    items = build_event_overlay_items(events, x_max_seconds=30.0)
+    key = event_overlay_key(events, x_max_seconds=30.0)
+
+    changed = apply_event_overlay_artists(app, items, key=key)
+
+    assert changed is True
+    # 1 interval span + 1 point line on each of 3 axes, plus 2 labels on ECG.
+    assert len(app.review_event_overlay_artists) == 3 + 3 + 2
+    assert app.review_event_overlay_key == key
+    # The interval span landed on every shared-x axis.
+    assert len(app.ax_review_ecg.patches) == 1
+    assert len(app.ax_review_resp.patches) == 1
+    assert len(app.ax_review_status.patches) == 1
+
+
+def test_apply_event_overlay_artists_skips_when_key_unchanged() -> None:
+    from ads1292_studio.event_overlay import build_event_overlay_items, event_overlay_key
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.gui_plots import apply_event_overlay_artists
+
+    app = _make_review_overlay_app()
+    events = (EventMarker(timestamp_seconds=4.0, label="touch"),)
+    items = build_event_overlay_items(events, x_max_seconds=30.0)
+    key = event_overlay_key(events, x_max_seconds=30.0)
+
+    apply_event_overlay_artists(app, items, key=key)
+    artists_after_first = list(app.review_event_overlay_artists)
+
+    changed = apply_event_overlay_artists(app, items, key=key)
+
+    assert changed is False
+    assert app.review_event_overlay_artists == artists_after_first
+
+
+def test_apply_event_overlay_artists_replaces_artists_when_key_changes() -> None:
+    from ads1292_studio.event_overlay import build_event_overlay_items, event_overlay_key
+    from ads1292_studio.events import EventMarker, event_from_interval
+    from ads1292_studio.gui_plots import apply_event_overlay_artists
+
+    app = _make_review_overlay_app()
+    first_events = (EventMarker(timestamp_seconds=4.0, label="touch"),)
+    first_items = build_event_overlay_items(first_events, x_max_seconds=30.0)
+    first_key = event_overlay_key(first_events, x_max_seconds=30.0)
+    apply_event_overlay_artists(app, first_items, key=first_key)
+    old_artists = list(app.review_event_overlay_artists)
+
+    second_events = (*first_events, event_from_interval(start_seconds=10.0, end_seconds=20.0, label="motion"))
+    second_items = build_event_overlay_items(second_events, x_max_seconds=30.0)
+    second_key = event_overlay_key(second_events, x_max_seconds=30.0)
+
+    changed = apply_event_overlay_artists(app, second_items, key=second_key)
+
+    assert changed is True
+    assert all(artist.axes is None for artist in old_artists)
+    assert app.review_event_overlay_key == second_key

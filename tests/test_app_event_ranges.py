@@ -42,6 +42,7 @@ def _fake_app(*, current_time: float) -> SimpleNamespace:
         _current_event_time=lambda: current_time,
         _set_event_count=lambda: calls.append("count"),
         _save_event_sidecar=lambda: calls.append("save"),
+        _refresh_review_event_overlay=lambda: calls.append("overlay"),
         _log=lambda message: calls.append(message),
         calls=calls,
     )
@@ -73,6 +74,17 @@ def test_add_event_range_uses_marked_start_and_current_time() -> None:
     assert app.event_range_start_var.get() == "Range start: --"
     assert "count" in app.calls
     assert "save" in app.calls
+    assert "overlay" in app.calls
+
+
+def test_add_event_refreshes_review_overlay() -> None:
+    app = _fake_app(current_time=7.0)
+
+    App.add_event(app)
+
+    assert len(app.event_markers) == 1
+    assert app.event_markers[0].timestamp_seconds == 7.0
+    assert "overlay" in app.calls
 
 
 def test_add_manual_event_range_uses_explicit_seconds() -> None:
@@ -93,6 +105,7 @@ def test_add_manual_event_range_uses_explicit_seconds() -> None:
     assert app.manual_event_end_var.get() == ""
     assert "count" in app.calls
     assert "save" in app.calls
+    assert "overlay" in app.calls
     assert any("Manual event range 73.00-77.25s" in call for call in app.calls)
 
 
@@ -108,6 +121,7 @@ def test_remove_last_event_updates_sidecar_and_log() -> None:
     assert app.event_markers == [EventMarker(2.0, label="baseline", notes="quiet")]
     assert "count" in app.calls
     assert "save" in app.calls
+    assert "overlay" in app.calls
     assert any("Removed event 12.50-18.00s motion" in call for call in app.calls)
 
 

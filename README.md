@@ -78,6 +78,12 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Event markers for motion, deep breathing, electrode touch, or other protocol
   annotations; events can be saved as `.events.json` sidecars and included in
   exported reports.
+- Event annotations are drawn directly on the offline Review waveform: interval
+  annotations appear as shaded time spans and point annotations as dashed
+  markers, aligned across the ECG, respiration, and contact panels so an
+  annotated window (for example "motion 73-79 s") is visible against every
+  signal. Annotations added or removed during review update the waveform
+  immediately, using the same overlay geometry as the exported report.
 - ADC calibration config for Vref, PGA gain, and bit depth; GUI plots and
   reports can display ECG in microvolts while raw CSV counts remain preserved.
 - Session package export with raw CSV, sidecars, report files, and SHA256
@@ -210,6 +216,13 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
 - Keep both live and offline review Matplotlib line/axis/grid/calibration
   application in `gui_plots.py`; `app.py` should queue frames, clear state, and
   update text/cards instead of owning plot mutation details.
+- Keep event-annotation overlay geometry (which markers become spans vs dashed
+  lines, where labels anchor, how intervals clamp to the record end) in the pure
+  `event_overlay.py` core so the offline Review tab and the exported HTML report
+  draw annotations identically; `gui_plots.apply_event_overlay_artists` owns the
+  Matplotlib span/line/text artists and reuses the changed-only key from the core
+  so unchanged annotations do not trigger a review redraw, and `app.py` only
+  supplies `event_markers` plus the current review x-range.
 - Avoid redundant PQRST panel redraws during offline review; the review traces
   can refresh with the current frame, but the PQRST panel uses an axis clear and
   full redraw, so only redraw it when the `PqrstReview` content changes.

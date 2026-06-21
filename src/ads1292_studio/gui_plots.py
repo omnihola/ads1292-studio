@@ -42,6 +42,14 @@ from ads1292_studio.gui_specs import (
     scrollbar_chrome_spec,
     status_axis_spec,
 )
+from ads1292_studio.event_overlay import (
+    EVENT_INTERVAL_ALPHA,
+    EVENT_INTERVAL_COLOR,
+    EVENT_LABEL_Y,
+    EVENT_POINT_ALPHA,
+    EVENT_POINT_COLOR,
+    EventOverlayItem,
+)
 from ads1292_studio.live_render import LiveRenderFrame
 from ads1292_studio.models import PqrstReview
 from ads1292_studio.plots import robust_ylim, stable_ylim
@@ -346,6 +354,67 @@ def apply_review_render_frame(
     if any((*trace_changed, *axis_changed, label_changed, grid_changed, calibration_changed)):
         draw_canvas_idle_if_visible(app.review_canvas, review_owner)
     draw_pqrst_review_if_changed(app, frame.pqrst)
+
+
+def apply_event_overlay_artists(
+    app: Any,
+    items: tuple[EventOverlayItem, ...],
+    *,
+    key: tuple,
+) -> bool:
+    """Draw event annotations on the shared-x review axes (changed-only).
+
+    Interval annotations become shaded spans and point annotations become dashed
+    vertical lines across the ECG, respiration, and contact axes so an annotated
+    window is visible across every signal at once; the text label is placed once
+    on the ECG axis. Returns ``True`` when the overlay was rebuilt, ``False`` when
+    the cached key matched and nothing was touched.
+    """
+    if getattr(app, "review_event_overlay_key", None) == key:
+        return False
+    for artist in getattr(app, "review_event_overlay_artists", []):
+        artist.remove()
+    axes = (app.ax_review_ecg, app.ax_review_resp, app.ax_review_status)
+    new_artists: list = []
+    for item in items:
+        if item.is_interval:
+            for axis in axes:
+                new_artists.append(
+                    axis.axvspan(
+                        item.start_seconds,
+                        item.end_seconds,
+                        color=EVENT_INTERVAL_COLOR,
+                        alpha=EVENT_INTERVAL_ALPHA,
+                        linewidth=0,
+                    )
+                )
+        else:
+            for axis in axes:
+                new_artists.append(
+                    axis.axvline(
+                        item.start_seconds,
+                        color=EVENT_POINT_COLOR,
+                        alpha=EVENT_POINT_ALPHA,
+                        linewidth=1.0,
+                        linestyle="--",
+                    )
+                )
+        new_artists.append(
+            app.ax_review_ecg.text(
+                item.label_x,
+                EVENT_LABEL_Y,
+                item.label,
+                transform=app.ax_review_ecg.get_xaxis_transform(),
+                ha="center",
+                va="top",
+                fontsize=8,
+                color=EVENT_POINT_COLOR,
+                rotation=0,
+            )
+        )
+    app.review_event_overlay_artists = new_artists
+    app.review_event_overlay_key = key
+    return True
 
 
 def flush_pending_review_render(app: Any, *, force: bool = False) -> bool:

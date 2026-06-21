@@ -15,6 +15,14 @@ import numpy as np
 matplotlib.use("Agg")
 
 from ads1292_studio.calibration import Calibration, counts_to_microvolts
+from ads1292_studio.event_overlay import (
+    EVENT_INTERVAL_ALPHA,
+    EVENT_INTERVAL_COLOR,
+    EVENT_LABEL_Y,
+    EVENT_POINT_ALPHA,
+    EVENT_POINT_COLOR,
+    build_event_overlay_items,
+)
 from ads1292_studio.events import EventMarker
 from ads1292_studio.models import PqrstReview, StreamSample
 from ads1292_studio.metadata import SessionMetadata
@@ -158,33 +166,35 @@ def _apply_event_overlays(
     *,
     x_max_seconds: float,
 ) -> None:
-    if not events or x_max_seconds <= 0:
-        return
-    overlay_color = "#F59E0B"
-    line_color = "#B45309"
-    for event in events:
-        marker = event.normalized()
-        start = min(max(marker.timestamp_seconds, 0.0), x_max_seconds)
-        end = min(max(marker.end_seconds, 0.0), x_max_seconds)
-        if marker.timestamp_seconds > x_max_seconds:
-            continue
-        if marker.duration_seconds > 0 and end > start:
+    items = build_event_overlay_items(events, x_max_seconds=x_max_seconds)
+    for item in items:
+        if item.is_interval:
             for axis in axes:
-                axis.axvspan(start, end, color=overlay_color, alpha=0.14, linewidth=0)
-            label_x = start + (end - start) / 2.0
+                axis.axvspan(
+                    item.start_seconds,
+                    item.end_seconds,
+                    color=EVENT_INTERVAL_COLOR,
+                    alpha=EVENT_INTERVAL_ALPHA,
+                    linewidth=0,
+                )
         else:
             for axis in axes:
-                axis.axvline(start, color=line_color, alpha=0.72, linewidth=1.0, linestyle="--")
-            label_x = start
+                axis.axvline(
+                    item.start_seconds,
+                    color=EVENT_POINT_COLOR,
+                    alpha=EVENT_POINT_ALPHA,
+                    linewidth=1.0,
+                    linestyle="--",
+                )
         axes[0].text(
-            label_x,
-            0.96,
-            marker.label,
+            item.label_x,
+            EVENT_LABEL_Y,
+            item.label,
             transform=axes[0].get_xaxis_transform(),
             ha="center",
             va="top",
             fontsize=8,
-            color=line_color,
+            color=EVENT_POINT_COLOR,
             rotation=0,
         )
 
