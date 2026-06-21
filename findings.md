@@ -151,6 +151,8 @@
 - The CSV is load-bearing: `session_package.py` copies it as `raw_csv` and `report`/`session_index`/review read it. Dropping the CSV would break Export Package/Report/Index.
 - Observed defect in the user's real output: the two NEWEST sessions (`~/Documents/ECG/live/2026-06-21-174135...` and `raw/2026-06-21-174151...`) are CSV-only — the json+xlsx finalization did not run (app exited before Stop finalized). The 14:18 session has all three. So the rich outputs were being LOST, not the CSV.
 - Decision: the Qt app keeps CSV + JSON + XLSX (same location/format) and finalizes reliably on Stop AND on window close (`closeEvent` -> `controller.finalize_now()` joins the writer thread then writes json+xlsx), so a recording is never left CSV-only again.
+- Root cause of the CSV-only loss (Tk app): `app.py` `_close()` called `worker.stop()` then `destroy()` immediately — it never joined the CSV writer thread and never called `_finalize_recording_sidecars()`, and the per-tick finalizer only runs while the app is alive. Closing the window during/after a recording therefore exited before json+xlsx were written.
+- Backport fix (Tk app, 2026-06-21): `_close()` now, when a recording is pending, joins the writer thread (timeout 3s) and calls `_finalize_recording_sidecars()` before `destroy()`, wrapped best-effort so it never blocks close. `_finalize_recording_sidecars` self-guards against a live thread, so the join must happen first (it does). Not unit-tested directly because live Tk-widget pytest aborts on macOS; the underlying write path is covered by the Qt finalize test and the full suite stays green (535).
 
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`

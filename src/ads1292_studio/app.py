@@ -1982,6 +1982,16 @@ class App(tk.Tk):
         self.is_closing = True
         self._cancel_tick()
         self.worker.stop()
+        # Never exit with a CSV-only recording: wait for the writer thread to flush,
+        # then finalize the JSON bundle + XLSX before destroying the window.
+        if self.recording_path is not None and self.recording_finalization_pending:
+            thread = getattr(self.worker, "thread", None)
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=3.0)
+            try:
+                self._finalize_recording_sidecars()
+            except Exception as exc:  # best-effort; never block window close
+                print(f"Recording finalization on close failed: {exc}")
         if self.live_quality_future is not None and not self.live_quality_future.done():
             self.live_quality_future.cancel()
         if self.review_render_future is not None and not self.review_render_future.done():
