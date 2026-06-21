@@ -4,6 +4,7 @@ import json
 from ads1292_studio.events import (
     EventMarker,
     event_from_interval,
+    event_id,
     event_template,
     read_events_csv,
     read_events_json,
@@ -104,8 +105,10 @@ def test_event_sidecars_include_sample_indices_for_reproducible_segments(
     assert event["start_sample_index"] == 36500
     assert event["end_sample_index"] == 38625
     assert event["duration_samples"] == 2125
+    assert event["event_id"].startswith("evt-0036500-0038625-artifact-")
     assert "start_sample_index,end_sample_index,duration_samples" in csv_text
     assert "36500,38625,2125" in csv_text
+    assert "evt-0036500-0038625-artifact-" in csv_text
     assert read_events_json(json_path) == tuple(event.normalized() for event in events)
     assert read_events_csv(csv_path) == tuple(event.normalized() for event in events)
 
@@ -155,7 +158,7 @@ def test_event_markers_csv_round_trip_includes_start_end_duration(tmp_path: Path
 
     assert loaded == tuple(event.normalized() for event in events)
     assert (
-        "start_seconds,end_seconds,duration_seconds,start_sample_index,end_sample_index,duration_samples,event_type,label,notes"
+        "event_id,start_seconds,end_seconds,duration_seconds,start_sample_index,end_sample_index,duration_samples,event_type,label,notes"
         in text
     )
     assert "6000,7750,1750" in text
@@ -179,6 +182,19 @@ def test_events_csv_reader_accepts_start_end_seconds_without_duration(tmp_path: 
     )
 
 
+def test_event_id_is_stable_and_sample_index_based() -> None:
+    marker = EventMarker(73.0, duration_seconds=4.25, label="Artifact window", notes="motion artifact")
+
+    first = event_id(marker, sample_rate_hz=500.0)
+    second = event_id(marker.normalized(), sample_rate_hz=500.0)
+    lower_rate = event_id(marker, sample_rate_hz=250.0)
+
+    assert first == second
+    assert first.startswith("evt-0036500-0038625-artifact-window-")
+    assert lower_rate.startswith("evt-0018250-0019312-artifact-window-")
+    assert lower_rate != first
+
+
 def test_format_event_log_text_lists_point_and_interval_rows() -> None:
     from ads1292_studio.events import format_event_log_text
 
@@ -191,10 +207,12 @@ def test_format_event_log_text_lists_point_and_interval_rows() -> None:
     )
 
     assert (
-        "Start (s)\tEnd (s)\tDuration (s)\tStart sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
+        "ID\tStart (s)\tEnd (s)\tDuration (s)\tStart sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
         in text
     )
+    assert "evt-0001000-0001000-baseline-" in text
     assert "2.00\t2.00\t0.00\t1000\t1000\t0\tpoint\tbaseline\tquiet" in text
+    assert "evt-0006250-0009000-motion-" in text
     assert "12.50\t18.00\t5.50\t6250\t9000\t2750\tinterval\tmotion\tarm motion" in text
 
 
@@ -208,6 +226,7 @@ def test_format_event_log_text_uses_requested_sample_rate_for_sample_indices() -
         sample_rate_hz=250.0,
     )
 
+    assert "evt-0000250-0000750-challenge-" in text
     assert "1.00\t3.00\t2.00\t250\t750\t500\tinterval\tchallenge\tpaced breathing" in text
 
 

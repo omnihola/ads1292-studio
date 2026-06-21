@@ -139,7 +139,8 @@ def test_refresh_event_log_replaces_text_widget_contents() -> None:
 
     assert text.calls[0][0] == "delete"
     assert (
-        "Start (s)\tEnd (s)\tDuration (s)\tStart sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
+        "ID\tStart (s)\tEnd (s)\tDuration (s)\tStart sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
         in text.content
     )
+    assert "evt-0006250-0009000-motion-" in text.content
     assert "12.50\t18.00\t5.50\t6250\t9000\t2750\tinterval\tmotion\tarm motion" in text.content

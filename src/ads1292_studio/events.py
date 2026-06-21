@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
+import hashlib
 import json
 from pathlib import Path
+import re
 from typing import Iterable
 
 
@@ -69,6 +71,7 @@ def write_events_json(
 
 
 EVENTS_CSV_HEADER = [
+    "event_id",
     "start_seconds",
     "end_seconds",
     "duration_seconds",
@@ -101,6 +104,7 @@ def write_events_csv(
                     "start_seconds": f"{marker.timestamp_seconds:.6f}",
                     "end_seconds": f"{marker.end_seconds:.6f}",
                     "duration_seconds": f"{marker.duration_seconds:.6f}",
+                    "event_id": event_id(marker, sample_rate_hz=sample_rate),
                     "start_sample_index": sample_indices["start_sample_index"],
                     "end_sample_index": sample_indices["end_sample_index"],
                     "duration_samples": sample_indices["duration_samples"],
@@ -129,7 +133,7 @@ def format_event_log_text(
     if not normalized:
         return "No event annotations.\n"
     rows = [
-        "Start (s)\tEnd (s)\tDuration (s)\t"
+        "ID\tStart (s)\tEnd (s)\tDuration (s)\t"
         "Start sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
     ]
     sample_rate = _normalized_sample_rate(sample_rate_hz)
@@ -138,6 +142,7 @@ def format_event_log_text(
         rows.append(
             "\t".join(
                 (
+                    event_id(event, sample_rate_hz=sample_rate),
                     f"{event.timestamp_seconds:.2f}",
                     f"{event.end_seconds:.2f}",
                     f"{event.duration_seconds:.2f}",
@@ -160,6 +165,30 @@ def event_sample_indices(
     return _event_sample_indices(event, _normalized_sample_rate(sample_rate_hz))
 
 
+def event_id(
+    event: EventMarker,
+    sample_rate_hz: float = DEFAULT_EVENT_SAMPLE_RATE_HZ,
+) -> str:
+    sample_rate = _normalized_sample_rate(sample_rate_hz)
+    marker = event.normalized()
+    sample_indices = _event_sample_indices(marker, sample_rate)
+    label_slug = _slug(marker.label)
+    fingerprint = "|".join(
+        (
+            str(sample_indices["start_sample_index"]),
+            str(sample_indices["end_sample_index"]),
+            _event_type(marker),
+            marker.label,
+            marker.notes,
+        )
+    )
+    digest = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:8]
+    return (
+        f"evt-{sample_indices['start_sample_index']:07d}-"
+        f"{sample_indices['end_sample_index']:07d}-{label_slug}-{digest}"
+    )
+
+
 def _event_type(event: EventMarker) -> str:
     return "interval" if event.normalized().duration_seconds > 0 else "point"
 
@@ -171,6 +200,7 @@ def _event_json_entry(
 ) -> dict[str, object]:
     marker = event.normalized()
     return {
+        "event_id": event_id(marker, sample_rate_hz=sample_rate_hz),
         "timestamp_seconds": marker.timestamp_seconds,
         "start_seconds": marker.timestamp_seconds,
         "end_seconds": marker.end_seconds,
@@ -242,3 +272,8 @@ def _seconds_to_sample_index(seconds: float, sample_rate_hz: float) -> int:
 def _normalized_sample_rate(sample_rate_hz: float) -> float:
     rate = float(sample_rate_hz)
     return rate if rate > 0 else DEFAULT_EVENT_SAMPLE_RATE_HZ
+
+
+def _slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.strip().lower()).strip("-")
+    return slug[:32] or "event"
