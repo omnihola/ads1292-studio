@@ -20,6 +20,7 @@ import numpy as np
 matplotlib.use("TkAgg")
 
 from ads1292_studio.batch import export_batch_summary
+from ads1292_studio.app_icon import apply_app_icon
 from ads1292_studio.calibration import Calibration, read_calibration_json, write_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice, find_ads_port, list_ads_ports
@@ -241,6 +242,7 @@ class App(tk.Tk):
         install_macos_stderr_filter()
         super().__init__()
         self.title("ADS1292 Studio")
+        apply_app_icon(self)
         window_spec = app_window_spec()
         self.geometry(str(window_spec["geometry"]))
         self.minsize(*window_spec["min_size"])
