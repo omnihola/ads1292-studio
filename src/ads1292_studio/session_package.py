@@ -54,6 +54,7 @@ def export_session_package(
     sidecars = (
         ("metadata", source_csv.with_suffix(".json")),
         ("events", source_csv.with_suffix(".events.json")),
+        ("events_csv", source_csv.with_suffix(".events.csv")),
         ("calibration", source_csv.with_suffix(".calibration.json")),
         ("acquisition", source_csv.with_suffix(".acquisition.json")),
         ("protocol", source_csv.with_suffix(".protocol.json")),

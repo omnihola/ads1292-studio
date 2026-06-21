@@ -5,7 +5,7 @@ from pathlib import Path
 from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
 from ads1292_studio.calibration import Calibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
-from ads1292_studio.events import EventMarker, write_events_json
+from ads1292_studio.events import EventMarker, write_events_csv, write_events_json
 from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, write_protocol_json
@@ -31,6 +31,7 @@ def _write_session_files(path: Path) -> None:
         SessionMetadata(session_id="pkg-001", subject_id="anonymous", electrode="MOTAC gel"),
     )
     write_events_json(path.with_suffix(".events.json"), (EventMarker(0.5, "motion", "arm moved"),))
+    write_events_csv(path.with_suffix(".events.csv"), (EventMarker(0.5, "motion", "arm moved"),))
     write_calibration_json(path.with_suffix(".calibration.json"), Calibration(label="bench-cal"))
     write_protocol_json(
         path.with_suffix(".protocol.json"),
@@ -74,6 +75,7 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
         "raw_csv",
         "metadata",
         "events",
+        "events_csv",
         "calibration",
         "acquisition",
         "protocol",

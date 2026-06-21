@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 from dataclasses import asdict, dataclass
 import json
 from pathlib import Path
@@ -47,6 +48,42 @@ def write_events_json(path: Path | str, events: Iterable[EventMarker]) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     normalized = [asdict(event.normalized()) for event in events]
     output.write_text(json.dumps(normalized, indent=2) + "\n")
+
+
+EVENTS_CSV_HEADER = ["start_seconds", "end_seconds", "duration_seconds", "label", "notes"]
+
+
+def write_events_csv(path: Path | str, events: Iterable[EventMarker]) -> None:
+    output = Path(path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=EVENTS_CSV_HEADER)
+        writer.writeheader()
+        for event in events:
+            marker = event.normalized()
+            writer.writerow(
+                {
+                    "start_seconds": f"{marker.timestamp_seconds:.6f}",
+                    "end_seconds": f"{marker.end_seconds:.6f}",
+                    "duration_seconds": f"{marker.duration_seconds:.6f}",
+                    "label": marker.label,
+                    "notes": marker.notes,
+                }
+            )
+
+
+def read_events_csv(path: Path | str) -> tuple[EventMarker, ...]:
+    csv_path = Path(path)
+    with csv_path.open(newline="") as handle:
+        return tuple(
+            EventMarker(
+                timestamp_seconds=float(row.get("start_seconds", 0.0) or 0.0),
+                duration_seconds=float(row.get("duration_seconds", 0.0) or 0.0),
+                label=row.get("label", ""),
+                notes=row.get("notes", ""),
+            ).normalized()
+            for row in csv.DictReader(handle)
+        )
 
 
 def event_from_interval(

@@ -1,6 +1,14 @@
 from pathlib import Path
 
-from ads1292_studio.events import EventMarker, event_from_interval, event_template, read_events_json, write_events_json
+from ads1292_studio.events import (
+    EventMarker,
+    event_from_interval,
+    event_template,
+    read_events_csv,
+    read_events_json,
+    write_events_csv,
+    write_events_json,
+)
 
 
 def test_event_markers_json_round_trip(tmp_path: Path) -> None:
@@ -33,6 +41,28 @@ def test_event_marker_supports_duration_and_end_seconds(tmp_path: Path) -> None:
     assert loaded[0].duration_seconds == 3.5
     assert loaded[0].end_seconds == 15.5
     assert "duration_seconds" in path.read_text()
+
+
+def test_event_markers_csv_round_trip_includes_start_end_duration(tmp_path: Path) -> None:
+    path = tmp_path / "recording.events.csv"
+    events = (
+        EventMarker(
+            timestamp_seconds=12.0,
+            duration_seconds=3.5,
+            label="motion segment",
+            notes="subject moved right arm, visible artifact",
+        ),
+        EventMarker(timestamp_seconds=25.0, label="electrode touch", notes="adjusted LA"),
+    )
+
+    write_events_csv(path, events)
+    loaded = read_events_csv(path)
+    text = path.read_text()
+
+    assert loaded == tuple(event.normalized() for event in events)
+    assert "start_seconds,end_seconds,duration_seconds,label,notes" in text
+    assert "15.500000" in text
+    assert "motion segment" in text
 
 
 def test_event_marker_normalizes_negative_duration_to_point_event() -> None:

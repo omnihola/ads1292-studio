@@ -42,7 +42,7 @@ from ads1292_studio.display import (
     parse_display_window,
     parse_sweep_speed,
 )
-from ads1292_studio.events import EventMarker, event_from_interval, read_events_json, write_events_json
+from ads1292_studio.events import EventMarker, event_from_interval, read_events_json, write_events_csv, write_events_json
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_samples import append_live_sample_batch
 from ads1292_studio.gui_log import append_log_messages, log_tab_is_visible
@@ -572,6 +572,7 @@ class App(tk.Tk):
             )
             write_metadata_json(csv_path.with_suffix(".json"), self._metadata())
             write_events_json(self._events_path(csv_path), self.event_markers)
+            write_events_csv(self._events_csv_path(csv_path), self.event_markers)
             write_calibration_json(self._calibration_path(csv_path), self._calibration())
             write_protocol_json(self._protocol_path(csv_path), self._protocol())
             write_quality_gate_json(self._quality_gate_path(csv_path), self._quality_gate())
@@ -1008,6 +1009,9 @@ class App(tk.Tk):
     def _events_path(self, csv_path: Path) -> Path:
         return csv_path.with_suffix(".events.json")
 
+    def _events_csv_path(self, csv_path: Path) -> Path:
+        return csv_path.with_suffix(".events.csv")
+
     def _calibration_path(self, csv_path: Path) -> Path:
         return csv_path.with_suffix(".calibration.json")
 
@@ -1034,6 +1038,7 @@ class App(tk.Tk):
         if self.recording_path is None:
             return
         write_events_json(self._events_path(self.recording_path), self.event_markers)
+        write_events_csv(self._events_csv_path(self.recording_path), self.event_markers)
 
     def _set_event_count(self) -> None:
         self.event_count_var.set(f"{len(self.event_markers)} events")
@@ -1119,6 +1124,7 @@ class App(tk.Tk):
             return
         write_metadata_json(self.recording_path.with_suffix(".json"), self._metadata())
         write_events_json(self._events_path(self.recording_path), self.event_markers)
+        write_events_csv(self._events_csv_path(self.recording_path), self.event_markers)
         write_calibration_json(self._calibration_path(self.recording_path), self._calibration())
         write_protocol_json(self._protocol_path(self.recording_path), self._protocol())
         write_quality_gate_json(self._quality_gate_path(self.recording_path), self._quality_gate())
