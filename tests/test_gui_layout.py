@@ -120,7 +120,7 @@ def test_acquisition_toolbar_exposes_live_calibration_action() -> None:
     assert "Calibrate Live" in source
 
 
-def test_sidebar_exposes_event_range_actions() -> None:
+def test_sidebar_keeps_event_actions_out_of_left_panel() -> None:
     from ads1292_studio.gui_layout import initialize_sidebar_state, populate_sidebar
 
     init_source = inspect.getsource(initialize_sidebar_state)
@@ -129,20 +129,22 @@ def test_sidebar_exposes_event_range_actions() -> None:
     assert "event_range_start_var" in init_source
     assert "manual_event_start_var" in init_source
     assert "manual_event_end_var" in init_source
-    assert "mark_event_range_start_button" in sidebar_source
-    assert "add_event_range_button" in sidebar_source
-    assert "add_manual_event_range_button" in sidebar_source
-    assert "remove_last_event_button" in sidebar_source
     assert "remove_event_index_var" in init_source
-    assert "remove_event_by_number_button" in sidebar_source
-    assert "Range start s" in sidebar_source
-    assert "Range end s" in sidebar_source
-    assert "Add Point Event" in sidebar_source
-    assert "Start Range" in sidebar_source
-    assert "End Range" in sidebar_source
-    assert "Add Manual Range" in sidebar_source
-    assert "Remove Last Event" in sidebar_source
-    assert "Remove Event #" in sidebar_source
+    assert "mark_event_range_start_button" not in sidebar_source
+    assert "add_event_range_button" not in sidebar_source
+    assert "add_manual_event_range_button" not in sidebar_source
+    assert "remove_last_event_button" not in sidebar_source
+    assert "remove_event_by_number_button" not in sidebar_source
+    assert "Event label" not in sidebar_source
+    assert "Event notes" not in sidebar_source
+    assert "Range start s" not in sidebar_source
+    assert "Range end s" not in sidebar_source
+    assert "Add Point Event" not in sidebar_source
+    assert "Start Range" not in sidebar_source
+    assert "End Range" not in sidebar_source
+    assert "Add Manual Range" not in sidebar_source
+    assert "Remove Last Event" not in sidebar_source
+    assert "Remove Event #" not in sidebar_source
 
 
 def test_sidebar_exposes_acquisition_provenance_summary() -> None:
@@ -154,8 +156,8 @@ def test_sidebar_exposes_acquisition_provenance_summary() -> None:
     assert "acquisition_var" in init_source
     assert '"Acquisition"' in sidebar_source
     assert "Acquisition provenance" in sidebar_source
-    assert "Start Range" in sidebar_source
-    assert "End Range" in sidebar_source
+    assert "Start Range" not in sidebar_source
+    assert "End Range" not in sidebar_source
 
 
 def test_app_window_spec_prevents_cramped_signal_views() -> None:
@@ -1606,7 +1608,7 @@ def test_live_snr_footer_exposes_event_annotation_controls() -> None:
     assert "event_range_start_var" in event_source
 
 
-def test_live_event_controls_are_split_across_rows_not_one_long_grid() -> None:
+def test_live_event_controls_use_four_functional_rows() -> None:
     from ads1292_studio.gui_sidebar import build_live_event_panel
 
     event_source = inspect.getsource(build_live_event_panel)
@@ -1614,16 +1616,21 @@ def test_live_event_controls_are_split_across_rows_not_one_long_grid() -> None:
     assert "app.live_event_status_row" in event_source
     assert "app.live_event_label_row" in event_source
     assert "app.live_event_notes_row" in event_source
-    assert "app.live_event_actions_row" in event_source
+    assert "app.live_event_point_row" in event_source
+    assert "app.live_event_range_row" in event_source
     assert "text=\"Event label\"" in event_source
     assert "text=\"Event notes\"" in event_source
     assert "app.live_event_label_entry.pack(anchor=tk.W, fill=tk.X)" in event_source
     assert "app.live_event_notes_entry.pack(anchor=tk.W, fill=tk.X)" in event_source
     assert "app.live_add_event_button.pack(anchor=tk.W, fill=tk.X" in event_source
-    assert "app.live_mark_event_range_start_button.pack(anchor=tk.W, fill=tk.X" in event_source
-    assert "app.live_add_event_range_button.pack(anchor=tk.W, fill=tk.X" in event_source
-    assert "app.live_remove_last_event_button.pack(anchor=tk.W, fill=tk.X" in event_source
+    assert "app.live_mark_event_range_start_button.grid(row=0, column=0" in event_source
+    assert "app.live_add_event_range_button.grid(row=0, column=1" in event_source
+    assert "app.live_remove_last_event_button.grid(row=0, column=2" in event_source
+    assert '"Remove Last"' in event_source
     assert "Add Point Event" in event_source
+    assert "app.live_event_range_row.columnconfigure(0, weight=1)" in event_source
+    assert "app.live_event_range_row.columnconfigure(1, weight=1)" in event_source
+    assert "app.live_event_range_row.columnconfigure(2, weight=1)" in event_source
     assert ".grid(row=0, column=5" not in event_source
     assert ".grid(row=0, column=6" not in event_source
     assert ".grid(row=0, column=7" not in event_source

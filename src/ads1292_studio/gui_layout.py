@@ -15,7 +15,6 @@ from ads1292_studio.gui_specs import (
     header_layout_spec,
     header_text_styles,
     main_tab_labels,
-    muted_label_spec,
     sidebar_action_button_style,
     sidebar_field_styles,
     sidebar_layout_spec,
@@ -32,7 +31,6 @@ from ads1292_studio.gui_specs import (
 from ads1292_studio.gui_sidebar import (
     build_action_section_heading,
     build_channel_map_cards,
-    build_event_count_card,
     build_fixed_status_panel,
     build_protocol_note_card,
     build_safety_notice,
@@ -490,24 +488,6 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
     metadata_entry(app, session_side, "Notes", app.notes_var)
     ttk.Label(session_side, text="Acquisition provenance", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
     build_protocol_note_card(app, session_side, "Acquisition", app.acquisition_var)
-    ttk.Label(session_side, text="Events", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(14, 2))
-    metadata_entry(app, session_side, "Event label", app.event_label_var)
-    metadata_entry(app, session_side, "Event notes", app.event_notes_var)
-    app.add_event_button = _sidebar_button(session_side, "Add Point Event", app.add_event)
-    app.mark_event_range_start_button = _sidebar_button(session_side, "Start Range", app.mark_event_range_start)
-    app.add_event_range_button = _sidebar_button(session_side, "End Range", app.add_event_range)
-    metadata_entry(app, session_side, "Range start s", app.manual_event_start_var)
-    metadata_entry(app, session_side, "Range end s", app.manual_event_end_var)
-    app.add_manual_event_range_button = _sidebar_button(session_side, "Add Manual Range", app.add_manual_event_range)
-    app.remove_last_event_button = _sidebar_button(session_side, "Remove Last Event", app.remove_last_event)
-    metadata_entry(app, session_side, "Remove event #", app.remove_event_index_var)
-    app.remove_event_by_number_button = _sidebar_button(session_side, "Remove Event #", app.remove_event_by_number)
-    ttk.Label(
-        session_side,
-        textvariable=app.event_range_start_var,
-        style=muted_label_spec()["style"],
-    ).pack(anchor=tk.W, pady=(3, 2))
-    build_event_count_card(app, session_side)
 
     app.action_section_labels = {}
     build_action_section_heading(app, session_side, "Open Data", top_padding=14)
