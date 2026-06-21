@@ -112,6 +112,10 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert acquisition["port"] == "/dev/cu.usbmodem214301"
     assert acquisition["csv_schema"] == "ads1292-studio-live-stream-v1"
     assert acquisition["timestamp_reference"] == "relative_seconds_from_recording_start"
+    column_map = {entry["name"]: entry for entry in acquisition["csv_columns"]}
+    assert column_map["timestamp"]["unit"] == "s"
+    assert column_map["ch2_counts"]["description"] == "CH2 ECG Lead I (LA-RA)"
+    assert column_map["live_scale_uv_per_count"]["unit"] == "uV/count"
     assert acquisition["raw_lsb_uv_per_count"] == Calibration(label="bench-cal").microvolts_per_count
     assert acquisition["live_scale_uv_per_count"] == 1.895
     assert acquisition["live_scale_runs"] == 5

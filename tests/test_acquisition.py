@@ -43,6 +43,12 @@ def test_acquisition_provenance_round_trip_preserves_live_and_raw_scale(
     assert loaded.port == "/dev/cu.usbmodem214301"
     assert loaded.sample_rate_hz == 500.0
     assert loaded.timestamp_reference == "relative_seconds_from_recording_start"
+    columns = {entry["name"]: entry for entry in loaded.csv_columns}
+    assert columns["timestamp"]["unit"] == "s"
+    assert "recording start" in columns["timestamp"]["description"]
+    assert columns["ch2_counts"]["unit"] == "live_stream_count"
+    assert columns["ch2_counts"]["description"] == "CH2 ECG Lead I (LA-RA)"
+    assert columns["live_scale_uv_per_count"]["unit"] == "uV/count"
     assert loaded.channel_map["ch2_counts"] == "CH2 ECG Lead I (LA-RA)"
     assert loaded.channel_map["ch1_counts"] == "CH1 respiration/raw impedance"
     assert loaded.live_calibration["mean_uv_per_count"] == 1.895
@@ -67,6 +73,10 @@ def test_acquisition_provenance_marks_raw_adc_schema(tmp_path: Path) -> None:
     assert provenance.acquisition_mode == "raw_adc_24bit"
     assert provenance.csv_schema == "ads1292-studio-raw-adc-v1"
     assert provenance.timestamp_reference == "relative_seconds_from_recording_start"
+    columns = {entry["name"]: entry for entry in provenance.csv_columns}
+    assert columns["ch1_raw24"]["unit"] == "ADC count"
+    assert columns["ch1_uv"]["unit"] == "uV"
+    assert columns["raw_lsb_uv_per_count"]["unit"] == "uV/count"
     assert provenance.live_calibration == {}
 
 
