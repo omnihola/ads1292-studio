@@ -41,6 +41,58 @@ def test_save_event_sidecar_writes_json_and_csv(monkeypatch) -> None:
     assert ("csv", "recording.events.csv", fake.event_markers) in calls
 
 
+def test_save_event_sidecar_refreshes_existing_recording_manifest(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    calls = []
+    csv_path = tmp_path / "recording.csv"
+    csv_path.with_suffix(".manifest.json").write_text("{}\n")
+
+    monkeypatch.setattr(app_module, "write_events_json", lambda _path, _events: None)
+    monkeypatch.setattr(app_module, "write_events_csv", lambda _path, _events: None)
+    monkeypatch.setattr(
+        app_module,
+        "write_recording_manifest",
+        lambda path: calls.append(Path(path)) or Path(path).with_suffix(".manifest.json"),
+    )
+    fake = SimpleNamespace(
+        recording_path=csv_path,
+        event_markers=(EventMarker(1.0, label="motion"),),
+        _events_path=lambda path: path.with_suffix(".events.json"),
+        _events_csv_path=lambda path: path.with_suffix(".events.csv"),
+        _log=lambda message: calls.append(message),
+    )
+
+    App._save_event_sidecar(fake)
+
+    assert csv_path in calls
+    assert any("Recording manifest refreshed" in str(call) for call in calls)
+
+
+def test_save_event_sidecar_does_not_create_manifest_before_finalization(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    calls = []
+    csv_path = tmp_path / "recording.csv"
+
+    monkeypatch.setattr(app_module, "write_events_json", lambda _path, _events: None)
+    monkeypatch.setattr(app_module, "write_events_csv", lambda _path, _events: None)
+    monkeypatch.setattr(app_module, "write_recording_manifest", lambda path: calls.append(Path(path)))
+    fake = SimpleNamespace(
+        recording_path=csv_path,
+        event_markers=(EventMarker(1.0, label="motion"),),
+        _events_path=lambda path: path.with_suffix(".events.json"),
+        _events_csv_path=lambda path: path.with_suffix(".events.csv"),
+        _log=lambda message: calls.append(message),
+    )
+
+    App._save_event_sidecar(fake)
+
+    assert calls == []
+
+
 def test_load_event_sidecar_falls_back_to_events_csv(tmp_path: Path) -> None:
     calls = []
     csv_path = tmp_path / "recording.csv"

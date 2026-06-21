@@ -1060,6 +1060,19 @@ class App(tk.Tk):
             return
         write_events_json(self._events_path(self.recording_path), self.event_markers)
         write_events_csv(self._events_csv_path(self.recording_path), self.event_markers)
+        App._refresh_recording_manifest_if_present(self)
+
+    def _refresh_recording_manifest_if_present(self) -> None:
+        if self.recording_path is None:
+            return
+        manifest_path = self.recording_path.with_suffix(".manifest.json")
+        if not manifest_path.exists():
+            return
+        try:
+            refreshed = write_recording_manifest(self.recording_path)
+            self._log(f"Recording manifest refreshed: {refreshed}")
+        except Exception as exc:
+            self._log(f"Recording manifest refresh failed: {exc}")
 
     def _set_event_count(self) -> None:
         self.event_count_var.set(_event_count_summary(self.event_markers))
