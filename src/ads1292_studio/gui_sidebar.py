@@ -20,6 +20,7 @@ from ads1292_studio.gui_specs import (
     status_detail_styles,
     status_tone_color,
     status_tone_style,
+    sidebar_status_label,
     toolbar_hint_styles,
     toolbar_layout_spec,
     workflow_hint_styles,
@@ -307,7 +308,15 @@ def build_sidebar(app: Any, parent: ttk.Frame) -> dict[str, ttk.Frame]:
 
 def build_fixed_status_panel(app: Any, parent: ttk.Frame) -> ttk.Frame:
     spec = sidebar_layout_spec()
-    scroll = ScrollableFrame(parent, width=int(spec["status_scroll_width"]))
+    app.sidebar_status_title = ttk.Label(
+        parent,
+        text=sidebar_status_label(),
+        style="SectionHeading.TLabel",
+    )
+    app.sidebar_status_title.pack(anchor=tk.W, fill=tk.X, pady=(0, 8))
+    app.sidebar_status_body = ttk.Frame(parent, style=str(spec["shell"]))
+    app.sidebar_status_body.pack(fill=tk.BOTH, expand=True)
+    scroll = ScrollableFrame(app.sidebar_status_body, width=int(spec["status_scroll_width"]))
     scroll.frame.pack(fill=tk.BOTH, expand=True)
     app.sidebar_status_scroll = scroll
     return scroll.content

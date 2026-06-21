@@ -662,9 +662,12 @@ def test_sidebar_status_is_fixed_outside_tab_strip() -> None:
     status_source = inspect.getsource(build_fixed_status_panel)
 
     assert "app.sidebar_status_shell" in body_source
-    assert "status_shell.pack(side=tk.RIGHT, fill=tk.Y)" in body_source
+    assert "status_shell.grid(row=0, column=2, sticky=\"ns\")" in body_source
     assert "build_fixed_status_panel(app, status_shell)" in body_source
     assert 'sidebar["Status"] = status_side' in body_source
+    assert "app.sidebar_status_title" in status_source
+    assert "text=sidebar_status_label()" in status_source
+    assert "app.sidebar_status_body" in status_source
     assert "app.sidebar_status_scroll" in status_source
     assert "app.sidebar_tab_strip" not in status_source
 
@@ -767,11 +770,16 @@ def test_body_shell_uses_fixed_sidebar_without_native_paned_sash() -> None:
 
     assert "ttk.PanedWindow" not in source
     assert "app.body_shell" in source
-    assert "side_shell.pack(side=tk.LEFT, fill=tk.Y)" in source
-    assert "status_shell.pack(side=tk.RIGHT, fill=tk.Y)" in source
+    assert "body.grid_columnconfigure(0, minsize=int(sidebar_spec[\"width\"]), weight=0)" in source
+    assert "body.grid_columnconfigure(1, weight=1)" in source
+    assert "body.grid_columnconfigure(2, minsize=int(sidebar_spec[\"status_width\"]), weight=0)" in source
+    assert "side_shell.grid(row=0, column=0, sticky=\"ns\")" in source
+    assert "status_shell.grid(row=0, column=2, sticky=\"ns\")" in source
     assert "side_shell.pack_propagate(False)" in source
     assert "status_shell.pack_propagate(False)" in source
-    assert "main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)" in source
+    assert "side_shell.grid_propagate(False)" in source
+    assert "status_shell.grid_propagate(False)" in source
+    assert "main.grid(row=0, column=1, sticky=\"nsew\")" in source
 
 
 def test_header_connection_styles_make_status_a_pill() -> None:

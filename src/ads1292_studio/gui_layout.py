@@ -372,6 +372,10 @@ def build_body_shell(app: Any) -> tuple[dict[str, ttk.Frame], ttk.Frame]:
     body = ttk.Frame(app, style=str(workspace_spec["main"]))
     body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
     app.body_shell = body
+    body.grid_rowconfigure(0, weight=1)
+    body.grid_columnconfigure(0, minsize=int(sidebar_spec["width"]), weight=0)
+    body.grid_columnconfigure(1, weight=1)
+    body.grid_columnconfigure(2, minsize=int(sidebar_spec["status_width"]), weight=0)
     side_shell = ttk.Frame(
         body,
         width=sidebar_spec["width"],
@@ -379,8 +383,9 @@ def build_body_shell(app: Any) -> tuple[dict[str, ttk.Frame], ttk.Frame]:
         style=str(sidebar_spec["shell"]),
     )
     app.sidebar_shell = side_shell
-    side_shell.pack(side=tk.LEFT, fill=tk.Y)
+    side_shell.grid(row=0, column=0, sticky="ns")
     side_shell.pack_propagate(False)
+    side_shell.grid_propagate(False)
     sidebar = build_sidebar(app, side_shell)
     status_shell = ttk.Frame(
         body,
@@ -389,13 +394,14 @@ def build_body_shell(app: Any) -> tuple[dict[str, ttk.Frame], ttk.Frame]:
         style=str(sidebar_spec["shell"]),
     )
     app.sidebar_status_shell = status_shell
-    status_shell.pack(side=tk.RIGHT, fill=tk.Y)
+    status_shell.grid(row=0, column=2, sticky="ns")
     status_shell.pack_propagate(False)
+    status_shell.grid_propagate(False)
     status_side = build_fixed_status_panel(app, status_shell)
     sidebar["Status"] = status_side
     main = ttk.Frame(body, padding=workspace_spec["main_padding"], style=str(workspace_spec["main"]))
     app.main_workspace = main
-    main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    main.grid(row=0, column=1, sticky="nsew")
     return sidebar, main
 
 
