@@ -782,11 +782,11 @@ class App(tk.Tk):
         start_seconds = self._current_event_time()
         self.event_range_start_seconds = start_seconds
         self.event_range_start_var.set(f"Range start: {start_seconds:.2f} s")
-        self._log(f"Event range start marked at {start_seconds:.2f}s")
+        self._log(f"Range start marked at {start_seconds:.2f}s")
 
     def add_event_range(self) -> None:
         if self.event_range_start_seconds is None:
-            messagebox.showerror("No range start", "Click Mark Range Start before Add Event Range.")
+            messagebox.showerror("No range start", "Click Start Range before End Range.")
             return
         end_seconds = self._current_event_time()
         marker = event_from_interval(
@@ -803,7 +803,7 @@ class App(tk.Tk):
         self._refresh_review_event_overlay()
         self._refresh_live_event_overlay()
         self._log(
-            f"Event range {marker.timestamp_seconds:.2f}-{marker.end_seconds:.2f}s: "
+            f"Range {marker.timestamp_seconds:.2f}-{marker.end_seconds:.2f}s: "
             f"{marker.label} {marker.notes}".strip()
         )
 
@@ -828,7 +828,7 @@ class App(tk.Tk):
         self._refresh_review_event_overlay()
         self._refresh_live_event_overlay()
         self._log(
-            f"Manual event range {marker.timestamp_seconds:.2f}-{marker.end_seconds:.2f}s: "
+            f"Manual range {marker.timestamp_seconds:.2f}-{marker.end_seconds:.2f}s: "
             f"{marker.label} {marker.notes}".strip()
         )
 

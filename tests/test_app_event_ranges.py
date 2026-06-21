@@ -109,7 +109,7 @@ def test_add_manual_event_range_uses_explicit_seconds() -> None:
     assert "count" in app.calls
     assert "save" in app.calls
     assert "overlay" in app.calls
-    assert any("Manual event range 73.00-77.25s" in call for call in app.calls)
+    assert any("Manual range 73.00-77.25s" in call for call in app.calls)
 
 
 def test_remove_last_event_updates_sidecar_and_log() -> None:

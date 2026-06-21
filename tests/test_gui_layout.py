@@ -137,7 +137,10 @@ def test_sidebar_exposes_event_range_actions() -> None:
     assert "remove_event_by_number_button" in sidebar_source
     assert "Range start s" in sidebar_source
     assert "Range end s" in sidebar_source
-    assert "Add Exact Range" in sidebar_source
+    assert "Add Point Event" in sidebar_source
+    assert "Start Range" in sidebar_source
+    assert "End Range" in sidebar_source
+    assert "Add Manual Range" in sidebar_source
     assert "Remove Last Event" in sidebar_source
     assert "Remove Event #" in sidebar_source
 
@@ -151,8 +154,8 @@ def test_sidebar_exposes_acquisition_provenance_summary() -> None:
     assert "acquisition_var" in init_source
     assert '"Acquisition"' in sidebar_source
     assert "Acquisition provenance" in sidebar_source
-    assert "Mark Range Start" in sidebar_source
-    assert "Add Event Range" in sidebar_source
+    assert "Start Range" in sidebar_source
+    assert "End Range" in sidebar_source
 
 
 def test_app_window_spec_prevents_cramped_signal_views() -> None:
