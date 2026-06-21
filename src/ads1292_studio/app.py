@@ -1134,7 +1134,8 @@ class App(tk.Tk):
         if not self.is_streaming:
             return
         markers = tuple(self.event_markers)
-        x_max_seconds = max(1.0, self.sample_index / SAMPLE_RATE_HZ)
+        marker_end_seconds = tuple(marker.normalized().end_seconds for marker in markers)
+        x_max_seconds = max(1.0, self.sample_index / SAMPLE_RATE_HZ, *marker_end_seconds)
         items = build_event_overlay_items(markers, x_max_seconds=x_max_seconds)
         key = tuple(
             (marker.normalized().timestamp_seconds, marker.normalized().end_seconds, marker.label)

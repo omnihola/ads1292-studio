@@ -112,6 +112,20 @@ def test_refresh_live_event_overlay_draws_while_streaming() -> None:
     assert app.live_canvas.draw_idle_calls == 1
 
 
+def test_refresh_live_event_overlay_keeps_future_manual_events() -> None:
+    app = _make_live_app(
+        is_streaming=True,
+        sample_index=15000,
+        event_markers=[event_from_interval(start_seconds=73.0, end_seconds=77.25, label="future artifact")],
+    )
+
+    App._refresh_live_event_overlay(app)
+
+    assert app.live_event_overlay_key is not None
+    assert len(app.ax_live_ecg.patches) == 1
+    assert app.live_event_overlay_artists
+
+
 def test_refresh_live_event_overlay_is_noop_when_not_streaming() -> None:
     app = _make_live_app(
         is_streaming=False,
