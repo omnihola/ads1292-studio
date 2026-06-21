@@ -18,16 +18,14 @@ class _FakeCanvas:
 
 def _make_review_app(*, loaded_samples, event_markers, x_right: float = 30.0) -> SimpleNamespace:
     fig = Figure()
-    ax_ecg = fig.add_subplot(311)
-    ax_resp = fig.add_subplot(312)
-    ax_status = fig.add_subplot(313)
+    ax_ecg = fig.add_subplot(211)
+    ax_resp = fig.add_subplot(212)
     ax_ecg.set_xlim(0.0, x_right)
     return SimpleNamespace(
         loaded_samples=loaded_samples,
         event_markers=event_markers,
         ax_review_ecg=ax_ecg,
         ax_review_resp=ax_resp,
-        ax_review_status=ax_status,
         review_event_overlay_artists=[],
         review_event_overlay_key=None,
         review_canvas=_FakeCanvas(),
@@ -81,16 +79,14 @@ def test_refresh_review_event_overlay_clears_overlay_when_events_removed() -> No
 
 def _make_live_app(*, is_streaming: bool, sample_index: int, event_markers) -> SimpleNamespace:
     fig = Figure()
-    ax_ecg = fig.add_subplot(311)
-    ax_resp = fig.add_subplot(312)
-    ax_status = fig.add_subplot(313)
+    ax_ecg = fig.add_subplot(211)
+    ax_resp = fig.add_subplot(212)
     return SimpleNamespace(
         is_streaming=is_streaming,
         sample_index=sample_index,
         event_markers=event_markers,
         ax_live_ecg=ax_ecg,
         ax_live_resp=ax_resp,
-        ax_live_status=ax_status,
         live_event_overlay_artists=[],
         live_event_overlay_key=None,
         live_canvas=_FakeCanvas(),

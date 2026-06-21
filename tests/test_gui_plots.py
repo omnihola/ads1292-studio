@@ -5,6 +5,7 @@ from matplotlib.figure import Figure
 
 from ads1292_studio.display import EcgDisplaySettings
 from ads1292_studio.gui_plots import (
+    apply_ecg_paper_grid,
     apply_live_render_frame,
     apply_review_render_frame,
     calibration_pulse_needs_update,
@@ -16,6 +17,7 @@ from ads1292_studio.gui_plots import (
     set_line_data_if_changed,
     set_line_color_if_changed,
     set_line_visible_if_changed,
+    sparse_time_tick_label,
     flush_pending_pqrst_review,
     show_empty_plot_state,
 )
@@ -258,6 +260,19 @@ def test_calibration_pulse_needs_update_uses_artist_and_label_cache() -> None:
     assert calibration_pulse_needs_update(ax, artists, EcgDisplaySettings(gain=2.0), cache) is True
 
 
+def test_ecg_paper_grid_keeps_sparse_two_second_time_labels() -> None:
+    fig = Figure()
+    ax = fig.add_subplot(111)
+
+    apply_ecg_paper_grid(ax, EcgDisplaySettings(sweep_speed_mm_s=25), {})
+
+    formatter = ax.xaxis.get_major_formatter()
+    assert sparse_time_tick_label(30.6, None) == ""
+    assert formatter(30.8, None) == ""
+    assert formatter(32.0, None) == "32"
+    assert formatter(34.0, None) == "34"
+
+
 def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
     fig = Figure()
     ax_ecg = fig.add_subplot(311)
@@ -315,12 +330,8 @@ def test_apply_live_render_frame_updates_lines_axes_and_canvas() -> None:
     assert peak_line.get_ydata().tolist() == [2.0]
     assert peak_line.get_visible() is True
     assert resp_line.get_ydata().tolist() == [10.0, 11.0, 12.0]
-    assert status_line.get_ydata().tolist() == [0.0, 2.0, 2.0]
-    assert status_line.get_color() == APP_VISUAL_TOKENS["warning"]
     assert ax_ecg.get_xlim() == (1.0, 9.0)
     assert ax_resp.get_xlim() == (1.0, 9.0)
-    assert ax_status.get_xlim() == (1.0, 9.0)
-    assert ax_status.get_ylim() == (-0.5, 2.5)
     assert canvas.draw_idle_calls == 1
 
 
@@ -413,7 +424,6 @@ def test_apply_live_render_frame_skips_redundant_main_trace_writes() -> None:
 
     assert app.live_ecg_line.set_data_calls == 1
     assert app.live_resp_line.set_data_calls == 1
-    assert app.live_status_line.set_data_calls == 1
     assert app.live_canvas.draw_idle_calls == 1
 
 
@@ -695,17 +705,15 @@ def test_apply_review_render_frame_updates_review_lines_axes_and_pqrst() -> None
         display_settings=EcgDisplaySettings(time_window_seconds=8.0),
         ecg_label="CH2 ECG Lead I",
         resp_label="CH1 respiration",
-        contact_label="lead-off bits",
         ecg_inverted=False,
     )
 
     assert ecg_line.get_ydata().tolist() == [0.0, 2.0, 0.0]
     assert peak_line.get_xdata().tolist() == [1.0]
     assert resp_line.get_ydata().tolist() == [10.0, 11.0, 12.0]
-    assert status_line.get_ydata().tolist() == [0.0, 1.0, 1.0]
     assert ax_ecg.get_xlim() == (0.0, 2.0)
     assert ax_ecg.get_ylim() == (-3.0, 3.0)
-    assert ax_status.get_xlabel() == "Time (s)"
+    assert ax_resp.get_xlabel() == "Time (s)"
     assert "Offline ECG: CH2 ECG Lead I" in ax_ecg.get_title()
     assert review_canvas.draw_idle_calls == 1
     assert pqrst_canvas.draw_idle_calls == 1
@@ -774,13 +782,11 @@ def test_apply_review_render_frame_skips_unchanged_pqrst_redraw() -> None:
             display_settings=EcgDisplaySettings(time_window_seconds=8.0),
             ecg_label="CH2 ECG Lead I",
             resp_label="CH1 respiration",
-            contact_label="lead-off bits",
             ecg_inverted=False,
         )
 
     assert ecg_line.set_data_calls == 1
     assert resp_line.set_data_calls == 1
-    assert status_line.set_data_calls == 1
     assert review_canvas.draw_idle_calls == 1
     assert pqrst_canvas.draw_idle_calls == 1
 
@@ -848,7 +854,6 @@ def test_apply_review_render_frame_defers_canvas_draw_when_review_tabs_are_hidde
         display_settings=EcgDisplaySettings(time_window_seconds=8.0),
         ecg_label="CH2 ECG Lead I",
         resp_label="CH1 respiration",
-        contact_label="lead-off bits",
         ecg_inverted=False,
     )
 
@@ -923,7 +928,6 @@ def test_flush_pending_review_render_draws_when_review_tab_becomes_visible() -> 
             display_settings=EcgDisplaySettings(time_window_seconds=8.0),
             ecg_label="CH2 ECG Lead I",
             resp_label="CH1 respiration",
-            contact_label="lead-off bits",
             ecg_inverted=False,
         ),
     )
@@ -988,7 +992,6 @@ def test_flush_pending_review_render_can_force_selected_tab_before_tk_maps() -> 
             display_settings=EcgDisplaySettings(time_window_seconds=8.0),
             ecg_label="CH2 ECG Lead I",
             resp_label="CH1 respiration",
-            contact_label="lead-off bits",
             ecg_inverted=False,
         ),
     )
@@ -1099,7 +1102,6 @@ def test_apply_review_render_frame_skips_unchanged_peak_marker_writes() -> None:
             display_settings=EcgDisplaySettings(time_window_seconds=8.0),
             ecg_label="CH2 ECG Lead I",
             resp_label="CH1 respiration",
-            contact_label="lead-off bits",
             ecg_inverted=False,
         )
 
@@ -1108,14 +1110,12 @@ def test_apply_review_render_frame_skips_unchanged_peak_marker_writes() -> None:
 
 def _make_review_overlay_app() -> SimpleNamespace:
     fig = Figure()
-    ax_ecg = fig.add_subplot(311)
-    ax_resp = fig.add_subplot(312)
-    ax_status = fig.add_subplot(313)
+    ax_ecg = fig.add_subplot(211)
+    ax_resp = fig.add_subplot(212)
     ax_ecg.plot([], [])
     return SimpleNamespace(
         ax_review_ecg=ax_ecg,
         ax_review_resp=ax_resp,
-        ax_review_status=ax_status,
         review_event_overlay_artists=[],
         review_event_overlay_key=None,
     )
@@ -1137,13 +1137,12 @@ def test_apply_event_overlay_artists_draws_spans_lines_and_labels() -> None:
     changed = apply_event_overlay_artists(app, items, key=key)
 
     assert changed is True
-    # 1 interval span + 1 point line on each of 3 axes, plus 2 labels on ECG.
-    assert len(app.review_event_overlay_artists) == 3 + 3 + 2
+    # 1 interval span + 1 point line on each visible signal axis, plus 2 labels on ECG.
+    assert len(app.review_event_overlay_artists) == 2 + 2 + 2
     assert app.review_event_overlay_key == key
     # The interval span landed on every shared-x axis.
     assert len(app.ax_review_ecg.patches) == 1
     assert len(app.ax_review_resp.patches) == 1
-    assert len(app.ax_review_status.patches) == 1
 
 
 def test_apply_event_overlay_artists_skips_when_key_unchanged() -> None:
@@ -1190,14 +1189,12 @@ def test_apply_event_overlay_artists_replaces_artists_when_key_changes() -> None
 
 def _make_live_overlay_app() -> SimpleNamespace:
     fig = Figure()
-    ax_ecg = fig.add_subplot(311)
-    ax_resp = fig.add_subplot(312)
-    ax_status = fig.add_subplot(313)
+    ax_ecg = fig.add_subplot(211)
+    ax_resp = fig.add_subplot(212)
     ax_ecg.plot([], [])
     return SimpleNamespace(
         ax_live_ecg=ax_ecg,
         ax_live_resp=ax_resp,
-        ax_live_status=ax_status,
         live_event_overlay_artists=[],
         live_event_overlay_key=None,
     )
@@ -1219,7 +1216,7 @@ def test_apply_live_event_overlay_artists_draws_on_live_axes() -> None:
     changed = apply_live_event_overlay_artists(app, items, key=key)
 
     assert changed is True
-    assert len(app.live_event_overlay_artists) == 3 + 3 + 2
+    assert len(app.live_event_overlay_artists) == 2 + 2 + 2
     assert app.live_event_overlay_key == key
     assert len(app.ax_live_ecg.patches) == 1
     assert len(app.ax_live_resp.patches) == 1

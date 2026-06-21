@@ -66,8 +66,10 @@ from ads1292_studio.gui_state import (
     live_axis_titles,
     live_ecg_axis_title,
     live_metrics_text,
+    live_snr_text,
 )
 from ads1292_studio.models import StreamSample
+from ads1292_studio.quality import SignalNoiseEstimate
 
 
 class _FakeStringVar:
@@ -666,7 +668,6 @@ def test_live_axis_titles_are_static_until_display_mode_changes() -> None:
     titles = live_axis_titles(
         ecg_label="CH2 ECG Lead I (LA-RA)",
         resp_label="CH1 respiration raw",
-        contact_label="lead-off/contact status",
         mode="raw | 1x | 8s | 25 mm/s",
         inverted=False,
     )
@@ -674,7 +675,6 @@ def test_live_axis_titles_are_static_until_display_mode_changes() -> None:
     assert titles == (
         "ECG display: CH2 ECG Lead I (LA-RA) | raw | 1x | 8s | 25 mm/s",
         "CH1 respiration raw",
-        "lead-off/contact status",
     )
     assert all("samples" not in title and "R peaks" not in title for title in titles)
 
@@ -689,7 +689,7 @@ def test_live_redraw_caches_axis_title_updates() -> None:
     apply_source = inspect.getsource(apply_live_axis_titles)
     init_source = inspect.getsource(App.__init__)
 
-    assert "self.last_live_axis_titles: tuple[str, str, str] | None = None" in init_source
+    assert "self.last_live_axis_titles: tuple[str, str] | None = None" in init_source
     assert "apply_live_axis_titles(" in redraw_source
     assert not hasattr(App, "_apply_live_axis_titles")
     assert "set_signal_axis_title(" not in redraw_source
@@ -716,7 +716,7 @@ def test_live_redraw_skips_duplicate_render_keys() -> None:
         "build_live_render_frame("
     )
     assert redraw_source.index("if frame is None:") < redraw_source.index("self.last_live_render_key = render_key")
-    assert "self._clear_empty_plot_state((self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))" in redraw_source
+    assert "self._clear_empty_plot_state((self.ax_live_ecg, self.ax_live_resp))" in redraw_source
     assert redraw_source.index("build_live_render_frame(") < redraw_source.index("self._clear_empty_plot_state(")
 
 
@@ -749,11 +749,10 @@ def test_live_redraw_skips_unchanged_y_axis_limit_writes() -> None:
     assert "for ax in (app.ax_live_ecg, app.ax_live_resp, app.ax_live_status):" not in apply_source
     assert "set_axis_ylim_if_changed(app.ax_live_ecg" in apply_source
     assert "set_axis_ylim_if_changed(app.ax_live_resp" in apply_source
-    assert "set_axis_ylim_if_changed(app.ax_live_status" in apply_source
+    assert "set_axis_ylim_if_changed(app.ax_live_status" not in apply_source
     assert "ax.set_xlim(frame.left, frame.right)" not in apply_source
     assert "self.ax_live_ecg.set_ylim(" not in redraw_source
     assert "self.ax_live_resp.set_ylim(" not in redraw_source
-    assert "self.ax_live_status.set_ylim(" not in redraw_source
 
 
 def test_live_metrics_text_carries_dynamic_runtime_counts() -> None:
@@ -766,6 +765,24 @@ def test_live_metrics_text_carries_dynamic_runtime_counts() -> None:
     )
 
     assert text == "samples 1234 | duration 2.5 s | source CH2 ECG Lead I (LA-RA) | HR 72 bpm | R peaks 5"
+
+
+def test_live_snr_text_formats_realtime_estimate() -> None:
+    estimate = SignalNoiseEstimate(
+        snr_db=18.345,
+        signal_rms_counts=12.34,
+        noise_rms_counts=1.52,
+        peak_to_peak_counts=86.0,
+        sample_count=4000,
+        duration_seconds=8.0,
+        valid=True,
+    )
+
+    assert live_snr_text(estimate) == (
+        "Realtime SNR: 18.3 dB | signal RMS 12.3 ct | "
+        "noise RMS 1.5 ct | p2p 86 ct | window 8.0 s"
+    )
+    assert live_snr_text(None) == "Realtime SNR: -- | waiting for ECG window"
 
 
 def test_live_redraw_delegates_metrics_text_application() -> None:

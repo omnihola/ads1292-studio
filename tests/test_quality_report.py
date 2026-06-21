@@ -8,7 +8,7 @@ from ads1292_studio.events import EventMarker
 from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.protocol import ProtocolStep, TestProtocol
 from ads1292_studio.quality_gate import QualityGate
-from ads1292_studio.quality import compute_quality_metrics
+from ads1292_studio.quality import compute_quality_metrics, estimate_realtime_snr
 from ads1292_studio.report import export_review_report
 
 
@@ -68,6 +68,21 @@ def test_quality_metrics_include_artifact_and_drift_values() -> None:
     assert metrics.baseline_drift_counts >= 80
     assert metrics.noise_rms_counts > 0
     assert metrics.peak_to_peak_counts > 400
+
+
+def test_realtime_snr_estimate_drops_when_high_frequency_noise_is_added() -> None:
+    sample_rate_hz = 500.0
+    t = np.arange(0, 8, 1 / sample_rate_hz)
+    clean = 100.0 * np.sin(2 * np.pi * 1.0 * t)
+    high_frequency_noise = 25.0 * np.where(np.arange(t.size) % 2 == 0, 1.0, -1.0)
+
+    clean_estimate = estimate_realtime_snr(clean, sample_rate_hz=sample_rate_hz)
+    noisy_estimate = estimate_realtime_snr(clean + high_frequency_noise, sample_rate_hz=sample_rate_hz)
+
+    assert clean_estimate.valid is True
+    assert noisy_estimate.valid is True
+    assert clean_estimate.snr_db > noisy_estimate.snr_db
+    assert noisy_estimate.noise_rms_counts > clean_estimate.noise_rms_counts
 
 
 def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:

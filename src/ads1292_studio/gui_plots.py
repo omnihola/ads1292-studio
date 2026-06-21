@@ -11,7 +11,7 @@ configure_matplotlib_cache()
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-from matplotlib.ticker import MultipleLocator
+from matplotlib.ticker import FuncFormatter, MultipleLocator
 import numpy as np
 import seaborn as sns
 
@@ -25,8 +25,10 @@ from ads1292_studio.display import (
 from ads1292_studio.gui_state import (
     display_scale_reference_label,
     live_axis_titles,
+    live_snr_text,
     set_axis_xlim_if_changed,
     set_axis_ylim_if_changed,
+    set_string_var_if_changed,
 )
 from ads1292_studio.gui_specs import (
     empty_plot_messages,
@@ -40,7 +42,6 @@ from ads1292_studio.gui_specs import (
     plot_trace_styles,
     pqrst_plot_style,
     scrollbar_chrome_spec,
-    status_axis_spec,
 )
 from ads1292_studio.event_overlay import (
     EVENT_INTERVAL_ALPHA,
@@ -64,25 +65,22 @@ class PendingReviewPlot:
     display_settings: EcgDisplaySettings
     ecg_label: str
     resp_label: str
-    contact_label: str
     ecg_inverted: bool
 
 
 def build_live_plot_panel(app: Any) -> None:
-    fig = new_plot_figure(figsize=(10, 7))
-    fig.subplots_adjust(**plot_figure_layouts()["three_panel"])
-    app.ax_live_ecg = fig.add_subplot(311)
-    app.ax_live_resp = fig.add_subplot(312, sharex=app.ax_live_ecg)
-    app.ax_live_status = fig.add_subplot(313, sharex=app.ax_live_ecg)
-    for ax in (app.ax_live_ecg, app.ax_live_resp, app.ax_live_status):
+    fig = new_plot_figure(figsize=(9.2, 4.8))
+    fig.subplots_adjust(**plot_figure_layouts()["signal_two_panel"])
+    app.ax_live_ecg = fig.add_subplot(211)
+    app.ax_live_resp = fig.add_subplot(212, sharex=app.ax_live_ecg)
+    for ax in (app.ax_live_ecg, app.ax_live_resp):
         ax.label_outer()
-    style_signal_axes((app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
-    configure_status_axes((app.ax_live_status,))
+    style_signal_axes((app.ax_live_ecg, app.ax_live_resp))
     add_signal_reference_lines((app.ax_live_ecg, app.ax_live_resp))
     app.ax_live_ecg.set_ylabel("display counts")
     app.ax_live_resp.set_ylabel("counts")
-    app.ax_live_status.set_xlabel("Time (s)")
-    configure_live_time_axis((app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
+    app.ax_live_resp.set_xlabel("Time (s)")
+    configure_live_time_axis((app.ax_live_ecg, app.ax_live_resp))
     configure_initial_ecg_paper_grid((app.ax_live_ecg,))
     trace_styles = plot_trace_styles()
     app.live_ecg_line, = app.ax_live_ecg.plot([], [], color=PLOT_TRACE_COLORS["ecg"], **trace_styles["ecg"])
@@ -93,31 +91,25 @@ def build_live_plot_panel(app: Any) -> None:
         color=PLOT_TRACE_COLORS["respiration"],
         **trace_styles["respiration"],
     )
-    app.live_status_line, = app.ax_live_status.plot(
-        [],
-        [],
-        color=PLOT_TRACE_COLORS["contact"],
-        **trace_styles["contact"],
-    )
-    show_empty_plot_state(app.empty_plot_artists, "live", (app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
+    show_empty_plot_state(app.empty_plot_artists, "live", (app.ax_live_ecg, app.ax_live_resp))
     app.live_canvas = build_plot_canvas(app, app.live_tab, fig, name="live")
+    build_live_snr_footer(app)
 
 
 def build_review_plot_panel(app: Any) -> None:
-    fig = new_plot_figure(figsize=(10, 7))
-    fig.subplots_adjust(**plot_figure_layouts()["three_panel"])
-    app.ax_review_ecg = fig.add_subplot(311)
-    app.ax_review_resp = fig.add_subplot(312, sharex=app.ax_review_ecg)
-    app.ax_review_status = fig.add_subplot(313, sharex=app.ax_review_ecg)
-    for ax in (app.ax_review_ecg, app.ax_review_resp, app.ax_review_status):
+    fig = new_plot_figure(figsize=(9.2, 4.8))
+    fig.subplots_adjust(**plot_figure_layouts()["signal_two_panel"])
+    app.ax_review_ecg = fig.add_subplot(211)
+    app.ax_review_resp = fig.add_subplot(212, sharex=app.ax_review_ecg)
+    for ax in (app.ax_review_ecg, app.ax_review_resp):
         ax.label_outer()
-    style_signal_axes((app.ax_review_ecg, app.ax_review_resp, app.ax_review_status))
-    configure_status_axes((app.ax_review_status,))
+    style_signal_axes((app.ax_review_ecg, app.ax_review_resp))
     configure_initial_ecg_paper_grid((app.ax_review_ecg,))
     add_signal_reference_lines((app.ax_review_ecg, app.ax_review_resp))
-    app.ax_review_status.set_xlabel("Time (s)")
     app.ax_review_ecg.set_ylabel("display counts")
     app.ax_review_resp.set_ylabel("counts")
+    app.ax_review_resp.set_xlabel("Time (s)")
+    configure_live_time_axis((app.ax_review_ecg, app.ax_review_resp))
     trace_styles = plot_trace_styles()
     app.review_ecg_line, = app.ax_review_ecg.plot([], [], color=PLOT_TRACE_COLORS["ecg"], **trace_styles["ecg"])
     app.review_peak_line, = app.ax_review_ecg.plot([], [], color=PLOT_TRACE_COLORS["peak"], **trace_styles["peak"])
@@ -127,16 +119,10 @@ def build_review_plot_panel(app: Any) -> None:
         color=PLOT_TRACE_COLORS["respiration"],
         **trace_styles["respiration"],
     )
-    app.review_status_line, = app.ax_review_status.plot(
-        [],
-        [],
-        color=PLOT_TRACE_COLORS["contact"],
-        **trace_styles["contact"],
-    )
     show_empty_plot_state(
         app.empty_plot_artists,
         "review",
-        (app.ax_review_ecg, app.ax_review_resp, app.ax_review_status),
+        (app.ax_review_ecg, app.ax_review_resp),
     )
     app.review_canvas = build_plot_canvas(app, app.review_tab, fig, name="review")
 
@@ -175,29 +161,24 @@ def apply_live_render_frame(
     min_ecg_span_counts: float,
     min_resp_span_counts: float,
 ) -> None:
-    restored_axis_chrome = restore_data_axis_chrome((app.ax_live_ecg, app.ax_live_resp, app.ax_live_status))
+    restored_axis_chrome = restore_data_axis_chrome((app.ax_live_ecg, app.ax_live_resp))
     trace_changed = (
         set_line_data_if_changed(app.live_ecg_line, frame.plot_ecg_x, frame.plot_ecg),
         set_line_data_if_changed(app.live_peak_line, frame.peaks_x, frame.peaks_y),
         set_line_visible_if_changed(app.live_peak_line, bool(frame.peaks)),
         set_line_data_if_changed(app.live_resp_line, frame.plot_resp_x, frame.plot_resp),
-        set_line_data_if_changed(app.live_status_line, frame.plot_status_x, frame.plot_status),
-        set_line_color_if_changed(app.live_status_line, live_contact_trace_color(frame.visible_status)),
     )
     xlim_changed = (
         set_axis_xlim_if_changed(app.ax_live_ecg, (frame.left, frame.right)),
         set_axis_xlim_if_changed(app.ax_live_resp, (frame.left, frame.right)),
-        set_axis_xlim_if_changed(app.ax_live_status, (frame.left, frame.right)),
     )
     ylim_changed: tuple[bool, ...] = tuple()
     if autoscale:
         ecg_ylim = robust_ylim(frame.visible_ecg_plot, min_span=min_ecg_span_counts * display_settings.gain)
         resp_ylim = robust_ylim(frame.visible_resp_plot, min_span=min_resp_span_counts)
-        status_top = float(frame.visible_status.max()) + 0.5 if frame.visible_status.size else 1.0
         ylim_changed = (
             set_axis_ylim_if_changed(app.ax_live_ecg, stable_ylim(app.ax_live_ecg.get_ylim(), ecg_ylim)),
             set_axis_ylim_if_changed(app.ax_live_resp, stable_ylim(app.ax_live_resp.get_ylim(), resp_ylim)),
-            set_axis_ylim_if_changed(app.ax_live_status, (-0.5, max(1.0, status_top))),
         )
     grid_changed = apply_ecg_paper_grid(app.ax_live_ecg, display_settings, app.ecg_paper_grid_cache)
     calibration_changed = restored_axis_chrome or calibration_pulse_needs_update(
@@ -215,6 +196,8 @@ def apply_live_render_frame(
         )
     if any((*trace_changed, *xlim_changed, *ylim_changed, grid_changed, calibration_changed)):
         draw_canvas_idle_if_visible(app.live_canvas, getattr(app, "live_tab", None))
+    if hasattr(app, "live_snr_var"):
+        set_string_var_if_changed(app.live_snr_var, live_snr_text(frame.snr))
 
 
 def draw_canvas_idle_if_visible(canvas: object, owner: object | None = None) -> bool:
@@ -269,24 +252,21 @@ def apply_live_axis_titles(
     *,
     ecg_label: str,
     resp_label: str,
-    contact_label: str,
     ecg_inverted: bool,
 ) -> None:
     mode = f"{display_mode_label(display_settings, filter_settings)}, display-smoothed"
     titles = live_axis_titles(
         ecg_label=ecg_label,
         resp_label=resp_label,
-        contact_label=contact_label,
         mode=mode,
         inverted=ecg_inverted,
     )
     if app.last_live_axis_titles == titles:
         return
     app.last_live_axis_titles = titles
-    ecg_title, resp_title, contact_title = titles
+    ecg_title, resp_title = titles
     set_signal_axis_title(app.ax_live_ecg, ecg_title)
     set_signal_axis_title(app.ax_live_resp, resp_title)
-    set_signal_axis_title(app.ax_live_status, contact_title)
 
 
 def apply_review_render_frame(
@@ -296,7 +276,6 @@ def apply_review_render_frame(
     display_settings: EcgDisplaySettings,
     ecg_label: str,
     resp_label: str,
-    contact_label: str,
     ecg_inverted: bool,
     force_visible: bool = False,
 ) -> None:
@@ -306,18 +285,16 @@ def apply_review_render_frame(
             display_settings=display_settings,
             ecg_label=ecg_label,
             resp_label=resp_label,
-            contact_label=contact_label,
             ecg_inverted=ecg_inverted,
         )
         draw_pqrst_review_if_changed(app, frame.pqrst)
         return
     app.pending_review_plot = None
     review_owner = None if force_visible else getattr(app, "review_tab", None)
-    restored_axis_chrome = restore_data_axis_chrome((app.ax_review_ecg, app.ax_review_resp, app.ax_review_status))
+    restored_axis_chrome = restore_data_axis_chrome((app.ax_review_ecg, app.ax_review_resp))
     trace_changed = (
         set_line_data_if_changed(app.review_ecg_line, frame.plot_ecg_x, frame.plot_ecg),
         set_line_data_if_changed(app.review_resp_line, frame.plot_resp_x, frame.plot_resp),
-        set_line_data_if_changed(app.review_status_line, frame.plot_status_x, frame.plot_status),
         set_line_data_if_changed(app.review_peak_line, frame.peak_x, frame.peak_y),
     )
     polarity = ", inverted" if ecg_inverted else ""
@@ -327,16 +304,13 @@ def apply_review_render_frame(
         f"HR {frame.review.heart_rate.median_bpm:.1f} bpm | peaks {len(frame.review.peaks)}",
     )
     set_signal_axis_title(app.ax_review_resp, resp_label)
-    set_signal_axis_title(app.ax_review_status, contact_label)
     axis_changed = (
         set_axis_xlim_if_changed(app.ax_review_ecg, (0, frame.x_right)),
         set_axis_ylim_if_changed(app.ax_review_ecg, frame.ecg_ylim),
         set_axis_xlim_if_changed(app.ax_review_resp, (0, frame.x_right)),
         set_axis_ylim_if_changed(app.ax_review_resp, frame.resp_ylim),
-        set_axis_xlim_if_changed(app.ax_review_status, (0, frame.x_right)),
-        set_axis_ylim_if_changed(app.ax_review_status, frame.status_ylim),
     )
-    label_changed = set_axis_xlabel_if_changed(app.ax_review_status, "Time (s)")
+    label_changed = set_axis_xlabel_if_changed(app.ax_review_resp, "Time (s)")
     grid_changed = apply_ecg_paper_grid(app.ax_review_ecg, display_settings, app.ecg_paper_grid_cache)
     calibration_changed = restored_axis_chrome or calibration_pulse_needs_update(
         app.ax_review_ecg,
@@ -425,7 +399,7 @@ def apply_event_overlay_artists(
     if getattr(app, "review_event_overlay_key", None) == key:
         return False
     app.review_event_overlay_artists = _draw_event_overlay(
-        (app.ax_review_ecg, app.ax_review_resp, app.ax_review_status),
+        (app.ax_review_ecg, app.ax_review_resp),
         app.ax_review_ecg,
         items,
         getattr(app, "review_event_overlay_artists", []),
@@ -449,7 +423,7 @@ def apply_live_event_overlay_artists(
     if getattr(app, "live_event_overlay_key", None) == key:
         return False
     app.live_event_overlay_artists = _draw_event_overlay(
-        (app.ax_live_ecg, app.ax_live_resp, app.ax_live_status),
+        (app.ax_live_ecg, app.ax_live_resp),
         app.ax_live_ecg,
         items,
         getattr(app, "live_event_overlay_artists", []),
@@ -469,7 +443,6 @@ def flush_pending_review_render(app: Any, *, force: bool = False) -> bool:
         display_settings=pending.display_settings,
         ecg_label=pending.ecg_label,
         resp_label=pending.resp_label,
-        contact_label=pending.contact_label,
         ecg_inverted=pending.ecg_inverted,
         force_visible=force,
     )
@@ -594,6 +567,30 @@ def build_plot_canvas(app: Any, parent: ttk.Frame, fig: Figure, *, name: str) ->
     canvas_widget.configure(**plot_canvas_widget_style())
     canvas_widget.pack(fill=tk.BOTH, expand=True)
     return canvas
+
+
+def build_live_snr_footer(app: Any) -> None:
+    if not hasattr(app, "live_snr_var"):
+        app.live_snr_var = tk.StringVar(value=live_snr_text(None))
+    app.live_snr_footer = tk.Frame(app.live_plot_panel, bg=APP_VISUAL_TOKENS["panel_alt"], padx=12, pady=7)
+    app.live_snr_footer.pack(fill=tk.X, side=tk.BOTTOM, pady=(6, 0))
+    app.live_snr_title = tk.Label(
+        app.live_snr_footer,
+        text="Realtime SNR",
+        bg=APP_VISUAL_TOKENS["panel_alt"],
+        fg=APP_VISUAL_TOKENS["ink"],
+        font=("Aptos", 11, "bold"),
+    )
+    app.live_snr_title.pack(side=tk.LEFT, padx=(0, 12))
+    app.live_snr_value = tk.Label(
+        app.live_snr_footer,
+        textvariable=app.live_snr_var,
+        bg=APP_VISUAL_TOKENS["panel_alt"],
+        fg=APP_VISUAL_TOKENS["muted"],
+        font=("Aptos", 11),
+        anchor="w",
+    )
+    app.live_snr_value.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
 
 def build_log_panel(app: Any) -> None:
@@ -766,13 +763,17 @@ def configure_live_time_axis(axes: tuple[object, ...]) -> None:
     spec = live_axis_spec()
     for ax in axes:
         ax.xaxis.set_major_locator(MultipleLocator(float(spec["x_major_tick_seconds"])))
+        ax.xaxis.set_major_formatter(FuncFormatter(sparse_time_tick_label))
 
 
-def configure_status_axes(axes: tuple[object, ...]) -> None:
-    spec = status_axis_spec()
-    for ax in axes:
-        ax.yaxis.set_major_locator(MultipleLocator(float(spec["y_major_tick_bits"])))
-        ax.set_ylabel(str(spec["ylabel"]))
+def sparse_time_tick_label(value: float, _position: object | None) -> str:
+    interval = float(live_axis_spec()["x_major_tick_seconds"])
+    nearest = round(float(value) / interval) * interval
+    if abs(float(value) - nearest) > max(1e-6, interval * 1e-6):
+        return ""
+    if abs(nearest - round(nearest)) <= 1e-6:
+        return str(int(round(nearest)))
+    return f"{nearest:g}"
 
 
 def configure_initial_ecg_paper_grid(axes: tuple[object, ...]) -> None:
@@ -795,6 +796,7 @@ def apply_ecg_paper_grid(
     cache[axis_id] = cache_key
     ax.xaxis.set_major_locator(MultipleLocator(float(spec["major_x_seconds"])))
     ax.xaxis.set_minor_locator(MultipleLocator(float(spec["minor_x_seconds"])))
+    ax.xaxis.set_major_formatter(FuncFormatter(sparse_time_tick_label))
     _, _, major_y, minor_y = cache_key
     ax.yaxis.set_major_locator(MultipleLocator(major_y))
     ax.yaxis.set_minor_locator(MultipleLocator(minor_y))

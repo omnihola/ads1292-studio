@@ -9,6 +9,7 @@ from typing import TypeVar
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings, display_mode_label
 from ads1292_studio.gui_specs import status_tone_color, status_tone_style
+from ads1292_studio.quality import SignalNoiseEstimate
 
 
 _T = TypeVar("_T")
@@ -314,14 +315,12 @@ def live_axis_titles(
     *,
     ecg_label: str,
     resp_label: str,
-    contact_label: str,
     mode: str,
     inverted: bool,
-) -> tuple[str, str, str]:
+) -> tuple[str, str]:
     return (
         live_ecg_axis_title(ecg_label, mode, inverted=inverted),
         resp_label,
-        contact_label,
     )
 
 
@@ -336,6 +335,18 @@ def live_metrics_text(
     return (
         f"samples {sample_index} | duration {duration_seconds:.1f} s | "
         f"source {ecg_label} | HR {heart_rate_bpm:.0f} bpm | R peaks {peak_count}"
+    )
+
+
+def live_snr_text(estimate: SignalNoiseEstimate | None) -> str:
+    if estimate is None or not estimate.valid:
+        return "Realtime SNR: -- | waiting for ECG window"
+    return (
+        f"Realtime SNR: {estimate.snr_db:.1f} dB | "
+        f"signal RMS {estimate.signal_rms_counts:.1f} ct | "
+        f"noise RMS {estimate.noise_rms_counts:.1f} ct | "
+        f"p2p {estimate.peak_to_peak_counts:.0f} ct | "
+        f"window {estimate.duration_seconds:.1f} s"
     )
 
 

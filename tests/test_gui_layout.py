@@ -1213,11 +1213,10 @@ def test_protocol_note_styles_make_long_protocol_text_readable() -> None:
     }
 
 
-def test_gui_layout_uses_ads1292r_synchronized_three_panel_view() -> None:
+def test_gui_layout_uses_ads1292r_synchronized_two_signal_track_view() -> None:
     assert ads1292r_plot_layout_labels() == (
         "CH2 ECG Lead I (LA-RA)",
         "CH1 Respiration raw",
-        "Lead-off / contact status",
     )
 
 
@@ -1330,7 +1329,7 @@ def test_plot_trace_styles_keep_live_and_review_signals_readable() -> None:
 
 def test_live_axis_spec_keeps_time_grid_stable() -> None:
     assert live_axis_spec() == {
-        "x_major_tick_seconds": 1.0,
+        "x_major_tick_seconds": 2.0,
     }
 
 
@@ -1383,12 +1382,10 @@ def test_empty_plot_messages_guide_the_first_run_workflow() -> None:
     assert messages["live"] == (
         "Connect, then Start for CH2 ECG",
         "CH1 respiration / impedance appears here",
-        "Lead-off contact status appears here",
     )
     assert messages["review"] == (
         "Load CSV for CH2 ECG review",
         "Load CSV for CH1 respiration",
-        "Load CSV for contact status",
     )
     assert messages["pqrst"] == ("Load or record ECG to review averaged PQRST",)
     assert messages["spectrum"] == (
@@ -1563,23 +1560,32 @@ def test_signal_reference_lines_are_limited_to_ecg_and_respiration_axes() -> Non
     assert "app.ax_review_status" not in source.split("add_signal_reference_lines")[2].split(")")[0]
 
 
-def test_status_axis_uses_integer_lead_off_bit_scale() -> None:
-    assert status_axis_spec() == {
-        "y_major_tick_bits": 1.0,
-        "ylabel": "lead-off bits",
+def test_live_axis_uses_two_second_time_ticks() -> None:
+    assert live_axis_spec() == {
+        "x_major_tick_seconds": 2.0,
     }
 
 
-def test_live_and_review_status_axes_are_configured_as_status_tracks() -> None:
-    from ads1292_studio.gui_plots import build_live_plot_panel, build_review_plot_panel, configure_status_axes
+def test_live_and_review_status_axes_are_not_rendered_as_plot_tracks() -> None:
+    from ads1292_studio.gui_plots import build_live_plot_panel, build_review_plot_panel
 
     source = inspect.getsource(build_live_plot_panel) + inspect.getsource(build_review_plot_panel)
-    configure_source = inspect.getsource(configure_status_axes)
 
-    assert "configure_status_axes((app.ax_live_status,))" in source
-    assert "configure_status_axes((app.ax_review_status,))" in source
-    assert "set_ylabel(str(spec[\"ylabel\"]))" in configure_source
-    assert "MultipleLocator(float(spec[\"y_major_tick_bits\"]))" in configure_source
+    assert "ax_live_status" not in source
+    assert "ax_review_status" not in source
+    assert "live_status_line" not in source
+    assert "review_status_line" not in source
+
+
+def test_live_plot_panel_builds_dedicated_realtime_snr_footer() -> None:
+    from ads1292_studio.gui_plots import build_live_plot_panel, build_live_snr_footer
+
+    live_source = inspect.getsource(build_live_plot_panel)
+    footer_source = inspect.getsource(build_live_snr_footer)
+
+    assert "build_live_snr_footer(app)" in live_source
+    assert "Realtime SNR" in footer_source
+    assert "live_snr_var" in footer_source
 
 
 def test_live_and_review_ecg_axes_start_with_ecg_paper_grid() -> None:
@@ -1612,11 +1618,9 @@ def test_live_and_review_runtime_grid_and_calibration_are_plot_helpers() -> None
     assert "apply_review_render_frame(" in inspect.getsource(App._show_review_frame)
     assert "set_axis_xlim_if_changed(app.ax_review_ecg" in review_source
     assert "set_axis_xlim_if_changed(app.ax_review_resp" in review_source
-    assert "set_axis_xlim_if_changed(app.ax_review_status" in review_source
     assert ".set_xlim(0, frame.x_right)" not in review_source
     assert "set_axis_ylim_if_changed(app.ax_review_ecg" in review_source
     assert "set_axis_ylim_if_changed(app.ax_review_resp" in review_source
-    assert "set_axis_ylim_if_changed(app.ax_review_status" in review_source
     assert ".set_ylim(*frame." not in review_source
     assert "apply_ecg_paper_grid(app.ax_live_ecg" in live_source
     assert "apply_ecg_paper_grid(app.ax_review_ecg" in review_source
@@ -1732,6 +1736,13 @@ def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
             "top": 0.990,
             "bottom": 0.052,
             "hspace": 0.18,
+        },
+        "signal_two_panel": {
+            "left": 0.070,
+            "right": 0.970,
+            "top": 0.940,
+            "bottom": 0.115,
+            "hspace": 0.34,
         },
         "single_panel": {
             "left": 0.058,

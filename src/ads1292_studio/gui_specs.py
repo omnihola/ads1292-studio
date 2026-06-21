@@ -282,7 +282,6 @@ ADS1292R_CHANNEL_LABELS = {
 ADS1292R_PLOT_LAYOUT_LABELS = (
     "CH2 ECG Lead I (LA-RA)",
     "CH1 Respiration raw",
-    "Lead-off / contact status",
 )
 STATUS_TONE_STYLES = {
     "ready": "Ready.Status.TLabel",
@@ -368,7 +367,7 @@ STATUS_TONE_COLORS = {
     "neutral": "#A9B4C3",
 }
 LIVE_AXIS_SPEC = {
-    "x_major_tick_seconds": 1.0,
+    "x_major_tick_seconds": 2.0,
 }
 STATUS_AXIS_SPEC = {
     "y_major_tick_bits": 1.0,
@@ -378,12 +377,10 @@ EMPTY_PLOT_MESSAGES = {
     "live": (
         "Connect, then Start for CH2 ECG",
         "CH1 respiration / impedance appears here",
-        "Lead-off contact status appears here",
     ),
     "review": (
         "Load CSV for CH2 ECG review",
         "Load CSV for CH1 respiration",
-        "Load CSV for contact status",
     ),
     "pqrst": ("Load or record ECG to review averaged PQRST",),
     "spectrum": (
@@ -495,6 +492,13 @@ PLOT_FIGURE_LAYOUTS = {
         "top": 0.990,
         "bottom": 0.052,
         "hspace": 0.18,
+    },
+    "signal_two_panel": {
+        "left": 0.070,
+        "right": 0.970,
+        "top": 0.940,
+        "bottom": 0.115,
+        "hspace": 0.34,
     },
     "single_panel": {
         "left": 0.058,
@@ -867,7 +871,7 @@ def ads1292r_secondary_channel_label(ecg_source: str) -> str:
     return "CH1 Respiration raw" if ecg_source.upper() == "CH2" else "CH2 ECG Lead I (LA-RA)"
 
 
-def ads1292r_plot_layout_labels() -> tuple[str, str, str]:
+def ads1292r_plot_layout_labels() -> tuple[str, str]:
     return ADS1292R_PLOT_LAYOUT_LABELS
 
 

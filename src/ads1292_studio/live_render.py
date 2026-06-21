@@ -8,6 +8,7 @@ import numpy as np
 
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
 from ads1292_studio.plots import decimate_extrema_for_plot, decimate_for_plot, smooth_for_plot
+from ads1292_studio.quality import SignalNoiseEstimate, estimate_realtime_snr
 from ads1292_studio.signal_processing import HeartRateSummary, apply_software_filters, detect_r_peaks, heart_rate_summary
 
 
@@ -35,6 +36,7 @@ class LiveRenderFrame:
     plot_status_x: np.ndarray
     plot_status: np.ndarray
     heart_rate: HeartRateSummary
+    snr: SignalNoiseEstimate | None = None
 
 
 def display_signal_values(
@@ -144,4 +146,5 @@ def build_live_render_frame(
         plot_status_x=plot_status_x,
         plot_status=plot_status,
         heart_rate=heart_rate_summary(peaks, sample_rate_hz),
+        snr=estimate_realtime_snr(visible_ecg, sample_rate_hz=sample_rate_hz),
     )

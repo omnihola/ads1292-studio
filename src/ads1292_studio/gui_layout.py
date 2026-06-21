@@ -5,7 +5,7 @@ from tkinter import ttk
 from typing import Any
 
 from ads1292_studio.display import display_gain_labels, display_window_labels, sweep_speed_labels
-from ads1292_studio.gui_state import configure_widget_option_if_changed
+from ads1292_studio.gui_state import configure_widget_option_if_changed, live_snr_text
 from ads1292_studio.gui_specs import (
     ADS1292R_ECG_SOURCE,
     SIGNAL_CARD_LABELS,
@@ -407,6 +407,7 @@ def build_body_shell(app: Any) -> tuple[dict[str, ttk.Frame], ttk.Frame]:
 
 def initialize_sidebar_state(app: Any, *, protocol_steps_text: str) -> None:
     app.metrics_var = tk.StringVar(value="No session")
+    app.live_snr_var = tk.StringVar(value=live_snr_text(None))
     app.quality_var = tk.StringVar(value="Quality: --")
     app.path_var = tk.StringVar(value="CSV: --")
     app.acquisition_var = tk.StringVar(value="Acquisition: no CSV loaded")

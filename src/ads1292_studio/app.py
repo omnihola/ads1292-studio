@@ -338,7 +338,7 @@ class App(tk.Tk):
         self.last_control_state: GuiState | None = None
         self.last_display_refresh_key: tuple[object, ...] | None = None
         self.last_live_render_key: tuple[object, ...] | None = None
-        self.last_live_axis_titles: tuple[str, str, str] | None = None
+        self.last_live_axis_titles: tuple[str, str] | None = None
 
         self._build_ui()
         self.refresh_ports()
@@ -1825,7 +1825,7 @@ class App(tk.Tk):
             return
 
         self.last_live_render_key = render_key
-        self._clear_empty_plot_state((self.ax_live_ecg, self.ax_live_resp, self.ax_live_status))
+        self._clear_empty_plot_state((self.ax_live_ecg, self.ax_live_resp))
         apply_live_render_frame(
             self,
             frame,
@@ -1834,14 +1834,13 @@ class App(tk.Tk):
             min_ecg_span_counts=DISPLAY_MIN_ECG_SPAN_COUNTS,
             min_resp_span_counts=DISPLAY_MIN_RESP_SPAN_COUNTS,
         )
-        ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
+        ecg_label, resp_label = ads1292r_plot_layout_labels()
         apply_live_axis_titles(
             self,
             display_settings,
             filter_settings,
             ecg_label=ecg_label,
             resp_label=resp_label,
-            contact_label=contact_label,
             ecg_inverted=DEFAULT_ECG_INVERTED,
         )
         apply_live_metrics_text(
@@ -1873,7 +1872,6 @@ class App(tk.Tk):
             (
                 self.ax_review_ecg,
                 self.ax_review_resp,
-                self.ax_review_status,
                 self.ax_pqrst,
                 self.ax_spectrum_fft,
                 self.ax_spectrum_hist,
@@ -1882,14 +1880,13 @@ class App(tk.Tk):
         self._clear_signal_buffers()
         self.sample_index = 0
         display_settings = self._display_settings()
-        ecg_label, resp_label, contact_label = ads1292r_plot_layout_labels()
+        ecg_label, resp_label = ads1292r_plot_layout_labels()
         apply_review_render_frame(
             self,
             frame,
             display_settings=display_settings,
             ecg_label=ecg_label,
             resp_label=resp_label,
-            contact_label=contact_label,
             ecg_inverted=DEFAULT_ECG_INVERTED,
         )
         overlay_markers = tuple(self.event_markers)

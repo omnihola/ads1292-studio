@@ -9,6 +9,17 @@ from ads1292_studio.signal_processing import review_channels
 
 
 @dataclass(frozen=True)
+class SignalNoiseEstimate:
+    snr_db: float
+    signal_rms_counts: float
+    noise_rms_counts: float
+    peak_to_peak_counts: float
+    sample_count: int
+    duration_seconds: float
+    valid: bool
+
+
+@dataclass(frozen=True)
 class QualityMetrics:
     sample_count: int
     duration_seconds: float
@@ -74,6 +85,26 @@ def compute_quality_metrics(
         noise_rms_counts=noise_rms,
         peak_to_peak_counts=peak_to_peak,
     )
+
+
+def estimate_realtime_snr(values: np.ndarray, *, sample_rate_hz: float = 500.0) -> SignalNoiseEstimate:
+    finite_values = np.asarray(values, dtype=float)
+    finite_values = finite_values[np.isfinite(finite_values)]
+    if finite_values.size < 3:
+        return SignalNoiseEstimate(0.0, 0.0, 0.0, 0.0, int(finite_values.size), 0.0, False)
+
+    centered = finite_values - float(np.median(finite_values))
+    signal_rms = float(np.sqrt(np.mean(centered * centered)))
+    # First-difference RMS is sqrt(2) larger than sample noise for white noise.
+    noise_rms = float(_noise_rms(finite_values) / np.sqrt(2.0))
+    peak_to_peak = float(np.percentile(finite_values, 95.0) - np.percentile(finite_values, 5.0))
+    duration = (finite_values.size - 1) / sample_rate_hz if sample_rate_hz > 0 else 0.0
+    if signal_rms <= 1e-12:
+        return SignalNoiseEstimate(0.0, signal_rms, noise_rms, peak_to_peak, int(finite_values.size), float(duration), False)
+    if noise_rms <= 1e-12:
+        return SignalNoiseEstimate(80.0, signal_rms, noise_rms, peak_to_peak, int(finite_values.size), float(duration), True)
+    snr_db = float(20.0 * np.log10(signal_rms / noise_rms))
+    return SignalNoiseEstimate(snr_db, signal_rms, noise_rms, peak_to_peak, int(finite_values.size), float(duration), True)
 
 
 def _baseline_drift(values: np.ndarray, sample_rate_hz: float) -> float:
