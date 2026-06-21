@@ -86,6 +86,10 @@ beside the raw recordings with `cp -n`, so existing sidecars are not overwritten
   true absolute time and scroll with the rolling window; in Review, annotations
   added or removed update the waveform immediately. Both views and the exported
   report share the same overlay geometry.
+- The event log numbers each annotation with a 1-based `#`, and a Remove Event #
+  action deletes a specific annotation by that number (not only the most recent
+  one), so a mis-placed annotation in the middle of a session can be corrected
+  without removing the ones after it.
 - ADC calibration config for Vref, PGA gain, and bit depth; GUI plots and
   reports can display ECG in microvolts while raw CSV counts remain preserved.
 - Session package export with raw CSV, sidecars, report files, and SHA256

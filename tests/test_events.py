@@ -207,13 +207,40 @@ def test_format_event_log_text_lists_point_and_interval_rows() -> None:
     )
 
     assert (
-        "ID\tStart (s)\tEnd (s)\tDuration (s)\tStart sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
+        "#\tID\tStart (s)\tEnd (s)\tDuration (s)\tStart sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
         in text
     )
-    assert "evt-0001000-0001000-baseline-" in text
+    assert "1\tevt-0001000-0001000-baseline-" in text
     assert "2.00\t2.00\t0.00\t1000\t1000\t0\tpoint\tbaseline\tquiet" in text
-    assert "evt-0006250-0009000-motion-" in text
+    assert "2\tevt-0006250-0009000-motion-" in text
     assert "12.50\t18.00\t5.50\t6250\t9000\t2750\tinterval\tmotion\tarm motion" in text
+
+
+def test_remove_event_at_index_removes_the_one_based_position() -> None:
+    from ads1292_studio.events import remove_event_at_index
+
+    events = (
+        EventMarker(2.0, label="baseline"),
+        EventMarker(12.5, duration_seconds=5.5, label="motion"),
+        EventMarker(40.0, label="touch"),
+    )
+
+    remaining, removed = remove_event_at_index(events, 2)
+
+    assert [marker.label for marker in remaining] == ["baseline", "touch"]
+    assert removed is not None
+    assert removed.label == "motion"
+
+
+def test_remove_event_at_index_out_of_range_returns_unchanged() -> None:
+    from ads1292_studio.events import remove_event_at_index
+
+    events = (EventMarker(2.0, label="baseline"),)
+
+    for bad_index in (0, 2, -1):
+        remaining, removed = remove_event_at_index(events, bad_index)
+        assert [marker.label for marker in remaining] == ["baseline"]
+        assert removed is None
 
 
 def test_format_event_log_text_uses_requested_sample_rate_for_sample_indices() -> None:
@@ -226,7 +253,7 @@ def test_format_event_log_text_uses_requested_sample_rate_for_sample_indices() -
         sample_rate_hz=250.0,
     )
 
-    assert "evt-0000250-0000750-challenge-" in text
+    assert "1\tevt-0000250-0000750-challenge-" in text
     assert "1.00\t3.00\t2.00\t250\t750\t500\tinterval\tchallenge\tpaced breathing" in text
 
 

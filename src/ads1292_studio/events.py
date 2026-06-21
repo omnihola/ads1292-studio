@@ -133,15 +133,16 @@ def format_event_log_text(
     if not normalized:
         return "No event annotations.\n"
     rows = [
-        "ID\tStart (s)\tEnd (s)\tDuration (s)\t"
+        "#\tID\tStart (s)\tEnd (s)\tDuration (s)\t"
         "Start sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
     ]
     sample_rate = _normalized_sample_rate(sample_rate_hz)
-    for event in normalized:
+    for position, event in enumerate(normalized, start=1):
         sample_indices = event_sample_indices(event, sample_rate)
         rows.append(
             "\t".join(
                 (
+                    str(position),
                     event_id(event, sample_rate_hz=sample_rate),
                     f"{event.timestamp_seconds:.2f}",
                     f"{event.end_seconds:.2f}",
@@ -245,6 +246,23 @@ def event_from_interval(
         label=label,
         notes=notes,
     ).normalized()
+
+
+def remove_event_at_index(
+    events: Iterable[EventMarker],
+    index_1based: int,
+) -> tuple[tuple[EventMarker, ...], EventMarker | None]:
+    """Remove the annotation at a 1-based position (as shown in the event log).
+
+    Returns the remaining events plus the removed marker, or the unchanged events
+    and ``None`` when the index is out of range.
+    """
+    normalized = tuple(event.normalized() for event in events)
+    if index_1based < 1 or index_1based > len(normalized):
+        return normalized, None
+    removed = normalized[index_1based - 1]
+    remaining = normalized[: index_1based - 1] + normalized[index_1based:]
+    return remaining, removed
 
 
 def event_template() -> tuple[EventMarker, ...]:

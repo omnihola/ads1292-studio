@@ -44,6 +44,7 @@ def _fake_app(*, current_time: float) -> SimpleNamespace:
         _save_event_sidecar=lambda: calls.append("save"),
         _refresh_review_event_overlay=lambda: calls.append("overlay"),
         _refresh_live_event_overlay=lambda: calls.append("live-overlay"),
+        remove_event_index_var=_Var(""),
         _log=lambda message: calls.append(message),
         calls=calls,
     )
@@ -127,6 +128,37 @@ def test_remove_last_event_updates_sidecar_and_log() -> None:
     assert any("Removed event 12.50-18.00s motion" in call for call in app.calls)
 
 
+def test_remove_event_by_number_removes_specified_event() -> None:
+    app = _fake_app(current_time=18.0)
+    app.remove_event_index_var = _Var("2")
+    app.event_markers = [
+        EventMarker(2.0, label="baseline", notes="quiet"),
+        EventMarker(12.5, duration_seconds=5.5, label="motion", notes="arm motion"),
+        EventMarker(40.0, label="touch", notes="electrode"),
+    ]
+
+    App.remove_event_by_number(app)
+
+    assert [marker.label for marker in app.event_markers] == ["baseline", "touch"]
+    assert app.remove_event_index_var.get() == ""
+    assert "count" in app.calls
+    assert "save" in app.calls
+    assert "overlay" in app.calls
+    assert "live-overlay" in app.calls
+    assert any("Removed event #2" in call for call in app.calls)
+
+
+def test_remove_event_by_number_ignores_out_of_range_without_mutating() -> None:
+    app = _fake_app(current_time=18.0)
+    app.remove_event_index_var = _Var("9")
+    app.event_markers = [EventMarker(2.0, label="baseline", notes="quiet")]
+
+    App.remove_event_by_number(app)
+
+    assert [marker.label for marker in app.event_markers] == ["baseline"]
+    assert "save" not in app.calls
+
+
 def test_set_event_count_shows_latest_event_details() -> None:
     app = SimpleNamespace(
         event_count_var=_Var(),
@@ -155,7 +187,7 @@ def test_refresh_event_log_replaces_text_widget_contents() -> None:
 
     assert text.calls[0][0] == "delete"
     assert (
-        "ID\tStart (s)\tEnd (s)\tDuration (s)\tStart sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
+        "#\tID\tStart (s)\tEnd (s)\tDuration (s)\tStart sample\tEnd sample\tDuration samples\tType\tLabel\tNotes"
         in text.content
     )
     assert "evt-0006250-0009000-motion-" in text.content

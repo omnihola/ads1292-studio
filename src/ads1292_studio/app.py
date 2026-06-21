@@ -50,6 +50,7 @@ from ads1292_studio.events import (
     format_event_log_text,
     read_events_csv,
     read_events_json,
+    remove_event_at_index,
     write_events_csv,
     write_events_json,
 )
@@ -837,6 +838,31 @@ class App(tk.Tk):
         self._refresh_live_event_overlay()
         self._log(
             f"Removed event {removed.timestamp_seconds:.2f}-{removed.end_seconds:.2f}s "
+            f"{removed.label} {removed.notes}".strip()
+        )
+
+    def remove_event_by_number(self) -> None:
+        raw = self.remove_event_index_var.get().strip()
+        if not raw:
+            messagebox.showerror("No event number", "Enter the event number to remove (see the # column in the event log).")
+            return
+        try:
+            index = int(raw)
+        except ValueError:
+            messagebox.showerror("Invalid event number", "The event number must be a whole number.")
+            return
+        remaining, removed = remove_event_at_index(tuple(self.event_markers), index)
+        if removed is None:
+            self._log(f"No event #{index} to remove; there are {len(self.event_markers)} events")
+            return
+        self.event_markers = list(remaining)
+        self.remove_event_index_var.set("")
+        self._set_event_count()
+        self._save_event_sidecar()
+        self._refresh_review_event_overlay()
+        self._refresh_live_event_overlay()
+        self._log(
+            f"Removed event #{index} {removed.timestamp_seconds:.2f}-{removed.end_seconds:.2f}s "
             f"{removed.label} {removed.notes}".strip()
         )
 
