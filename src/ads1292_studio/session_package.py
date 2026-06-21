@@ -78,6 +78,7 @@ def export_session_package(
         ("acquisition", source_csv.with_suffix(".acquisition.json")),
         ("protocol", source_csv.with_suffix(".protocol.json")),
         ("quality_gate", source_csv.with_suffix(".quality-gate.json")),
+        ("recording_manifest", source_csv.with_suffix(".manifest.json")),
     )
     for role, sidecar in sidecars:
         if not sidecar.exists():

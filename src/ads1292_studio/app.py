@@ -237,6 +237,7 @@ from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.plot_theme import APP_VISUAL_TOKENS
 from ads1292_studio.protocol import TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, read_quality_gate_json, write_quality_gate_json
+from ads1292_studio.recording_manifest import write_recording_manifest
 from ads1292_studio.recording_paths import recording_csv_path
 from ads1292_studio.report import export_review_report
 from ads1292_studio.review_render import ReviewRenderFrame, build_review_render_frame
@@ -1190,9 +1191,11 @@ class App(tk.Tk):
                 last_timestamp_seconds=last_timestamp,
             )
             write_acquisition_json(acquisition_path, provenance)
+            manifest_path = write_recording_manifest(self.recording_path, created_at=finalized)
             self.acquisition_var.set(format_acquisition_summary(provenance))
             self.recording_finalization_pending = False
             self._log(f"Recording finalized: {sample_count} samples, span {last_timestamp - first_timestamp:.6g}s")
+            self._log(f"Recording manifest written: {manifest_path}")
         except Exception as exc:
             self._log(f"Recording finalization failed: {exc}")
 

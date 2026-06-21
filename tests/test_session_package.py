@@ -14,6 +14,7 @@ from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
+from ads1292_studio.recording_manifest import write_recording_manifest
 from ads1292_studio.session_package import export_session_package, verify_session_package
 
 
@@ -75,6 +76,7 @@ def _write_session_files(path: Path) -> None:
             last_timestamp_seconds=1.198,
         ),
     )
+    write_recording_manifest(path, created_at="2026-06-21T12:00:04")
 
 
 def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Path) -> None:
@@ -109,10 +111,15 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
         "acquisition",
         "protocol",
         "quality_gate",
+        "recording_manifest",
         "report_html",
         "report_ecg_png",
         "report_pqrst_png",
     } <= roles
+    recording_manifest = next(file_info for file_info in manifest["files"] if file_info["role"] == "recording_manifest")
+    copied_recording_manifest = export.package_dir / recording_manifest["path"]
+    assert copied_recording_manifest.exists()
+    assert recording_manifest["sha256"] == hashlib.sha256(copied_recording_manifest.read_bytes()).hexdigest()
     assert manifest["metrics"]["ecg_source"] == "CH2"
     assert "baseline_drift_counts" in manifest["metrics"]
     assert "noise_rms_counts" in manifest["metrics"]

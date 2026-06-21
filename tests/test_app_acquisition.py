@@ -1,4 +1,5 @@
 import inspect
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -63,6 +64,10 @@ def test_finalize_recording_sidecars_uses_csv_sample_span(tmp_path: Path) -> Non
     assert loaded.completion["first_timestamp_seconds"] == 0.0
     assert loaded.completion["last_timestamp_seconds"] == 0.008
     assert loaded.completion["sample_span_seconds"] == 0.008
+    manifest = json.loads(csv_path.with_suffix(".manifest.json").read_text())
+    assert manifest["source_csv"] == "recording.csv"
+    assert manifest["recording"]["sample_count"] == 5
+    assert manifest["acquisition"]["completion_audit"] == "pass"
     assert any(kind == "sidecars" for kind, _ in logs)
     assert any("finalized" in message for kind, message in logs if kind == "summary")
 
