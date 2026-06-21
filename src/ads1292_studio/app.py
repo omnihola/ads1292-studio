@@ -45,6 +45,7 @@ from ads1292_studio.display import (
 from ads1292_studio.events import (
     EventMarker,
     event_from_interval,
+    format_event_log_text,
     read_events_csv,
     read_events_json,
     write_events_csv,
@@ -344,6 +345,7 @@ class App(tk.Tk):
         build_pqrst_plot_panel(self)
         build_spectrum_plot_panel(self)
         build_log_panel(self)
+        self._refresh_event_log()
         register_control_buttons(self)
         self._apply_control_states()
 
@@ -1054,6 +1056,14 @@ class App(tk.Tk):
 
     def _set_event_count(self) -> None:
         self.event_count_var.set(_event_count_summary(self.event_markers))
+        if hasattr(self, "_refresh_event_log"):
+            self._refresh_event_log()
+
+    def _refresh_event_log(self) -> None:
+        if not hasattr(self, "event_log_text"):
+            return
+        self.event_log_text.delete("1.0", tk.END)
+        self.event_log_text.insert(tk.END, format_event_log_text(self.event_markers))
 
     def _calibration(self) -> Calibration:
         return _calibration_from_values(

@@ -90,6 +90,27 @@ def read_events_csv(path: Path | str) -> tuple[EventMarker, ...]:
         )
 
 
+def format_event_log_text(events: Iterable[EventMarker]) -> str:
+    normalized = tuple(event.normalized() for event in events)
+    if not normalized:
+        return "No event annotations.\n"
+    rows = ["Start (s)\tEnd (s)\tDuration (s)\tType\tLabel\tNotes"]
+    rows.extend(
+        "\t".join(
+            (
+                f"{event.timestamp_seconds:.2f}",
+                f"{event.end_seconds:.2f}",
+                f"{event.duration_seconds:.2f}",
+                _event_type(event),
+                event.label,
+                event.notes,
+            )
+        )
+        for event in normalized
+    )
+    return "\n".join(rows) + "\n"
+
+
 def _event_type(event: EventMarker) -> str:
     return "interval" if event.normalized().duration_seconds > 0 else "point"
 

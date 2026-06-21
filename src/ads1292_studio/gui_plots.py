@@ -495,8 +495,39 @@ def build_log_panel(app: Any) -> None:
     app.log_shell = shell
     app.log_panel = panel
     scrollbar_spec = scrollbar_chrome_spec()
+    ttk.Label(panel, text="Event annotations", style="SectionHeading.TLabel").pack(anchor=tk.W)
+    event_frame = ttk.Frame(panel, style=str(spec["panel"]))
+    event_frame.pack(fill=tk.BOTH, expand=False, pady=(4, 10))
+    app.event_log_scrollbar = ttk.Scrollbar(
+        event_frame,
+        orient=str(spec["scrollbar"]),
+        style=str(scrollbar_spec["vertical"]),
+    )
     app.log_scrollbar = ttk.Scrollbar(panel, orient=str(spec["scrollbar"]), style=str(scrollbar_spec["vertical"]))
     text_padding = spec["text_padding"]
+    app.event_log_text = tk.Text(
+        event_frame,
+        height=8,
+        bg=str(spec["background"]),
+        fg=str(spec["foreground"]),
+        insertbackground=str(spec["insert"]),
+        selectbackground=str(spec["select_background"]),
+        selectforeground=str(spec["select_foreground"]),
+        borderwidth=int(spec["borderwidth"]),
+        highlightthickness=int(spec["highlightthickness"]),
+        relief=str(spec["relief"]),
+        padx=text_padding[0],
+        pady=text_padding[1],
+        spacing1=spec["spacing"][0],
+        spacing3=spec["spacing"][1],
+        wrap=str(spec["wrap"]),
+        font=spec["font"],
+        yscrollcommand=app.event_log_scrollbar.set,
+    )
+    app.event_log_scrollbar.configure(command=app.event_log_text.yview)
+    app.event_log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    app.event_log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    ttk.Label(panel, text="Runtime log", style="SectionHeading.TLabel").pack(anchor=tk.W)
     app.log_text = tk.Text(
         panel,
         height=int(spec["height"]),

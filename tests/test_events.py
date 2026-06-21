@@ -144,6 +144,21 @@ def test_events_csv_reader_accepts_start_end_seconds_without_duration(tmp_path: 
     )
 
 
+def test_format_event_log_text_lists_point_and_interval_rows() -> None:
+    from ads1292_studio.events import format_event_log_text
+
+    text = format_event_log_text(
+        (
+            EventMarker(2.0, label="baseline", notes="quiet"),
+            EventMarker(12.5, duration_seconds=5.5, label="motion", notes="arm motion"),
+        )
+    )
+
+    assert "Start (s)\tEnd (s)\tDuration (s)\tType\tLabel\tNotes" in text
+    assert "2.00\t2.00\t0.00\tpoint\tbaseline\tquiet" in text
+    assert "12.50\t18.00\t5.50\tinterval\tmotion\tarm motion" in text
+
+
 def test_event_marker_normalizes_negative_duration_to_point_event() -> None:
     marker = EventMarker(timestamp_seconds=2.0, duration_seconds=-1.0).normalized()
 

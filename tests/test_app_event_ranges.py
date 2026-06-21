@@ -17,6 +17,20 @@ class _Var:
         self.value = value
 
 
+class _Text:
+    def __init__(self) -> None:
+        self.content = ""
+        self.calls: list[tuple[str, str, str | None]] = []
+
+    def delete(self, start: str, end: str) -> None:
+        self.calls.append(("delete", start, end))
+        self.content = ""
+
+    def insert(self, index: str, text: str) -> None:
+        self.calls.append(("insert", index, None))
+        self.content += text
+
+
 def _fake_app(*, current_time: float) -> SimpleNamespace:
     calls: list[str] = []
     return SimpleNamespace(
@@ -73,3 +87,20 @@ def test_set_event_count_shows_latest_event_details() -> None:
     App._set_event_count(app)
 
     assert app.event_count_var.get() == "2 events\nLast: 12.50-18.00 s motion - arm motion"
+
+
+def test_refresh_event_log_replaces_text_widget_contents() -> None:
+    text = _Text()
+    app = SimpleNamespace(
+        event_log_text=text,
+        event_markers=[
+            EventMarker(2.0, label="baseline", notes="quiet"),
+            EventMarker(12.5, duration_seconds=5.5, label="motion", notes="arm motion"),
+        ],
+    )
+
+    App._refresh_event_log(app)
+
+    assert text.calls[0][0] == "delete"
+    assert "Start (s)\tEnd (s)\tDuration (s)\tType\tLabel\tNotes" in text.content
+    assert "12.50\t18.00\t5.50\tinterval\tmotion\tarm motion" in text.content
