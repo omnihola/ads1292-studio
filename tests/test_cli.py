@@ -1,11 +1,15 @@
 from pathlib import Path
 
+from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
 from ads1292_studio import cli
 from ads1292_studio.calibration import Calibration, read_calibration_json, write_calibration_json
 from ads1292_studio.cli import main
 from ads1292_studio.csv_io import write_recording_csv
+from ads1292_studio.events import EventMarker, write_events_json
+from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, read_protocol_json, write_protocol_json
+from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
 
 
 def _write_small_csv(path: Path) -> None:
@@ -21,6 +25,33 @@ def _write_small_csv(path: Path) -> None:
         for index in range(500)
     )
     write_recording_csv(path, samples)
+
+
+def _write_complete_sidecars(path: Path) -> None:
+    calibration = Calibration(label="cli-bench-cal")
+    write_metadata_json(path.with_suffix(".json"), SessionMetadata(session_id=path.stem, electrode="MOTAC gel"))
+    write_events_json(path.with_suffix(".events.json"), (EventMarker(0.5, "baseline", "quiet"),))
+    write_calibration_json(path.with_suffix(".calibration.json"), calibration)
+    write_acquisition_json(
+        path.with_suffix(".acquisition.json"),
+        build_acquisition_provenance(
+            csv_path=path,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem-test",
+            sample_rate_hz=500.0,
+            calibration=calibration,
+            live_calibration=None,
+            started_at="2026-06-21T00:00:00",
+        ),
+    )
+    write_protocol_json(
+        path.with_suffix(".protocol.json"),
+        TestProtocol(
+            name="CLI protocol",
+            steps=(ProtocolStep(start_seconds=0.0, duration_seconds=1.0, label="baseline", instruction="Sit still."),),
+        ),
+    )
+    write_quality_gate_json(path.with_suffix(".quality-gate.json"), QualityGate(min_duration_seconds=0.5))
 
 
 def test_cli_writes_calibration_template(tmp_path: Path) -> None:
@@ -109,6 +140,7 @@ def test_cli_verify_package_returns_success(tmp_path: Path) -> None:
     csv_path = tmp_path / "recording.csv"
     out_dir = tmp_path / "packages"
     _write_small_csv(csv_path)
+    _write_complete_sidecars(csv_path)
     assert main(["package", str(csv_path), "--out", str(out_dir), "--title", "CLI Package"]) == 0
     manifest_path = next(out_dir.glob("*/manifest.json"))
 

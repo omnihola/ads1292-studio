@@ -22,6 +22,16 @@ from ads1292_studio.quality_gate import quality_gate_template, read_quality_gate
 from ads1292_studio.report import export_review_report
 
 
+REQUIRED_SIDECAR_ROLES = (
+    "metadata",
+    "events",
+    "calibration",
+    "acquisition",
+    "protocol",
+    "quality_gate",
+)
+
+
 @dataclass(frozen=True)
 class SessionPackageExport:
     package_dir: Path
@@ -122,6 +132,7 @@ def export_session_package(
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "source_csv": str(source_csv),
         "title": title,
+        "sidecar_completeness": _sidecar_completeness(files),
         "metrics": {
             "quality": report.metrics.quality_label,
             "ecg_source": report.metrics.ecg_source,
@@ -176,6 +187,9 @@ def verify_session_package(manifest_path: Path | str) -> PackageVerification:
         actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
         if expected_sha != actual_sha:
             failures.append(f"{role}: sha256 mismatch for {relative}")
+    missing_roles = tuple(data.get("sidecar_completeness", {}).get("missing_roles", ()))
+    if missing_roles:
+        failures.append(f"required sidecars missing: {', '.join(missing_roles)}")
     return PackageVerification(manifest_path=manifest, ok=not failures, checked_files=checked, failures=tuple(failures))
 
 
@@ -235,6 +249,17 @@ def _event_annotation_entry(event) -> dict:
         "duration_seconds": round(normalized.duration_seconds, 6),
         "label": normalized.label,
         "notes": normalized.notes,
+    }
+
+
+def _sidecar_completeness(files: list[dict]) -> dict:
+    present = {str(item.get("role", "")) for item in files}
+    missing = tuple(role for role in REQUIRED_SIDECAR_ROLES if role not in present)
+    return {
+        "required_roles": list(REQUIRED_SIDECAR_ROLES),
+        "present_roles": [role for role in REQUIRED_SIDECAR_ROLES if role in present],
+        "missing_roles": list(missing),
+        "complete": not missing,
     }
 
 

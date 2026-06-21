@@ -76,6 +76,17 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert export.manifest_path.exists()
     assert export.report_html_path.exists()
     manifest = json.loads(export.manifest_path.read_text())
+    sidecar_completeness = manifest["sidecar_completeness"]
+    assert sidecar_completeness["complete"] is True
+    assert sidecar_completeness["missing_roles"] == []
+    assert sidecar_completeness["required_roles"] == [
+        "metadata",
+        "events",
+        "calibration",
+        "acquisition",
+        "protocol",
+        "quality_gate",
+    ]
     roles = {file_info["role"] for file_info in manifest["files"]}
     assert {
         "raw_csv",
@@ -219,3 +230,21 @@ def test_verify_session_package_fails_after_file_tamper(tmp_path: Path) -> None:
 
     assert result.ok is False
     assert any("sha256 mismatch" in failure for failure in result.failures)
+
+
+def test_verify_session_package_fails_when_required_sidecar_was_missing(tmp_path: Path) -> None:
+    csv_path = tmp_path / "pkg-001.csv"
+    _write_session_files(csv_path)
+    csv_path.with_suffix(".acquisition.json").unlink()
+    export = export_session_package(csv_path=csv_path, out_dir=tmp_path / "packages", title="Package Test")
+
+    manifest = json.loads(export.manifest_path.read_text())
+    sidecar_completeness = manifest["sidecar_completeness"]
+    assert sidecar_completeness["complete"] is False
+    assert sidecar_completeness["missing_roles"] == ["acquisition"]
+    assert "acquisition" not in sidecar_completeness["present_roles"]
+
+    result = verify_session_package(export.manifest_path)
+
+    assert result.ok is False
+    assert "required sidecars missing: acquisition" in result.failures
