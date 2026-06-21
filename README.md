@@ -10,7 +10,7 @@ material comparison, waveform-quality review, and experiment documentation.
 
 ## Quick Start
 
-From this folder:
+From this folder (launches the modern PySide6 GUI):
 
 ```bash
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio
@@ -21,6 +21,10 @@ or:
 ```bash
 ./run_gui_sensor.sh
 ```
+
+The default GUI is now the PySide6 (Qt) app (`ads1292-studio` / `ads1292-studio-qt`).
+The legacy Tk app is still available as `ads1292-studio-tk` or
+`python -m ads1292_studio.app`.
 
 The GUI workflow is intentionally manual:
 

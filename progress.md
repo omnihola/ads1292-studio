@@ -804,6 +804,9 @@
 - Files modified: `src/ads1292_studio/ui_qt/{controller,main_window,status_panel,sidebar_forms}.py`, `tests/test_ui_qt_smoke.py`, planning files.
 - Still to do in 44.2: PQRST / Spectrum / Event Log tabs; backport reliable finalization to the Tk app (optional); real-hardware smoke.
 
+### Phase 44 default-app swap: Qt is now the main app
+- **Status:** done. `python -m ads1292_studio` and the `ads1292-studio` console script now launch the PySide6 (Qt) app (`__main__.py` -> `app_qt.main`). The legacy Tk app is demoted to `ads1292-studio-tk` (and `python -m ads1292_studio.app`). PySide6 moved from an optional `[qt]` extra to a core dependency. `run_gui_sensor.sh` is unchanged (it calls `python -m ads1292_studio`, which now opens Qt). README Quick Start updated. Full suite 537 passed.
+
 ### Phase 44.3 (complete): events + archive actions + Calibrate Live + Validation/Protocol forms
 - **Status:** complete. Validation tab edits QualityGate thresholds (duration/contact/R-peaks/HR bounds/require-QRS + optional artifact limits); Protocol tab edits name/objective/operator-instructions/acceptance-notes with template steps shown. Both flow via `controller.start(quality_gate=, protocol=)` into the recording bundle. Added `test_sidebar_forms_build_quality_gate_and_protocol`. 537 tests pass. Qt app is now feature-equivalent to the Tk app. Remaining: 44.4 polish (dark mode, shortcuts) + open PR.
 - Archive actions wired to the existing core exporters (output under `~/Documents/ECG/{reports,packages,batch,session-index}`): Export Report (`export_review_report`), Export Package (`export_session_package`), Verify Package (`verify_session_package`, file dialog), Batch Compare (`export_batch_summary`, multi-file dialog), Session Index (`export_session_index` + `build_session_index_message`, folder dialog). Each shows a result/error dialog.
