@@ -287,15 +287,15 @@ def _status_for_quality(quality_label: str) -> str:
 
 
 def _sidecar_status(csv_path: Path) -> tuple[str, str]:
-    expected = {
-        "metadata": csv_path.with_suffix(".json"),
-        "events": csv_path.with_suffix(".events.json"),
-        "calibration": csv_path.with_suffix(".calibration.json"),
-        "acquisition": csv_path.with_suffix(".acquisition.json"),
-        "protocol": csv_path.with_suffix(".protocol.json"),
-        "quality_gate": csv_path.with_suffix(".quality-gate.json"),
-    }
-    missing = tuple(name for name, path in expected.items() if not path.exists())
+    expected = (
+        ("metadata", (csv_path.with_suffix(".json"),)),
+        ("events", (csv_path.with_suffix(".events.json"), csv_path.with_suffix(".events.csv"))),
+        ("calibration", (csv_path.with_suffix(".calibration.json"),)),
+        ("acquisition", (csv_path.with_suffix(".acquisition.json"),)),
+        ("protocol", (csv_path.with_suffix(".protocol.json"),)),
+        ("quality_gate", (csv_path.with_suffix(".quality-gate.json"),)),
+    )
+    missing = tuple(name for name, paths in expected if not any(path.exists() for path in paths))
     return ("complete", "") if not missing else ("missing", ";".join(missing))
 
 

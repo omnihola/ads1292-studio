@@ -24,7 +24,7 @@ from ads1292_studio.report import export_review_report
 
 REQUIRED_SIDECAR_ROLES = (
     "metadata",
-    "events",
+    "event_annotations",
     "calibration",
     "acquisition",
     "protocol",
@@ -254,13 +254,20 @@ def _event_annotation_entry(event) -> dict:
 
 def _sidecar_completeness(files: list[dict]) -> dict:
     present = {str(item.get("role", "")) for item in files}
-    missing = tuple(role for role in REQUIRED_SIDECAR_ROLES if role not in present)
+    present_required = tuple(role for role in REQUIRED_SIDECAR_ROLES if _required_role_present(role, present))
+    missing = tuple(role for role in REQUIRED_SIDECAR_ROLES if role not in present_required)
     return {
         "required_roles": list(REQUIRED_SIDECAR_ROLES),
-        "present_roles": [role for role in REQUIRED_SIDECAR_ROLES if role in present],
+        "present_roles": list(present_required),
         "missing_roles": list(missing),
         "complete": not missing,
     }
+
+
+def _required_role_present(role: str, present_file_roles: set[str]) -> bool:
+    if role == "event_annotations":
+        return bool({"events", "events_csv"} & present_file_roles)
+    return role in present_file_roles
 
 
 def _acquisition_summary(provenance: AcquisitionProvenance | None) -> dict:

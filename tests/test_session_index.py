@@ -198,9 +198,32 @@ def test_scan_recording_directory_uses_events_csv_when_json_is_missing(tmp_path:
         EventMarker(timestamp_seconds=1.0, duration_seconds=2.5, label="deep breath", notes="inhale"),
     )
     write_events_csv(marked.with_suffix(".events.csv"), events)
+    write_calibration_json(marked.with_suffix(".calibration.json"), Calibration(label="bench-cal"))
+    write_acquisition_json(
+        marked.with_suffix(".acquisition.json"),
+        build_acquisition_provenance(
+            csv_path=marked,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem-test",
+            sample_rate_hz=500.0,
+            calibration=Calibration(label="bench-cal"),
+            live_calibration=None,
+            started_at="2026-06-21T00:00:00",
+        ),
+    )
+    write_protocol_json(
+        marked.with_suffix(".protocol.json"),
+        TestProtocol(
+            name="session-index-protocol",
+            steps=(ProtocolStep(start_seconds=0.0, duration_seconds=1.0, label="baseline", instruction="sit still"),),
+        ),
+    )
+    write_quality_gate_json(marked.with_suffix(".quality-gate.json"), QualityGate(min_duration_seconds=1.0))
 
     rows = {row.session_id: row for row in scan_recording_directory(tmp_path)}
 
+    assert rows["marked-csv"].sidecar_status == "complete"
+    assert rows["marked-csv"].missing_sidecars == ""
     assert rows["marked-csv"].event_count == 1
     assert rows["marked-csv"].interval_event_count == 1
     assert rows["marked-csv"].total_annotated_seconds == 2.5

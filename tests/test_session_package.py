@@ -81,7 +81,7 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert sidecar_completeness["missing_roles"] == []
     assert sidecar_completeness["required_roles"] == [
         "metadata",
-        "events",
+        "event_annotations",
         "calibration",
         "acquisition",
         "protocol",
@@ -171,6 +171,10 @@ def test_export_session_package_uses_events_csv_when_json_missing(tmp_path: Path
     assert "events" not in roles
     assert manifest["metrics"]["event_annotations"]["source_role"] == "events_csv"
     assert manifest["metrics"]["event_annotations"]["source_path"] == "pkg-001.events.csv"
+    assert manifest["sidecar_completeness"]["complete"] is True
+    assert "event_annotations" in manifest["sidecar_completeness"]["present_roles"]
+    assert manifest["sidecar_completeness"]["missing_roles"] == []
+    assert verify_session_package(export.manifest_path).ok is True
     assert "csv-only motion" in html
     assert "spreadsheet edited" in html
 
