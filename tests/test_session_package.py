@@ -113,6 +113,26 @@ def test_verify_session_package_passes_clean_manifest(tmp_path: Path) -> None:
     assert result.failures == tuple()
 
 
+def test_export_session_package_uses_events_csv_when_json_missing(tmp_path: Path) -> None:
+    csv_path = tmp_path / "pkg-001.csv"
+    _write_session_files(csv_path)
+    csv_path.with_suffix(".events.json").unlink()
+    write_events_csv(
+        csv_path.with_suffix(".events.csv"),
+        (EventMarker(0.5, duration_seconds=0.25, label="csv-only motion", notes="spreadsheet edited"),),
+    )
+
+    export = export_session_package(csv_path=csv_path, out_dir=tmp_path / "packages", title="Package Test")
+
+    manifest = json.loads(export.manifest_path.read_text())
+    roles = {file_info["role"] for file_info in manifest["files"]}
+    html = export.report_html_path.read_text()
+    assert "events_csv" in roles
+    assert "events" not in roles
+    assert "csv-only motion" in html
+    assert "spreadsheet edited" in html
+
+
 def test_verify_session_package_fails_after_file_tamper(tmp_path: Path) -> None:
     csv_path = tmp_path / "pkg-001.csv"
     _write_session_files(csv_path)

@@ -42,7 +42,14 @@ from ads1292_studio.display import (
     parse_display_window,
     parse_sweep_speed,
 )
-from ads1292_studio.events import EventMarker, event_from_interval, read_events_json, write_events_csv, write_events_json
+from ads1292_studio.events import (
+    EventMarker,
+    event_from_interval,
+    read_events_csv,
+    read_events_json,
+    write_events_csv,
+    write_events_json,
+)
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_samples import append_live_sample_batch
 from ads1292_studio.gui_log import append_log_messages, log_tab_is_visible
@@ -1027,6 +1034,12 @@ class App(tk.Tk):
     def _load_event_sidecar(self, csv_path: Path) -> None:
         path = self._events_path(csv_path)
         if not path.exists():
+            csv_sidecar = self._events_csv_path(csv_path)
+            if csv_sidecar.exists():
+                self.event_markers = list(read_events_csv(csv_sidecar))
+                self._set_event_count()
+                self._log(f"Loaded events CSV: {csv_sidecar}")
+                return
             self.event_markers = []
             self._set_event_count()
             return

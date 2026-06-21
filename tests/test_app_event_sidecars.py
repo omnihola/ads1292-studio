@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from ads1292_studio import app as app_module
 from ads1292_studio.app import App
-from ads1292_studio.events import EventMarker
+from ads1292_studio.events import EventMarker, write_events_csv
 
 
 def test_start_initializes_events_csv_sidecar() -> None:
@@ -39,3 +39,27 @@ def test_save_event_sidecar_writes_json_and_csv(monkeypatch) -> None:
 
     assert ("json", "recording.events.json", fake.event_markers) in calls
     assert ("csv", "recording.events.csv", fake.event_markers) in calls
+
+
+def test_load_event_sidecar_falls_back_to_events_csv(tmp_path: Path) -> None:
+    calls = []
+    csv_path = tmp_path / "recording.csv"
+    write_events_csv(
+        csv_path.with_suffix(".events.csv"),
+        (EventMarker(2.0, duration_seconds=1.5, label="csv-only motion", notes="from spreadsheet"),),
+    )
+    fake = SimpleNamespace(
+        event_markers=[],
+        _events_path=lambda path: path.with_suffix(".events.json"),
+        _events_csv_path=lambda path: path.with_suffix(".events.csv"),
+        _set_event_count=lambda: calls.append("count"),
+        _log=lambda message: calls.append(message),
+    )
+
+    App._load_event_sidecar(fake, csv_path)
+
+    assert len(fake.event_markers) == 1
+    assert fake.event_markers[0].label == "csv-only motion"
+    assert fake.event_markers[0].duration_seconds == 1.5
+    assert "count" in calls
+    assert any("events CSV" in str(call) for call in calls)

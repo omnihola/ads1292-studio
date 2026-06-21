@@ -9,7 +9,7 @@ import shutil
 
 from ads1292_studio.calibration import calibration_template, read_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
-from ads1292_studio.events import read_events_json
+from ads1292_studio.events import read_events_csv, read_events_json
 from ads1292_studio.metadata import read_metadata_json
 from ads1292_studio.protocol import read_protocol_json
 from ads1292_studio.quality_gate import quality_gate_template, read_quality_gate_json
@@ -70,6 +70,8 @@ def export_session_package(
             metadata = read_metadata_json(copied)
         elif role == "events":
             events = read_events_json(copied)
+        elif role == "events_csv" and not events:
+            events = read_events_csv(copied)
         elif role == "calibration":
             calibration = read_calibration_json(copied)
         elif role == "protocol":
