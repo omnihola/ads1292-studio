@@ -75,6 +75,27 @@ def test_add_event_range_uses_marked_start_and_current_time() -> None:
     assert "save" in app.calls
 
 
+def test_add_manual_event_range_uses_explicit_seconds() -> None:
+    app = _fake_app(current_time=18.0)
+    app.manual_event_start_var = _Var("73")
+    app.manual_event_end_var = _Var("77.25")
+
+    App.add_manual_event_range(app)
+
+    assert len(app.event_markers) == 1
+    marker = app.event_markers[0]
+    assert marker.timestamp_seconds == 73.0
+    assert marker.duration_seconds == 4.25
+    assert marker.end_seconds == 77.25
+    assert marker.label == "motion"
+    assert marker.notes == "arm motion"
+    assert app.manual_event_start_var.get() == ""
+    assert app.manual_event_end_var.get() == ""
+    assert "count" in app.calls
+    assert "save" in app.calls
+    assert any("Manual event range 73.00-77.25s" in call for call in app.calls)
+
+
 def test_set_event_count_shows_latest_event_details() -> None:
     app = SimpleNamespace(
         event_count_var=_Var(),

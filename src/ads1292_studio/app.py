@@ -784,6 +784,29 @@ class App(tk.Tk):
             f"{marker.label} {marker.notes}".strip()
         )
 
+    def add_manual_event_range(self) -> None:
+        try:
+            start_seconds = float(self.manual_event_start_var.get())
+            end_seconds = float(self.manual_event_end_var.get())
+        except ValueError:
+            messagebox.showerror("Invalid range", "Enter numeric range start and end seconds.")
+            return
+        marker = event_from_interval(
+            start_seconds=start_seconds,
+            end_seconds=end_seconds,
+            label=self.event_label_var.get(),
+            notes=self.event_notes_var.get(),
+        )
+        self.event_markers = [*self.event_markers, marker]
+        self.manual_event_start_var.set("")
+        self.manual_event_end_var.set("")
+        self._set_event_count()
+        self._save_event_sidecar()
+        self._log(
+            f"Manual event range {marker.timestamp_seconds:.2f}-{marker.end_seconds:.2f}s: "
+            f"{marker.label} {marker.notes}".strip()
+        )
+
     def export_report(self) -> None:
         if self.loaded_samples:
             samples = self.loaded_samples

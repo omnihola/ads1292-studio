@@ -415,6 +415,8 @@ def initialize_sidebar_state(app: Any, *, protocol_steps_text: str) -> None:
     app.event_label_var = tk.StringVar(value="motion")
     app.event_notes_var = tk.StringVar(value="")
     app.event_range_start_var = tk.StringVar(value="Range start: --")
+    app.manual_event_start_var = tk.StringVar(value="")
+    app.manual_event_end_var = tk.StringVar(value="")
     app.event_count_var = tk.StringVar(value="0 events")
     app.event_count_label = None
     app.calibration_label_var = tk.StringVar(value="ADS1292 default")
@@ -475,6 +477,9 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
     app.add_event_button = _sidebar_button(session_side, "Add Event", app.add_event)
     app.mark_event_range_start_button = _sidebar_button(session_side, "Mark Range Start", app.mark_event_range_start)
     app.add_event_range_button = _sidebar_button(session_side, "Add Event Range", app.add_event_range)
+    metadata_entry(app, session_side, "Range start s", app.manual_event_start_var)
+    metadata_entry(app, session_side, "Range end s", app.manual_event_end_var)
+    app.add_manual_event_range_button = _sidebar_button(session_side, "Add Exact Range", app.add_manual_event_range)
     ttk.Label(
         session_side,
         textvariable=app.event_range_start_var,

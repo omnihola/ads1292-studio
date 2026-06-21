@@ -127,8 +127,14 @@ def test_sidebar_exposes_event_range_actions() -> None:
     sidebar_source = inspect.getsource(populate_sidebar)
 
     assert "event_range_start_var" in init_source
+    assert "manual_event_start_var" in init_source
+    assert "manual_event_end_var" in init_source
     assert "mark_event_range_start_button" in sidebar_source
     assert "add_event_range_button" in sidebar_source
+    assert "add_manual_event_range_button" in sidebar_source
+    assert "Range start s" in sidebar_source
+    assert "Range end s" in sidebar_source
+    assert "Add Exact Range" in sidebar_source
 
 
 def test_sidebar_exposes_acquisition_provenance_summary() -> None:
