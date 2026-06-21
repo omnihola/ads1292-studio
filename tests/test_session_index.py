@@ -14,6 +14,7 @@ from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
+from ads1292_studio.recording_manifest import write_recording_manifest
 from ads1292_studio.session_index import export_session_index, scan_recording_directory
 
 
@@ -434,6 +435,58 @@ def test_export_session_index_audits_completion_against_csv(tmp_path: Path) -> N
     assert "mismatched.csv" in csv_text
     assert "fail,-2,-0.498" in csv_text
     assert "Completion audit: pass 1 | fail 1 | pending 1 | unknown 0" in html
+
+
+def test_export_session_index_audits_recording_manifests(tmp_path: Path) -> None:
+    matched = _write_recording(tmp_path, "matched.csv", "MOTAC gel + Ag/AgCl")
+    stale = _write_recording(tmp_path, "stale.csv", "MOTAC gel + Ag/AgCl")
+    missing = _write_recording(tmp_path, "missing.csv", "MOTAC gel + Ag/AgCl")
+    for path in (matched, stale, missing):
+        _write_complete_sidecars(path)
+        acquisition = build_acquisition_provenance(
+            csv_path=path,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem-test",
+            sample_rate_hz=500.0,
+            calibration=Calibration(label="bench-cal"),
+            live_calibration=None,
+            started_at="2026-06-21T00:00:00",
+        )
+        write_acquisition_json(
+            path.with_suffix(".acquisition.json"),
+            finalize_acquisition_provenance(
+                acquisition,
+                ended_at="2026-06-21T00:00:07",
+                finalized_at="2026-06-21T00:00:08",
+                sample_count=len(_samples()),
+                first_timestamp_seconds=0.0,
+                last_timestamp_seconds=6.998,
+            ),
+        )
+    write_recording_manifest(matched, created_at="2026-06-21T00:00:09")
+    write_recording_manifest(stale, created_at="2026-06-21T00:00:09")
+    with stale.open("a") as handle:
+        handle.write("7.000000,0,0,0,0,0,0\n")
+
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Manifest Audit")
+    rows = {row.session_id: row for row in export.rows}
+
+    assert rows["matched"].recording_manifest_status == "pass"
+    assert rows["matched"].recording_manifest_failures == ""
+    assert rows["stale"].recording_manifest_status == "fail"
+    assert "raw_csv: sha256 mismatch for stale.csv" in rows["stale"].recording_manifest_failures
+    assert "recording sample count mismatch" in rows["stale"].recording_manifest_failures
+    assert rows["missing"].recording_manifest_status == "missing"
+    assert rows["missing"].recording_manifest_failures == ""
+    assert export.summary.recording_manifest_pass == 1
+    assert export.summary.recording_manifest_fail == 1
+    assert export.summary.recording_manifest_missing == 1
+    assert export.summary.recording_manifest_unknown == 0
+    csv_text = export.csv_path.read_text()
+    html = export.html_path.read_text()
+    assert "recording_manifest_status,recording_manifest_failures" in csv_text
+    assert "stale.csv" in csv_text
+    assert "Manifest audit: pass 1 | fail 1 | missing 1 | unknown 0" in html
 
 
 def test_export_session_index_writes_sidecar_completion_plan(tmp_path: Path) -> None:

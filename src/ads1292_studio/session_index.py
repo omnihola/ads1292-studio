@@ -15,6 +15,7 @@ from ads1292_studio.metadata import SessionMetadata, read_metadata_json, write_m
 from ads1292_studio.protocol import protocol_template, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import quality_gate_template, write_quality_gate_json
+from ads1292_studio.recording_manifest import verify_recording_manifest
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,8 @@ class SessionIndexRow:
     interval_event_count: int
     total_annotated_seconds: float
     event_labels: str
+    recording_manifest_status: str
+    recording_manifest_failures: str
     package_ready_status: str
     next_action: str
 
@@ -65,6 +68,10 @@ class SessionIndexSummary:
     completion_audit_fail: int
     completion_audit_pending: int
     completion_audit_unknown: int
+    recording_manifest_pass: int
+    recording_manifest_fail: int
+    recording_manifest_missing: int
+    recording_manifest_unknown: int
     annotated_recordings: int
     event_annotations: int
     interval_event_annotations: int
@@ -235,6 +242,10 @@ def summarize_rows(rows: tuple[SessionIndexRow, ...]) -> SessionIndexSummary:
         completion_audit_fail=sum(1 for row in rows if row.completion_audit == "fail"),
         completion_audit_pending=sum(1 for row in rows if row.completion_audit == "pending"),
         completion_audit_unknown=sum(1 for row in rows if row.completion_audit == "unknown"),
+        recording_manifest_pass=sum(1 for row in rows if row.recording_manifest_status == "pass"),
+        recording_manifest_fail=sum(1 for row in rows if row.recording_manifest_status == "fail"),
+        recording_manifest_missing=sum(1 for row in rows if row.recording_manifest_status == "missing"),
+        recording_manifest_unknown=sum(1 for row in rows if row.recording_manifest_status == "unknown"),
         annotated_recordings=sum(1 for row in rows if row.event_count > 0),
         event_annotations=sum(row.event_count for row in rows),
         interval_event_annotations=sum(row.interval_event_count for row in rows),
@@ -276,6 +287,7 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
         actual_sample_count=metrics.sample_count,
         actual_span_seconds=metrics.duration_seconds,
     )
+    manifest_status, manifest_failures = _recording_manifest_audit(path)
     waveform_status = _status_for_quality(metrics.quality_label)
     package_ready_status = _package_ready_status(waveform_status, sidecar_status)
     return SessionIndexRow(
@@ -307,6 +319,8 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
         interval_event_count=event_summary.interval_count,
         total_annotated_seconds=event_summary.total_annotated_seconds,
         event_labels=event_summary.labels,
+        recording_manifest_status=manifest_status,
+        recording_manifest_failures=manifest_failures,
         package_ready_status=package_ready_status,
         next_action=_next_action(package_ready_status),
     )
@@ -381,6 +395,19 @@ def _completion_audit(
     if count_delta == 0 and abs(span_delta) <= 0.001:
         return "pass", count_delta, span_delta
     return "fail", count_delta, span_delta
+
+
+def _recording_manifest_audit(csv_path: Path) -> tuple[str, str]:
+    manifest_path = csv_path.with_suffix(".manifest.json")
+    if not manifest_path.exists():
+        return "missing", ""
+    try:
+        result = verify_recording_manifest(manifest_path)
+    except Exception as exc:
+        return "unknown", str(exc)
+    if result.ok:
+        return "pass", ""
+    return "fail", ";".join(result.failures)
 
 
 def _summarize_events(events: tuple[EventMarker, ...]) -> EventAnnotationSummary:
@@ -529,6 +556,8 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
         "interval_event_count",
         "total_annotated_seconds",
         "event_labels",
+        "recording_manifest_status",
+        "recording_manifest_failures",
         "package_ready_status",
         "next_action",
     ]
@@ -580,6 +609,8 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
         "Interval Events",
         "Annotated Seconds",
         "Event Labels",
+        "Manifest",
+        "Manifest Failures",
         "Package Ready",
         "Next Action",
     ]
@@ -608,6 +639,8 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
             str(row.interval_event_count),
             f"{row.total_annotated_seconds:.2f}",
             row.event_labels,
+            row.recording_manifest_status,
+            row.recording_manifest_failures,
             row.package_ready_status,
             row.next_action,
         ]
@@ -630,6 +663,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
   <p>Package-ready recordings: {summary.package_ready} | Incomplete records: {summary.incomplete_records} | Need signal review: {summary.needs_signal_review}</p>
   <p>Finalized recordings: {summary.finalized_recordings} | Open/unfinalized recordings: {summary.open_recordings} | Unknown completion: {summary.unknown_completion_records}</p>
   <p>Completion audit: pass {summary.completion_audit_pass} | fail {summary.completion_audit_fail} | pending {summary.completion_audit_pending} | unknown {summary.completion_audit_unknown}</p>
+  <p>Manifest audit: pass {summary.recording_manifest_pass} | fail {summary.recording_manifest_fail} | missing {summary.recording_manifest_missing} | unknown {summary.recording_manifest_unknown}</p>
   <p>Annotated recordings: {summary.annotated_recordings} | Event annotations: {summary.event_annotations} | Interval annotations: {summary.interval_event_annotations} | Annotated seconds: {summary.total_annotated_seconds:.2f}</p>
   <p>Next actions: package record {summary.action_package_record} | complete sidecars {summary.action_complete_sidecars} | review signal {summary.action_review_signal}</p>
   <table>
