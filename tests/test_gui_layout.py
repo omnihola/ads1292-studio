@@ -1612,12 +1612,18 @@ def test_live_event_controls_are_split_across_rows_not_one_long_grid() -> None:
     event_source = inspect.getsource(build_live_event_panel)
 
     assert "app.live_event_status_row" in event_source
-    assert "app.live_event_fields_row" in event_source
+    assert "app.live_event_label_row" in event_source
+    assert "app.live_event_notes_row" in event_source
     assert "app.live_event_actions_row" in event_source
-    assert "app.live_add_event_button.pack(side=tk.LEFT" in event_source
-    assert "app.live_mark_event_range_start_button.pack(side=tk.LEFT" in event_source
-    assert "app.live_add_event_range_button.pack(side=tk.LEFT" in event_source
-    assert "app.live_remove_last_event_button.pack(side=tk.LEFT" in event_source
+    assert "text=\"Event label\"" in event_source
+    assert "text=\"Event notes\"" in event_source
+    assert "app.live_event_label_entry.pack(anchor=tk.W, fill=tk.X)" in event_source
+    assert "app.live_event_notes_entry.pack(anchor=tk.W, fill=tk.X)" in event_source
+    assert "app.live_add_event_button.pack(anchor=tk.W, fill=tk.X" in event_source
+    assert "app.live_mark_event_range_start_button.pack(anchor=tk.W, fill=tk.X" in event_source
+    assert "app.live_add_event_range_button.pack(anchor=tk.W, fill=tk.X" in event_source
+    assert "app.live_remove_last_event_button.pack(anchor=tk.W, fill=tk.X" in event_source
+    assert "Add Point Event" in event_source
     assert ".grid(row=0, column=5" not in event_source
     assert ".grid(row=0, column=6" not in event_source
     assert ".grid(row=0, column=7" not in event_source
