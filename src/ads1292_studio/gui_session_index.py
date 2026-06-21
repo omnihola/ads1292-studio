@@ -41,5 +41,12 @@ def build_session_index_message(export: SessionIndexExport) -> str:
             "",
             "Apply sidecars script:",
             str(export.sidecar_apply_script_path),
+            "",
+            f"Recording manifest plan rows: {len(export.manifest_plan_rows)}",
+            str(export.manifest_plan_csv_path),
+            str(export.manifest_plan_html_path),
+            "",
+            "Apply recording manifests script:",
+            str(export.manifest_apply_script_path),
         ]
     )

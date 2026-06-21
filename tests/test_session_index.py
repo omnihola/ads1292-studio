@@ -489,6 +489,61 @@ def test_export_session_index_audits_recording_manifests(tmp_path: Path) -> None
     assert "Manifest audit: pass 1 | fail 1 | missing 1 | unknown 0" in html
 
 
+def test_export_session_index_writes_recording_manifest_repair_plan(tmp_path: Path) -> None:
+    matched = _write_recording(tmp_path, "matched.csv", "MOTAC gel + Ag/AgCl")
+    stale = _write_recording(tmp_path, "stale.csv", "MOTAC gel + Ag/AgCl")
+    missing = _write_recording(tmp_path, "missing.csv", "MOTAC gel + Ag/AgCl")
+    for path in (matched, stale, missing):
+        _write_complete_sidecars(path)
+        acquisition = build_acquisition_provenance(
+            csv_path=path,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem-test",
+            sample_rate_hz=500.0,
+            calibration=Calibration(label="bench-cal"),
+            live_calibration=None,
+            started_at="2026-06-21T00:00:00",
+        )
+        write_acquisition_json(
+            path.with_suffix(".acquisition.json"),
+            finalize_acquisition_provenance(
+                acquisition,
+                ended_at="2026-06-21T00:00:07",
+                finalized_at="2026-06-21T00:00:08",
+                sample_count=len(_samples()),
+                first_timestamp_seconds=0.0,
+                last_timestamp_seconds=6.998,
+            ),
+        )
+    write_recording_manifest(matched, created_at="2026-06-21T00:00:09")
+    write_recording_manifest(stale, created_at="2026-06-21T00:00:09")
+    with stale.open("a") as handle:
+        handle.write("7.000000,0,0,0,0,0,0\n")
+
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Manifest Repair")
+
+    assert export.manifest_plan_csv_path.exists()
+    assert export.manifest_plan_html_path.exists()
+    assert export.manifest_apply_script_path.exists()
+    assert len(export.manifest_plan_rows) == 2
+    assert {row.relative_path for row in export.manifest_plan_rows} == {"missing.csv", "stale.csv"}
+    assert {row.manifest_status for row in export.manifest_plan_rows} == {"missing", "fail"}
+    plan_text = export.manifest_plan_csv_path.read_text()
+    html = export.manifest_plan_html_path.read_text()
+    script = export.manifest_apply_script_path.read_text()
+    assert "relative_path,manifest_status,target_path,suggested_action" in plan_text
+    assert "missing.csv,missing," in plan_text
+    assert "stale.csv,fail," in plan_text
+    assert "Recording Manifest Repair Plan" in html
+    assert "missing.csv" in html
+    assert "stale.csv" in html
+    assert script.startswith("#!/bin/sh\n")
+    assert "python -m ads1292_studio manifest" in script
+    assert str(missing) in script
+    assert str(stale) in script
+    assert str(matched) not in script
+
+
 def test_export_session_index_writes_sidecar_completion_plan(tmp_path: Path) -> None:
     partial = _write_recording(tmp_path, "partial.csv", "commercial Ag/AgCl")
     ready = _write_recording(tmp_path, "ready.csv", "MOTAC gel + Ag/AgCl")

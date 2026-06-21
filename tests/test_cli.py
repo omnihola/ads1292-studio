@@ -187,6 +187,20 @@ def test_cli_verify_recording_returns_failure_for_stale_manifest(tmp_path: Path,
     assert "failure=raw_csv: sha256 mismatch for recording.csv" in output
 
 
+def test_cli_manifest_writes_recording_manifest(tmp_path: Path, capsys) -> None:
+    csv_path = tmp_path / "recording.csv"
+    _write_small_csv(csv_path)
+    _write_complete_sidecars(csv_path)
+
+    assert main(["manifest", str(csv_path)]) == 0
+
+    output = capsys.readouterr().out
+    manifest_path = csv_path.with_suffix(".manifest.json")
+    assert f"manifest={manifest_path}" in output
+    assert manifest_path.exists()
+    assert main(["verify-recording", str(manifest_path)]) == 0
+
+
 def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
     csv_path = tmp_path / "recording.csv"
     out_dir = tmp_path / "index"
@@ -197,10 +211,18 @@ def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
 
     csv_outputs = list(out_dir.glob("*.csv"))
     html_outputs = list(out_dir.glob("*.html"))
-    assert len(csv_outputs) == 2
-    assert len(html_outputs) == 2
-    index_csv = next(path for path in csv_outputs if not path.stem.endswith("-sidecar-plan"))
-    index_html = next(path for path in html_outputs if not path.stem.endswith("-sidecar-plan"))
+    assert len(csv_outputs) == 3
+    assert len(html_outputs) == 3
+    index_csv = next(
+        path
+        for path in csv_outputs
+        if not path.stem.endswith("-sidecar-plan") and not path.stem.endswith("-manifest-plan")
+    )
+    index_html = next(
+        path
+        for path in html_outputs
+        if not path.stem.endswith("-sidecar-plan") and not path.stem.endswith("-manifest-plan")
+    )
     assert "recording.csv" in index_csv.read_text()
     assert "CLI Session Index" in index_html.read_text()
     assert "package_ready=0" in captured
@@ -215,10 +237,17 @@ def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
     assert "sidecar_template_dir=" in captured
     assert "sidecar_template_files=6" in captured
     assert "sidecar_apply_script=" in captured
+    assert "manifest_plan_csv=" in captured
+    assert "manifest_plan_html=" in captured
+    assert "manifest_apply_script=" in captured
+    assert "manifest_plan_rows=1" in captured
     sidecar_plan = next(out_dir.glob("*-sidecar-plan.csv"))
     apply_script = next(out_dir.glob("*-apply-sidecars.sh"))
+    manifest_plan = next(out_dir.glob("*-manifest-plan.csv"))
+    manifest_apply_script = next(out_dir.glob("*-apply-manifests.sh"))
     template_dir = next(out_dir.glob("*-sidecar-templates"))
     sidecar_plan_text = sidecar_plan.read_text()
+    manifest_plan_text = manifest_plan.read_text()
     assert "recording.csv,metadata," in sidecar_plan_text
     assert "recording.csv,acquisition," in sidecar_plan_text
     assert str(template_dir / "recording.json") in sidecar_plan_text
@@ -228,6 +257,8 @@ def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
     assert (template_dir / "recording.acquisition.json").exists()
     assert (template_dir / "recording.protocol.json").exists()
     assert str(template_dir / "recording.json") in apply_script.read_text()
+    assert "recording.csv,missing," in manifest_plan_text
+    assert "python -m ads1292_studio manifest" in manifest_apply_script.read_text()
 
 
 def test_cli_qc_returns_success_for_good_recording(tmp_path: Path) -> None:

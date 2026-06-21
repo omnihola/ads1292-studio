@@ -127,6 +127,11 @@ def test_build_session_index_message_includes_action_queue_counts(tmp_path: Path
     assert str(export.sidecar_template_dir) in message
     assert "Apply sidecars script:" in message
     assert str(export.sidecar_apply_script_path) in message
+    assert "Recording manifest plan rows: 3" in message
+    assert str(export.manifest_plan_csv_path) in message
+    assert str(export.manifest_plan_html_path) in message
+    assert "Apply recording manifests script:" in message
+    assert str(export.manifest_apply_script_path) in message
 
 
 def test_build_session_index_message_includes_recording_completion_counts(

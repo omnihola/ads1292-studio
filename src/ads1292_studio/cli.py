@@ -15,7 +15,7 @@ from ads1292_studio.metadata import metadata_template, read_metadata_json, write
 from ads1292_studio.protocol import protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, evaluate_quality_gate
-from ads1292_studio.recording_manifest import verify_recording_manifest
+from ads1292_studio.recording_manifest import verify_recording_manifest, write_recording_manifest
 from ads1292_studio.report import export_review_report
 from ads1292_studio.segments import analyze_protocol_segments, evaluate_segment_quality_gates
 from ads1292_studio.session_index import export_session_index
@@ -157,15 +157,25 @@ def cmd_index(args: argparse.Namespace) -> int:
     print(f"sidecar_plan_html={export.sidecar_plan_html_path}")
     print(f"sidecar_template_dir={export.sidecar_template_dir}")
     print(f"sidecar_apply_script={export.sidecar_apply_script_path}")
+    print(f"manifest_plan_csv={export.manifest_plan_csv_path}")
+    print(f"manifest_plan_html={export.manifest_plan_html_path}")
+    print(f"manifest_apply_script={export.manifest_apply_script_path}")
     print(f"rows={len(export.rows)}")
     print(f"sidecar_plan_rows={len(export.sidecar_plan_rows)}")
     print(f"sidecar_template_files={len(export.sidecar_template_paths)}")
+    print(f"manifest_plan_rows={len(export.manifest_plan_rows)}")
     print(f"package_ready={export.summary.package_ready}")
     print(f"incomplete_records={export.summary.incomplete_records}")
     print(f"needs_signal_review={export.summary.needs_signal_review}")
     print(f"action_package_record={export.summary.action_package_record}")
     print(f"action_complete_sidecars={export.summary.action_complete_sidecars}")
     print(f"action_review_signal={export.summary.action_review_signal}")
+    return 0
+
+
+def cmd_manifest(args: argparse.Namespace) -> int:
+    manifest_path = write_recording_manifest(args.csv)
+    print(f"manifest={manifest_path}")
     return 0
 
 
@@ -280,6 +290,9 @@ def build_parser() -> argparse.ArgumentParser:
     index.add_argument("--out", type=Path, default=Path("reports/session-index"))
     index.add_argument("--title", default="ADS1292 Session Index")
     index.set_defaults(func=cmd_index)
+    manifest = sub.add_parser("manifest")
+    manifest.add_argument("csv", type=Path)
+    manifest.set_defaults(func=cmd_manifest)
     package = sub.add_parser("package")
     package.add_argument("csv", type=Path)
     package.add_argument("--out", type=Path, default=Path("packages"))
