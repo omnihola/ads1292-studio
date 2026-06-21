@@ -129,6 +129,20 @@
 |-------|------------|
 | Live/Review plot titles overlapped the shared x-tick labels of the panel above (found via real hardware testing screenshot after the Connect/Start fixes) | Added `label_outer()` to hide redundant tick labels on non-bottom panels and `fig.subplots_adjust(hspace=0.55)` for title clearance in both `_build_live_plot()` and `_build_review_plot()`. |
 
+## GUI Modernization — Phase 44 Design Record (2026-06-21)
+- User goal: modernize the GUI to look contemporary and be easier to use; focus is (i) visual modernization and (ii) usability/workflow, not new analysis features.
+- Toolkit decision: Route B — rewrite only the widget/styling layer in PySide6 (LGPL, safe to share). Rejected Route A (Tkinter re-theme; aesthetic ceiling too low for the user's goal) and Route C (web rewrite; largest effort, not justified).
+- Architecture finding (via codegraph): the domain core is already toolkit-agnostic — `device`, `workers`, `acquisition`, `calibration`, `csv_io`, `events`, `processing`, `report`, `review_render`, `spectrum`, `models` import no Tkinter and are reused as-is. `gui_state.py` is effectively a view-model (pure functions for control gating, status cards, workflow hints, tick intervals, formatting) and is reused directly. Only ~6 files are Tk-bound and must be re-implemented: `app.py`, `gui_layout.py`, `gui_plots.py`, `gui_style.py`, `gui_scroll.py`, parts of `gui_log.py`.
+- Concurrency reuse: `LiveWorker` communicates through caller-provided `queue.Queue`s, so a Qt `QTimer` can drain those queues on the GUI thread as a near drop-in for the Tk `after()` tick loop — the threading model does not change.
+- Plotting: keep matplotlib embedded via `FigureCanvasQTAgg` for phase 1 so `report.py`/`review_render.py`/`spectrum.py` (which produce matplotlib figures and the report export) work unchanged. pyqtgraph for the live panel is a possible later optimization, not phase 1.
+- Theme: light-first, dark-ready. A `ui_qt/tokens.py` design scale (seeded from `APP_VISUAL_TOKENS`) compiles to a QSS stylesheet in `ui_qt/theme.py`; a dark mode map can drop in later without widget changes.
+- Layout (confirmed against the real running app, not assumed): true 3 columns — LEFT `Session/Validation/Protocol` tabbed forms (recording notes, provenance, Load CSV, archive actions), CENTER workspace tabs (Live ECG / Review CSV / PQRST Beat / Spectrum / Event Log) + two synchronized panels (CH2 ECG `Amplitude (counts)` + CH1 respiration `Impedance signal (counts)`) + SNR/Event console, RIGHT `Status` (Next step, Overview incl. Port, Channel map incl. Contact=lead-off bits, Signal quality, Session). Side columns scroll internally so all three are equal height.
+- Live panel is two panels now: the lead-off/contact waveform panel was removed; contact remains as a metric (Signal quality card) and as a Channel-map row, not as a plot.
+- Calibrate Live stays in the control toolbar, state-gated (requires connected and not streaming), like Start/Stop.
+- Event console regrouped by intent: (1) Annotate (label/notes -> Add Point / Start Range / End Range, primary action emphasized), (2) Manual range (start/end + Add Manual Range), (3) Manage (Remove Last / Remove by number), destructive actions tinted red and separated.
+- Visual baseline approved by user: `docs/mockups/2026-06-21-pyqt-modernization-mockup-v5.html` (rendered `.png` alongside). Iterations v1->v5 captured the move from a wrong 2-/3-panel mental model to the real layout, the event-console regroup, and equal-height scrolling side columns.
+- Delivery model: parallel `ui_qt/` package + new entry point (`ads1292-studio-qt`) so the existing Tk app keeps working until the Qt version reaches parity. Push to GitHub after phase-1 tests pass (confirm before push).
+
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
 - Existing GUI reference: `tools/ads1292_mac/ads1x9x_gui.py`

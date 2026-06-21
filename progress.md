@@ -761,10 +761,27 @@
 | 2026-06-18 | Canonical CSV lead-off column could be dropped when the status byte did not carry the low-nibble flags | 1 | CSV import now combines `status_byte` with explicit `lead_off_bits`. |
 | 2026-06-18 | GUI still allowed channel switching even though ADS1292R assigns CH2 to ECG and CH1 to respiration | 1 | Removed the ECG source selector and changed Live/Review to synchronized CH2 ECG, CH1 respiration, and lead-off/contact panels. |
 
+## Session: 2026-06-21
+
+### Phase 44: GUI Modernization (PySide6 / Qt) — design
+- **Status:** in progress (design approved by user; implementation starting)
+- Actions taken:
+  - Brainstormed the modernization with the user: chose Route B (rewrite only the widget layer in PySide6), focus on (i) visual modernization and (ii) usability/workflow, light-first theme.
+  - Used codegraph to confirm the UI/core boundary: the domain core and `gui_state` view-model are toolkit-agnostic and reused unchanged; only ~6 files are Tk-bound and need re-implementation.
+  - Produced and iterated light-first HTML visual mockups v1->v5 (rendered to PNG with headless Chrome and sent to the user). Corrected the layout from an assumed 2-/3-panel model to the real running app: true 3-column layout (left forms / center plots+console / right Status), 2 live panels (lead-off waveform removed; contact kept as a metric), regrouped SNR/Event console, equal-height side columns with internal scrollbars, Calibrate Live kept in the control toolbar.
+  - User approved `docs/mockups/2026-06-21-pyqt-modernization-mockup-v5.html` as the visual baseline.
+  - Recorded Phase 44 plan, design record, and decisions in `task_plan.md` and `findings.md`.
+- Files created/modified:
+  - `docs/mockups/2026-06-21-pyqt-modernization-mockup-v1..v5.html` (+ rendered `.png`)
+  - `task_plan.md`, `findings.md`, `progress.md`
+- Next:
+  - Write design spec to `docs/superpowers/specs/2026-06-21-pyqt-modernization-design.md` and have the user review it.
+  - Implement Phase 44.1 MVP (PySide6 shell + token/QSS theme + connect/start/stop/calibrate flow + 2-panel live plot via FigureCanvasQTAgg + 3-column layout + Status panel + SNR/Event console) with reused `gui_state`/`gui_workers` and a QTimer queue drain; then push to GitHub on a feature branch (confirm before push).
+
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 43 complete; Connect/Stop/Start no longer block or race the GUI thread, and offline CSV review now analyzes the full recording (decimating only the rendered plot) instead of only the last 10 seconds. Channel-label confirmation (which exact Einthoven lead CH2 represents) is still pending the user's electrode-disconnect hardware test. |
+| Where am I? | Phase 44 (GUI modernization to PySide6) — design approved by the user (visual baseline = `docs/mockups/2026-06-21-pyqt-modernization-mockup-v5.html`); about to write the spec and start the Phase 44.1 MVP. Phase 43 and earlier are complete. Channel-label confirmation (which exact Einthoven lead CH2 represents) is still pending the user's electrode-disconnect hardware test. |
 | Where am I going? | Continue iterative polish and bug elimination in `ads1292-studio/`. |
 | What's the goal? | Build a robust ADS1292 Studio GUI/app for MOTAC ECG validation. |
 | What have I learned? | CH2 can carry the clear ECG-like QRS in the saved run; low-nibble lead-off bits are the safer contact flag. The ADS1292R chip datasheet (SBAS502C) confirms respiration demodulation hardware exists only on Channel 1 and TI states Channel 1 cannot do ECG while respiration is enabled on it — this independently corroborates the existing CH1=respiration/CH2=ECG assignment that was originally reached empirically. The original GUI bugs were concurrency/state bugs (blocking calls on the GUI thread, a cross-thread close/read race, an optimistic Start state, and an offline-review window capped at the live-display buffer size), not datasheet-correctness bugs. |

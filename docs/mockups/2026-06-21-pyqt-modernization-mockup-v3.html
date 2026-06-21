@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ADS1292 Studio — PySide6 Mockup v3 (event console regrouped)</title>
+<style>
+  :root {
+    --surface:#EEF2F7; --panel:#FFFFFF; --panel-alt:#F5F8FC;
+    --border:#DCE3EC; --border-strong:#C6D0DC;
+    --ink:#1B2533; --ink-muted:#5A6677; --ink-faint:#8A95A4;
+    --accent:#1E88A8; --accent-press:#166076; --accent-soft:#E2F1F6;
+    --indigo:#4C5DD4;
+    --ok:#2E9E6B; --ok-soft:#E3F4EC;
+    --warn:#C8881E; --warn-soft:#FBF0DA;
+    --bad:#D24B4B; --bad-soft:#FBE7E7;
+    --ecg:#1E88A8; --resp:#4C5DD4;
+    --radius:10px; --radius-sm:7px;
+    --shadow-card:0 1px 2px rgba(20,33,51,.05),0 2px 6px rgba(20,33,51,.05);
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",sans-serif;
+    --mono:"SF Mono","JetBrains Mono","Menlo",monospace;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:#C9D2DD; font-family:var(--font); color:var(--ink); -webkit-font-smoothing:antialiased; padding:28px; display:flex; justify-content:center; }
+  .window { width:1180px; background:var(--surface); border-radius:14px; box-shadow:0 30px 80px rgba(20,33,51,.30); overflow:hidden; border:1px solid rgba(0,0,0,.05); }
+  .titlebar { height:38px; background:linear-gradient(#FBFCFE,#EEF2F7); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; padding:0 14px; }
+  .dot { width:12px; height:12px; border-radius:50%; }
+  .dot.r{background:#FF5F57;}.dot.y{background:#FEBC2E;}.dot.g{background:#28C840;}
+  .titlebar .tb-title { flex:1; text-align:center; font-size:12.5px; color:var(--ink-faint); font-weight:500; }
+
+  .header { display:flex; align-items:center; gap:14px; padding:16px 20px 14px; background:var(--panel); border-bottom:1px solid var(--border); }
+  .logo { width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--indigo)); display:grid; place-items:center; color:#fff; flex:none; box-shadow:0 3px 8px rgba(30,136,168,.35); }
+  .logo svg { width:22px; height:22px; }
+  .titles h1 { font-size:18px; font-weight:650; letter-spacing:-.2px; }
+  .titles p { font-size:12.5px; color:var(--ink-muted); margin-top:1px; }
+  .header .spacer { flex:1; }
+  .pill { display:inline-flex; align-items:center; gap:7px; padding:6px 13px; border-radius:999px; font-size:12.5px; font-weight:600; background:var(--ok-soft); color:var(--ok); border:1px solid rgba(46,158,107,.25); }
+  .pill .led { width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 0 3px rgba(46,158,107,.15); }
+
+  .controls { display:flex; align-items:center; gap:10px; padding:12px 20px; background:var(--panel-alt); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .ctl-group { display:flex; align-items:center; gap:8px; }
+  .ctl-label { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--ink-faint); font-weight:600; }
+  .field { height:34px; padding:0 12px; border-radius:var(--radius-sm); border:1px solid var(--border-strong); background:#fff; font-size:13px; color:var(--ink); display:inline-flex; align-items:center; gap:8px; min-width:150px; justify-content:space-between; }
+  .field .chev { color:var(--ink-faint); font-size:10px; }
+  .btn { height:34px; padding:0 16px; border-radius:var(--radius-sm); border:1px solid var(--border-strong); background:#fff; color:var(--ink); font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:all .12s; }
+  .btn:hover { border-color:var(--accent); color:var(--accent); }
+  .toggle { display:inline-flex; align-items:center; gap:8px; font-size:13px; user-select:none; }
+  .switch { width:38px; height:22px; border-radius:999px; background:var(--accent); position:relative; flex:none; }
+  .switch::after { content:""; position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); }
+  .btn.disabled { opacity:.45; cursor:not-allowed; background:#fff; color:var(--ink-faint); border-color:var(--border); box-shadow:none; }
+  .controls .spacer { flex:1; }
+
+  .body { display:flex; min-height:620px; }
+  .sidebar { width:288px; flex:none; padding:16px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; gap:14px; overflow-y:auto; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-card); }
+  .card .card-head { padding:11px 14px 0; font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--ink-faint); font-weight:700; }
+  .card .card-body { padding:10px 14px 13px; }
+  .next-step { background:linear-gradient(135deg,var(--accent-soft),#EFF6FF); border-color:rgba(30,136,168,.30); }
+  .next-step .ns-title { display:flex; align-items:center; gap:8px; font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--accent-press); font-weight:700; }
+  .next-step .ns-body { margin-top:6px; font-size:13.5px; line-height:1.45; }
+  .next-step .ns-body b { color:var(--accent-press); }
+  .row { display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:13px; border-bottom:1px dashed var(--border); }
+  .row:last-child { border-bottom:0; }
+  .row .k { color:var(--ink-muted); display:flex; align-items:center; gap:7px; }
+  .row .v { font-weight:600; }
+  .sdot { width:8px; height:8px; border-radius:50%; flex:none; }
+  .sdot.ok{background:var(--ok);}.sdot.warn{background:var(--warn);}.sdot.bad{background:var(--bad);}.sdot.idle{background:var(--ink-faint);}
+  .legend-dot { width:9px; height:9px; border-radius:2px; }
+  .tag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; }
+  .tag.ok{background:var(--ok-soft);color:var(--ok);}
+
+  .workspace { flex:1; padding:16px 18px; display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .tabs { display:flex; gap:4px; border-bottom:1px solid var(--border); }
+  .tab { padding:9px 16px; font-size:13px; font-weight:600; color:var(--ink-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab.future { color:var(--ink-faint); font-weight:500; }
+
+  .plot-stack { display:flex; flex-direction:column; gap:10px; }
+  .plot { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-card); overflow:hidden; display:flex; flex-direction:column; height:144px; }
+  .plot-head { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid var(--border); }
+  .plot-head .pt { font-size:13px; font-weight:650; display:flex; align-items:center; gap:8px; }
+  .plot-head .py { font-size:11px; color:var(--ink-faint); font-family:var(--mono); }
+  .plot-canvas { flex:1; position:relative; background:var(--panel-alt); }
+  .grid { position:absolute; inset:0; background-image:linear-gradient(rgba(30,136,168,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(30,136,168,.06) 1px,transparent 1px); background-size:26px 26px; }
+  .plot-canvas svg { position:absolute; inset:0; width:100%; height:100%; }
+
+  /* ---------- Event console (regrouped) ---------- */
+  .console { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-card); }
+  /* top strip: SNR (left) + live event status (right) */
+  .console-top { display:flex; align-items:center; gap:14px; padding:10px 16px; border-bottom:1px solid var(--border); background:var(--panel-alt); border-radius:var(--radius) var(--radius) 0 0; }
+  .snr-title { font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--ink-faint); font-weight:700; }
+  .snr-val { font-family:var(--mono); font-size:12.5px; color:var(--ink); }
+  .snr-val b { color:var(--ok); }
+  .console-top .spacer { flex:1; }
+  .ev-status { display:flex; align-items:center; gap:14px; font-size:12.5px; color:var(--ink-muted); }
+  .ev-status b { color:var(--ink); font-family:var(--mono); }
+  .ev-chip { font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; background:var(--accent-soft); color:var(--accent-press); }
+
+  /* two-column body */
+  .ev-grid { display:grid; grid-template-columns:1fr 1px 1fr; }
+  .ev-col { padding:13px 16px; display:flex; flex-direction:column; gap:10px; }
+  .ev-vdiv { background:var(--border); }
+  .ev-col-head { font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--accent-press); font-weight:700; display:flex; align-items:center; gap:7px; }
+  .ev-col-head .num { width:17px; height:17px; border-radius:50%; background:var(--accent-soft); color:var(--accent-press); font-size:10px; display:grid; place-items:center; font-weight:800; }
+
+  .ev-fields { display:flex; gap:10px; }
+  .ev-field { flex:1; display:flex; flex-direction:column; gap:4px; }
+  .ev-field label { font-size:11px; color:var(--ink-faint); font-weight:600; }
+  .ev-input { height:32px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); background:#fff; padding:0 10px; font-size:13px; color:var(--ink); display:flex; align-items:center; }
+  .ev-input.ph { color:var(--ink-faint); }
+
+  .ev-actions { display:flex; gap:8px; }
+  .ev-btn { height:34px; padding:0 14px; border-radius:var(--radius-sm); border:1px solid var(--border-strong); background:#fff; font-size:12.5px; font-weight:600; color:var(--ink); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+  .ev-btn.key { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 2px 6px rgba(30,136,168,.25); flex:1; }
+  .ev-btn.go { background:var(--ok-soft); border-color:rgba(46,158,107,.40); color:var(--ok); }
+  .ev-btn.warn { background:var(--bad-soft); border-color:rgba(210,75,75,.30); color:var(--bad); }
+  .ev-btn.full { width:100%; }
+
+  .ev-inline { display:flex; align-items:flex-end; gap:10px; }
+  .ev-num { display:flex; flex-direction:column; gap:4px; }
+  .ev-num label { font-size:11px; color:var(--ink-faint); font-weight:600; }
+  .ev-num .ev-input { width:92px; font-family:var(--mono); }
+  .ev-num.sm .ev-input { width:62px; }
+
+  .ev-subsep { height:1px; background:var(--border); margin:3px 0 1px; }
+  .ev-manage { display:flex; align-items:flex-end; gap:10px; }
+
+  .statusbar { display:flex; align-items:center; gap:22px; padding:10px 20px; background:var(--panel); border-top:1px solid var(--border); font-size:12.5px; color:var(--ink-muted); }
+  .statusbar .metric { display:flex; align-items:baseline; gap:7px; }
+  .statusbar .metric b { font-size:16px; color:var(--ink); font-family:var(--mono); font-weight:700; }
+  .statusbar .metric .u { font-size:11px; color:var(--ink-faint); }
+  .statusbar .spacer { flex:1; }
+  .statusbar .state { display:flex; align-items:center; gap:8px; color:var(--accent); font-weight:700; }
+  .statusbar .state .led { width:8px; height:8px; border-radius:50%; background:var(--accent); animation:pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+  .caption { width:1180px; margin:16px auto 0; font-size:12.5px; color:#3a4656; background:#ffffffcc; border:1px solid var(--border); border-radius:10px; padding:12px 16px; line-height:1.5; }
+  .caption b { color:var(--accent-press); }
+</style>
+</head>
+<body>
+<div style="display:flex; flex-direction:column; align-items:center;">
+  <div class="window">
+    <div class="titlebar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="tb-title">ADS1292 Studio</span>
+    </div>
+
+    <div class="header">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2-6 4 12 2-6h8"/></svg></div>
+      <div class="titles"><h1>ADS1292 Studio</h1><p>MOTAC ECG validation · ADS1292RECG-FE</p></div>
+      <div class="spacer"></div>
+      <div class="pill"><span class="led"></span>Streaming · cu.usbmodem2024</div>
+    </div>
+
+    <div class="controls">
+      <div class="ctl-group"><span class="ctl-label">Port</span><span class="field">cu.usbmodem2024 <span class="chev">▼</span></span><button class="btn">↻ Refresh</button></div>
+      <button class="btn">Connected ✓</button>
+      <div class="ctl-group" style="margin-left:6px;"><span class="ctl-label">Mode</span><span class="field" style="min-width:130px;">Live Monitor <span class="chev">▼</span></span></div>
+      <label class="toggle"><span class="switch"></span> Save CSV</label>
+      <div class="spacer"></div>
+      <button class="btn disabled">▶ Start</button>
+      <button class="btn" style="border-color:var(--bad);color:var(--bad);">■ Stop</button>
+    </div>
+
+    <div class="body">
+      <aside class="sidebar">
+        <div class="card next-step"><div class="card-body">
+          <div class="ns-title">◆ Next step</div>
+          <div class="ns-body">Recording live. Mark events below, then press <b>Stop</b> to finalize the recording.</div>
+        </div></div>
+        <div class="card"><div class="card-head">Overview</div><div class="card-body">
+          <div class="row"><span class="k"><span class="sdot ok"></span>Connection</span><span class="v">Connected</span></div>
+          <div class="row"><span class="k"><span class="sdot ok"></span>Acquisition</span><span class="v">Streaming</span></div>
+          <div class="row"><span class="k"><span class="sdot ok"></span>Data</span><span class="v">12,840 samples</span></div>
+          <div class="row"><span class="k"><span class="sdot warn"></span>Package</span><span class="v">Recording…</span></div>
+        </div></div>
+        <div class="card"><div class="card-head">Channel map</div><div class="card-body">
+          <div class="row"><span class="k"><span class="legend-dot" style="background:var(--ecg)"></span>CH2</span><span class="v">ECG Lead I (LA–RA)</span></div>
+          <div class="row"><span class="k"><span class="legend-dot" style="background:var(--resp)"></span>CH1</span><span class="v">Respiration raw</span></div>
+        </div></div>
+        <div class="card"><div class="card-head">Signal quality</div><div class="card-body">
+          <div class="row"><span class="k">Signal</span><span class="tag ok">Good ECG/QRS</span></div>
+          <div class="row"><span class="k">Contact</span><span class="v">99.9%</span></div>
+          <div class="row"><span class="k">Heart rate</span><span class="v">72 bpm · 129 R</span></div>
+          <div class="row"><span class="k">Artifacts</span><span class="v">low drift</span></div>
+        </div></div>
+      </aside>
+
+      <main class="workspace">
+        <div class="tabs">
+          <div class="tab active">Live ECG</div>
+          <div class="tab future">Review CSV</div>
+          <div class="tab future">PQRST Beat</div>
+          <div class="tab future">Spectrum</div>
+          <div class="tab future">Event Log</div>
+        </div>
+
+        <div class="plot-stack">
+          <div class="plot">
+            <div class="plot-head"><span class="pt"><span class="legend-dot" style="background:var(--ecg)"></span>CH2 · ECG Lead I</span><span class="py">Amplitude (counts)</span></div>
+            <div class="plot-canvas"><div class="grid"></div>
+              <svg viewBox="0 0 800 144" preserveAspectRatio="none"><path fill="none" stroke="var(--ecg)" stroke-width="1.8"
+                d="M0,92 L60,92 L70,89 L78,97 L86,36 L94,124 L102,83 L112,92 L150,92 L160,87 L168,95 L176,92
+                   L210,92 L220,89 L228,97 L236,36 L244,124 L252,83 L262,92 L300,92 L310,87 L318,95 L326,92
+                   L360,92 L370,89 L378,97 L386,36 L394,124 L402,83 L412,92 L450,92 L460,87 L468,95 L476,92
+                   L510,92 L520,89 L528,97 L536,36 L544,124 L552,83 L562,92 L600,92 L610,87 L618,95 L626,92
+                   L660,92 L670,89 L678,97 L686,36 L694,124 L702,83 L712,92 L760,92 L800,92"/></svg>
+            </div>
+          </div>
+          <div class="plot">
+            <div class="plot-head"><span class="pt"><span class="legend-dot" style="background:var(--resp)"></span>CH1 · Respiration raw</span><span class="py">Impedance signal (counts)</span></div>
+            <div class="plot-canvas"><div class="grid"></div>
+              <svg viewBox="0 0 800 144" preserveAspectRatio="none"><path fill="none" stroke="var(--resp)" stroke-width="1.8"
+                d="M0,72 C80,18 140,18 220,72 C300,126 360,126 440,72 C520,18 580,18 660,72 C740,126 780,104 800,86"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Event console (regrouped) -->
+        <div class="console">
+          <div class="console-top">
+            <span class="snr-title">Realtime SNR</span>
+            <span class="snr-val">ECG <b>24.6 dB</b> · noise 3.1 µV rms · baseline stable</span>
+            <span class="spacer"></span>
+            <div class="ev-status">
+              <span>Events <b>3</b></span>
+              <span>Range start <b>12.4 s</b></span>
+              <span class="ev-chip">range armed</span>
+            </div>
+          </div>
+
+          <div class="ev-grid">
+            <!-- LEFT: capture -->
+            <div class="ev-col">
+              <div class="ev-col-head"><span class="num">1</span>Annotate</div>
+              <div class="ev-fields">
+                <div class="ev-field"><label>Event label</label><div class="ev-input ph">e.g. motion start</div></div>
+                <div class="ev-field"><label>Event notes</label><div class="ev-input ph">optional notes…</div></div>
+              </div>
+              <div class="ev-actions">
+                <button class="ev-btn key">＋ Add Point Event</button>
+                <button class="ev-btn go">▷ Start Range</button>
+                <button class="ev-btn">▣ End Range</button>
+              </div>
+            </div>
+
+            <div class="ev-vdiv"></div>
+
+            <!-- RIGHT: manual range + manage -->
+            <div class="ev-col">
+              <div class="ev-col-head"><span class="num">2</span>Manual range</div>
+              <div class="ev-inline">
+                <div class="ev-num"><label>Range start s</label><div class="ev-input">10.0</div></div>
+                <div class="ev-num"><label>Range end s</label><div class="ev-input">18.0</div></div>
+                <button class="ev-btn" style="height:32px;">＋ Add Manual Range</button>
+              </div>
+
+              <div class="ev-subsep"></div>
+
+              <div class="ev-col-head"><span class="num">3</span>Manage</div>
+              <div class="ev-manage">
+                <button class="ev-btn warn">↶ Remove Last</button>
+                <div class="ev-num sm"><label>Remove #</label><div class="ev-input">2</div></div>
+                <button class="ev-btn warn" style="height:32px;">✕ Remove Event #</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div class="statusbar">
+      <div class="metric"><b>72</b><span class="u">bpm</span></div>
+      <div class="metric">scale <b>2.41</b><span class="u">µV/count</span></div>
+      <div class="metric">contact <b>99.9</b><span class="u">%</span></div>
+      <div class="spacer"></div>
+      <div class="state"><span class="led"></span>Streaming · 00:25.7</div>
+    </div>
+  </div>
+
+  <div class="caption">
+    <b>Event console v3 — regrouped by intent.</b> Top strip pairs <b>Realtime SNR</b> (left) with live event status (right: count · range start · armed chip).
+    Body splits into two labeled columns: <b>① Annotate</b> (label/notes → Add Point / Start Range / End Range, primary action emphasized) and
+    <b>② Manual range</b> + <b>③ Manage</b> (inputs aligned with labels; destructive Remove actions grouped and tinted red, separated by a divider).
+    No more wrapping/overflow — every group reads as one unit.
+  </div>
+</div>
+</body>
+</html>

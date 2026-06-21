@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ADS1292 Studio — PySide6 Mockup v4 (true 3-column layout)</title>
+<style>
+  :root {
+    --surface:#EEF2F7; --panel:#FFFFFF; --panel-alt:#F5F8FC;
+    --border:#DCE3EC; --border-strong:#C6D0DC;
+    --ink:#1B2533; --ink-muted:#5A6677; --ink-faint:#8A95A4;
+    --accent:#1E88A8; --accent-press:#166076; --accent-soft:#E2F1F6;
+    --indigo:#4C5DD4;
+    --ok:#2E9E6B; --ok-soft:#E3F4EC;
+    --warn:#C8881E; --warn-soft:#FBF0DA;
+    --bad:#D24B4B; --bad-soft:#FBE7E7;
+    --ecg:#1E88A8; --resp:#4C5DD4;
+    --radius:10px; --radius-sm:7px;
+    --shadow-card:0 1px 2px rgba(20,33,51,.05),0 2px 6px rgba(20,33,51,.05);
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",sans-serif;
+    --mono:"SF Mono","JetBrains Mono","Menlo",monospace;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:#C9D2DD; font-family:var(--font); color:var(--ink); -webkit-font-smoothing:antialiased; padding:24px; display:flex; justify-content:center; }
+  .window { width:1400px; background:var(--surface); border-radius:14px; box-shadow:0 30px 80px rgba(20,33,51,.30); overflow:hidden; border:1px solid rgba(0,0,0,.05); }
+  .titlebar { height:36px; background:linear-gradient(#FBFCFE,#EEF2F7); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; padding:0 14px; }
+  .dot { width:12px; height:12px; border-radius:50%; }
+  .dot.r{background:#FF5F57;}.dot.y{background:#FEBC2E;}.dot.g{background:#28C840;}
+  .titlebar .tb-title { flex:1; text-align:center; font-size:12.5px; color:var(--ink-faint); font-weight:500; }
+
+  /* Header */
+  .header { display:flex; align-items:center; gap:13px; padding:13px 18px; background:var(--panel); border-bottom:1px solid var(--border); }
+  .logo { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,var(--accent),var(--indigo)); display:grid; place-items:center; color:#fff; flex:none; box-shadow:0 3px 8px rgba(30,136,168,.35); }
+  .logo svg { width:20px; height:20px; }
+  .titles h1 { font-size:17px; font-weight:650; letter-spacing:-.2px; }
+  .titles p { font-size:12px; color:var(--ink-muted); margin-top:1px; }
+  .header .spacer { flex:1; }
+  .pill { display:inline-flex; align-items:center; gap:7px; padding:6px 13px; border-radius:999px; font-size:12.5px; font-weight:600; background:var(--bad-soft); color:var(--bad); border:1px solid rgba(210,75,75,.22); }
+  .pill .led { width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 0 3px rgba(210,75,75,.15); }
+
+  /* Toolbars */
+  .controls { display:flex; align-items:center; gap:9px; padding:10px 18px; background:var(--panel-alt); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .ctl-label { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-faint); font-weight:600; }
+  .field { height:32px; padding:0 11px; border-radius:var(--radius-sm); border:1px solid var(--border-strong); background:#fff; font-size:12.5px; color:var(--ink); display:inline-flex; align-items:center; gap:8px; justify-content:space-between; }
+  .field .chev { color:var(--ink-faint); font-size:10px; }
+  .btn { height:32px; padding:0 14px; border-radius:var(--radius-sm); border:1px solid var(--border-strong); background:#fff; color:var(--ink); font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .12s; }
+  .btn:hover { border-color:var(--accent); color:var(--accent); }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 2px 6px rgba(30,136,168,.30); }
+  .btn.disabled { opacity:.45; cursor:not-allowed; background:#fff; color:var(--ink-faint); border-color:var(--border); box-shadow:none; }
+  .sep { width:1px; height:22px; background:var(--border); margin:0 3px; }
+  .check { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; }
+  .box { width:16px; height:16px; border-radius:4px; background:var(--accent); display:grid; place-items:center; color:#fff; font-size:11px; }
+  .controls .spacer { flex:1; }
+
+  /* Display toolbar */
+  .display { display:flex; align-items:center; gap:8px; padding:8px 18px; background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; font-size:12.5px; }
+  .seg { display:inline-flex; border:1px solid var(--border-strong); border-radius:var(--radius-sm); overflow:hidden; }
+  .seg span { padding:5px 11px; font-size:12px; color:var(--ink-muted); font-weight:600; border-right:1px solid var(--border); cursor:pointer; }
+  .seg span:last-child { border-right:0; }
+  .seg span.on { background:var(--accent); color:#fff; }
+  .mini { height:28px; padding:0 9px; border:1px solid var(--border-strong); border-radius:6px; background:#fff; font-size:12px; display:inline-flex; align-items:center; gap:6px; }
+  .hint { font-family:var(--mono); font-size:11px; color:var(--ink-faint); background:var(--panel-alt); border:1px solid var(--border); border-radius:6px; padding:4px 10px; }
+  .dlabel { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-faint); font-weight:700; }
+
+  /* Body: 3 columns, fixed equal height; sides scroll internally */
+  .body { display:flex; height:680px; overflow:hidden; }
+  .col-left { width:262px; flex:none; border-right:1px solid var(--border); background:var(--surface); display:flex; flex-direction:column; min-height:0; }
+  .col-right { width:268px; flex:none; border-left:1px solid var(--border); background:var(--surface); display:flex; flex-direction:column; min-height:0; }
+  .col-center { flex:1; min-width:0; padding:14px 16px; display:flex; flex-direction:column; gap:11px; }
+
+  /* modern, always-visible scrollbars on the side panels */
+  .panel-scroll::-webkit-scrollbar, .scards::-webkit-scrollbar { width:10px; }
+  .panel-scroll::-webkit-scrollbar-track, .scards::-webkit-scrollbar-track { background:var(--panel-alt); border-radius:8px; margin:4px; }
+  .panel-scroll::-webkit-scrollbar-thumb, .scards::-webkit-scrollbar-thumb { background:var(--border-strong); border-radius:8px; border:2px solid var(--panel-alt); }
+  .panel-scroll::-webkit-scrollbar-thumb:hover, .scards::-webkit-scrollbar-thumb:hover { background:var(--ink-faint); }
+
+  .sub-tabs { display:flex; gap:2px; padding:10px 12px 0; border-bottom:1px solid var(--border); flex:none; }
+  .sub-tab { padding:7px 13px; font-size:12.5px; font-weight:600; color:var(--ink-muted); cursor:pointer; border-radius:7px 7px 0 0; border-bottom:2px solid transparent; }
+  .sub-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .panel-scroll { padding:14px 14px 16px; overflow-y:scroll; flex:1; min-height:0; display:flex; flex-direction:column; gap:6px; }
+  .group-head { font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--ink-faint); font-weight:700; margin-top:10px; margin-bottom:3px; }
+  .group-head:first-child { margin-top:0; }
+  .f-label { font-size:11.5px; color:var(--ink-muted); margin:6px 0 3px; }
+  .input { height:32px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); background:#fff; padding:0 10px; font-size:12.5px; color:var(--ink); display:flex; align-items:center; }
+  .input.ph { color:var(--ink-faint); }
+  .note-card { background:var(--accent-soft); border:1px solid rgba(30,136,168,.25); border-left:3px solid var(--accent); border-radius:7px; padding:8px 11px; font-size:12px; color:var(--ink-muted); margin:6px 0; }
+  .note-card b { color:var(--accent-press); display:block; margin-bottom:2px; }
+  .act { height:34px; border-radius:var(--radius-sm); border:1px solid var(--border-strong); background:#fff; font-size:12.5px; font-weight:600; color:var(--ink); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; margin-top:6px; }
+  .act.load { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .act.disabled { opacity:.45; color:var(--ink-faint); border-color:var(--border); }
+
+  /* Status (right) */
+  .status-head { padding:13px 16px 4px; font-size:13px; font-weight:700; flex:none; }
+  .scards { padding:6px 14px 16px; overflow-y:scroll; flex:1; min-height:0; display:flex; flex-direction:column; gap:13px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-card); }
+  .card .card-head { padding:10px 13px 0; font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--ink-faint); font-weight:700; }
+  .card .card-body { padding:8px 13px 11px; }
+  .next-step { background:linear-gradient(135deg,var(--accent-soft),#EFF6FF); border-color:rgba(30,136,168,.30); }
+  .next-step .ns-title { font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--accent-press); font-weight:700; }
+  .next-step .ns-body { margin-top:5px; font-size:13px; line-height:1.4; color:var(--accent-press); font-weight:600; }
+  .row { display:flex; align-items:center; justify-content:space-between; padding:5px 0; font-size:12.5px; border-bottom:1px dashed var(--border); }
+  .row:last-child { border-bottom:0; }
+  .row .k { color:var(--ink-muted); display:flex; align-items:center; gap:7px; }
+  .row .v { font-weight:600; }
+  .row .v.mono { font-family:var(--mono); font-size:12px; }
+  .sdot { width:8px; height:8px; border-radius:50%; flex:none; }
+  .sdot.ok{background:var(--ok);}.sdot.warn{background:var(--warn);}.sdot.bad{background:var(--bad);}.sdot.idle{background:var(--ink-faint);}
+  .legend-dot { width:9px; height:9px; border-radius:2px; }
+  .pillv { font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; }
+  .pillv.warn{background:var(--warn-soft);color:var(--warn);} .pillv.idle{background:var(--panel-alt);color:var(--ink-faint);}
+
+  /* Center: tabs + plots + console */
+  .tabs { display:flex; gap:4px; border-bottom:1px solid var(--border); }
+  .tab { padding:9px 15px; font-size:13px; font-weight:600; color:var(--ink-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab.future { color:var(--ink-faint); font-weight:500; }
+  .plot-stack { display:flex; flex-direction:column; gap:9px; flex:1; min-height:0; }
+  .plot { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-card); overflow:hidden; display:flex; flex-direction:column; flex:1; min-height:120px; }
+  .plot-head { display:flex; align-items:center; justify-content:space-between; padding:7px 13px; border-bottom:1px solid var(--border); }
+  .plot-head .pt { font-size:12.5px; font-weight:650; display:flex; align-items:center; gap:8px; }
+  .plot-head .py { font-size:11px; color:var(--ink-faint); font-family:var(--mono); }
+  .plot-canvas { flex:1; position:relative; background:var(--panel-alt); display:grid; place-items:center; }
+  .grid { position:absolute; inset:0; background-image:linear-gradient(rgba(30,136,168,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(30,136,168,.05) 1px,transparent 1px); background-size:26px 26px; }
+  .empty-msg { position:relative; font-size:13px; font-weight:600; color:var(--ink-faint); background:#fff; border:1px solid var(--border); border-radius:8px; padding:9px 18px; box-shadow:var(--shadow-card); }
+
+  /* console */
+  .console { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-card); }
+  .console-top { display:flex; align-items:center; gap:12px; padding:9px 15px; border-bottom:1px solid var(--border); background:var(--panel-alt); border-radius:var(--radius) var(--radius) 0 0; }
+  .snr-title { font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--ink-faint); font-weight:700; }
+  .snr-val { font-family:var(--mono); font-size:12px; color:var(--ink-muted); }
+  .console-top .spacer { flex:1; }
+  .ev-status { display:flex; align-items:center; gap:13px; font-size:12px; color:var(--ink-muted); }
+  .ev-status b { color:var(--ink); font-family:var(--mono); }
+  .ev-grid { display:grid; grid-template-columns:1fr 1px 1fr; }
+  .ev-col { padding:12px 15px; display:flex; flex-direction:column; gap:9px; }
+  .ev-vdiv { background:var(--border); }
+  .ev-col-head { font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--accent-press); font-weight:700; display:flex; align-items:center; gap:7px; }
+  .ev-col-head .num { width:16px; height:16px; border-radius:50%; background:var(--accent-soft); color:var(--accent-press); font-size:10px; display:grid; place-items:center; font-weight:800; }
+  .ev-fields { display:flex; gap:9px; }
+  .ev-field { flex:1; display:flex; flex-direction:column; gap:4px; }
+  .ev-field label { font-size:11px; color:var(--ink-faint); font-weight:600; }
+  .ev-input { height:31px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); background:#fff; padding:0 10px; font-size:12.5px; color:var(--ink); display:flex; align-items:center; }
+  .ev-input.ph { color:var(--ink-faint); }
+  .ev-actions { display:flex; gap:7px; }
+  .ev-btn { height:33px; padding:0 12px; border-radius:var(--radius-sm); border:1px solid var(--border-strong); background:#fff; font-size:12px; font-weight:600; color:var(--ink); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; }
+  .ev-btn.key { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 2px 6px rgba(30,136,168,.25); flex:1; }
+  .ev-btn.go { background:var(--ok-soft); border-color:rgba(46,158,107,.40); color:var(--ok); }
+  .ev-btn.warn { background:var(--bad-soft); border-color:rgba(210,75,75,.30); color:var(--bad); }
+  .ev-inline { display:flex; align-items:flex-end; gap:9px; }
+  .ev-num { display:flex; flex-direction:column; gap:4px; }
+  .ev-num label { font-size:11px; color:var(--ink-faint); font-weight:600; }
+  .ev-num .ev-input { width:86px; font-family:var(--mono); }
+  .ev-num.sm .ev-input { width:58px; }
+  .ev-subsep { height:1px; background:var(--border); margin:2px 0 0; }
+  .ev-manage { display:flex; align-items:flex-end; gap:9px; }
+
+  .caption { width:1400px; margin:14px auto 0; font-size:12.5px; color:#3a4656; background:#ffffffcc; border:1px solid var(--border); border-radius:10px; padding:12px 16px; line-height:1.5; }
+  .caption b { color:var(--accent-press); }
+</style>
+</head>
+<body>
+<div style="display:flex; flex-direction:column; align-items:center;">
+  <div class="window">
+    <div class="titlebar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="tb-title">ADS1292 Studio</span>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2-6 4 12 2-6h8"/></svg></div>
+      <div class="titles"><h1>ADS1292 Studio</h1><p>MOTAC ECG validation</p></div>
+      <div class="spacer"></div>
+      <div class="pill"><span class="led"></span>Not connected</div>
+    </div>
+
+    <!-- Control toolbar -->
+    <div class="controls">
+      <span class="ctl-label">Input · Port</span>
+      <span class="field" style="min-width:230px;">/dev/cu.usbmodem214301 <span class="chev">▼</span></span>
+      <button class="btn">Refresh</button>
+      <button class="btn primary">Connect</button>
+      <button class="btn disabled">▶ Start</button>
+      <button class="btn disabled">■ Stop</button>
+      <span class="sep"></span>
+      <span class="ctl-label">Mode</span>
+      <span class="field" style="min-width:128px;">Live Monitor <span class="chev">▼</span></span>
+      <button class="btn disabled">Calibrate Live</button>
+      <span class="sep"></span>
+      <span class="ctl-label">Record</span>
+      <label class="check"><span class="box">✓</span> Record CSV</label>
+    </div>
+
+    <!-- Display toolbar -->
+    <div class="display">
+      <span class="dlabel">Display</span>
+      <div class="seg"><span class="on">Auto scale</span></div>
+      <span class="dlabel" style="margin-left:6px;">Filters</span>
+      <div class="seg"><span>HP</span><span>Notch</span><span>LP</span><span>QRS filter</span></div>
+      <span class="sep"></span>
+      <span class="dlabel">Scale</span>
+      <span class="mini">Window <b>8 s</b> ▾</span>
+      <span class="mini">Gain <b>1x</b> ▾</span>
+      <span class="mini">Speed <b>25 mm/s</b> ▾</span>
+      <span class="spacer" style="flex:1"></span>
+      <span class="hint">CH2 Lead I · CH1 Resp · Contact · raw · 1x · 8 s · 25 mm/s</span>
+    </div>
+
+    <!-- Body: 3 columns -->
+    <div class="body">
+      <!-- LEFT: Session / Validation / Protocol forms -->
+      <div class="col-left">
+        <div class="sub-tabs">
+          <span class="sub-tab active">Session</span>
+          <span class="sub-tab">Validation</span>
+          <span class="sub-tab">Protocol</span>
+        </div>
+        <div class="panel-scroll">
+          <div class="group-head">Recording notes</div>
+          <div class="f-label">Session ID</div><div class="input">untitled-session</div>
+          <div class="f-label">Subject</div><div class="input">anonymous</div>
+          <div class="f-label">Electrode</div><div class="input">commercial Ag/AgCl control</div>
+          <div class="f-label">Montage</div><div class="input">RA/LA/RL torso</div>
+          <div class="f-label">Operator</div><div class="input ph">—</div>
+          <div class="f-label">Notes</div><div class="input ph">—</div>
+
+          <div class="group-head">Acquisition provenance</div>
+          <div class="note-card"><b>Acquisition</b>no CSV loaded</div>
+
+          <div class="group-head">Open data</div>
+          <button class="act load">⤓ Load CSV</button>
+
+          <div class="group-head">Optional archive</div>
+          <button class="act disabled">Export Report</button>
+          <button class="act disabled">Export Package</button>
+          <button class="act">Verify Package</button>
+          <button class="act">Batch Compare</button>
+          <button class="act">Session Index</button>
+        </div>
+      </div>
+
+      <!-- CENTER: plots + event console -->
+      <div class="col-center">
+        <div class="tabs">
+          <div class="tab active">Live ECG</div>
+          <div class="tab future">Review CSV</div>
+          <div class="tab future">PQRST Beat</div>
+          <div class="tab future">Spectrum</div>
+          <div class="tab future">Event Log</div>
+        </div>
+
+        <div class="plot-stack">
+          <div class="plot">
+            <div class="plot-head"><span class="pt"><span class="legend-dot" style="background:var(--ecg)"></span>CH2 · ECG Lead I</span><span class="py">Amplitude (counts)</span></div>
+            <div class="plot-canvas"><div class="grid"></div><div class="empty-msg">Connect, then Start for CH2 ECG</div></div>
+          </div>
+          <div class="plot">
+            <div class="plot-head"><span class="pt"><span class="legend-dot" style="background:var(--resp)"></span>CH1 · Respiration raw</span><span class="py">Impedance signal (counts)</span></div>
+            <div class="plot-canvas"><div class="grid"></div><div class="empty-msg">CH1 respiration / impedance appears here</div></div>
+          </div>
+        </div>
+
+        <!-- Event console (regrouped, idle state) -->
+        <div class="console">
+          <div class="console-top">
+            <span class="snr-title">Realtime SNR</span>
+            <span class="snr-val">— · waiting for ECG window</span>
+            <span class="spacer"></span>
+            <div class="ev-status"><span>Events <b>0</b></span><span>Range start <b>—</b></span></div>
+          </div>
+          <div class="ev-grid">
+            <div class="ev-col">
+              <div class="ev-col-head"><span class="num">1</span>Annotate</div>
+              <div class="ev-fields">
+                <div class="ev-field"><label>Event label</label><div class="ev-input">motion</div></div>
+                <div class="ev-field"><label>Event notes</label><div class="ev-input ph">optional notes…</div></div>
+              </div>
+              <div class="ev-actions">
+                <button class="ev-btn key">＋ Add Point Event</button>
+                <button class="ev-btn go">▷ Start Range</button>
+                <button class="ev-btn">▣ End Range</button>
+              </div>
+            </div>
+            <div class="ev-vdiv"></div>
+            <div class="ev-col">
+              <div class="ev-col-head"><span class="num">2</span>Manual range</div>
+              <div class="ev-inline">
+                <div class="ev-num"><label>Range start s</label><div class="ev-input ph">—</div></div>
+                <div class="ev-num"><label>Range end s</label><div class="ev-input ph">—</div></div>
+                <button class="ev-btn" style="height:31px;">＋ Add Manual Range</button>
+              </div>
+              <div class="ev-subsep"></div>
+              <div class="ev-col-head"><span class="num">3</span>Manage</div>
+              <div class="ev-manage">
+                <button class="ev-btn warn">↶ Remove Last</button>
+                <div class="ev-num sm"><label>Remove #</label><div class="ev-input ph">—</div></div>
+                <button class="ev-btn warn" style="height:31px;">✕ Remove Event #</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Status -->
+      <div class="col-right">
+        <div class="status-head">Status</div>
+        <div class="scards">
+          <div class="card next-step"><div class="card-body">
+            <div class="ns-title">Next step</div>
+            <div class="ns-body">Press Connect, or load CSV.</div>
+          </div></div>
+          <div class="card"><div class="card-head">Overview</div><div class="card-body">
+            <div class="row"><span class="k"><span class="sdot bad"></span>Connection</span><span class="pillv warn">disconnected</span></div>
+            <div class="row"><span class="k">Port</span><span class="v mono">usbmodem214301</span></div>
+            <div class="row"><span class="k"><span class="sdot idle"></span>Acquisition</span><span class="v">idle</span></div>
+            <div class="row"><span class="k"><span class="sdot idle"></span>Data</span><span class="v">none loaded</span></div>
+            <div class="row"><span class="k"><span class="sdot idle"></span>Package</span><span class="v">unavailable</span></div>
+          </div></div>
+          <div class="card"><div class="card-head">Channel map</div><div class="card-body">
+            <div class="row"><span class="k"><span class="legend-dot" style="background:var(--ecg)"></span>ECG</span><span class="v">CH2 Lead I (LA-RA)</span></div>
+            <div class="row"><span class="k"><span class="legend-dot" style="background:var(--resp)"></span>Respiration</span><span class="v">CH1 raw impedance</span></div>
+            <div class="row"><span class="k"><span class="legend-dot" style="background:#6B7686"></span>Contact</span><span class="v">lead-off bits</span></div>
+          </div></div>
+          <div class="card"><div class="card-head">Signal quality</div><div class="card-body">
+            <div class="row"><span class="k">Signal</span><span class="pillv idle">not reviewed</span></div>
+            <div class="row"><span class="k">Contact</span><span class="v">—</span></div>
+            <div class="row"><span class="k">Heart rate</span><span class="v">—</span></div>
+            <div class="row"><span class="k">Artifacts</span><span class="v">—</span></div>
+          </div></div>
+          <div class="card"><div class="card-head">Session</div><div class="card-body">
+            <div class="row"><span class="k">Session</span><span class="v">No session</span></div>
+            <div class="row"><span class="k">Quality</span><span class="v">—</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="caption">
+    <b>v4 — true 3-column layout.</b> Left = <b>Session / Validation / Protocol</b> tabbed forms (recording notes, provenance, Load CSV, archive actions);
+    center = workspace tabs + 2 ECG/respiration panels + the regrouped <b>SNR + Event console</b>; right = <b>Status</b> (Next step, Overview, Channel map incl. Contact, Signal quality, Session).
+    Top adds the <b>Display toolbar</b> (Auto scale · Filters · Scale) and the full control row (Refresh / Connect / Start / Stop · Mode · Calibrate Live · Record CSV).
+    Shown in the real idle/disconnected state with empty-plot placeholders, modernized with the approved token system.
+  </div>
+</div>
+</body>
+</html>

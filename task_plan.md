@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 43
+Phase 44: GUI Modernization (PySide6 / Qt) — design approved, implementation starting
 
 ## Phases
 
@@ -374,6 +374,40 @@ Phase 43
 - [x] Verify against the real `recordings/2026-06-18-221342-ads1292-studio.csv` (44,884 samples, 89.8s): full-recording compute path completes in ~27ms and reproduces the documented `r_peaks=129`, `hr_median_bpm=86.7` baseline that the CLI `review`/`qc` commands already showed.
 - **Status:** complete
 
+### Phase 44: GUI Modernization (PySide6 / Qt)
+Goal: modernize the desktop GUI (visual + workflow) by rewriting only the widget/styling
+layer in PySide6, while reusing the entire toolkit-agnostic core (device, workers, signal
+processing, recording, quality, calibration) and the `gui_state` view-model unchanged.
+Approach chosen with the user via brainstorming: Route B (real native toolkit, not a Tkinter
+re-theme and not a web rewrite), light-first theme (dark-ready token system), matplotlib
+embedded via `FigureCanvasQTAgg` for phase 1 (keeps `report.py`/`review_render.py`/`spectrum.py`
+unchanged), parallel `ui_qt/` package + second entry point so the working Tk app is never broken.
+
+Visual baseline approved: `docs/mockups/2026-06-21-pyqt-modernization-mockup-v5.html` (+ .png).
+True 3-column layout confirmed against the real running app: left = Session/Validation/Protocol
+tabbed forms (scrollable), center = workspace tabs + 2 synchronized panels (CH2 ECG + CH1
+respiration; lead-off waveform removed, contact kept as a metric) + regrouped SNR/Event console,
+right = Status (Next step, Overview, Channel map incl. Contact, Signal quality, Session). Side
+columns scroll internally so all three columns are equal height. Calibrate Live stays in the
+control toolbar (state-gated like Start/Stop). Display toolbar (Auto scale / Filters / Scale)
+retained.
+
+- [x] Brainstorm route, focus (visual + workflow), and constraints with the user.
+- [x] Confirm clean UI/core separation via codegraph (only ~6 files are Tk-bound).
+- [x] Produce and iterate light-first visual mockups (v1 -> v5) until user-approved.
+- [x] Record Phase 44 design and decisions in planning files.
+- [ ] Write design spec to `docs/superpowers/specs/2026-06-21-pyqt-modernization-design.md`; user review.
+- [ ] Phase 44.1 MVP: PySide6 app shell + token/QSS theme system + connect/start/stop/calibrate
+      flow + 2-panel live plot (FigureCanvasQTAgg) + 3-column layout + Status panel + SNR/Event
+      console, driven by reused `gui_state`/`gui_workers` and a QTimer queue drain.
+- [ ] Phase 44.2: Review CSV / PQRST / Spectrum / Event Log tabs.
+- [ ] Phase 44.3: left-panel forms (Session/Validation/Protocol) + archive actions (report,
+      package, verify, batch, session index) wired to existing core modules.
+- [ ] Phase 44.4: polish (focus/hover states, keyboard shortcuts, density, dark-mode pass).
+- [ ] Tests: token->QSS snapshot, controller logic via `gui_state`, offscreen QApplication smoke.
+- [ ] Commit on a feature branch and push to GitHub (confirm before push).
+- **Status:** in progress (design approved; implementation starting)
+
 ## Key Questions
 1. Can the first commercial-direction version run without the physical board? Yes: offline CSV review must work from existing saved CSV.
 2. Which channel should be treated as ECG? For ADS1292RECG-FE/ADS1292R, CH2 is ECG Lead I (LA-RA); CH1 is the respiration raw channel and should not be treated as a second ECG lead.
@@ -427,6 +461,12 @@ Phase 43
 | Add a unified GUI state snapshot | Button gating, workflow hints, overview text, and status cards should share a single immutable state object rather than recomputing the same booleans in several places. |
 | Add real-recording signal-quality cards | Actual exported data can be usable while the GUI still hides the conclusion; the Status tab should expose ECG source, contact, HR/R peaks, and drift/noise as separate scan-friendly rows. |
 | Use synchronized ADS1292R plots instead of channel auto-selection in the GUI | For this board, ECG and respiration are different measurement functions: show CH2 ECG, CH1 respiration, and lead-off/contact together on the same time axis rather than switching or combining channels. |
+| Modernize the GUI by rewriting only the widget layer in PySide6 (Route B) | A native Qt toolkit reaches a modern look (rounded cards, semantic states, real type scale) that a Tkinter re-theme cannot; the toolkit-agnostic core and `gui_state` view-model are reused unchanged, so the high-risk concurrency/signal code is untouched. |
+| Keep matplotlib via FigureCanvasQTAgg for phase 1 instead of migrating to pyqtgraph | The report/review/spectrum modules already produce matplotlib figures; embedding them in Qt preserves export and de-risks the rewrite. pyqtgraph for the live panel stays an optional later optimization. |
+| Build a parallel `ui_qt/` package with a second entry point | The working Tk app must stay runnable during the transition so the Qt version can be compared to it until it reaches parity. |
+| Use a light-first, dark-ready design-token system compiled to QSS | One source of truth (`ui_qt/tokens.py`) mirrors the existing `APP_VISUAL_TOKENS` seed and maps 1:1 to a QSS stylesheet, so a dark map can be added later without touching widget code. |
+| Approve a true 3-column layout with internally-scrolling side columns | Matches the real running app (left forms / center plots+console / right Status); fixing side-column height with internal scroll keeps all three columns equal height and removes the empty center-bottom gap. |
+| Regroup the live SNR/Event console by intent | The event-annotation controls were a cramped wrapping row; grouping into Annotate / Manual range / Manage with aligned inputs and tinted destructive actions makes the central workflow legible. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

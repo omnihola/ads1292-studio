@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ADS1292 Studio — PySide6 Modernization Mockup (light-first)</title>
+<style>
+  :root {
+    /* ---- Design tokens (light-first) — these become QSS variables ---- */
+    --surface:      #EEF2F7;   /* app background */
+    --panel:        #FFFFFF;   /* elevated cards */
+    --panel-alt:    #F5F8FC;   /* subtle fills, table rows */
+    --border:       #DCE3EC;   /* hairline borders */
+    --border-strong:#C6D0DC;
+    --ink:          #1B2533;   /* primary text */
+    --ink-muted:    #5A6677;   /* secondary text */
+    --ink-faint:    #8A95A4;   /* tertiary / hints */
+    --accent:       #1E88A8;   /* medical teal — primary actions */
+    --accent-press: #166076;
+    --accent-soft:  #E2F1F6;
+    --indigo:       #4C5DD4;
+    --ok:           #2E9E6B;   /* connected / pass */
+    --ok-soft:      #E3F4EC;
+    --warn:         #C8881E;   /* caution */
+    --warn-soft:    #FBF0DA;
+    --bad:          #D24B4B;   /* error / disconnected */
+    --bad-soft:     #FBE7E7;
+    --ecg:          #1E88A8;
+    --resp:         #4C5DD4;
+    --status-trace: #6B7686;
+    --radius:       10px;
+    --radius-sm:    7px;
+    --shadow:       0 1px 2px rgba(20,33,51,.06), 0 6px 18px rgba(20,33,51,.06);
+    --shadow-card:  0 1px 2px rgba(20,33,51,.05), 0 2px 6px rgba(20,33,51,.05);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+    --mono: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #C9D2DD;
+    font-family: var(--font);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    padding: 28px;
+    display: flex;
+    justify-content: center;
+  }
+  /* ---- Window shell ---- */
+  .window {
+    width: 1180px;
+    background: var(--surface);
+    border-radius: 14px;
+    box-shadow: 0 30px 80px rgba(20,33,51,.30);
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,.05);
+  }
+  .titlebar {
+    height: 38px;
+    background: linear-gradient(#FBFCFE,#EEF2F7);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 14px;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.r { background: #FF5F57; } .dot.y { background: #FEBC2E; } .dot.g { background: #28C840; }
+  .titlebar .tb-title { flex: 1; text-align: center; font-size: 12.5px; color: var(--ink-faint); font-weight: 500; }
+
+  /* ---- Header ---- */
+  .header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 20px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--indigo));
+    display: grid; place-items: center; color: #fff; flex: none;
+    box-shadow: 0 3px 8px rgba(30,136,168,.35);
+  }
+  .logo svg { width: 22px; height: 22px; }
+  .titles h1 { font-size: 18px; font-weight: 650; letter-spacing: -.2px; }
+  .titles p { font-size: 12.5px; color: var(--ink-muted); margin-top: 1px; }
+  .header .spacer { flex: 1; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 13px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600;
+    background: var(--bad-soft); color: var(--bad);
+    border: 1px solid rgba(210,75,75,.22);
+  }
+  .pill .led { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px rgba(210,75,75,.15); }
+
+  /* ---- Control strip ---- */
+  .controls {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 20px;
+    background: var(--panel-alt);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .ctl-group { display: flex; align-items: center; gap: 8px; }
+  .ctl-label { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--ink-faint); font-weight: 600; }
+  .field {
+    height: 34px; padding: 0 12px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong); background: #fff;
+    font-size: 13px; color: var(--ink); display: inline-flex; align-items: center; gap: 8px;
+    min-width: 150px; justify-content: space-between;
+  }
+  .field .chev { color: var(--ink-faint); font-size: 10px; }
+  .btn {
+    height: 34px; padding: 0 16px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong); background: #fff; color: var(--ink);
+    font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+    transition: all .12s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 2px 6px rgba(30,136,168,.30); }
+  .btn.primary:hover { background: var(--accent-press); color:#fff; }
+  .btn.ghost-go { background: var(--ok); border-color: var(--ok); color:#fff; }
+  .btn.disabled { opacity: .45; cursor: not-allowed; background: #fff; color: var(--ink-faint); border-color: var(--border); box-shadow:none; }
+  .btn.disabled:hover { border-color: var(--border); color: var(--ink-faint); }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); user-select: none; }
+  .switch { width: 38px; height: 22px; border-radius: 999px; background: var(--accent); position: relative; flex:none; }
+  .switch::after { content:""; position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); }
+  .controls .spacer { flex: 1; }
+
+  /* ---- Body ---- */
+  .body { display: flex; min-height: 560px; }
+  .sidebar {
+    width: 290px; flex: none; padding: 16px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
+  }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-card); }
+  .card .card-head { padding: 11px 14px 0; font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--ink-faint); font-weight: 700; }
+  .card .card-body { padding: 10px 14px 13px; }
+
+  .next-step { background: linear-gradient(135deg, var(--accent-soft), #EFF6FF); border-color: rgba(30,136,168,.30); }
+  .next-step .ns-title { display:flex; align-items:center; gap:8px; font-size:11px; text-transform:uppercase; letter-spacing:.7px; color: var(--accent-press); font-weight:700; }
+  .next-step .ns-body { margin-top: 6px; font-size: 13.5px; line-height: 1.45; color: var(--ink); }
+  .next-step .ns-body b { color: var(--accent-press); }
+
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px dashed var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .row .k { color: var(--ink-muted); display:flex; align-items:center; gap:7px; }
+  .row .v { font-weight: 600; color: var(--ink); }
+  .sdot { width: 8px; height: 8px; border-radius: 50%; flex:none; }
+  .sdot.ok { background: var(--ok); } .sdot.warn { background: var(--warn); } .sdot.bad { background: var(--bad); } .sdot.idle { background: var(--ink-faint); }
+  .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .tag.ok { background: var(--ok-soft); color: var(--ok); }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+  .tag.idle { background: var(--panel-alt); color: var(--ink-faint); }
+
+  /* ---- Workspace ---- */
+  .workspace { flex: 1; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+  .tab { padding: 9px 16px; font-size: 13px; font-weight: 600; color: var(--ink-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab.future { color: var(--ink-faint); font-weight: 500; }
+
+  .plot-stack { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .plot {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow-card); overflow: hidden; flex: 1; min-height: 120px;
+    display: flex; flex-direction: column;
+  }
+  .plot-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+  .plot-head .pt { font-size: 13px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 2px; }
+  .plot-head .py { font-size: 11px; color: var(--ink-faint); font-family: var(--mono); }
+  .plot-canvas { flex: 1; position: relative; background:
+      linear-gradient(var(--panel-alt) 0 0) padding-box;
+  }
+  .grid { position:absolute; inset:0; background-image:
+      linear-gradient(rgba(30,136,168,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,136,168,.06) 1px, transparent 1px);
+    background-size: 26px 26px; }
+  .plot-canvas svg { position:absolute; inset:0; width:100%; height:100%; }
+
+  /* ---- Status bar ---- */
+  .statusbar {
+    display: flex; align-items: center; gap: 22px;
+    padding: 10px 20px; background: var(--panel); border-top: 1px solid var(--border);
+    font-size: 12.5px; color: var(--ink-muted);
+  }
+  .statusbar .metric { display:flex; align-items:baseline; gap:7px; }
+  .statusbar .metric b { font-size: 16px; color: var(--ink); font-family: var(--mono); font-weight: 700; }
+  .statusbar .metric .u { font-size: 11px; color: var(--ink-faint); }
+  .statusbar .spacer { flex:1; }
+  .statusbar .state { display:flex; align-items:center; gap:8px; color: var(--accent); font-weight:700; }
+  .statusbar .state .led { width:8px; height:8px; border-radius:50%; background: var(--accent); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+  .caption { width:1180px; margin: 16px auto 0; font-size:12.5px; color:#3a4656; background:#ffffffcc; border:1px solid var(--border); border-radius:10px; padding:12px 16px; line-height:1.5; }
+  .caption b { color: var(--accent-press); }
+</style>
+</head>
+<body>
+<div style="display:flex; flex-direction:column; align-items:center;">
+  <div class="window">
+    <!-- Title bar -->
+    <div class="titlebar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="tb-title">ADS1292 Studio</span>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12h4l2-6 4 12 2-6h8"/>
+        </svg>
+      </div>
+      <div class="titles">
+        <h1>ADS1292 Studio</h1>
+        <p>MOTAC ECG validation · ADS1292RECG-FE</p>
+      </div>
+      <div class="spacer"></div>
+      <div class="pill"><span class="led"></span>Not connected</div>
+    </div>
+
+    <!-- Control strip -->
+    <div class="controls">
+      <div class="ctl-group">
+        <span class="ctl-label">Port</span>
+        <span class="field">cu.usbmodem2024 <span class="chev">▼</span></span>
+        <button class="btn">↻ Refresh</button>
+      </div>
+      <button class="btn primary">Connect</button>
+      <div class="ctl-group" style="margin-left:6px;">
+        <span class="ctl-label">Mode</span>
+        <span class="field" style="min-width:130px;">Live Monitor <span class="chev">▼</span></span>
+      </div>
+      <label class="toggle"><span class="switch"></span> Save CSV</label>
+      <div class="spacer"></div>
+      <button class="btn ghost-go">▶ Start</button>
+      <button class="btn disabled">■ Stop</button>
+    </div>
+
+    <!-- Body -->
+    <div class="body">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="card next-step">
+          <div class="card-body">
+            <div class="ns-title">◆ Next step</div>
+            <div class="ns-body">Board detected. Press <b>Connect</b>, then <b>Start</b> to begin live acquisition.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">Overview</div>
+          <div class="card-body">
+            <div class="row"><span class="k"><span class="sdot bad"></span>Connection</span><span class="v">Disconnected</span></div>
+            <div class="row"><span class="k"><span class="sdot idle"></span>Acquisition</span><span class="v">Idle</span></div>
+            <div class="row"><span class="k"><span class="sdot idle"></span>Data</span><span class="v">No samples</span></div>
+            <div class="row"><span class="k"><span class="sdot idle"></span>Package</span><span class="v">Not ready</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">Channel map</div>
+          <div class="card-body">
+            <div class="row"><span class="k"><span class="legend-dot" style="background:var(--ecg)"></span>CH2</span><span class="v">ECG Lead I (LA–RA)</span></div>
+            <div class="row"><span class="k"><span class="legend-dot" style="background:var(--resp)"></span>CH1</span><span class="v">Respiration raw</span></div>
+            <div class="row"><span class="k"><span class="legend-dot" style="background:var(--status-trace)"></span>STAT</span><span class="v">Lead-off / contact</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">Signal quality</div>
+          <div class="card-body">
+            <div class="row"><span class="k">Signal</span><span class="tag idle">Waiting</span></div>
+            <div class="row"><span class="k">Contact</span><span class="v">—</span></div>
+            <div class="row"><span class="k">Heart rate</span><span class="v">—</span></div>
+            <div class="row"><span class="k">Artifacts</span><span class="v">—</span></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Workspace -->
+      <main class="workspace">
+        <div class="tabs">
+          <div class="tab active">Live ECG</div>
+          <div class="tab future">Review CSV</div>
+          <div class="tab future">PQRST Beat</div>
+          <div class="tab future">Spectrum</div>
+          <div class="tab future">Event Log</div>
+        </div>
+
+        <div class="plot-stack">
+          <!-- ECG -->
+          <div class="plot">
+            <div class="plot-head">
+              <span class="pt"><span class="legend-dot" style="background:var(--ecg)"></span>CH2 · ECG Lead I</span>
+              <span class="py">µV</span>
+            </div>
+            <div class="plot-canvas">
+              <div class="grid"></div>
+              <svg viewBox="0 0 800 130" preserveAspectRatio="none">
+                <path fill="none" stroke="var(--ecg)" stroke-width="1.8"
+                  d="M0,80 L60,80 L70,78 L78,84 L86,30 L94,110 L102,72 L112,80 L150,80 L160,76 L168,82 L176,80
+                     L210,80 L220,78 L228,84 L236,30 L244,110 L252,72 L262,80 L300,80 L310,76 L318,82 L326,80
+                     L360,80 L370,78 L378,84 L386,30 L394,110 L402,72 L412,80 L450,80 L460,76 L468,82 L476,80
+                     L510,80 L520,78 L528,84 L536,30 L544,110 L552,72 L562,80 L600,80 L610,76 L618,82 L626,80
+                     L660,80 L670,78 L678,84 L686,30 L694,110 L702,72 L712,80 L760,80 L800,80"/>
+              </svg>
+            </div>
+          </div>
+          <!-- Respiration -->
+          <div class="plot">
+            <div class="plot-head">
+              <span class="pt"><span class="legend-dot" style="background:var(--resp)"></span>CH1 · Respiration raw</span>
+              <span class="py">counts</span>
+            </div>
+            <div class="plot-canvas">
+              <div class="grid"></div>
+              <svg viewBox="0 0 800 90" preserveAspectRatio="none">
+                <path fill="none" stroke="var(--resp)" stroke-width="1.8"
+                  d="M0,45 C80,10 140,10 220,45 C300,80 360,80 440,45 C520,10 580,10 660,45 C740,80 780,70 800,55"/>
+              </svg>
+            </div>
+          </div>
+          <!-- Lead-off -->
+          <div class="plot">
+            <div class="plot-head">
+              <span class="pt"><span class="legend-dot" style="background:var(--status-trace)"></span>Lead-off / contact status</span>
+              <span class="py">bits</span>
+            </div>
+            <div class="plot-canvas">
+              <div class="grid"></div>
+              <svg viewBox="0 0 800 70" preserveAspectRatio="none">
+                <path fill="none" stroke="var(--status-trace)" stroke-width="1.8" d="M0,55 L800,55"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Status bar -->
+    <div class="statusbar">
+      <div class="metric"><b>72</b><span class="u">bpm</span></div>
+      <div class="metric">scale <b>2.41</b><span class="u">µV/count</span></div>
+      <div class="metric">contact <b>99.9</b><span class="u">%</span></div>
+      <div class="spacer"></div>
+      <div class="state"><span class="led"></span>Streaming…</div>
+    </div>
+  </div>
+
+  <div class="caption">
+    <b>Phase-1 mockup — ADS1292 Studio (PySide6, light-first).</b>
+    Same information architecture as today (header · control strip · sidebar cards · workspace tabs · 3 stacked plots),
+    modernized: soft neutral surface, white elevated cards, medical-teal accent, semantic status dots (red=disconnected,
+    grey=idle, green=ok), a single obvious primary action, a persistent <b>Next step</b> card, and a live status bar with big
+    HR / scale readouts. The three-panel CH2-ECG / CH1-respiration / lead-off contract is preserved exactly.
+    Colors/spacing/typography here map 1:1 to QSS tokens in <span style="font-family:var(--mono)">ui_qt/tokens.py</span>.
+  </div>
+</div>
+</body>
+</html>
