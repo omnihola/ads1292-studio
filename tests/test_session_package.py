@@ -2,7 +2,11 @@ import hashlib
 import json
 from pathlib import Path
 
-from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
+from ads1292_studio.acquisition import (
+    build_acquisition_provenance,
+    finalize_acquisition_provenance,
+    write_acquisition_json,
+)
 from ads1292_studio.calibration import Calibration, LiveStreamCalibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_csv, write_events_json
@@ -45,22 +49,30 @@ def _write_session_files(path: Path) -> None:
         path.with_suffix(".quality-gate.json"),
         QualityGate(min_duration_seconds=0.5, min_r_peaks=1, require_qrs_clear=False),
     )
+    acquisition = build_acquisition_provenance(
+        csv_path=path,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem214301",
+        sample_rate_hz=500.0,
+        calibration=Calibration(label="bench-cal"),
+        live_calibration=LiveStreamCalibration(
+            mean_uv_per_count=1.895,
+            std_uv_per_count=0.002,
+            cv_percent=0.11,
+            runs=5,
+            test_signal_pp_uv=2016.6666667,
+        ),
+        started_at="2026-06-21T12:00:00",
+    )
     write_acquisition_json(
         path.with_suffix(".acquisition.json"),
-        build_acquisition_provenance(
-            csv_path=path,
-            acquisition_mode="live_stream",
-            port="/dev/cu.usbmodem214301",
-            sample_rate_hz=500.0,
-            calibration=Calibration(label="bench-cal"),
-            live_calibration=LiveStreamCalibration(
-                mean_uv_per_count=1.895,
-                std_uv_per_count=0.002,
-                cv_percent=0.11,
-                runs=5,
-                test_signal_pp_uv=2016.6666667,
-            ),
-            started_at="2026-06-21T12:00:00",
+        finalize_acquisition_provenance(
+            acquisition,
+            ended_at="2026-06-21T12:00:02",
+            finalized_at="2026-06-21T12:00:03",
+            sample_count=600,
+            first_timestamp_seconds=0.0,
+            last_timestamp_seconds=1.198,
         ),
     )
 
@@ -134,6 +146,10 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert acquisition["raw_lsb_uv_per_count"] == Calibration(label="bench-cal").microvolts_per_count
     assert acquisition["live_scale_uv_per_count"] == 1.895
     assert acquisition["live_scale_runs"] == 5
+    assert acquisition["completion_status"] == "finalized"
+    assert acquisition["sample_count"] == 600
+    assert acquisition["sample_span_seconds"] == 1.198
+    assert acquisition["ended_at"] == "2026-06-21T12:00:02"
     raw_entry = next(file_info for file_info in manifest["files"] if file_info["role"] == "raw_csv")
     copied_csv = export.package_dir / raw_entry["path"]
     expected_sha = hashlib.sha256(copied_csv.read_bytes()).hexdigest()

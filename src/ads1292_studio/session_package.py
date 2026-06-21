@@ -282,10 +282,16 @@ def _acquisition_summary(provenance: AcquisitionProvenance | None) -> dict:
             "raw_lsb_uv_per_count": None,
             "live_scale_uv_per_count": None,
             "live_scale_runs": 0,
+            "completion_status": "unknown",
+            "sample_count": 0,
+            "sample_span_seconds": 0.0,
+            "ended_at": "",
+            "finalized_at": "",
         }
     normalized = provenance.normalized()
     raw_adc = normalized.raw_adc
     live = normalized.live_calibration
+    completion = normalized.completion
     return {
         "mode": normalized.acquisition_mode,
         "sample_rate_hz": normalized.sample_rate_hz,
@@ -296,6 +302,11 @@ def _acquisition_summary(provenance: AcquisitionProvenance | None) -> dict:
         "raw_lsb_uv_per_count": raw_adc.get("raw_lsb_uv_per_count"),
         "live_scale_uv_per_count": live.get("mean_uv_per_count") if live else None,
         "live_scale_runs": live.get("runs", 0) if live else 0,
+        "completion_status": completion.get("status", "open"),
+        "sample_count": completion.get("sample_count", 0),
+        "sample_span_seconds": completion.get("sample_span_seconds", 0.0),
+        "ended_at": completion.get("ended_at", ""),
+        "finalized_at": completion.get("finalized_at", ""),
     }
 
 

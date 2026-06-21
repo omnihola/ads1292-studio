@@ -23,6 +23,7 @@ from ads1292_studio.batch import export_batch_summary
 from ads1292_studio.app_icon import apply_app_icon
 from ads1292_studio.acquisition import (
     build_acquisition_provenance,
+    finalize_acquisition_provenance,
     format_acquisition_summary,
     read_acquisition_json,
     write_acquisition_json,
@@ -288,6 +289,7 @@ class App(tk.Tk):
         self.connected_port: str | None = None
         self.last_selected_port = ""
         self.recording_path: Path | None = None
+        self.recording_finalization_pending = False
         self.loaded_samples: tuple[StreamSample, ...] = tuple()
         self.event_markers: list[EventMarker] = []
         self.event_range_start_seconds: float | None = None
@@ -567,6 +569,7 @@ class App(tk.Tk):
             return
         self._clear_buffers()
         self.recording_path = None
+        self.recording_finalization_pending = False
         csv_path = None
         acquisition_mode = self._acquisition_mode()
         if self.save_var.get():
@@ -596,6 +599,7 @@ class App(tk.Tk):
             write_acquisition_json(self._acquisition_path(csv_path), acquisition)
             self.acquisition_var.set(format_acquisition_summary(acquisition))
             self.path_var.set(f"CSV: {csv_path}")
+            self.recording_finalization_pending = True
         self.is_starting = True
         self.connection_var.set("Starting raw acquisition..." if acquisition_mode is AcquisitionMode.RAW else "Starting stream...")
         live_calibration = (
@@ -618,6 +622,8 @@ class App(tk.Tk):
 
     def stop(self) -> None:
         self.worker.stop()
+        if self.recording_path is not None:
+            self.recording_finalization_pending = True
         self.is_streaming = False
         self.connection_var.set(f"Connected: {self.connected_port}" if self.connected_port else "Stopped")
         self._apply_control_states()
@@ -863,7 +869,7 @@ class App(tk.Tk):
         if not out_dir:
             return
         try:
-            self._write_current_sidecars()
+            self._finalize_recording_sidecars()
             export = export_session_package(
                 csv_path=self.recording_path,
                 out_dir=Path(out_dir),
@@ -1151,6 +1157,52 @@ class App(tk.Tk):
         write_protocol_json(self._protocol_path(self.recording_path), self._protocol())
         write_quality_gate_json(self._quality_gate_path(self.recording_path), self._quality_gate())
 
+    def _finalize_recording_sidecars(
+        self,
+        *,
+        ended_at: str | None = None,
+        finalized_at: str | None = None,
+    ) -> None:
+        if self.recording_path is None:
+            return
+        worker = getattr(self, "worker", None)
+        thread = getattr(worker, "thread", None)
+        if thread is not None and thread.is_alive():
+            self._log("Recording finalization deferred until CSV writer stops")
+            return
+        self._write_current_sidecars()
+        acquisition_path = self._acquisition_path(self.recording_path)
+        if not acquisition_path.exists():
+            self._log(f"Recording finalization skipped: missing acquisition sidecar {acquisition_path}")
+            self.recording_finalization_pending = False
+            return
+        try:
+            sample_count, first_timestamp, last_timestamp = App._recording_csv_span(self.recording_path)
+            now = datetime.now().isoformat(timespec="seconds")
+            ended = ended_at or now
+            finalized = finalized_at or now
+            provenance = finalize_acquisition_provenance(
+                read_acquisition_json(acquisition_path),
+                ended_at=ended,
+                finalized_at=finalized,
+                sample_count=sample_count,
+                first_timestamp_seconds=first_timestamp,
+                last_timestamp_seconds=last_timestamp,
+            )
+            write_acquisition_json(acquisition_path, provenance)
+            self.acquisition_var.set(format_acquisition_summary(provenance))
+            self.recording_finalization_pending = False
+            self._log(f"Recording finalized: {sample_count} samples, span {last_timestamp - first_timestamp:.6g}s")
+        except Exception as exc:
+            self._log(f"Recording finalization failed: {exc}")
+
+    @staticmethod
+    def _recording_csv_span(csv_path: Path) -> tuple[int, float, float]:
+        samples = read_recording_csv(csv_path).samples
+        if not samples:
+            return 0, 0.0, 0.0
+        return len(samples), float(samples[0].timestamp), float(samples[-1].timestamp)
+
     def _schedule_tick(self, *, sample_backlog: bool = False) -> None:
         if self.is_closing or self.tick_after_id is not None:
             return
@@ -1213,6 +1265,8 @@ class App(tk.Tk):
     def _sync_worker_stream_state(self) -> None:
         thread = self.worker.thread
         worker_alive = bool(thread and thread.is_alive())
+        if self.recording_finalization_pending and not worker_alive:
+            self._finalize_recording_sidecars()
         if not stream_worker_has_ended(
             is_streaming=self.is_streaming,
             is_starting=self.is_starting,

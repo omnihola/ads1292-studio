@@ -3,6 +3,7 @@ from pathlib import Path
 from ads1292_studio.acquisition import (
     ACQUISITION_SCHEMA,
     build_acquisition_provenance,
+    finalize_acquisition_provenance,
     format_acquisition_summary,
     read_acquisition_json,
     write_acquisition_json,
@@ -55,6 +56,8 @@ def test_acquisition_provenance_round_trip_preserves_live_and_raw_scale(
     assert loaded.live_calibration["runs"] == 5
     assert loaded.raw_adc["pga_gain"] == 6.0
     assert loaded.raw_adc["raw_lsb_uv_per_count"] == raw_calibration.microvolts_per_count
+    assert loaded.completion["status"] == "open"
+    assert loaded.completion["sample_count"] == 0
 
 
 def test_acquisition_provenance_marks_raw_adc_schema(tmp_path: Path) -> None:
@@ -106,3 +109,40 @@ def test_format_acquisition_summary_exposes_scientific_record_fields(tmp_path: P
     assert "timestamps relative to recording start" in summary
     assert "Live scale 1.895 uV/count" in summary
     assert "Raw LSB 0.048081 uV/count" in summary
+
+
+def test_finalize_acquisition_provenance_records_completion_fields(tmp_path: Path) -> None:
+    csv_path = tmp_path / "2026-06-21-120000-ads1292-studio.csv"
+    provenance = build_acquisition_provenance(
+        csv_path=csv_path,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem214301",
+        sample_rate_hz=500.0,
+        calibration=Calibration(),
+        live_calibration=None,
+        started_at="2026-06-21T12:00:00",
+    )
+
+    finalized = finalize_acquisition_provenance(
+        provenance,
+        ended_at="2026-06-21T12:00:12",
+        finalized_at="2026-06-21T12:00:13",
+        sample_count=6000,
+        first_timestamp_seconds=0.0,
+        last_timestamp_seconds=11.998,
+    )
+    write_acquisition_json(csv_path.with_suffix(".acquisition.json"), finalized)
+
+    loaded = read_acquisition_json(csv_path.with_suffix(".acquisition.json"))
+
+    assert loaded.completion == {
+        "status": "finalized",
+        "ended_at": "2026-06-21T12:00:12",
+        "finalized_at": "2026-06-21T12:00:13",
+        "sample_count": 6000,
+        "first_timestamp_seconds": 0.0,
+        "last_timestamp_seconds": 11.998,
+        "sample_span_seconds": 11.998,
+    }
+    summary = format_acquisition_summary(loaded)
+    assert "finalized | 6000 samples | span 11.998 s" in summary

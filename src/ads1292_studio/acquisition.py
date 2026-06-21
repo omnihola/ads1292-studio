@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 import json
 from pathlib import Path
 from typing import Any
@@ -81,6 +81,7 @@ class AcquisitionProvenance:
     csv_columns: tuple[dict[str, str], ...] = field(default_factory=tuple)
     raw_adc: dict[str, Any] = field(default_factory=dict)
     live_calibration: dict[str, Any] = field(default_factory=dict)
+    completion: dict[str, Any] = field(default_factory=dict)
 
     def normalized(self) -> "AcquisitionProvenance":
         mode = _normalized_mode(self.acquisition_mode)
@@ -100,6 +101,7 @@ class AcquisitionProvenance:
             or default_csv_columns(mode, include_live_calibration=bool(live_calibration)),
             raw_adc=dict(self.raw_adc),
             live_calibration=live_calibration,
+            completion=_clean_completion(self.completion),
         )
 
 
@@ -159,6 +161,29 @@ def build_acquisition_provenance(
             "label": raw_calibration.label,
         },
         live_calibration=_live_calibration_entry(normalized_live),
+        completion=_open_completion(),
+    ).normalized()
+
+
+def finalize_acquisition_provenance(
+    provenance: AcquisitionProvenance,
+    *,
+    ended_at: str,
+    finalized_at: str,
+    sample_count: int,
+    first_timestamp_seconds: float,
+    last_timestamp_seconds: float,
+) -> AcquisitionProvenance:
+    normalized = provenance.normalized()
+    return replace(
+        normalized,
+        completion=_finalized_completion(
+            ended_at=ended_at,
+            finalized_at=finalized_at,
+            sample_count=sample_count,
+            first_timestamp_seconds=first_timestamp_seconds,
+            last_timestamp_seconds=last_timestamp_seconds,
+        ),
     ).normalized()
 
 
@@ -191,12 +216,14 @@ def format_acquisition_summary(provenance: AcquisitionProvenance | None) -> str:
     raw_text = "Raw LSB unavailable"
     if raw.get("raw_lsb_uv_per_count") is not None:
         raw_text = f"Raw LSB {float(raw['raw_lsb_uv_per_count']):.6f} uV/count"
+    completion_text = _format_completion_summary(normalized.completion)
     return (
         f"{normalized.acquisition_mode} | {normalized.sample_rate_hz:g} Hz | "
         f"{normalized.port or 'port unknown'}\n"
         f"timestamps relative to recording start ({normalized.timestamp_reference})\n"
         f"{live_text}\n"
-        f"{raw_text}"
+        f"{raw_text}\n"
+        f"{completion_text}"
     )
 
 
@@ -238,6 +265,65 @@ def _clean_csv_columns(values) -> tuple[dict[str, str], ...]:
 def _clean_timestamp_reference(value: str) -> str:
     text = str(value).strip()
     return text if text else TIMESTAMP_REFERENCE
+
+
+def _open_completion() -> dict[str, Any]:
+    return {
+        "status": "open",
+        "ended_at": "",
+        "finalized_at": "",
+        "sample_count": 0,
+        "first_timestamp_seconds": 0.0,
+        "last_timestamp_seconds": 0.0,
+        "sample_span_seconds": 0.0,
+    }
+
+
+def _finalized_completion(
+    *,
+    ended_at: str,
+    finalized_at: str,
+    sample_count: int,
+    first_timestamp_seconds: float,
+    last_timestamp_seconds: float,
+) -> dict[str, Any]:
+    first = max(0.0, float(first_timestamp_seconds))
+    last = max(first, float(last_timestamp_seconds))
+    return {
+        "status": "finalized",
+        "ended_at": str(ended_at).strip(),
+        "finalized_at": str(finalized_at).strip(),
+        "sample_count": max(0, int(sample_count)),
+        "first_timestamp_seconds": round(first, 6),
+        "last_timestamp_seconds": round(last, 6),
+        "sample_span_seconds": round(last - first, 6),
+    }
+
+
+def _clean_completion(value: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return _open_completion()
+    status = str(value.get("status", "open")).strip().lower()
+    if status != "finalized":
+        return _open_completion()
+    return _finalized_completion(
+        ended_at=str(value.get("ended_at", "")),
+        finalized_at=str(value.get("finalized_at", "")),
+        sample_count=int(float(value.get("sample_count", 0) or 0)),
+        first_timestamp_seconds=float(value.get("first_timestamp_seconds", 0.0) or 0.0),
+        last_timestamp_seconds=float(value.get("last_timestamp_seconds", 0.0) or 0.0),
+    )
+
+
+def _format_completion_summary(completion: dict[str, Any]) -> str:
+    cleaned = _clean_completion(completion)
+    if cleaned["status"] != "finalized":
+        return "Recording completion: open"
+    return (
+        "Recording completion: "
+        f"finalized | {cleaned['sample_count']} samples | "
+        f"span {cleaned['sample_span_seconds']:.6g} s"
+    )
 
 
 def _csv_column_entry(name: str) -> dict[str, str]:
