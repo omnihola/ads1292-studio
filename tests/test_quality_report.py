@@ -131,6 +131,52 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "FFT / Histogram" in html
 
 
+def test_event_overlays_mark_intervals_and_point_events_on_report_axes() -> None:
+    from ads1292_studio import report
+
+    fig = report.new_export_figure(figsize=(6, 3), dpi=80)
+    ax1 = fig.add_subplot(211)
+    ax2 = fig.add_subplot(212)
+
+    report._apply_event_overlays(
+        (ax1, ax2),
+        (
+            EventMarker(timestamp_seconds=1.0, label="electrode touch"),
+            EventMarker(timestamp_seconds=2.0, duration_seconds=1.5, label="motion"),
+        ),
+        x_max_seconds=5.0,
+    )
+
+    assert len(ax1.patches) == 1
+    assert len(ax2.patches) == 1
+    assert len(ax1.lines) == 1
+    assert len(ax2.lines) == 1
+    assert any(text.get_text() == "motion" for text in ax1.texts)
+    assert any(text.get_text() == "electrode touch" for text in ax1.texts)
+
+
+def test_export_review_report_applies_event_overlays(tmp_path: Path, monkeypatch) -> None:
+    from ads1292_studio import report
+
+    calls = []
+
+    def capture_overlay(axes, events, *, x_max_seconds):
+        calls.append((axes, events, x_max_seconds))
+
+    monkeypatch.setattr(report, "_apply_event_overlays", capture_overlay)
+
+    export_review_report(
+        samples=synthetic_samples(),
+        out_dir=tmp_path,
+        title="Overlay Hook",
+        events=(EventMarker(timestamp_seconds=2.0, duration_seconds=1.0, label="motion"),),
+    )
+
+    assert calls
+    assert calls[0][1][0].label == "motion"
+    assert calls[0][2] > 0
+
+
 def test_pqrst_report_title_marks_p_and_t_as_tentative() -> None:
     from ads1292_studio import report
 

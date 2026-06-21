@@ -80,7 +80,7 @@ def export_review_report(
         else tuple()
     )
     segment_gate_result = evaluate_segment_quality_gates(segment_metrics, quality_gate) if segment_metrics else None
-    _write_ecg_png(sample_tuple, ecg_png, metrics, sample_rate_hz, normalized_calibration)
+    _write_ecg_png(sample_tuple, ecg_png, metrics, sample_rate_hz, normalized_calibration, tuple(events or ()))
     _write_pqrst_png(sample_tuple, pqrst_png, metrics, sample_rate_hz, normalized_calibration)
     _write_spectrum_png(sample_tuple, spectrum_png, metrics, sample_rate_hz)
     html_path.write_text(
@@ -125,6 +125,7 @@ def _write_ecg_png(
     metrics: QualityMetrics,
     sample_rate_hz: float,
     calibration: Calibration,
+    events: tuple[EventMarker, ...],
 ) -> None:
     ecg_raw = _selected_channel(samples, metrics.ecg_source)
     other_raw = _other_channel(samples, metrics.ecg_source)
@@ -145,9 +146,47 @@ def _write_ecg_png(
     ax2.set_title("Other channel")
     ax2.set_xlabel("Time (s)")
     ax2.set_ylabel("Filtered uV")
+    _apply_event_overlays((ax1, ax2), events, x_max_seconds=float(x[-1]) if x.size else 0.0)
     style_export_axes((ax1, ax2))
     fig.tight_layout()
     fig.savefig(path)
+
+
+def _apply_event_overlays(
+    axes,
+    events: tuple[EventMarker, ...] | list[EventMarker],
+    *,
+    x_max_seconds: float,
+) -> None:
+    if not events or x_max_seconds <= 0:
+        return
+    overlay_color = "#F59E0B"
+    line_color = "#B45309"
+    for event in events:
+        marker = event.normalized()
+        start = min(max(marker.timestamp_seconds, 0.0), x_max_seconds)
+        end = min(max(marker.end_seconds, 0.0), x_max_seconds)
+        if marker.timestamp_seconds > x_max_seconds:
+            continue
+        if marker.duration_seconds > 0 and end > start:
+            for axis in axes:
+                axis.axvspan(start, end, color=overlay_color, alpha=0.14, linewidth=0)
+            label_x = start + (end - start) / 2.0
+        else:
+            for axis in axes:
+                axis.axvline(start, color=line_color, alpha=0.72, linewidth=1.0, linestyle="--")
+            label_x = start
+        axes[0].text(
+            label_x,
+            0.96,
+            marker.label,
+            transform=axes[0].get_xaxis_transform(),
+            ha="center",
+            va="top",
+            fontsize=8,
+            color=line_color,
+            rotation=0,
+        )
 
 
 def _write_pqrst_png(
