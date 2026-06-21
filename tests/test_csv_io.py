@@ -40,6 +40,7 @@ def test_csv_round_trip_preserves_raw_channels_and_lead_bits(tmp_path: Path) -> 
     assert text.splitlines()[0].startswith("timestamp,sample_index,ch1_counts")
     assert "1.000000,0,-12,345" in text
     assert "1.002000,1,-10,355" in text
+    assert [sample.sample_index for sample in loaded.samples] == [0, 1]
     assert [sample.ch1 for sample in loaded.samples] == [-12, -10]
     assert [sample.ch2 for sample in loaded.samples] == [345, 355]
     assert [sample.status_byte for sample in loaded.samples] == [0x10, 0x05]
@@ -60,6 +61,7 @@ def test_csv_reader_accepts_legacy_ecg_resp_headers(tmp_path: Path) -> None:
     assert loaded.samples[0].ch2 == 99
     assert loaded.samples[0].status_byte == 16
     assert loaded.samples[0].lead_off_bits == 0
+    assert loaded.samples[0].sample_index == 0
 
 
 def test_csv_reader_accepts_new_live_sample_index_column(tmp_path: Path) -> None:
@@ -73,8 +75,31 @@ def test_csv_reader_accepts_new_live_sample_index_column(tmp_path: Path) -> None
 
     assert len(loaded.samples) == 1
     assert loaded.samples[0].timestamp == 1.0
+    assert loaded.samples[0].sample_index == 500
     assert loaded.samples[0].ch1 == 7
     assert loaded.samples[0].ch2 == 99
+
+
+def test_csv_writer_preserves_existing_stream_sample_index(tmp_path: Path) -> None:
+    path = tmp_path / "preserved-index.csv"
+    samples = (
+        StreamSample(
+            timestamp=2.0,
+            ch1=10,
+            ch2=20,
+            board_heart_rate=0,
+            board_respiration_rate=0,
+            status_byte=0,
+            sample_index=1000,
+        ),
+    )
+
+    write_recording_csv(path, samples)
+
+    text = path.read_text()
+    loaded = read_recording_csv(path)
+    assert "2.000000,1000,10,20" in text
+    assert loaded.samples[0].sample_index == 1000
 
 
 def test_csv_reader_combines_canonical_lead_off_bits_when_status_byte_omits_them(tmp_path: Path) -> None:
@@ -136,6 +161,7 @@ def test_csv_recorder_flushes_in_batches_and_on_close(tmp_path: Path, monkeypatc
     assert recorder.rows_written == 5
     assert flush_calls == 3
     assert len(loaded.samples) == 5
+    assert [sample.sample_index for sample in loaded.samples] == [0, 1, 2, 3, 4]
     assert loaded.samples[-1].ch2 == 104
     assert loaded.samples[-1].lead_off_bits == 4
     lines = path.read_text().splitlines()

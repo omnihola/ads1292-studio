@@ -25,6 +25,7 @@ class StreamSample:
     board_heart_rate: int
     board_respiration_rate: int
     status_byte: int
+    sample_index: int | None = None
 
     @property
     def lead_off_bits(self) -> int:
@@ -53,6 +54,7 @@ class RawSample:
             board_heart_rate=0,
             board_respiration_rate=0,
             status_byte=self.status_byte,
+            sample_index=self.sample_index,
         )
 
 

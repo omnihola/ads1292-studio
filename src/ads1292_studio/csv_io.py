@@ -62,11 +62,15 @@ def _float_field(row: dict[str, str], *names: str, default: float = 0.0) -> floa
     return default
 
 
+def _stream_sample_index(sample: StreamSample, fallback: int) -> int:
+    return int(sample.sample_index) if sample.sample_index is not None else int(fallback)
+
+
 def read_recording_csv(path: Path | str, sample_rate_hz: float = 500.0) -> Recording:
     csv_path = Path(path)
     samples: list[StreamSample] = []
     with csv_path.open(newline="") as handle:
-        for row in csv.DictReader(handle):
+        for row_index, row in enumerate(csv.DictReader(handle)):
             status_byte = _int_field(row, "status_byte", "lead_off")
             if row.get("lead_off_bits") not in (None, ""):
                 lead_off_bits = _int_field(row, "lead_off_bits") & 0x0F
@@ -85,6 +89,7 @@ def read_recording_csv(path: Path | str, sample_rate_hz: float = 500.0) -> Recor
                         "respiration_rate",
                     ),
                     status_byte=status_byte,
+                    sample_index=_int_field(row, "sample_index", "index", default=row_index),
                 )
             )
     return Recording(path=csv_path, samples=tuple(samples), sample_rate_hz=sample_rate_hz)
@@ -125,11 +130,11 @@ def write_recording_csv(path: Path | str, samples: Iterable[StreamSample]) -> No
     with csv_path.open("w", newline="", buffering=1) as handle:
         writer = csv.writer(handle)
         writer.writerow(CANONICAL_HEADER)
-        for sample_index, sample in enumerate(samples):
+        for row_index, sample in enumerate(samples):
             writer.writerow(
                 [
                     f"{sample.timestamp:.6f}",
-                    sample_index,
+                    _stream_sample_index(sample, row_index),
                     sample.ch1,
                     sample.ch2,
                     sample.board_heart_rate,
@@ -215,7 +220,7 @@ class CsvRecorder:
             raise RuntimeError("CSV recorder is not open")
         row = [
             f"{sample.timestamp:.6f}",
-            self.rows_written,
+            _stream_sample_index(sample, self.rows_written),
             sample.ch1,
             sample.ch2,
             sample.board_heart_rate,
