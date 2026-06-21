@@ -134,6 +134,11 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert manifest["metrics"]["segment_gate"]["segment_results"][0]["label"] == "baseline"
     assert manifest["metrics"]["quality_gate"]["min_duration_seconds"] == 0.5
     assert manifest["metrics"]["quality_gate"]["require_qrs_clear"] is False
+    sample_index = manifest["metrics"]["sample_index"]
+    assert sample_index["first_sample_index"] == 0
+    assert sample_index["last_sample_index"] == 599
+    assert sample_index["sample_index_contiguous"] is True
+    assert sample_index["sample_index_gap_count"] == 0
     annotations = manifest["metrics"]["event_annotations"]
     assert annotations["schema"] == "ads1292-event-annotations-v1"
     assert annotations["timestamp_reference"] == "relative_seconds_from_recording_start"

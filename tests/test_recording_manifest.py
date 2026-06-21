@@ -95,6 +95,10 @@ def test_write_recording_manifest_lists_files_and_scientific_context(tmp_path: P
     assert payload["source_csv"] == "recording.csv"
     assert payload["recording"]["sample_count"] == 600
     assert payload["recording"]["duration_seconds"] == 1.198
+    assert payload["recording"]["first_sample_index"] == 0
+    assert payload["recording"]["last_sample_index"] == 599
+    assert payload["recording"]["sample_index_contiguous"] is True
+    assert payload["recording"]["sample_index_gap_count"] == 0
     assert payload["sidecar_completeness"]["complete"] is True
     assert payload["sidecar_completeness"]["missing_roles"] == []
     roles = {item["role"] for item in payload["files"]}
@@ -150,6 +154,49 @@ def test_write_recording_manifest_lists_files_and_scientific_context(tmp_path: P
     assert payload["acquisition"]["sample_span_delta_seconds"] == 0.0
 
 
+def test_build_recording_manifest_reports_sample_index_gaps(tmp_path: Path) -> None:
+    csv_path = tmp_path / "gapped.csv"
+    write_recording_csv(
+        csv_path,
+        (
+            StreamSample(
+                timestamp=0.0,
+                ch1=1,
+                ch2=2,
+                board_heart_rate=0,
+                board_respiration_rate=0,
+                status_byte=0,
+                sample_index=100,
+            ),
+            StreamSample(
+                timestamp=0.002,
+                ch1=3,
+                ch2=4,
+                board_heart_rate=0,
+                board_respiration_rate=0,
+                status_byte=0,
+                sample_index=101,
+            ),
+            StreamSample(
+                timestamp=0.004,
+                ch1=5,
+                ch2=6,
+                board_heart_rate=0,
+                board_respiration_rate=0,
+                status_byte=0,
+                sample_index=103,
+            ),
+        ),
+    )
+
+    payload = build_recording_manifest(csv_path, created_at="2026-06-21T13:00:00")
+
+    assert payload["recording"]["first_sample_index"] == 100
+    assert payload["recording"]["last_sample_index"] == 103
+    assert payload["recording"]["sample_index_contiguous"] is False
+    assert payload["recording"]["sample_index_gap_count"] == 1
+
+
 def test_build_recording_manifest_marks_open_completion_pending(tmp_path: Path) -> None:
     csv_path = tmp_path / "open.csv"
     _write_recording(csv_path, samples=10)
@@ -201,6 +248,23 @@ def test_verify_recording_manifest_detects_changed_csv(tmp_path: Path) -> None:
     assert "raw_csv: byte mismatch for recording.csv" in result.failures
     assert "raw_csv: sha256 mismatch for recording.csv" in result.failures
     assert "recording sample count mismatch: manifest 600, actual 601" in result.failures
+
+
+def test_verify_recording_manifest_detects_sample_index_metric_mismatch(tmp_path: Path) -> None:
+    csv_path = tmp_path / "recording.csv"
+    _write_recording(csv_path)
+    _write_complete_sidecars(csv_path)
+    manifest_path = write_recording_manifest(csv_path, created_at="2026-06-21T13:00:00")
+    payload = json.loads(manifest_path.read_text())
+    payload["recording"]["last_sample_index"] = 598
+    payload["recording"]["sample_index_gap_count"] = 1
+    manifest_path.write_text(json.dumps(payload, indent=2) + "\n")
+
+    result = verify_recording_manifest(manifest_path)
+
+    assert result.ok is False
+    assert "recording last sample index mismatch: manifest 598, actual 599" in result.failures
+    assert "recording sample index gap count mismatch: manifest 1, actual 0" in result.failures
 
 
 def test_verify_recording_manifest_rejects_pending_acquisition_completion(tmp_path: Path) -> None:

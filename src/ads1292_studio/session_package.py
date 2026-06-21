@@ -23,7 +23,11 @@ from ads1292_studio.metadata import read_metadata_json
 from ads1292_studio.processing import build_processing_settings, read_processing_json
 from ads1292_studio.protocol import read_protocol_json
 from ads1292_studio.quality_gate import quality_gate_template, read_quality_gate_json
-from ads1292_studio.recording_manifest import verify_recording_manifest, write_recording_manifest
+from ads1292_studio.recording_manifest import (
+    recording_sample_index_summary,
+    verify_recording_manifest,
+    write_recording_manifest,
+)
 from ads1292_studio.report import export_review_report
 
 
@@ -154,6 +158,7 @@ def export_session_package(
             "baseline_drift_counts": report.metrics.baseline_drift_counts,
             "noise_rms_counts": report.metrics.noise_rms_counts,
             "peak_to_peak_counts": report.metrics.peak_to_peak_counts,
+            "sample_index": recording_sample_index_summary(recording.samples),
             "quality_gate": asdict(quality_gate.normalized()),
             "event_annotations": _event_annotation_summary(
                 events,

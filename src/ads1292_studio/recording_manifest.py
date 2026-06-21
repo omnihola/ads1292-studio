@@ -97,6 +97,7 @@ def build_recording_manifest(
             "sample_rate_hz": recording.sample_rate_hz,
             "first_timestamp_seconds": _first_timestamp(recording.samples),
             "last_timestamp_seconds": _last_timestamp(recording.samples),
+            **recording_sample_index_summary(recording.samples),
         },
         "sidecar_completeness": _sidecar_completeness(present_roles),
         "event_annotations": _event_annotation_summary(
@@ -348,6 +349,33 @@ def _last_timestamp(samples) -> float:
     return round(float(samples[-1].timestamp), 6)
 
 
+def recording_sample_index_summary(samples) -> dict[str, int | bool]:
+    if not samples:
+        return {
+            "first_sample_index": 0,
+            "last_sample_index": 0,
+            "sample_index_contiguous": True,
+            "sample_index_gap_count": 0,
+        }
+    indices = [_sample_index_or_row(sample, index) for index, sample in enumerate(samples)]
+    gap_count = sum(
+        1
+        for previous, current in zip(indices, indices[1:])
+        if current - previous != 1
+    )
+    return {
+        "first_sample_index": indices[0],
+        "last_sample_index": indices[-1],
+        "sample_index_contiguous": gap_count == 0,
+        "sample_index_gap_count": gap_count,
+    }
+
+
+def _sample_index_or_row(sample, row_index: int) -> int:
+    sample_index = getattr(sample, "sample_index", None)
+    return int(row_index) if sample_index is None else int(sample_index)
+
+
 def _recording_metric_failures(payload: dict, base_dir: Path) -> tuple[str, ...]:
     source_name = payload.get("source_csv")
     if not isinstance(source_name, str) or not source_name:
@@ -369,4 +397,40 @@ def _recording_metric_failures(payload: dict, base_dir: Path) -> tuple[str, ...]
     actual_duration = round(float(recording.duration_seconds), 6)
     if abs(expected_duration - actual_duration) > 0.001:
         failures.append(f"recording duration mismatch: manifest {expected_duration}, actual {actual_duration}")
+    expected_sample_index = _expected_sample_index_summary(recording_entry)
+    actual_sample_index = recording_sample_index_summary(recording.samples)
+    if expected_sample_index["first_sample_index"] != actual_sample_index["first_sample_index"]:
+        failures.append(
+            "recording first sample index mismatch: "
+            f"manifest {expected_sample_index['first_sample_index']}, "
+            f"actual {actual_sample_index['first_sample_index']}"
+        )
+    if expected_sample_index["last_sample_index"] != actual_sample_index["last_sample_index"]:
+        failures.append(
+            "recording last sample index mismatch: "
+            f"manifest {expected_sample_index['last_sample_index']}, "
+            f"actual {actual_sample_index['last_sample_index']}"
+        )
+    if expected_sample_index["sample_index_contiguous"] != actual_sample_index["sample_index_contiguous"]:
+        failures.append(
+            "recording sample index continuity mismatch: "
+            f"manifest {expected_sample_index['sample_index_contiguous']}, "
+            f"actual {actual_sample_index['sample_index_contiguous']}"
+        )
+    if expected_sample_index["sample_index_gap_count"] != actual_sample_index["sample_index_gap_count"]:
+        failures.append(
+            "recording sample index gap count mismatch: "
+            f"manifest {expected_sample_index['sample_index_gap_count']}, "
+            f"actual {actual_sample_index['sample_index_gap_count']}"
+        )
     return tuple(failures)
+
+
+def _expected_sample_index_summary(recording_entry: dict) -> dict[str, int | bool]:
+    sample_count = int(recording_entry.get("sample_count", 0) or 0)
+    return {
+        "first_sample_index": int(recording_entry.get("first_sample_index", 0) or 0),
+        "last_sample_index": int(recording_entry.get("last_sample_index", max(0, sample_count - 1)) or 0),
+        "sample_index_contiguous": bool(recording_entry.get("sample_index_contiguous", True)),
+        "sample_index_gap_count": int(recording_entry.get("sample_index_gap_count", 0) or 0),
+    }
