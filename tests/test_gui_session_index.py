@@ -163,3 +163,61 @@ def test_build_session_index_message_includes_recording_completion_counts(
     assert "Finalized recordings: 1" in message
     assert "Open/unfinalized recordings: 1" in message
     assert "Unknown completion: 0" in message
+
+
+def test_build_session_index_message_includes_completion_audit_counts(
+    tmp_path: Path,
+) -> None:
+    matched = _write_recording(tmp_path, "matched.csv", _samples())
+    mismatched = _write_recording(tmp_path, "mismatched.csv", _samples())
+    pending = _write_recording(tmp_path, "pending.csv", _samples())
+    for path in (matched, mismatched, pending):
+        _write_complete_sidecars(path)
+    matched_acquisition = build_acquisition_provenance(
+        csv_path=matched,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem-test",
+        sample_rate_hz=500.0,
+        calibration=Calibration(label="bench-cal"),
+        live_calibration=None,
+        started_at="2026-06-21T00:00:00",
+    )
+    mismatched_acquisition = build_acquisition_provenance(
+        csv_path=mismatched,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem-test",
+        sample_rate_hz=500.0,
+        calibration=Calibration(label="bench-cal"),
+        live_calibration=None,
+        started_at="2026-06-21T00:00:00",
+    )
+    write_acquisition_json(
+        matched.with_suffix(".acquisition.json"),
+        finalize_acquisition_provenance(
+            matched_acquisition,
+            ended_at="2026-06-21T00:00:07",
+            finalized_at="2026-06-21T00:00:08",
+            sample_count=len(_samples()),
+            first_timestamp_seconds=0.0,
+            last_timestamp_seconds=6.998,
+        ),
+    )
+    write_acquisition_json(
+        mismatched.with_suffix(".acquisition.json"),
+        finalize_acquisition_provenance(
+            mismatched_acquisition,
+            ended_at="2026-06-21T00:00:07",
+            finalized_at="2026-06-21T00:00:08",
+            sample_count=len(_samples()) - 2,
+            first_timestamp_seconds=0.0,
+            last_timestamp_seconds=6.5,
+        ),
+    )
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Completion Audit GUI")
+
+    message = build_session_index_message(export)
+
+    assert "Completion audit pass: 1" in message
+    assert "Completion audit fail: 1" in message
+    assert "Completion audit pending: 1" in message
+    assert "Completion audit unknown: 0" in message

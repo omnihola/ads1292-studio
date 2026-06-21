@@ -366,6 +366,76 @@ def test_export_session_index_surfaces_acquisition_completion(tmp_path: Path) ->
     assert "Open/unfinalized recordings: 1" in html
 
 
+def test_export_session_index_audits_completion_against_csv(tmp_path: Path) -> None:
+    matched = _write_recording(tmp_path, "matched.csv", "MOTAC gel + Ag/AgCl")
+    mismatched = _write_recording(tmp_path, "mismatched.csv", "MOTAC gel + Ag/AgCl")
+    pending = _write_recording(tmp_path, "pending.csv", "MOTAC gel + Ag/AgCl")
+    for path in (matched, mismatched, pending):
+        _write_complete_sidecars(path)
+
+    matched_acquisition = build_acquisition_provenance(
+        csv_path=matched,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem-test",
+        sample_rate_hz=500.0,
+        calibration=Calibration(label="bench-cal"),
+        live_calibration=None,
+        started_at="2026-06-21T00:00:00",
+    )
+    mismatched_acquisition = build_acquisition_provenance(
+        csv_path=mismatched,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem-test",
+        sample_rate_hz=500.0,
+        calibration=Calibration(label="bench-cal"),
+        live_calibration=None,
+        started_at="2026-06-21T00:00:00",
+    )
+    write_acquisition_json(
+        matched.with_suffix(".acquisition.json"),
+        finalize_acquisition_provenance(
+            matched_acquisition,
+            ended_at="2026-06-21T00:00:07",
+            finalized_at="2026-06-21T00:00:08",
+            sample_count=len(_samples()),
+            first_timestamp_seconds=0.0,
+            last_timestamp_seconds=6.998,
+        ),
+    )
+    write_acquisition_json(
+        mismatched.with_suffix(".acquisition.json"),
+        finalize_acquisition_provenance(
+            mismatched_acquisition,
+            ended_at="2026-06-21T00:00:07",
+            finalized_at="2026-06-21T00:00:08",
+            sample_count=len(_samples()) - 2,
+            first_timestamp_seconds=0.0,
+            last_timestamp_seconds=6.5,
+        ),
+    )
+
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Completion Audit")
+    rows = {row.session_id: row for row in export.rows}
+
+    assert rows["matched"].completion_audit == "pass"
+    assert rows["matched"].recorded_sample_count_delta == 0
+    assert rows["matched"].recorded_span_delta_seconds == 0.0
+    assert rows["mismatched"].completion_audit == "fail"
+    assert rows["mismatched"].recorded_sample_count_delta == -2
+    assert rows["mismatched"].recorded_span_delta_seconds == -0.498
+    assert rows["pending"].completion_audit == "pending"
+    assert export.summary.completion_audit_pass == 1
+    assert export.summary.completion_audit_fail == 1
+    assert export.summary.completion_audit_pending == 1
+    assert export.summary.completion_audit_unknown == 0
+    csv_text = export.csv_path.read_text()
+    html = export.html_path.read_text()
+    assert "completion_audit,recorded_sample_count_delta,recorded_span_delta_seconds" in csv_text
+    assert "mismatched.csv" in csv_text
+    assert "fail,-2,-0.498" in csv_text
+    assert "Completion audit: pass 1 | fail 1 | pending 1 | unknown 0" in html
+
+
 def test_export_session_index_writes_sidecar_completion_plan(tmp_path: Path) -> None:
     partial = _write_recording(tmp_path, "partial.csv", "commercial Ag/AgCl")
     ready = _write_recording(tmp_path, "ready.csv", "MOTAC gel + Ag/AgCl")

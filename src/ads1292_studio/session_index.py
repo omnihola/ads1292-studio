@@ -31,6 +31,9 @@ class SessionIndexRow:
     completion_status: str
     recorded_sample_count: int
     recorded_span_seconds: float
+    completion_audit: str
+    recorded_sample_count_delta: int
+    recorded_span_delta_seconds: float
     ecg_source: str
     contact_ok_percent: float
     r_peaks: int
@@ -58,6 +61,10 @@ class SessionIndexSummary:
     finalized_recordings: int
     open_recordings: int
     unknown_completion_records: int
+    completion_audit_pass: int
+    completion_audit_fail: int
+    completion_audit_pending: int
+    completion_audit_unknown: int
     annotated_recordings: int
     event_annotations: int
     interval_event_annotations: int
@@ -224,6 +231,10 @@ def summarize_rows(rows: tuple[SessionIndexRow, ...]) -> SessionIndexSummary:
         finalized_recordings=sum(1 for row in rows if row.completion_status == "finalized"),
         open_recordings=sum(1 for row in rows if row.completion_status == "open"),
         unknown_completion_records=sum(1 for row in rows if row.completion_status == "unknown"),
+        completion_audit_pass=sum(1 for row in rows if row.completion_audit == "pass"),
+        completion_audit_fail=sum(1 for row in rows if row.completion_audit == "fail"),
+        completion_audit_pending=sum(1 for row in rows if row.completion_audit == "pending"),
+        completion_audit_unknown=sum(1 for row in rows if row.completion_audit == "unknown"),
         annotated_recordings=sum(1 for row in rows if row.event_count > 0),
         event_annotations=sum(row.event_count for row in rows),
         interval_event_annotations=sum(row.interval_event_count for row in rows),
@@ -260,6 +271,11 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
     sidecar_status, missing_sidecars = _sidecar_status(path)
     event_summary = _event_summary_for(path)
     completion = _completion_summary_for(path)
+    audit, count_delta, span_delta = _completion_audit(
+        completion,
+        actual_sample_count=metrics.sample_count,
+        actual_span_seconds=metrics.duration_seconds,
+    )
     waveform_status = _status_for_quality(metrics.quality_label)
     package_ready_status = _package_ready_status(waveform_status, sidecar_status)
     return SessionIndexRow(
@@ -275,6 +291,9 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
         completion_status=completion.status,
         recorded_sample_count=completion.sample_count,
         recorded_span_seconds=completion.span_seconds,
+        completion_audit=audit,
+        recorded_sample_count_delta=count_delta,
+        recorded_span_delta_seconds=span_delta,
         ecg_source=metrics.ecg_source,
         contact_ok_percent=metrics.contact_ok_percent,
         r_peaks=metrics.r_peaks,
@@ -345,6 +364,23 @@ def _completion_summary_for(csv_path: Path) -> AcquisitionCompletionSummary:
         sample_count=max(0, int(float(completion.get("sample_count", 0) or 0))),
         span_seconds=round(float(completion.get("sample_span_seconds", 0.0) or 0.0), 6),
     )
+
+
+def _completion_audit(
+    completion: AcquisitionCompletionSummary,
+    *,
+    actual_sample_count: int,
+    actual_span_seconds: float,
+) -> tuple[str, int, float]:
+    if completion.status == "open":
+        return "pending", 0, 0.0
+    if completion.status != "finalized":
+        return "unknown", 0, 0.0
+    count_delta = int(completion.sample_count) - int(actual_sample_count)
+    span_delta = round(float(completion.span_seconds) - float(actual_span_seconds), 6)
+    if count_delta == 0 and abs(span_delta) <= 0.001:
+        return "pass", count_delta, span_delta
+    return "fail", count_delta, span_delta
 
 
 def _summarize_events(events: tuple[EventMarker, ...]) -> EventAnnotationSummary:
@@ -477,6 +513,9 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
         "completion_status",
         "recorded_sample_count",
         "recorded_span_seconds",
+        "completion_audit",
+        "recorded_sample_count_delta",
+        "recorded_span_delta_seconds",
         "ecg_source",
         "contact_ok_percent",
         "r_peaks",
@@ -526,6 +565,9 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
         "Completion",
         "Recorded Samples",
         "Recorded Span",
+        "Completion Audit",
+        "Recorded Sample Delta",
+        "Recorded Span Delta",
         "Source",
         "Contact OK",
         "R peaks",
@@ -551,6 +593,9 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
             row.completion_status,
             str(row.recorded_sample_count),
             f"{row.recorded_span_seconds:.6g}",
+            row.completion_audit,
+            str(row.recorded_sample_count_delta),
+            f"{row.recorded_span_delta_seconds:.6g}",
             row.ecg_source,
             f"{row.contact_ok_percent:.2f}%",
             str(row.r_peaks),
@@ -584,6 +629,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
   <p>Recordings: {summary.recordings} | Usable recordings: {summary.usable_recordings}</p>
   <p>Package-ready recordings: {summary.package_ready} | Incomplete records: {summary.incomplete_records} | Need signal review: {summary.needs_signal_review}</p>
   <p>Finalized recordings: {summary.finalized_recordings} | Open/unfinalized recordings: {summary.open_recordings} | Unknown completion: {summary.unknown_completion_records}</p>
+  <p>Completion audit: pass {summary.completion_audit_pass} | fail {summary.completion_audit_fail} | pending {summary.completion_audit_pending} | unknown {summary.completion_audit_unknown}</p>
   <p>Annotated recordings: {summary.annotated_recordings} | Event annotations: {summary.event_annotations} | Interval annotations: {summary.interval_event_annotations} | Annotated seconds: {summary.total_annotated_seconds:.2f}</p>
   <p>Next actions: package record {summary.action_package_record} | complete sidecars {summary.action_complete_sidecars} | review signal {summary.action_review_signal}</p>
   <table>
