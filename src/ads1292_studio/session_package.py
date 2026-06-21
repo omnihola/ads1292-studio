@@ -10,7 +10,12 @@ import shutil
 from ads1292_studio.acquisition import AcquisitionProvenance, read_acquisition_json
 from ads1292_studio.calibration import calibration_template, read_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
-from ads1292_studio.events import read_events_csv, read_events_json
+from ads1292_studio.events import (
+    EVENT_ANNOTATIONS_SCHEMA,
+    EVENT_TIMESTAMP_REFERENCE,
+    read_events_csv,
+    read_events_json,
+)
 from ads1292_studio.metadata import read_metadata_json
 from ads1292_studio.protocol import read_protocol_json
 from ads1292_studio.quality_gate import quality_gate_template, read_quality_gate_json
@@ -199,6 +204,8 @@ def _event_annotation_summary(events) -> dict:
             interval_events += 1
             total_annotated_seconds += event.duration_seconds
     return {
+        "schema": EVENT_ANNOTATIONS_SCHEMA,
+        "timestamp_reference": EVENT_TIMESTAMP_REFERENCE,
         "count": len(normalized),
         "point_events": len(normalized) - interval_events,
         "interval_events": interval_events,

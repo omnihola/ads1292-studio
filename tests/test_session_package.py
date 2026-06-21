@@ -101,6 +101,8 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     assert manifest["metrics"]["quality_gate"]["min_duration_seconds"] == 0.5
     assert manifest["metrics"]["quality_gate"]["require_qrs_clear"] is False
     annotations = manifest["metrics"]["event_annotations"]
+    assert annotations["schema"] == "ads1292-event-annotations-v1"
+    assert annotations["timestamp_reference"] == "relative_seconds_from_recording_start"
     assert annotations["count"] == 1
     assert annotations["point_events"] == 1
     assert annotations["interval_events"] == 0

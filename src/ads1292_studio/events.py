@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import Iterable
 
 
+EVENT_ANNOTATIONS_SCHEMA = "ads1292-event-annotations-v1"
+EVENT_TIMESTAMP_REFERENCE = "relative_seconds_from_recording_start"
+
+
 @dataclass(frozen=True)
 class EventMarker:
     timestamp_seconds: float
@@ -47,7 +51,12 @@ def write_events_json(path: Path | str, events: Iterable[EventMarker]) -> None:
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
     normalized = [asdict(event.normalized()) for event in events]
-    output.write_text(json.dumps(normalized, indent=2) + "\n")
+    payload = {
+        "schema": EVENT_ANNOTATIONS_SCHEMA,
+        "timestamp_reference": EVENT_TIMESTAMP_REFERENCE,
+        "events": normalized,
+    }
+    output.write_text(json.dumps(payload, indent=2) + "\n")
 
 
 EVENTS_CSV_HEADER = ["start_seconds", "end_seconds", "duration_seconds", "label", "notes"]

@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 from ads1292_studio.events import (
     EventMarker,
@@ -20,8 +21,39 @@ def test_event_markers_json_round_trip(tmp_path: Path) -> None:
 
     write_events_json(path, events)
     loaded = read_events_json(path)
+    data = json.loads(path.read_text())
 
     assert loaded == events
+    assert data["schema"] == "ads1292-event-annotations-v1"
+    assert data["timestamp_reference"] == "relative_seconds_from_recording_start"
+    assert data["events"][0]["label"] == "motion"
+
+
+def test_event_markers_json_reader_accepts_legacy_list_format(tmp_path: Path) -> None:
+    path = tmp_path / "legacy.events.json"
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "timestamp_seconds": 1.25,
+                    "duration_seconds": 0.5,
+                    "label": "legacy motion",
+                    "notes": "old sidecar",
+                }
+            ]
+        )
+    )
+
+    loaded = read_events_json(path)
+
+    assert loaded == (
+        EventMarker(
+            1.25,
+            duration_seconds=0.5,
+            label="legacy motion",
+            notes="old sidecar",
+        ),
+    )
 
 
 def test_event_marker_supports_duration_and_end_seconds(tmp_path: Path) -> None:
