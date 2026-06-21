@@ -1588,6 +1588,24 @@ def test_live_plot_panel_builds_dedicated_realtime_snr_footer() -> None:
     assert "live_snr_var" in footer_source
 
 
+def test_live_snr_footer_exposes_event_annotation_controls() -> None:
+    from ads1292_studio.gui_plots import build_live_snr_footer
+    from ads1292_studio.gui_sidebar import build_live_event_panel
+
+    footer_source = inspect.getsource(build_live_snr_footer)
+    event_source = inspect.getsource(build_live_event_panel)
+
+    assert "build_live_event_panel(app, app.live_bottom_panel)" in footer_source
+    assert "live_event_label_entry" in event_source
+    assert "live_event_notes_entry" in event_source
+    assert "live_add_event_button" in event_source
+    assert "live_mark_event_range_start_button" in event_source
+    assert "live_add_event_range_button" in event_source
+    assert "live_remove_last_event_button" in event_source
+    assert "event_count_var" in event_source
+    assert "event_range_start_var" in event_source
+
+
 def test_live_and_review_ecg_axes_start_with_ecg_paper_grid() -> None:
     from ads1292_studio.gui_plots import (
         apply_ecg_paper_grid,

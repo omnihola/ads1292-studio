@@ -43,6 +43,7 @@ from ads1292_studio.gui_specs import (
     pqrst_plot_style,
     scrollbar_chrome_spec,
 )
+from ads1292_studio.gui_sidebar import build_live_event_panel
 from ads1292_studio.event_overlay import (
     EVENT_INTERVAL_ALPHA,
     EVENT_INTERVAL_COLOR,
@@ -582,8 +583,10 @@ def build_plot_canvas(app: Any, parent: ttk.Frame, fig: Figure, *, name: str, co
 def build_live_snr_footer(app: Any) -> None:
     if not hasattr(app, "live_snr_var"):
         app.live_snr_var = tk.StringVar(value=live_snr_text(None))
-    app.live_snr_footer = tk.Frame(app.live_plot_panel, bg=APP_VISUAL_TOKENS["panel_alt"], padx=12, pady=7)
-    app.live_snr_footer.pack(fill=tk.X, side=tk.BOTTOM, pady=(6, 0))
+    app.live_bottom_panel = tk.Frame(app.live_plot_panel, bg=APP_VISUAL_TOKENS["surface"])
+    app.live_bottom_panel.pack(fill=tk.X, pady=(6, 0))
+    app.live_snr_footer = tk.Frame(app.live_bottom_panel, bg=APP_VISUAL_TOKENS["panel_alt"], padx=12, pady=7)
+    app.live_snr_footer.pack(fill=tk.X)
     app.live_snr_title = tk.Label(
         app.live_snr_footer,
         text="Realtime SNR",
@@ -601,6 +604,7 @@ def build_live_snr_footer(app: Any) -> None:
         anchor="w",
     )
     app.live_snr_value.pack(side=tk.LEFT, fill=tk.X, expand=True)
+    build_live_event_panel(app, app.live_bottom_panel)
 
 
 def build_log_panel(app: Any) -> None:
