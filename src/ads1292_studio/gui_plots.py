@@ -69,7 +69,7 @@ class PendingReviewPlot:
 
 
 def build_live_plot_panel(app: Any) -> None:
-    fig = new_plot_figure(figsize=(8.6, 3.8))
+    fig = new_plot_figure(figsize=(7.4, 3.0))
     fig.subplots_adjust(**plot_figure_layouts()["signal_two_panel"])
     app.ax_live_ecg = fig.add_subplot(211)
     app.ax_live_resp = fig.add_subplot(212, sharex=app.ax_live_ecg)
@@ -92,12 +92,12 @@ def build_live_plot_panel(app: Any) -> None:
         **trace_styles["respiration"],
     )
     show_empty_plot_state(app.empty_plot_artists, "live", (app.ax_live_ecg, app.ax_live_resp))
-    app.live_canvas = build_plot_canvas(app, app.live_tab, fig, name="live")
+    app.live_canvas = build_plot_canvas(app, app.live_tab, fig, name="live", compact=True)
     build_live_snr_footer(app)
 
 
 def build_review_plot_panel(app: Any) -> None:
-    fig = new_plot_figure(figsize=(8.6, 3.8))
+    fig = new_plot_figure(figsize=(7.4, 3.0))
     fig.subplots_adjust(**plot_figure_layouts()["signal_two_panel"])
     app.ax_review_ecg = fig.add_subplot(211)
     app.ax_review_resp = fig.add_subplot(212, sharex=app.ax_review_ecg)
@@ -124,7 +124,7 @@ def build_review_plot_panel(app: Any) -> None:
         "review",
         (app.ax_review_ecg, app.ax_review_resp),
     )
-    app.review_canvas = build_plot_canvas(app, app.review_tab, fig, name="review")
+    app.review_canvas = build_plot_canvas(app, app.review_tab, fig, name="review", compact=True)
 
 
 def build_pqrst_plot_panel(app: Any) -> None:
@@ -555,18 +555,27 @@ def draw_spectrum_analysis(
     draw_canvas_idle_if_visible(canvas, owner)
 
 
-def build_plot_canvas(app: Any, parent: ttk.Frame, fig: Figure, *, name: str) -> FigureCanvasTkAgg:
+def build_plot_canvas(app: Any, parent: ttk.Frame, fig: Figure, *, name: str, compact: bool = False) -> FigureCanvasTkAgg:
     spec = plot_panel_spec()
     shell = ttk.Frame(parent, padding=spec["padding"], style=str(spec["shell"]))
-    shell.pack(fill=tk.BOTH, expand=True)
+    if compact:
+        shell.pack(anchor=tk.N, expand=False)
+    else:
+        shell.pack(fill=tk.BOTH, expand=True)
     panel = ttk.Frame(shell, padding=spec["panel_padding"], style=str(spec["panel"]))
-    panel.pack(fill=tk.BOTH, expand=True)
+    if compact:
+        panel.pack(anchor=tk.N, expand=False)
+    else:
+        panel.pack(fill=tk.BOTH, expand=True)
     setattr(app, f"{name}_plot_shell", shell)
     setattr(app, f"{name}_plot_panel", panel)
     canvas = FigureCanvasTkAgg(fig, master=panel)
     canvas_widget = canvas.get_tk_widget()
     canvas_widget.configure(**plot_canvas_widget_style())
-    canvas_widget.pack(fill=tk.BOTH, expand=True)
+    if compact:
+        canvas_widget.pack(anchor=tk.N, expand=False)
+    else:
+        canvas_widget.pack(fill=tk.BOTH, expand=True)
     return canvas
 
 

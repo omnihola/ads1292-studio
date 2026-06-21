@@ -1768,14 +1768,18 @@ def test_plot_figure_layouts_returns_nested_copies() -> None:
 
 
 def test_live_review_plot_builders_use_compact_high_dpi_signal_figures() -> None:
-    from ads1292_studio.gui_plots import build_live_plot_panel, build_review_plot_panel, new_plot_figure
+    from ads1292_studio.gui_plots import build_live_plot_panel, build_plot_canvas, build_review_plot_panel, new_plot_figure
 
     live_source = inspect.getsource(build_live_plot_panel)
+    canvas_source = inspect.getsource(build_plot_canvas)
     review_source = inspect.getsource(build_review_plot_panel)
     figure_source = inspect.getsource(new_plot_figure)
 
-    assert "figsize=(8.6, 3.8)" in live_source
-    assert "figsize=(8.6, 3.8)" in review_source
+    assert "figsize=(7.4, 3.0)" in live_source
+    assert "figsize=(7.4, 3.0)" in review_source
+    assert "compact=True" in live_source
+    assert "compact=True" in review_source
+    assert "compact: bool = False" in canvas_source
     assert "dpi=160" in figure_source
 
 
