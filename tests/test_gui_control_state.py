@@ -656,15 +656,16 @@ def test_should_apply_control_state_skips_unchanged_state() -> None:
     )
 
 
-def test_live_ecg_axis_title_keeps_dynamic_counts_out_of_plot_title() -> None:
+def test_live_ecg_axis_title_is_short_and_channel_focused() -> None:
     title = live_ecg_axis_title("CH2 ECG Lead I (LA-RA)", "raw | 1x | 8s | 25 mm/s", inverted=True)
 
-    assert title == "ECG display: CH2 ECG Lead I (LA-RA) | raw | 1x | 8s | 25 mm/s, inverted"
+    assert title == "CH2-ECG"
     assert "R peaks" not in title
     assert "samples" not in title
+    assert "raw | 1x" not in title
 
 
-def test_live_axis_titles_are_static_until_display_mode_changes() -> None:
+def test_live_axis_titles_are_compact_channel_names() -> None:
     titles = live_axis_titles(
         ecg_label="CH2 ECG Lead I (LA-RA)",
         resp_label="CH1 respiration raw",
@@ -673,8 +674,8 @@ def test_live_axis_titles_are_static_until_display_mode_changes() -> None:
     )
 
     assert titles == (
-        "ECG display: CH2 ECG Lead I (LA-RA) | raw | 1x | 8s | 25 mm/s",
-        "CH1 respiration raw",
+        "CH2-ECG",
+        "CH1-Respiration",
     )
     assert all("samples" not in title and "R peaks" not in title for title in titles)
 

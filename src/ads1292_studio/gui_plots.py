@@ -69,7 +69,7 @@ class PendingReviewPlot:
 
 
 def build_live_plot_panel(app: Any) -> None:
-    fig = new_plot_figure(figsize=(9.2, 4.8))
+    fig = new_plot_figure(figsize=(8.6, 3.8))
     fig.subplots_adjust(**plot_figure_layouts()["signal_two_panel"])
     app.ax_live_ecg = fig.add_subplot(211)
     app.ax_live_resp = fig.add_subplot(212, sharex=app.ax_live_ecg)
@@ -77,8 +77,8 @@ def build_live_plot_panel(app: Any) -> None:
         ax.label_outer()
     style_signal_axes((app.ax_live_ecg, app.ax_live_resp))
     add_signal_reference_lines((app.ax_live_ecg, app.ax_live_resp))
-    app.ax_live_ecg.set_ylabel("display counts")
-    app.ax_live_resp.set_ylabel("counts")
+    app.ax_live_ecg.set_ylabel("Amplitude (counts)")
+    app.ax_live_resp.set_ylabel("Impedance signal (counts)")
     app.ax_live_resp.set_xlabel("Time (s)")
     configure_live_time_axis((app.ax_live_ecg, app.ax_live_resp))
     configure_initial_ecg_paper_grid((app.ax_live_ecg,))
@@ -97,7 +97,7 @@ def build_live_plot_panel(app: Any) -> None:
 
 
 def build_review_plot_panel(app: Any) -> None:
-    fig = new_plot_figure(figsize=(9.2, 4.8))
+    fig = new_plot_figure(figsize=(8.6, 3.8))
     fig.subplots_adjust(**plot_figure_layouts()["signal_two_panel"])
     app.ax_review_ecg = fig.add_subplot(211)
     app.ax_review_resp = fig.add_subplot(212, sharex=app.ax_review_ecg)
@@ -106,8 +106,8 @@ def build_review_plot_panel(app: Any) -> None:
     style_signal_axes((app.ax_review_ecg, app.ax_review_resp))
     configure_initial_ecg_paper_grid((app.ax_review_ecg,))
     add_signal_reference_lines((app.ax_review_ecg, app.ax_review_resp))
-    app.ax_review_ecg.set_ylabel("display counts")
-    app.ax_review_resp.set_ylabel("counts")
+    app.ax_review_ecg.set_ylabel("Amplitude (counts)")
+    app.ax_review_resp.set_ylabel("Impedance signal (counts)")
     app.ax_review_resp.set_xlabel("Time (s)")
     configure_live_time_axis((app.ax_review_ecg, app.ax_review_resp))
     trace_styles = plot_trace_styles()
@@ -297,13 +297,14 @@ def apply_review_render_frame(
         set_line_data_if_changed(app.review_resp_line, frame.plot_resp_x, frame.plot_resp),
         set_line_data_if_changed(app.review_peak_line, frame.peak_x, frame.peak_y),
     )
-    polarity = ", inverted" if ecg_inverted else ""
-    set_signal_axis_title(
-        app.ax_review_ecg,
-        f"Offline ECG: {ecg_label} | {frame.mode}{polarity} | "
-        f"HR {frame.review.heart_rate.median_bpm:.1f} bpm | peaks {len(frame.review.peaks)}",
+    ecg_title, resp_title = live_axis_titles(
+        ecg_label=ecg_label,
+        resp_label=resp_label,
+        mode=frame.mode,
+        inverted=ecg_inverted,
     )
-    set_signal_axis_title(app.ax_review_resp, resp_label)
+    set_signal_axis_title(app.ax_review_ecg, ecg_title)
+    set_signal_axis_title(app.ax_review_resp, resp_title)
     axis_changed = (
         set_axis_xlim_if_changed(app.ax_review_ecg, (0, frame.x_right)),
         set_axis_ylim_if_changed(app.ax_review_ecg, frame.ecg_ylim),
@@ -661,7 +662,7 @@ def build_log_panel(app: Any) -> None:
 
 def new_plot_figure(*, figsize: tuple[float, float]) -> Figure:
     apply_seaborn_plot_theme()
-    fig = Figure(figsize=figsize, dpi=100)
+    fig = Figure(figsize=figsize, dpi=160)
     fig.patch.set_facecolor(APP_VISUAL_TOKENS["surface"])
     return fig
 

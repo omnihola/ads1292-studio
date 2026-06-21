@@ -494,11 +494,11 @@ PLOT_FIGURE_LAYOUTS = {
         "hspace": 0.18,
     },
     "signal_two_panel": {
-        "left": 0.070,
-        "right": 0.970,
-        "top": 0.940,
-        "bottom": 0.115,
-        "hspace": 0.34,
+        "left": 0.064,
+        "right": 0.982,
+        "top": 0.910,
+        "bottom": 0.135,
+        "hspace": 0.28,
     },
     "single_panel": {
         "left": 0.058,

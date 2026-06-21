@@ -714,7 +714,8 @@ def test_apply_review_render_frame_updates_review_lines_axes_and_pqrst() -> None
     assert ax_ecg.get_xlim() == (0.0, 2.0)
     assert ax_ecg.get_ylim() == (-3.0, 3.0)
     assert ax_resp.get_xlabel() == "Time (s)"
-    assert "Offline ECG: CH2 ECG Lead I" in ax_ecg.get_title()
+    assert ax_ecg.get_title() == "CH2-ECG"
+    assert ax_resp.get_title() == "CH1-Respiration"
     assert review_canvas.draw_idle_calls == 1
     assert pqrst_canvas.draw_idle_calls == 1
 

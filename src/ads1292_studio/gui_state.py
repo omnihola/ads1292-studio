@@ -307,8 +307,7 @@ def gui_status_overview(
 
 
 def live_ecg_axis_title(ecg_label: str, mode: str, *, inverted: bool) -> str:
-    polarity = ", inverted" if inverted else ""
-    return f"ECG display: {ecg_label} | {mode}{polarity}"
+    return "CH2-ECG"
 
 
 def live_axis_titles(
@@ -318,10 +317,7 @@ def live_axis_titles(
     mode: str,
     inverted: bool,
 ) -> tuple[str, str]:
-    return (
-        live_ecg_axis_title(ecg_label, mode, inverted=inverted),
-        resp_label,
-    )
+    return (live_ecg_axis_title(ecg_label, mode, inverted=inverted), "CH1-Respiration")
 
 
 def live_metrics_text(

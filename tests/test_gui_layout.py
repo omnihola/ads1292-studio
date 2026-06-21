@@ -1738,11 +1738,11 @@ def test_plot_figure_layouts_keep_signal_panels_dense() -> None:
             "hspace": 0.18,
         },
         "signal_two_panel": {
-            "left": 0.070,
-            "right": 0.970,
-            "top": 0.940,
-            "bottom": 0.115,
-            "hspace": 0.34,
+            "left": 0.064,
+            "right": 0.982,
+            "top": 0.910,
+            "bottom": 0.135,
+            "hspace": 0.28,
         },
         "single_panel": {
             "left": 0.058,
@@ -1765,6 +1765,28 @@ def test_plot_figure_layouts_returns_nested_copies() -> None:
     layouts["three_panel"]["hspace"] = 9.0
 
     assert plot_figure_layouts()["three_panel"]["hspace"] == 0.18
+
+
+def test_live_review_plot_builders_use_compact_high_dpi_signal_figures() -> None:
+    from ads1292_studio.gui_plots import build_live_plot_panel, build_review_plot_panel, new_plot_figure
+
+    live_source = inspect.getsource(build_live_plot_panel)
+    review_source = inspect.getsource(build_review_plot_panel)
+    figure_source = inspect.getsource(new_plot_figure)
+
+    assert "figsize=(8.6, 3.8)" in live_source
+    assert "figsize=(8.6, 3.8)" in review_source
+    assert "dpi=160" in figure_source
+
+
+def test_live_review_plot_y_axis_labels_use_standard_count_units() -> None:
+    from ads1292_studio.gui_plots import build_live_plot_panel, build_review_plot_panel
+
+    source = inspect.getsource(build_live_plot_panel) + inspect.getsource(build_review_plot_panel)
+
+    assert 'set_ylabel("Amplitude (counts)")' in source
+    assert 'set_ylabel("Impedance signal (counts)")' in source
+    assert '"display counts"' not in source
 
 
 def test_plot_canvas_widget_style_removes_embedded_canvas_chrome() -> None:
