@@ -14,7 +14,7 @@ from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
-from ads1292_studio.recording_manifest import write_recording_manifest
+from ads1292_studio.recording_manifest import verify_recording_manifest, write_recording_manifest
 from ads1292_studio.session_package import export_session_package, verify_session_package
 
 
@@ -167,6 +167,38 @@ def test_export_session_package_copies_sidecars_and_writes_manifest(tmp_path: Pa
     expected_sha = hashlib.sha256(copied_csv.read_bytes()).hexdigest()
     assert raw_entry["sha256"] == expected_sha
     assert raw_entry["bytes"] == copied_csv.stat().st_size
+
+
+def test_export_session_package_refreshes_stale_recording_manifest(tmp_path: Path) -> None:
+    csv_path = tmp_path / "pkg-001.csv"
+    _write_session_files(csv_path)
+    write_events_json(
+        csv_path.with_suffix(".events.json"),
+        (
+            EventMarker(0.5, duration_seconds=0.25, label="motion", notes="updated interval"),
+            EventMarker(0.9, label="electrode touch", notes="adjusted contact"),
+        ),
+    )
+    stale_result = verify_recording_manifest(csv_path.with_suffix(".manifest.json"))
+    assert stale_result.ok is False
+
+    export = export_session_package(csv_path=csv_path, out_dir=tmp_path / "packages", title="Package Test")
+
+    source_result = verify_recording_manifest(csv_path.with_suffix(".manifest.json"))
+    assert source_result.ok is True
+    package_manifest = json.loads(export.manifest_path.read_text())
+    recording_manifest_entry = next(
+        file_info
+        for file_info in package_manifest["files"]
+        if file_info["role"] == "recording_manifest"
+    )
+    copied_recording_manifest = export.package_dir / recording_manifest_entry["path"]
+    copied_result = verify_recording_manifest(copied_recording_manifest)
+    assert copied_result.ok is True
+    annotations = package_manifest["metrics"]["event_annotations"]
+    assert annotations["count"] == 2
+    assert annotations["interval_events"] == 1
+    assert annotations["labels"] == {"electrode touch": 1, "motion": 1}
 
 
 def test_verify_session_package_passes_clean_manifest(tmp_path: Path) -> None:

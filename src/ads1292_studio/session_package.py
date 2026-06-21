@@ -19,6 +19,7 @@ from ads1292_studio.events import (
 from ads1292_studio.metadata import read_metadata_json
 from ads1292_studio.protocol import read_protocol_json
 from ads1292_studio.quality_gate import quality_gate_template, read_quality_gate_json
+from ads1292_studio.recording_manifest import verify_recording_manifest, write_recording_manifest
 from ads1292_studio.report import export_review_report
 
 
@@ -54,6 +55,7 @@ def export_session_package(
     source: str = "Auto",
 ) -> SessionPackageExport:
     source_csv = Path(csv_path)
+    recording_manifest_path = write_recording_manifest(source_csv)
     output = Path(out_dir)
     package_dir = output / _package_slug(source_csv)
     package_dir.mkdir(parents=True, exist_ok=True)
@@ -78,7 +80,7 @@ def export_session_package(
         ("acquisition", source_csv.with_suffix(".acquisition.json")),
         ("protocol", source_csv.with_suffix(".protocol.json")),
         ("quality_gate", source_csv.with_suffix(".quality-gate.json")),
-        ("recording_manifest", source_csv.with_suffix(".manifest.json")),
+        ("recording_manifest", recording_manifest_path),
     )
     for role, sidecar in sidecars:
         if not sidecar.exists():
@@ -188,6 +190,10 @@ def verify_session_package(manifest_path: Path | str) -> PackageVerification:
         actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
         if expected_sha != actual_sha:
             failures.append(f"{role}: sha256 mismatch for {relative}")
+        if role == "recording_manifest":
+            result = verify_recording_manifest(path)
+            if not result.ok:
+                failures.extend(f"recording_manifest: {failure}" for failure in result.failures)
     missing_roles = tuple(data.get("sidecar_completeness", {}).get("missing_roles", ()))
     if missing_roles:
         failures.append(f"required sidecars missing: {', '.join(missing_roles)}")
