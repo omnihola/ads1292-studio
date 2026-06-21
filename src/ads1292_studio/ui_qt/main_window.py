@@ -278,6 +278,8 @@ class MainWindow(QMainWindow):
             save_csv=self.save_csv.isChecked(),
             mode=mode,
             metadata=self.sidebar.metadata(),
+            quality_gate=self.sidebar.quality_gate(),
+            protocol=self.sidebar.protocol(),
         )
         self._set_timer_active(True)
         self._refresh_state()

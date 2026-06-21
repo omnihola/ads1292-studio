@@ -77,6 +77,8 @@ class AcquisitionController:
 
         self._finalization_pending = False
         self._record_metadata = SessionMetadata()
+        self._record_quality_gate = QualityGate()
+        self._record_protocol = protocol_template()
         self._record_provenance = None
         self._record_started_iso = ""
         self.event_markers: list[EventMarker] = []
@@ -135,6 +137,8 @@ class AcquisitionController:
         save_csv: bool,
         mode: AcquisitionMode = AcquisitionMode.LIVE,
         metadata: SessionMetadata | None = None,
+        quality_gate: QualityGate | None = None,
+        protocol=None,
     ) -> None:
         if self.connected_port != port or self.is_streaming:
             return
@@ -148,6 +152,8 @@ class AcquisitionController:
             csv_path = recording_csv_path(started_at=started_at, acquisition_mode=mode)
             self.recording_path = csv_path
             self._record_metadata = metadata or SessionMetadata()
+            self._record_quality_gate = quality_gate or QualityGate()
+            self._record_protocol = protocol or protocol_template()
             self._record_provenance = build_acquisition_provenance(
                 csv_path=csv_path,
                 acquisition_mode=mode.value,
@@ -231,8 +237,8 @@ class AcquisitionController:
                 events=events,
                 calibration=Calibration(),
                 acquisition=provenance,
-                protocol=protocol_template(),
-                quality_gate=QualityGate(),
+                protocol=self._record_protocol,
+                quality_gate=self._record_quality_gate,
                 processing=build_processing_settings(sample_rate_hz=SAMPLE_RATE_HZ),
                 sample_rate_hz=SAMPLE_RATE_HZ,
                 created_at=finalized,

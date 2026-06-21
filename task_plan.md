@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 44: GUI Modernization (PySide6 / Qt) — 44.3 mostly done (events + archive actions + Calibrate Live wired); 536 tests pass. Qt app now ~feature-equivalent to Tk. Remaining: Validation/Protocol forms + 44.4 polish.
+Phase 44: GUI Modernization (PySide6 / Qt) — 44.3 complete (events + archive actions + Calibrate Live + Validation/Protocol forms); 537 tests pass. Qt app feature-equivalent to Tk. Remaining: 44.4 polish (dark mode, shortcuts) + open PR to main.
 
 ## Phases
 
@@ -423,7 +423,11 @@ retained.
       writing under `~/Documents/ECG/{reports,packages,batch,session-index}`; Calibrate Live wired
       (`run_live_stream_calibration` in a background thread -> `live_calibration` applied to the next
       Start). Added a monkeypatched Export-Report functional test. 536 tests pass. Remaining:
-      Validation/Protocol form contents.
+      Validation/Protocol form contents — now DONE: Validation tab edits the QualityGate
+      thresholds (duration/contact/R-peaks/HR/QRS + optional artifact limits) and Protocol tab
+      edits name/objective/instructions/acceptance (+ template steps shown); both flow into
+      `controller.start(quality_gate=, protocol=)` and are written into the recording bundle.
+      537 tests pass.
 - [ ] Phase 44.4: polish (focus/hover states, keyboard shortcuts, density, dark-mode pass).
 - [ ] Tests: token->QSS snapshot, controller logic via `gui_state`, offscreen QApplication smoke.
 - [ ] Commit on a feature branch and push to GitHub (confirm before push).

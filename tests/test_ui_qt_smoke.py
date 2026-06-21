@@ -179,6 +179,22 @@ def test_export_report_writes_files_from_loaded_recording(qapp, tmp_path, monkey
         win.deleteLater()
 
 
+def test_sidebar_forms_build_quality_gate_and_protocol(qapp) -> None:
+    from ads1292_studio.protocol import TestProtocol
+    from ads1292_studio.quality_gate import QualityGate
+
+    win = _make_window(qapp)
+    try:
+        gate = win.sidebar.quality_gate()
+        assert isinstance(gate, QualityGate)
+        assert gate.min_duration_seconds == 8.0 and gate.require_qrs_clear is True
+        proto = win.sidebar.protocol()
+        assert isinstance(proto, TestProtocol)
+        assert len(proto.steps) == 3 and proto.name
+    finally:
+        win.deleteLater()
+
+
 def test_connect_failure_surfaces_without_crashing(qapp) -> None:
     win = _make_window(qapp)
     try:
