@@ -2,7 +2,11 @@ from pathlib import Path
 
 import numpy as np
 
-from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
+from ads1292_studio.acquisition import (
+    build_acquisition_provenance,
+    finalize_acquisition_provenance,
+    write_acquisition_json,
+)
 from ads1292_studio.calibration import Calibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_csv, write_events_json
@@ -314,6 +318,52 @@ def test_export_session_index_summarizes_event_annotation_coverage(tmp_path: Pat
     assert "Event annotations: 3" in html
     assert "Interval annotations: 2" in html
     assert "Annotated seconds: 5.50" in html
+
+
+def test_export_session_index_surfaces_acquisition_completion(tmp_path: Path) -> None:
+    finalized = _write_recording(tmp_path, "finalized.csv", "MOTAC gel + Ag/AgCl")
+    open_recording = _write_recording(tmp_path, "open.csv", "MOTAC gel + Ag/AgCl")
+    _write_complete_sidecars(finalized)
+    _write_complete_sidecars(open_recording)
+    acquisition = build_acquisition_provenance(
+        csv_path=finalized,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem-test",
+        sample_rate_hz=500.0,
+        calibration=Calibration(label="bench-cal"),
+        live_calibration=None,
+        started_at="2026-06-21T00:00:00",
+    )
+    write_acquisition_json(
+        finalized.with_suffix(".acquisition.json"),
+        finalize_acquisition_provenance(
+            acquisition,
+            ended_at="2026-06-21T00:00:07",
+            finalized_at="2026-06-21T00:00:08",
+            sample_count=len(_samples()),
+            first_timestamp_seconds=0.0,
+            last_timestamp_seconds=6.998,
+        ),
+    )
+
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Completion Audit")
+    rows = {row.session_id: row for row in export.rows}
+
+    assert rows["finalized"].completion_status == "finalized"
+    assert rows["finalized"].recorded_sample_count == len(_samples())
+    assert rows["finalized"].recorded_span_seconds == 6.998
+    assert rows["open"].completion_status == "open"
+    assert rows["open"].recorded_sample_count == 0
+    assert export.summary.finalized_recordings == 1
+    assert export.summary.open_recordings == 1
+    assert export.summary.unknown_completion_records == 0
+    csv_text = export.csv_path.read_text()
+    html = export.html_path.read_text()
+    assert "completion_status,recorded_sample_count,recorded_span_seconds" in csv_text
+    assert "finalized,3500,6.998" in csv_text
+    assert "Completion" in html
+    assert "Finalized recordings: 1" in html
+    assert "Open/unfinalized recordings: 1" in html
 
 
 def test_export_session_index_writes_sidecar_completion_plan(tmp_path: Path) -> None:

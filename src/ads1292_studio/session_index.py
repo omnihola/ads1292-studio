@@ -7,7 +7,7 @@ from html import escape
 from pathlib import Path
 from shlex import quote
 
-from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
+from ads1292_studio.acquisition import build_acquisition_provenance, read_acquisition_json, write_acquisition_json
 from ads1292_studio.calibration import calibration_template, write_calibration_json
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.events import EventMarker, event_template, read_events_csv, read_events_json, write_events_json
@@ -28,6 +28,9 @@ class SessionIndexRow:
     operator: str
     sample_count: int
     duration_seconds: float
+    completion_status: str
+    recorded_sample_count: int
+    recorded_span_seconds: float
     ecg_source: str
     contact_ok_percent: float
     r_peaks: int
@@ -52,6 +55,9 @@ class SessionIndexSummary:
     package_ready: int
     incomplete_records: int
     needs_signal_review: int
+    finalized_recordings: int
+    open_recordings: int
+    unknown_completion_records: int
     annotated_recordings: int
     event_annotations: int
     interval_event_annotations: int
@@ -67,6 +73,13 @@ class EventAnnotationSummary:
     interval_count: int = 0
     total_annotated_seconds: float = 0.0
     labels: str = ""
+
+
+@dataclass(frozen=True)
+class AcquisitionCompletionSummary:
+    status: str = "unknown"
+    sample_count: int = 0
+    span_seconds: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -208,6 +221,9 @@ def summarize_rows(rows: tuple[SessionIndexRow, ...]) -> SessionIndexSummary:
         package_ready=sum(1 for row in rows if row.package_ready_status == "package_ready"),
         incomplete_records=sum(1 for row in rows if row.package_ready_status == "incomplete_record"),
         needs_signal_review=sum(1 for row in rows if row.package_ready_status == "needs_signal_review"),
+        finalized_recordings=sum(1 for row in rows if row.completion_status == "finalized"),
+        open_recordings=sum(1 for row in rows if row.completion_status == "open"),
+        unknown_completion_records=sum(1 for row in rows if row.completion_status == "unknown"),
         annotated_recordings=sum(1 for row in rows if row.event_count > 0),
         event_annotations=sum(row.event_count for row in rows),
         interval_event_annotations=sum(row.interval_event_count for row in rows),
@@ -243,6 +259,7 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
     metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz)
     sidecar_status, missing_sidecars = _sidecar_status(path)
     event_summary = _event_summary_for(path)
+    completion = _completion_summary_for(path)
     waveform_status = _status_for_quality(metrics.quality_label)
     package_ready_status = _package_ready_status(waveform_status, sidecar_status)
     return SessionIndexRow(
@@ -255,6 +272,9 @@ def _row_for_csv(path: Path, root: Path) -> SessionIndexRow | None:
         operator=metadata.operator,
         sample_count=metrics.sample_count,
         duration_seconds=metrics.duration_seconds,
+        completion_status=completion.status,
+        recorded_sample_count=completion.sample_count,
+        recorded_span_seconds=completion.span_seconds,
         ecg_source=metrics.ecg_source,
         contact_ok_percent=metrics.contact_ok_percent,
         r_peaks=metrics.r_peaks,
@@ -307,6 +327,24 @@ def _event_summary_for(csv_path: Path) -> EventAnnotationSummary:
     if events_csv.exists():
         return _summarize_events(read_events_csv(events_csv))
     return EventAnnotationSummary()
+
+
+def _completion_summary_for(csv_path: Path) -> AcquisitionCompletionSummary:
+    acquisition_path = csv_path.with_suffix(".acquisition.json")
+    if not acquisition_path.exists():
+        return AcquisitionCompletionSummary()
+    try:
+        completion = read_acquisition_json(acquisition_path).completion
+    except (OSError, ValueError, TypeError):
+        return AcquisitionCompletionSummary()
+    status = str(completion.get("status", "unknown")).strip() or "unknown"
+    if status not in {"finalized", "open"}:
+        status = "unknown"
+    return AcquisitionCompletionSummary(
+        status=status,
+        sample_count=max(0, int(float(completion.get("sample_count", 0) or 0))),
+        span_seconds=round(float(completion.get("sample_span_seconds", 0.0) or 0.0), 6),
+    )
 
 
 def _summarize_events(events: tuple[EventMarker, ...]) -> EventAnnotationSummary:
@@ -436,6 +474,9 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
         "operator",
         "sample_count",
         "duration_seconds",
+        "completion_status",
+        "recorded_sample_count",
+        "recorded_span_seconds",
         "ecg_source",
         "contact_ok_percent",
         "r_peaks",
@@ -482,6 +523,9 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
         "Session",
         "Electrode",
         "Montage",
+        "Completion",
+        "Recorded Samples",
+        "Recorded Span",
         "Source",
         "Contact OK",
         "R peaks",
@@ -504,6 +548,9 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
             row.session_id,
             row.electrode,
             row.montage,
+            row.completion_status,
+            str(row.recorded_sample_count),
+            f"{row.recorded_span_seconds:.6g}",
             row.ecg_source,
             f"{row.contact_ok_percent:.2f}%",
             str(row.r_peaks),
@@ -536,6 +583,7 @@ def _html(title: str, rows: tuple[SessionIndexRow, ...], summary: SessionIndexSu
   <h1>{escape(title)}</h1>
   <p>Recordings: {summary.recordings} | Usable recordings: {summary.usable_recordings}</p>
   <p>Package-ready recordings: {summary.package_ready} | Incomplete records: {summary.incomplete_records} | Need signal review: {summary.needs_signal_review}</p>
+  <p>Finalized recordings: {summary.finalized_recordings} | Open/unfinalized recordings: {summary.open_recordings} | Unknown completion: {summary.unknown_completion_records}</p>
   <p>Annotated recordings: {summary.annotated_recordings} | Event annotations: {summary.event_annotations} | Interval annotations: {summary.interval_event_annotations} | Annotated seconds: {summary.total_annotated_seconds:.2f}</p>
   <p>Next actions: package record {summary.action_package_record} | complete sidecars {summary.action_complete_sidecars} | review signal {summary.action_review_signal}</p>
   <table>

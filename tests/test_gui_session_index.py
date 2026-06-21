@@ -2,7 +2,11 @@ from pathlib import Path
 
 import numpy as np
 
-from ads1292_studio.acquisition import build_acquisition_provenance, write_acquisition_json
+from ads1292_studio.acquisition import (
+    build_acquisition_provenance,
+    finalize_acquisition_provenance,
+    write_acquisition_json,
+)
 from ads1292_studio.calibration import Calibration, write_calibration_json
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.events import EventMarker, write_events_json
@@ -123,3 +127,39 @@ def test_build_session_index_message_includes_action_queue_counts(tmp_path: Path
     assert str(export.sidecar_template_dir) in message
     assert "Apply sidecars script:" in message
     assert str(export.sidecar_apply_script_path) in message
+
+
+def test_build_session_index_message_includes_recording_completion_counts(
+    tmp_path: Path,
+) -> None:
+    finalized = _write_recording(tmp_path, "finalized.csv", _samples())
+    open_recording = _write_recording(tmp_path, "open.csv", _samples())
+    _write_complete_sidecars(finalized)
+    _write_complete_sidecars(open_recording)
+    acquisition = build_acquisition_provenance(
+        csv_path=finalized,
+        acquisition_mode="live_stream",
+        port="/dev/cu.usbmodem-test",
+        sample_rate_hz=500.0,
+        calibration=Calibration(label="bench-cal"),
+        live_calibration=None,
+        started_at="2026-06-21T00:00:00",
+    )
+    write_acquisition_json(
+        finalized.with_suffix(".acquisition.json"),
+        finalize_acquisition_provenance(
+            acquisition,
+            ended_at="2026-06-21T00:00:07",
+            finalized_at="2026-06-21T00:00:08",
+            sample_count=len(_samples()),
+            first_timestamp_seconds=0.0,
+            last_timestamp_seconds=6.998,
+        ),
+    )
+    export = export_session_index(tmp_path, out_dir=tmp_path / "index", title="Completion GUI")
+
+    message = build_session_index_message(export)
+
+    assert "Finalized recordings: 1" in message
+    assert "Open/unfinalized recordings: 1" in message
+    assert "Unknown completion: 0" in message
