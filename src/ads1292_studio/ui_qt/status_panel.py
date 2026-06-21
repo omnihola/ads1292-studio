@@ -68,13 +68,14 @@ class StatusPanel(QScrollArea):
             cm_lay.addWidget(row)
         root.addWidget(cm_frame)
 
-        # Signal quality (placeholders for MVP; populated in a later phase)
+        # Signal quality
         sq_frame, sq_lay = card("Signal quality")
-        self._quality: dict[str, QLabel] = {}
+        self._quality: dict[str, tuple[QLabel, QLabel]] = {}
         for label in ("Signal", "Contact", "Heart rate", "Artifacts"):
             row, value = status_row(label, "—", "neutral")
+            dot = row.layout().itemAt(0).widget()
             sq_lay.addWidget(row)
-            self._quality[label] = value
+            self._quality[label] = (value, dot)
         root.addWidget(sq_frame)
 
         # Session
@@ -99,6 +100,12 @@ class StatusPanel(QScrollArea):
             value.setText(c.value)
             dot.setStyleSheet(f"color: {_dot_color(c.tone)};")
 
-    def set_quality(self, label: str, value: str) -> None:
-        if label in self._quality:
-            self._quality[label].setText(value)
+    def update_quality(self, cards) -> None:
+        """Update the Signal-quality rows from gui_signal_quality_cards output."""
+        for c in cards:
+            handle = self._quality.get(c.label)
+            if handle is None:
+                continue
+            value, dot = handle
+            value.setText(c.value)
+            dot.setStyleSheet(f"color: {_dot_color(c.tone)};")

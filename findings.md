@@ -143,6 +143,15 @@
 - Visual baseline approved by user: `docs/mockups/2026-06-21-pyqt-modernization-mockup-v5.html` (rendered `.png` alongside). Iterations v1->v5 captured the move from a wrong 2-/3-panel mental model to the real layout, the event-console regroup, and equal-height scrolling side columns.
 - Delivery model: parallel `ui_qt/` package + new entry point (`ads1292-studio-qt`) so the existing Tk app keeps working until the Qt version reaches parity. Push to GitHub after phase-1 tests pass (confirm before push).
 
+## Recording Output Format — Verified On Disk (2026-06-21, Phase 44.2)
+- Recordings are written to `~/Documents/ECG/` split into `live/` and `raw/` subfolders by mode (`recording_paths.py:18`); live files are `*-ads1292-studio.csv`, raw files `*-ads1292-raw.csv`.
+- A complete recording produces THREE artifacts in the mode subfolder: the raw CSV (written live by `LiveWorker` via `CsvRecorder`/`RawCsvRecorder`), a JSON bundle (`write_recording_bundle` -> `*.json`), and an XLSX (`write_recording_xlsx`, derived by reading the CSV).
+- The "Record CSV" checkbox (`save_var`) gates recording: ON -> all three; OFF -> nothing (no `recording_path`, so xlsx/json are not written either).
+- There is NO code path that produces "xlsx + json only": no CSV deletion exists in `src/` (grep confirmed), and the XLSX is generated FROM the CSV.
+- The CSV is load-bearing: `session_package.py` copies it as `raw_csv` and `report`/`session_index`/review read it. Dropping the CSV would break Export Package/Report/Index.
+- Observed defect in the user's real output: the two NEWEST sessions (`~/Documents/ECG/live/2026-06-21-174135...` and `raw/2026-06-21-174151...`) are CSV-only — the json+xlsx finalization did not run (app exited before Stop finalized). The 14:18 session has all three. So the rich outputs were being LOST, not the CSV.
+- Decision: the Qt app keeps CSV + JSON + XLSX (same location/format) and finalizes reliably on Stop AND on window close (`closeEvent` -> `controller.finalize_now()` joins the writer thread then writes json+xlsx), so a recording is never left CSV-only again.
+
 ## Resources
 - Existing reference implementation: `tools/ads1292_mac/ads1x9x.py`
 - Existing GUI reference: `tools/ads1292_mac/ads1x9x_gui.py`

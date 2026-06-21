@@ -83,6 +83,22 @@ class SidebarForms(QTabWidget):
         self.buttons[name] = btn
         layout.addWidget(btn)
 
+    def metadata(self):
+        """Build a SessionMetadata from the Session-tab fields."""
+        from ads1292_studio.metadata import SessionMetadata
+
+        def g(key: str) -> str:
+            return self.fields[key].text().strip()
+
+        return SessionMetadata(
+            session_id=g("Session ID"),
+            subject_id=g("Subject") or "anonymous",
+            electrode=g("Electrode"),
+            montage=g("Montage") or "RA/LA/RL torso",
+            operator=g("Operator"),
+            notes=g("Notes"),
+        )
+
     def _placeholder_tab(self, message: str) -> QScrollArea:
         inner = QWidget()
         lay = QVBoxLayout(inner)

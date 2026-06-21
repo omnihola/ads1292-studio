@@ -7,11 +7,13 @@ the Status panel from the reused ``gui_state`` view-model.
 from __future__ import annotations
 
 from collections import deque
+from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -24,7 +26,8 @@ from PySide6.QtWidgets import (
 )
 
 from ads1292_studio.device import find_ads_port, list_ads_ports
-from ads1292_studio.gui_state import gui_control_states
+from ads1292_studio.gui_state import gui_control_states, gui_signal_quality_cards
+from ads1292_studio.quality import compute_quality_metrics, estimate_realtime_snr
 from ads1292_studio.ui_qt.controller import AcquisitionController
 from ads1292_studio.ui_qt.event_console import EventConsole
 from ads1292_studio.ui_qt.live_panel import LivePanel
@@ -167,6 +170,7 @@ class MainWindow(QMainWindow):
         self.sidebar = SidebarForms()
         for name, btn in self.sidebar.buttons.items():
             self.controls[name] = btn
+        self.sidebar.buttons["Load CSV"].clicked.connect(self._on_load_csv)
         lay.addWidget(self.sidebar)
 
         center = QWidget()
@@ -190,8 +194,16 @@ class MainWindow(QMainWindow):
         )
         live_lay.addWidget(self.event_console)
         self.tabs.addTab(live_tab, "Live ECG")
-        for name in ("Review CSV", "PQRST Beat", "Spectrum", "Event Log"):
-            placeholder = QLabel(f"{name} — Phase 44.2")
+        # Review tab: full-recording 2-panel view (reuses the live 2-axis canvas)
+        review_tab = QWidget()
+        review_lay = QVBoxLayout(review_tab)
+        review_lay.setContentsMargins(0, 8, 0, 0)
+        self.review_panel = LivePanel()
+        self.review_panel.show_empty("Load a CSV to review a recording")
+        review_lay.addWidget(self.review_panel, 1)
+        self.tabs.addTab(review_tab, "Review CSV")
+        for name in ("PQRST Beat", "Spectrum", "Event Log"):
+            placeholder = QLabel(f"{name} — Phase 44.2 (next)")
             placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
             placeholder.setObjectName("Faint")
             self.tabs.addTab(placeholder, name)
@@ -247,7 +259,12 @@ class MainWindow(QMainWindow):
         self._ch1.clear()
         self._ch2.clear()
         self._sample_count = 0
-        self.controller.start(self.port_combo.currentText().strip(), save_csv=self.save_csv.isChecked(), mode=mode)
+        self.controller.start(
+            self.port_combo.currentText().strip(),
+            save_csv=self.save_csv.isChecked(),
+            mode=mode,
+            metadata=self.sidebar.metadata(),
+        )
         self._set_timer_active(True)
         self._refresh_state()
 
@@ -255,6 +272,14 @@ class MainWindow(QMainWindow):
         self.controller.stop()
         self._set_timer_active(False)
         self._refresh_state()
+
+    def _on_load_csv(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Load ADS1292 CSV", str(Path.home() / "Documents" / "ECG"), "CSV files (*.csv);;All files (*)"
+        )
+        if path:
+            self.controller.load_csv(Path(path))
+            self._refresh_state()
 
     def _on_calibrate(self) -> None:
         QMessageBox.information(self, "Calibrate Live", "Live calibration wiring lands in Phase 44.3.")
@@ -317,6 +342,8 @@ class MainWindow(QMainWindow):
                 self._ch2.append(float(s.ch2))
             self._sample_count += len(samples)
             self._redraw_live()
+        if outcome.loaded_recording is not None:
+            self._show_recording(outcome.loaded_recording)
         if outcome.state_changed or samples:
             self._refresh_state()
         if not self.controller.is_streaming and not samples:
@@ -331,6 +358,55 @@ class MainWindow(QMainWindow):
         start_index = self._sample_count - n
         xs = [(start_index + i) / SAMPLE_RATE_HZ for i in range(n)]
         self.live_panel.update_traces(xs, list(self._ch2), xs, list(self._ch1))
+        self._update_live_snr()
+
+    def _update_live_snr(self) -> None:
+        import numpy as np
+
+        if len(self._ch2) < 50:
+            return
+        est = estimate_realtime_snr(np.asarray(self._ch2, dtype=float), sample_rate_hz=SAMPLE_RATE_HZ)
+        if est.valid:
+            self.event_console.set_snr(f"ECG {est.snr_db:.1f} dB · noise {est.noise_rms_counts:.0f} ct")
+        else:
+            self.event_console.set_snr("— · acquiring…")
+
+    def _show_recording(self, recording) -> None:
+        samples = recording.samples
+        if not samples:
+            return
+        fs = recording.sample_rate_hz or SAMPLE_RATE_HZ
+        # decimate the rendered line for very large recordings (analysis uses full data)
+        step = max(1, len(samples) // 4000)
+        xs = [s.timestamp for s in samples[::step]]
+        ecg = [float(s.ch2) for s in samples[::step]]
+        resp = [float(s.ch1) for s in samples[::step]]
+        self.review_panel.update_traces(xs, ecg, xs, resp)
+        self.tabs.setCurrentWidget(self.tabs.widget(1))  # Review CSV
+        self._update_quality(samples, fs)
+
+    def _update_quality(self, samples, sample_rate_hz: float) -> None:
+        metrics = compute_quality_metrics(tuple(samples), sample_rate_hz=sample_rate_hz)
+        cards = gui_signal_quality_cards(
+            quality_label=metrics.quality_label,
+            ecg_source=metrics.ecg_source,
+            contact_ok_percent=metrics.contact_ok_percent,
+            lead_off_bad_samples=metrics.lead_off_bad_samples,
+            r_peaks=metrics.r_peaks,
+            hr_median_bpm=metrics.hr_median_bpm,
+            baseline_drift_counts=metrics.baseline_drift_counts,
+            noise_rms_counts=metrics.noise_rms_counts,
+            peak_to_peak_counts=metrics.peak_to_peak_counts,
+        )
+        self.status_panel.update_quality(cards)
+
+    def closeEvent(self, event) -> None:  # noqa: N802 - Qt override
+        # Never leave a recording CSV-only: finalize json+xlsx before exit.
+        if self.controller.has_pending_recording or self.controller.is_streaming:
+            outcome = self.controller.finalize_now()
+            for line in outcome.logs:
+                print(line)
+        super().closeEvent(event)
 
     # ---------- state refresh ----------
     def _refresh_state(self) -> None:

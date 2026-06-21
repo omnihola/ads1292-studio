@@ -96,6 +96,52 @@ def test_connect_then_start_then_samples_flow(qapp) -> None:
         win.deleteLater()
 
 
+def test_finalize_writes_csv_json_and_xlsx(tmp_path) -> None:
+    """A finalized recording produces all three artifacts (csv kept; json+xlsx added)."""
+    from ads1292_studio.acquisition import build_acquisition_provenance
+    from ads1292_studio.calibration import Calibration
+    from ads1292_studio.csv_io import CsvRecorder
+    from ads1292_studio.ui_qt.controller import AcquisitionController, DrainOutcome
+
+    csv_path = tmp_path / "live" / "2026-06-21-000000-000000-ads1292-studio.csv"
+    csv_path.parent.mkdir(parents=True)
+    with CsvRecorder(csv_path) as rec:
+        for i in range(60):
+            rec.write(
+                StreamSample(
+                    timestamp=i / 500.0,
+                    ch1=100 + i,
+                    ch2=200 - i,
+                    board_heart_rate=72,
+                    board_respiration_rate=15,
+                    status_byte=0,
+                    sample_index=i,
+                )
+            )
+
+    ctrl = AcquisitionController()
+    ctrl.recording_path = csv_path
+    ctrl._record_provenance = build_acquisition_provenance(
+        csv_path=csv_path,
+        acquisition_mode="live",
+        port="/dev/test",
+        sample_rate_hz=500.0,
+        calibration=Calibration(),
+        live_calibration=None,
+        started_at="2026-06-21T00:00:00",
+    )
+    ctrl._finalization_pending = True
+
+    out = DrainOutcome()
+    ctrl._finalize_recording(out)
+
+    assert csv_path.exists(), "CSV kept (load-bearing for Export Package/Report)"
+    assert csv_path.with_suffix(".json").exists(), "JSON bundle written"
+    assert csv_path.with_suffix(".xlsx").exists(), "XLSX written"
+    assert ctrl.has_pending_recording is False
+    assert any("XLSX written" in line for line in out.logs)
+
+
 def test_connect_failure_surfaces_without_crashing(qapp) -> None:
     win = _make_window(qapp)
     try:

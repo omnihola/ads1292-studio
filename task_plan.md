@@ -4,7 +4,7 @@
 Build an isolated, GitHub-ready ADS1292RECG-FE desktop acquisition and analysis app under `ads1292-studio/`, with commercial-software direction: robust capture, dual-channel ECG display, quality diagnostics, saved records, offline review, tests, documentation, and iterative bug tracking.
 
 ## Current Phase
-Phase 44: GUI Modernization (PySide6 / Qt) — 44.1 MVP implemented and tested (534 tests pass)
+Phase 44: GUI Modernization (PySide6 / Qt) — 44.2 in progress (offline review + reliable json+xlsx finalization); 535 tests pass
 
 ## Phases
 
@@ -404,7 +404,13 @@ retained.
       and optional `[qt]` extra. Tests: token->QSS (9) + offscreen QApplication smoke (4); full suite
       534 passed. Real app rendered offscreen to `docs/mockups/2026-06-21-pyqt-app-actual.png`.
       Deferred to later sub-phases: Calibrate Live wiring, live SNR/filters/peaks, event sidecar+overlay.
-- [ ] Phase 44.2: Review CSV / PQRST / Spectrum / Event Log tabs.
+- [~] Phase 44.2 (in progress): Load CSV -> Review tab (full-recording 2-panel) + Signal-quality
+      cards (reusing `compute_quality_metrics`/`gui_signal_quality_cards`); live SNR via
+      `estimate_realtime_snr`. Recording output verified to match the real app: writes to
+      `~/Documents/ECG/{live,raw}` and produces CSV + JSON bundle + XLSX. Made finalization
+      bulletproof (finalize on Stop AND on window close via `closeEvent`/`finalize_now`) so
+      recordings are never left CSV-only (the loss seen in the user's newest sessions). Still
+      to do: PQRST / Spectrum / Event Log tabs.
 - [ ] Phase 44.3: left-panel forms (Session/Validation/Protocol) + archive actions (report,
       package, verify, batch, session index) wired to existing core modules.
 - [ ] Phase 44.4: polish (focus/hover states, keyboard shortcuts, density, dark-mode pass).
@@ -471,6 +477,8 @@ retained.
 | Use a light-first, dark-ready design-token system compiled to QSS | One source of truth (`ui_qt/tokens.py`) mirrors the existing `APP_VISUAL_TOKENS` seed and maps 1:1 to a QSS stylesheet, so a dark map can be added later without touching widget code. |
 | Approve a true 3-column layout with internally-scrolling side columns | Matches the real running app (left forms / center plots+console / right Status); fixing side-column height with internal scroll keeps all three columns equal height and removes the empty center-bottom gap. |
 | Regroup the live SNR/Event console by intent | The event-annotation controls were a cramped wrapping row; grouping into Annotate / Manual range / Manage with aligned inputs and tinted destructive actions makes the central workflow legible. |
+| Keep CSV as the live recording target and KEEP it after finalize (do not switch to xlsx+json-only) | Verified the real app writes to `~/Documents/ECG/{live,raw}` and a complete recording is CSV + JSON + XLSX. The CSV is load-bearing: `session_package.py` copies it as `raw_csv` and `report`/`session_index`/review read it. Dropping the CSV would break Export Package/Report. The actual defect was the opposite of "too many formats": the user's newest sessions were CSV-only because json+xlsx finalization never ran. |
+| Make recording finalization bulletproof (finalize on Stop and on window close) | The user's `~/Documents/ECG` showed newest sessions as CSV-only (json+xlsx lost) because the app exited before finalization. The Qt app finalizes on Stop via the tick and on close via `closeEvent`/`finalize_now`, joining the CSV writer thread first, so json+xlsx are always produced. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
