@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from ads1292_studio.app import App
+from ads1292_studio.events import EventMarker
 
 
 class _Var:
@@ -58,3 +59,17 @@ def test_add_event_range_uses_marked_start_and_current_time() -> None:
     assert app.event_range_start_var.get() == "Range start: --"
     assert "count" in app.calls
     assert "save" in app.calls
+
+
+def test_set_event_count_shows_latest_event_details() -> None:
+    app = SimpleNamespace(
+        event_count_var=_Var(),
+        event_markers=[
+            EventMarker(2.0, label="baseline", notes="quiet"),
+            EventMarker(12.5, duration_seconds=5.5, label="motion", notes="arm motion"),
+        ],
+    )
+
+    App._set_event_count(app)
+
+    assert app.event_count_var.get() == "2 events\nLast: 12.50-18.00 s motion - arm motion"

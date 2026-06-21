@@ -1053,7 +1053,7 @@ class App(tk.Tk):
         write_events_csv(self._events_csv_path(self.recording_path), self.event_markers)
 
     def _set_event_count(self) -> None:
-        self.event_count_var.set(f"{len(self.event_markers)} events")
+        self.event_count_var.set(_event_count_summary(self.event_markers))
 
     def _calibration(self) -> Calibration:
         return _calibration_from_values(
@@ -1660,6 +1660,21 @@ class App(tk.Tk):
         self.is_closing = True
         self._cancel_tick()
         super().destroy()
+
+
+def _event_count_summary(events: list[EventMarker] | tuple[EventMarker, ...]) -> str:
+    normalized = tuple(event.normalized() for event in events)
+    count = len(normalized)
+    label = "event" if count == 1 else "events"
+    if count == 0:
+        return f"0 {label}"
+    latest = normalized[-1]
+    if latest.duration_seconds > 0:
+        time_text = f"{latest.timestamp_seconds:.2f}-{latest.end_seconds:.2f} s"
+    else:
+        time_text = f"{latest.timestamp_seconds:.2f} s"
+    notes = f" - {latest.notes}" if latest.notes else ""
+    return f"{count} {label}\nLast: {time_text} {latest.label}{notes}"
 
 
 def main() -> None:
