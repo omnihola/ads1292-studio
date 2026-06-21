@@ -233,7 +233,7 @@ SECONDARY_ACTION_BUTTONS = (
     "Session Index",
 )
 SIDEBAR_STATUS_LABEL = "Status"
-SIDEBAR_TABS = ("Session", "Validation", "Protocol", "Actions")
+SIDEBAR_TABS = ("Session", "Validation", "Protocol")
 SIDEBAR_LAYOUT_SPEC = {
     "shell": "SidebarShell.TFrame",
     "width": 320,

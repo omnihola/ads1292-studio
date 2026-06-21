@@ -565,6 +565,10 @@ def test_control_state_sync_refreshes_toggle_chip_visual_state() -> None:
 
 
 def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:
+    from ads1292_studio.gui_layout import populate_sidebar
+
+    source = inspect.getsource(populate_sidebar)
+
     assert secondary_action_button_labels() == (
         "Load CSV",
         "Export Report",
@@ -573,6 +577,10 @@ def test_gui_layout_groups_secondary_actions_in_sidebar() -> None:
         "Batch Compare",
         "Session Index",
     )
+    assert "Open Data" in source
+    assert "Optional Archive" in source
+    assert "session_side" in source
+    assert "actions_side" not in source
 
 
 def test_gui_layout_uses_task_based_sidebar_tabs() -> None:
@@ -580,7 +588,7 @@ def test_gui_layout_uses_task_based_sidebar_tabs() -> None:
 
     assert hasattr(gui_specs, "sidebar_status_label")
     assert gui_specs.sidebar_status_label() == "Status"
-    assert sidebar_tab_labels() == ("Session", "Validation", "Protocol", "Actions")
+    assert sidebar_tab_labels() == ("Session", "Validation", "Protocol")
 
 
 def test_sidebar_tabs_use_fixed_width_labels() -> None:

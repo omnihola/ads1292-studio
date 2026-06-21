@@ -463,7 +463,6 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
     session_side = sidebar["Session"]
     validation_side = sidebar["Validation"]
     protocol_side = sidebar["Protocol"]
-    actions_side = sidebar["Actions"]
 
     ttk.Label(status_side, text="Next Step", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 6))
     build_workflow_hint(app, status_side)
@@ -509,6 +508,16 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
     ).pack(anchor=tk.W, pady=(3, 2))
     build_event_count_card(app, session_side)
 
+    app.action_section_labels = {}
+    build_action_section_heading(app, session_side, "Open Data", top_padding=14)
+    app.load_csv_button = _sidebar_button(session_side, "Load CSV", app.load_csv)
+    build_action_section_heading(app, session_side, "Optional Archive")
+    app.export_report_button = _sidebar_button(session_side, "Export Report", app.export_report)
+    app.export_package_button = _sidebar_button(session_side, "Export Package", app.export_package)
+    app.verify_package_button = _sidebar_button(session_side, "Verify Package", app.verify_package)
+    app.batch_compare_button = _sidebar_button(session_side, "Batch Compare", app.batch_compare)
+    app.session_index_button = _sidebar_button(session_side, "Session Index", app.session_index)
+
     ttk.Label(validation_side, text="Calibration", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))
     metadata_entry(app, validation_side, "Label", app.calibration_label_var)
     metadata_entry(app, validation_side, "Vref mV", app.vref_mv_var)
@@ -535,19 +544,8 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
     metadata_entry(app, protocol_side, "Objective", app.protocol_objective_var)
     build_protocol_note_card(app, protocol_side, "Steps", app.protocol_steps_var)
     build_protocol_note_card(app, protocol_side, "Acceptance", app.protocol_acceptance_var)
-
-    app.action_section_labels = {}
-    build_action_section_heading(app, actions_side, "Review", top_padding=8)
-    app.load_csv_button = _sidebar_button(actions_side, "Load CSV", app.load_csv)
-    app.export_report_button = _sidebar_button(actions_side, "Export Report", app.export_report)
-    build_action_section_heading(app, actions_side, "Package")
-    app.export_package_button = _sidebar_button(actions_side, "Export Package", app.export_package)
-    app.verify_package_button = _sidebar_button(actions_side, "Verify Package", app.verify_package)
-    build_action_section_heading(app, actions_side, "Library")
-    app.batch_compare_button = _sidebar_button(actions_side, "Batch Compare", app.batch_compare)
-    app.session_index_button = _sidebar_button(actions_side, "Session Index", app.session_index)
-    build_action_section_heading(app, actions_side, "Safety")
-    build_safety_notice(app, actions_side)
+    build_action_section_heading(app, protocol_side, "Safety")
+    build_safety_notice(app, protocol_side)
 
 
 def _sidebar_button(parent: ttk.Frame, text: str, command: object) -> ttk.Button:
