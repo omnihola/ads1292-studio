@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ads1292_studio.events import EventMarker, event_template, read_events_json, write_events_json
+from ads1292_studio.events import EventMarker, event_from_interval, event_template, read_events_json, write_events_json
 
 
 def test_event_markers_json_round_trip(tmp_path: Path) -> None:
@@ -14,6 +14,45 @@ def test_event_markers_json_round_trip(tmp_path: Path) -> None:
     loaded = read_events_json(path)
 
     assert loaded == events
+
+
+def test_event_marker_supports_duration_and_end_seconds(tmp_path: Path) -> None:
+    path = tmp_path / "events.json"
+    events = (
+        EventMarker(
+            timestamp_seconds=12.0,
+            duration_seconds=3.5,
+            label="motion segment",
+            notes="subject moved right arm",
+        ),
+    )
+
+    write_events_json(path, events)
+    loaded = read_events_json(path)
+
+    assert loaded[0].duration_seconds == 3.5
+    assert loaded[0].end_seconds == 15.5
+    assert "duration_seconds" in path.read_text()
+
+
+def test_event_marker_normalizes_negative_duration_to_point_event() -> None:
+    marker = EventMarker(timestamp_seconds=2.0, duration_seconds=-1.0).normalized()
+
+    assert marker.duration_seconds == 0.0
+    assert marker.end_seconds == 2.0
+
+
+def test_event_from_interval_orders_start_and_end_times() -> None:
+    marker = event_from_interval(
+        start_seconds=17.0,
+        end_seconds=12.0,
+        label="motion segment",
+        notes="start/end clicked in reverse during review",
+    )
+
+    assert marker.timestamp_seconds == 12.0
+    assert marker.duration_seconds == 5.0
+    assert marker.end_seconds == 17.0
 
 
 def test_event_marker_normalizes_blank_fields() -> None:

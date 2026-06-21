@@ -82,7 +82,7 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
             montage="RA/LA/RL torso",
             notes="no movement",
         ),
-        events=(EventMarker(timestamp_seconds=2.5, label="motion", notes="arm moved"),),
+        events=(EventMarker(timestamp_seconds=2.5, duration_seconds=1.25, label="motion", notes="arm moved"),),
         calibration=Calibration(vref_mv=2420.0, pga_gain=6.0, adc_bits=24),
         quality_gate=QualityGate(min_duration_seconds=5.0),
         protocol=TestProtocol(
@@ -108,6 +108,9 @@ def test_export_review_report_writes_html_and_png(tmp_path: Path) -> None:
     assert "session-42" in html
     assert "commercial Ag/AgCl" in html
     assert "Event Markers" in html
+    assert "Duration (s)" in html
+    assert "End (s)" in html
+    assert "3.75" in html
     assert "motion" in html
     assert "arm moved" in html
     assert "Calibration" in html

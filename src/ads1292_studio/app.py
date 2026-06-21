@@ -36,7 +36,7 @@ from ads1292_studio.display import (
     parse_display_window,
     parse_sweep_speed,
 )
-from ads1292_studio.events import EventMarker, read_events_json, write_events_json
+from ads1292_studio.events import EventMarker, event_from_interval, read_events_json, write_events_json
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
 from ads1292_studio.gui_samples import append_live_sample_batch
 from ads1292_studio.gui_log import append_log_messages, log_tab_is_visible
@@ -275,6 +275,7 @@ class App(tk.Tk):
         self.recording_path: Path | None = None
         self.loaded_samples: tuple[StreamSample, ...] = tuple()
         self.event_markers: list[EventMarker] = []
+        self.event_range_start_seconds: float | None = None
         self.is_streaming = False
         self.is_loading_csv = False
         self.is_starting = False
@@ -715,6 +716,33 @@ class App(tk.Tk):
         self._set_event_count()
         self._save_event_sidecar()
         self._log(f"Event {marker.timestamp_seconds:.2f}s: {marker.label} {marker.notes}".strip())
+
+    def mark_event_range_start(self) -> None:
+        start_seconds = self._current_event_time()
+        self.event_range_start_seconds = start_seconds
+        self.event_range_start_var.set(f"Range start: {start_seconds:.2f} s")
+        self._log(f"Event range start marked at {start_seconds:.2f}s")
+
+    def add_event_range(self) -> None:
+        if self.event_range_start_seconds is None:
+            messagebox.showerror("No range start", "Click Mark Range Start before Add Event Range.")
+            return
+        end_seconds = self._current_event_time()
+        marker = event_from_interval(
+            start_seconds=self.event_range_start_seconds,
+            end_seconds=end_seconds,
+            label=self.event_label_var.get(),
+            notes=self.event_notes_var.get(),
+        )
+        self.event_markers = [*self.event_markers, marker]
+        self.event_range_start_seconds = None
+        self.event_range_start_var.set("Range start: --")
+        self._set_event_count()
+        self._save_event_sidecar()
+        self._log(
+            f"Event range {marker.timestamp_seconds:.2f}-{marker.end_seconds:.2f}s: "
+            f"{marker.label} {marker.notes}".strip()
+        )
 
     def export_report(self) -> None:
         if self.loaded_samples:

@@ -15,6 +15,7 @@ from ads1292_studio.gui_specs import (
     header_layout_spec,
     header_text_styles,
     main_tab_labels,
+    muted_label_spec,
     sidebar_action_button_style,
     sidebar_field_styles,
     sidebar_layout_spec,
@@ -412,6 +413,7 @@ def initialize_sidebar_state(app: Any, *, protocol_steps_text: str) -> None:
     app.notes_var = tk.StringVar(value="")
     app.event_label_var = tk.StringVar(value="motion")
     app.event_notes_var = tk.StringVar(value="")
+    app.event_range_start_var = tk.StringVar(value="Range start: --")
     app.event_count_var = tk.StringVar(value="0 events")
     app.event_count_label = None
     app.calibration_label_var = tk.StringVar(value="ADS1292 default")
@@ -463,6 +465,13 @@ def populate_sidebar(app: Any, sidebar: dict[str, ttk.Frame]) -> None:
     metadata_entry(app, session_side, "Event label", app.event_label_var)
     metadata_entry(app, session_side, "Event notes", app.event_notes_var)
     app.add_event_button = _sidebar_button(session_side, "Add Event", app.add_event)
+    app.mark_event_range_start_button = _sidebar_button(session_side, "Mark Range Start", app.mark_event_range_start)
+    app.add_event_range_button = _sidebar_button(session_side, "Add Event Range", app.add_event_range)
+    ttk.Label(
+        session_side,
+        textvariable=app.event_range_start_var,
+        style=muted_label_spec()["style"],
+    ).pack(anchor=tk.W, pady=(3, 2))
     build_event_count_card(app, session_side)
 
     ttk.Label(validation_side, text="Calibration", style="SectionHeading.TLabel").pack(anchor=tk.W, pady=(8, 2))

@@ -120,6 +120,19 @@ def test_acquisition_toolbar_exposes_live_calibration_action() -> None:
     assert "Calibrate Live" in source
 
 
+def test_sidebar_exposes_event_range_actions() -> None:
+    from ads1292_studio.gui_layout import initialize_sidebar_state, populate_sidebar
+
+    init_source = inspect.getsource(initialize_sidebar_state)
+    sidebar_source = inspect.getsource(populate_sidebar)
+
+    assert "event_range_start_var" in init_source
+    assert "mark_event_range_start_button" in sidebar_source
+    assert "add_event_range_button" in sidebar_source
+    assert "Mark Range Start" in sidebar_source
+    assert "Add Event Range" in sidebar_source
+
+
 def test_app_window_spec_prevents_cramped_signal_views() -> None:
     assert app_window_spec() == {
         "geometry": "1440x900",

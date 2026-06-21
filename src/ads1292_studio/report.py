@@ -243,6 +243,19 @@ def _write_spectrum_png(
     fig.savefig(path)
 
 
+def _event_row(event: EventMarker) -> str:
+    marker = event.normalized()
+    return (
+        "<tr>"
+        f"<td>{marker.timestamp_seconds:.2f}</td>"
+        f"<td>{marker.end_seconds:.2f}</td>"
+        f"<td>{marker.duration_seconds:.2f}</td>"
+        f"<td>{escape(marker.label)}</td>"
+        f"<td>{escape(marker.notes)}</td>"
+        "</tr>"
+    )
+
+
 def _html(
     title: str,
     metrics: QualityMetrics,
@@ -295,16 +308,12 @@ def _html(
     events_html = ""
     if events:
         event_rows = "\n".join(
-            "<tr>"
-            f"<td>{event.normalized().timestamp_seconds:.2f}</td>"
-            f"<td>{escape(event.normalized().label)}</td>"
-            f"<td>{escape(event.normalized().notes)}</td>"
-            "</tr>"
+            _event_row(event)
             for event in events
         )
         events_html = (
             "<h2>Event Markers</h2>"
-            "<table><tr><th>Time (s)</th><th>Label</th><th>Notes</th></tr>"
+            "<table><tr><th>Start (s)</th><th>End (s)</th><th>Duration (s)</th><th>Label</th><th>Notes</th></tr>"
             f"{event_rows}</table>"
         )
     protocol_html = ""
