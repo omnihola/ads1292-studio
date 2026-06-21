@@ -14,6 +14,7 @@ from ads1292_studio.metadata import SessionMetadata, write_metadata_json
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, read_protocol_json, write_protocol_json
 from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
+from ads1292_studio.recording_manifest import write_recording_manifest
 
 
 def _write_small_csv(path: Path) -> None:
@@ -157,6 +158,33 @@ def test_cli_verify_package_returns_success(tmp_path: Path) -> None:
     manifest_path = next(out_dir.glob("*/manifest.json"))
 
     assert main(["verify-package", str(manifest_path)]) == 0
+
+
+def test_cli_verify_recording_returns_success(tmp_path: Path, capsys) -> None:
+    csv_path = tmp_path / "recording.csv"
+    _write_small_csv(csv_path)
+    _write_complete_sidecars(csv_path)
+    manifest_path = write_recording_manifest(csv_path, created_at="2026-06-21T13:00:00")
+
+    assert main(["verify-recording", str(manifest_path)]) == 0
+
+    output = capsys.readouterr().out
+    assert "ok=True" in output
+    assert "checked_files=7" in output
+
+
+def test_cli_verify_recording_returns_failure_for_stale_manifest(tmp_path: Path, capsys) -> None:
+    csv_path = tmp_path / "recording.csv"
+    _write_small_csv(csv_path)
+    _write_complete_sidecars(csv_path)
+    manifest_path = write_recording_manifest(csv_path, created_at="2026-06-21T13:00:00")
+    csv_path.write_text(csv_path.read_text() + "1.000000,0,1000,0,0,0,0\n")
+
+    assert main(["verify-recording", str(manifest_path)]) == 2
+
+    output = capsys.readouterr().out
+    assert "ok=False" in output
+    assert "failure=raw_csv: sha256 mismatch for recording.csv" in output
 
 
 def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:

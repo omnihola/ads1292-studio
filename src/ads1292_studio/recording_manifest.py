@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 import hashlib
 import json
@@ -36,6 +37,14 @@ SIDECAR_PATHS = (
     ("protocol", ".protocol.json"),
     ("quality_gate", ".quality-gate.json"),
 )
+
+
+@dataclass(frozen=True)
+class RecordingManifestVerification:
+    manifest_path: Path
+    ok: bool
+    checked_files: int
+    failures: tuple[str, ...]
 
 
 def build_recording_manifest(
@@ -104,6 +113,56 @@ def write_recording_manifest(
     output = source_csv.with_suffix(".manifest.json")
     output.write_text(json.dumps(build_recording_manifest(source_csv, created_at=created_at), indent=2) + "\n")
     return output
+
+
+def verify_recording_manifest(manifest_path: Path | str) -> RecordingManifestVerification:
+    manifest = Path(manifest_path)
+    base_dir = manifest.parent
+    failures: list[str] = []
+    try:
+        payload = json.loads(manifest.read_text())
+    except Exception as exc:
+        return RecordingManifestVerification(
+            manifest_path=manifest,
+            ok=False,
+            checked_files=0,
+            failures=(f"manifest read failed: {exc}",),
+        )
+
+    checked = 0
+    for item in payload.get("files", []):
+        role = str(item.get("role", "unknown"))
+        relative = item.get("path")
+        if not isinstance(relative, str):
+            failures.append(f"{role}: missing path")
+            continue
+        path = base_dir / relative
+        if not path.exists():
+            failures.append(f"{role}: missing file {relative}")
+            continue
+        checked += 1
+        expected_bytes = item.get("bytes")
+        actual_bytes = path.stat().st_size
+        if expected_bytes != actual_bytes:
+            failures.append(f"{role}: byte mismatch for {relative}")
+        expected_sha = item.get("sha256")
+        actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        if expected_sha != actual_sha:
+            failures.append(f"{role}: sha256 mismatch for {relative}")
+
+    missing_roles = tuple(payload.get("sidecar_completeness", {}).get("missing_roles", ()))
+    if missing_roles:
+        failures.append(f"required sidecars missing: {', '.join(missing_roles)}")
+    acquisition_audit = str(payload.get("acquisition", {}).get("completion_audit", "unknown"))
+    if acquisition_audit != "pass":
+        failures.append(f"acquisition completion audit failed: {acquisition_audit}")
+    failures.extend(_recording_metric_failures(payload, base_dir))
+    return RecordingManifestVerification(
+        manifest_path=manifest,
+        ok=not failures,
+        checked_files=checked,
+        failures=tuple(failures),
+    )
 
 
 def _file_entry(role: str, path: Path) -> dict[str, str | int]:
@@ -241,3 +300,27 @@ def _last_timestamp(samples) -> float:
     if not samples:
         return 0.0
     return round(float(samples[-1].timestamp), 6)
+
+
+def _recording_metric_failures(payload: dict, base_dir: Path) -> tuple[str, ...]:
+    source_name = payload.get("source_csv")
+    if not isinstance(source_name, str) or not source_name:
+        return ("manifest source_csv missing",)
+    csv_path = base_dir / source_name
+    if not csv_path.exists():
+        return (f"source_csv missing: {source_name}",)
+    try:
+        recording = read_recording_csv(csv_path)
+    except Exception as exc:
+        return (f"source_csv read failed: {exc}",)
+    recording_entry = payload.get("recording", {})
+    failures: list[str] = []
+    expected_count = int(recording_entry.get("sample_count", 0) or 0)
+    actual_count = len(recording.samples)
+    if expected_count != actual_count:
+        failures.append(f"recording sample count mismatch: manifest {expected_count}, actual {actual_count}")
+    expected_duration = round(float(recording_entry.get("duration_seconds", 0.0) or 0.0), 6)
+    actual_duration = round(float(recording.duration_seconds), 6)
+    if abs(expected_duration - actual_duration) > 0.001:
+        failures.append(f"recording duration mismatch: manifest {expected_duration}, actual {actual_duration}")
+    return tuple(failures)

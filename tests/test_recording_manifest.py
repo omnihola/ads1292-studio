@@ -17,6 +17,7 @@ from ads1292_studio.quality_gate import QualityGate, write_quality_gate_json
 from ads1292_studio.recording_manifest import (
     RECORDING_MANIFEST_SCHEMA,
     build_recording_manifest,
+    verify_recording_manifest,
     write_recording_manifest,
 )
 
@@ -141,3 +142,55 @@ def test_build_recording_manifest_marks_open_completion_pending(tmp_path: Path) 
     assert payload["recording"]["sample_count"] == 10
     assert payload["acquisition"]["completion_status"] == "open"
     assert payload["acquisition"]["completion_audit"] == "pending"
+
+
+def test_verify_recording_manifest_accepts_unchanged_recording(tmp_path: Path) -> None:
+    csv_path = tmp_path / "recording.csv"
+    _write_recording(csv_path)
+    _write_complete_sidecars(csv_path)
+    manifest_path = write_recording_manifest(csv_path, created_at="2026-06-21T13:00:00")
+
+    result = verify_recording_manifest(manifest_path)
+
+    assert result.ok is True
+    assert result.checked_files == 8
+    assert result.failures == tuple()
+
+
+def test_verify_recording_manifest_detects_changed_csv(tmp_path: Path) -> None:
+    csv_path = tmp_path / "recording.csv"
+    _write_recording(csv_path)
+    _write_complete_sidecars(csv_path)
+    manifest_path = write_recording_manifest(csv_path, created_at="2026-06-21T13:00:00")
+    csv_path.write_text(csv_path.read_text() + "1.200000,10,900,0,0,0,0\n")
+
+    result = verify_recording_manifest(manifest_path)
+
+    assert result.ok is False
+    assert "raw_csv: byte mismatch for recording.csv" in result.failures
+    assert "raw_csv: sha256 mismatch for recording.csv" in result.failures
+    assert "recording sample count mismatch: manifest 600, actual 601" in result.failures
+
+
+def test_verify_recording_manifest_rejects_pending_acquisition_completion(tmp_path: Path) -> None:
+    csv_path = tmp_path / "open.csv"
+    _write_recording(csv_path, samples=10)
+    write_acquisition_json(
+        csv_path.with_suffix(".acquisition.json"),
+        build_acquisition_provenance(
+            csv_path=csv_path,
+            acquisition_mode="live_stream",
+            port="/dev/cu.usbmodem214301",
+            sample_rate_hz=500.0,
+            calibration=Calibration(label="open-cal"),
+            live_calibration=None,
+            started_at="2026-06-21T12:00:00",
+        ),
+    )
+    manifest_path = write_recording_manifest(csv_path, created_at="2026-06-21T13:00:00")
+
+    result = verify_recording_manifest(manifest_path)
+
+    assert result.ok is False
+    assert "required sidecars missing: metadata, event_annotations, calibration, protocol, quality_gate" in result.failures
+    assert "acquisition completion audit failed: pending" in result.failures

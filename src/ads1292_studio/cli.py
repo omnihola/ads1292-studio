@@ -15,6 +15,7 @@ from ads1292_studio.metadata import metadata_template, read_metadata_json, write
 from ads1292_studio.protocol import protocol_template, read_protocol_json, write_protocol_json
 from ads1292_studio.quality import compute_quality_metrics
 from ads1292_studio.quality_gate import QualityGate, evaluate_quality_gate
+from ads1292_studio.recording_manifest import verify_recording_manifest
 from ads1292_studio.report import export_review_report
 from ads1292_studio.segments import analyze_protocol_segments, evaluate_segment_quality_gates
 from ads1292_studio.session_index import export_session_index
@@ -186,6 +187,16 @@ def cmd_verify_package(args: argparse.Namespace) -> int:
     return 0 if result.ok else 2
 
 
+def cmd_verify_recording(args: argparse.Namespace) -> int:
+    result = verify_recording_manifest(args.manifest)
+    print(f"manifest={result.manifest_path}")
+    print(f"checked_files={result.checked_files}")
+    print(f"ok={result.ok}")
+    for failure in result.failures:
+        print(f"failure={failure}")
+    return 0 if result.ok else 2
+
+
 def cmd_qc(args: argparse.Namespace) -> int:
     recording = read_recording_csv(args.csv)
     metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz, source=args.source)
@@ -278,6 +289,9 @@ def build_parser() -> argparse.ArgumentParser:
     verify = sub.add_parser("verify-package")
     verify.add_argument("manifest", type=Path)
     verify.set_defaults(func=cmd_verify_package)
+    verify_recording = sub.add_parser("verify-recording")
+    verify_recording.add_argument("manifest", type=Path)
+    verify_recording.set_defaults(func=cmd_verify_recording)
     qc = sub.add_parser("qc")
     qc.add_argument("csv", type=Path)
     qc.add_argument("--source", choices=["Auto", "CH1", "CH2"], default="Auto")
