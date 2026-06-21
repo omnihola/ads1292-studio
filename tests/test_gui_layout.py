@@ -1603,7 +1603,12 @@ def test_live_snr_footer_exposes_event_annotation_controls() -> None:
     assert "live_add_event_button" in event_source
     assert "live_mark_event_range_start_button" in event_source
     assert "live_add_event_range_button" in event_source
+    assert "live_manual_event_start_entry" in event_source
+    assert "live_manual_event_end_entry" in event_source
+    assert "live_add_manual_event_range_button" in event_source
     assert "live_remove_last_event_button" in event_source
+    assert "live_remove_event_index_entry" in event_source
+    assert "live_remove_event_by_number_button" in event_source
     assert "event_count_var" in event_source
     assert "event_range_start_var" in event_source
 
@@ -1614,27 +1619,31 @@ def test_live_event_controls_use_four_functional_rows() -> None:
     event_source = inspect.getsource(build_live_event_panel)
 
     assert "app.live_event_status_row" in event_source
-    assert "app.live_event_label_row" in event_source
-    assert "app.live_event_notes_row" in event_source
-    assert "app.live_event_point_row" in event_source
-    assert "app.live_event_range_row" in event_source
+    assert "app.live_event_entry_row" in event_source
+    assert "app.live_event_action_row" in event_source
+    assert "app.live_event_manual_range_row" in event_source
+    assert "app.live_event_remove_row" in event_source
     assert "text=\"Event label\"" in event_source
     assert "text=\"Event notes\"" in event_source
     assert "app.live_event_label_entry.pack(anchor=tk.W, fill=tk.X)" in event_source
     assert "app.live_event_notes_entry.pack(anchor=tk.W, fill=tk.X)" in event_source
-    assert "app.live_add_event_button.pack(anchor=tk.W, fill=tk.X" in event_source
-    assert "app.live_mark_event_range_start_button.grid(row=0, column=0" in event_source
-    assert "app.live_add_event_range_button.grid(row=0, column=1" in event_source
-    assert "app.live_remove_last_event_button.grid(row=0, column=2" in event_source
+    assert "app.live_event_entry_row.columnconfigure(0, weight=1)" in event_source
+    assert "app.live_event_entry_row.columnconfigure(1, weight=1)" in event_source
+    assert "app.live_add_event_button.grid(row=0, column=0" in event_source
+    assert "app.live_mark_event_range_start_button.grid(row=0, column=1" in event_source
+    assert "app.live_add_event_range_button.grid(row=0, column=2" in event_source
+    assert "app.live_manual_event_start_entry" in event_source
+    assert "app.live_manual_event_end_entry" in event_source
+    assert "app.live_add_manual_event_range_button.grid(row=0, column=4" in event_source
+    assert "app.live_remove_last_event_button.grid(row=0, column=0" in event_source
+    assert "app.live_remove_event_index_entry" in event_source
+    assert "app.live_remove_event_by_number_button.grid(row=0, column=3" in event_source
     assert '"Remove Last"' in event_source
     assert "Add Point Event" in event_source
-    assert "app.live_event_range_row.columnconfigure(0, weight=1)" in event_source
-    assert "app.live_event_range_row.columnconfigure(1, weight=1)" in event_source
-    assert "app.live_event_range_row.columnconfigure(2, weight=1)" in event_source
-    assert ".grid(row=0, column=5" not in event_source
-    assert ".grid(row=0, column=6" not in event_source
-    assert ".grid(row=0, column=7" not in event_source
-    assert ".grid(row=0, column=8" not in event_source
+    assert "Start Range" in event_source
+    assert "End Range" in event_source
+    assert "Add Manual Range" in event_source
+    assert "Remove Event #" in event_source
 
 
 def test_live_and_review_ecg_axes_start_with_ecg_paper_grid() -> None:
