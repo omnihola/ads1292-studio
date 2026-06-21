@@ -1606,6 +1606,24 @@ def test_live_snr_footer_exposes_event_annotation_controls() -> None:
     assert "event_range_start_var" in event_source
 
 
+def test_live_event_controls_are_split_across_rows_not_one_long_grid() -> None:
+    from ads1292_studio.gui_sidebar import build_live_event_panel
+
+    event_source = inspect.getsource(build_live_event_panel)
+
+    assert "app.live_event_status_row" in event_source
+    assert "app.live_event_fields_row" in event_source
+    assert "app.live_event_actions_row" in event_source
+    assert "app.live_add_event_button.pack(side=tk.LEFT" in event_source
+    assert "app.live_mark_event_range_start_button.pack(side=tk.LEFT" in event_source
+    assert "app.live_add_event_range_button.pack(side=tk.LEFT" in event_source
+    assert "app.live_remove_last_event_button.pack(side=tk.LEFT" in event_source
+    assert ".grid(row=0, column=5" not in event_source
+    assert ".grid(row=0, column=6" not in event_source
+    assert ".grid(row=0, column=7" not in event_source
+    assert ".grid(row=0, column=8" not in event_source
+
+
 def test_live_and_review_ecg_axes_start_with_ecg_paper_grid() -> None:
     from ads1292_studio.gui_plots import (
         apply_ecg_paper_grid,

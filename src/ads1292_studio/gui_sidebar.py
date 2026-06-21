@@ -158,58 +158,59 @@ def build_live_event_panel(app: Any, parent: ttk.Frame) -> None:
     field_styles = sidebar_field_styles()
     app.live_event_panel = ttk.Frame(parent, padding=(12, 7), style=styles["frame"])
     app.live_event_panel.pack(fill=tk.X, pady=(6, 0))
-    app.live_event_panel.columnconfigure(3, weight=1)
+    app.live_event_status_row = ttk.Frame(app.live_event_panel, style=styles["frame"])
+    app.live_event_status_row.pack(fill=tk.X)
+    app.live_event_fields_row = ttk.Frame(app.live_event_panel, style=styles["frame"])
+    app.live_event_fields_row.pack(fill=tk.X, pady=(5, 0))
+    app.live_event_actions_row = ttk.Frame(app.live_event_panel, style=styles["frame"])
+    app.live_event_actions_row.pack(fill=tk.X, pady=(5, 0))
+    app.live_event_fields_row.columnconfigure(3, weight=1)
 
-    ttk.Label(app.live_event_panel, text="Events", style=styles["label"]).grid(
-        row=0,
-        column=0,
-        sticky=tk.W,
-        padx=(0, 10),
-    )
-    ttk.Label(app.live_event_panel, text="Label", style=field_styles["label"]).grid(row=0, column=1, sticky=tk.W)
-    app.live_event_label_entry = ttk.Entry(
-        app.live_event_panel,
-        textvariable=app.event_label_var,
-        width=14,
-        style=field_styles["entry"],
-    )
-    app.live_event_label_entry.grid(row=0, column=2, sticky=tk.W, padx=(4, 10))
-    ttk.Label(app.live_event_panel, text="Notes", style=field_styles["label"]).grid(row=0, column=3, sticky=tk.W)
-    app.live_event_notes_entry = ttk.Entry(
-        app.live_event_panel,
-        textvariable=app.event_notes_var,
-        width=32,
-        style=field_styles["entry"],
-    )
-    app.live_event_notes_entry.grid(row=0, column=4, sticky=tk.EW, padx=(4, 10))
-
-    app.live_add_event_button = _live_event_button(app.live_event_panel, "Add Point", app.add_event)
-    app.live_add_event_button.grid(row=0, column=5, padx=(0, 4))
-    app.live_mark_event_range_start_button = _live_event_button(
-        app.live_event_panel,
-        "Start Range",
-        app.mark_event_range_start,
-    )
-    app.live_mark_event_range_start_button.grid(row=0, column=6, padx=(0, 4))
-    app.live_add_event_range_button = _live_event_button(app.live_event_panel, "End Range", app.add_event_range)
-    app.live_add_event_range_button.grid(row=0, column=7, padx=(0, 4))
-    app.live_remove_last_event_button = _live_event_button(app.live_event_panel, "Remove Last", app.remove_last_event)
-    app.live_remove_last_event_button.grid(row=0, column=8)
-
+    ttk.Label(app.live_event_status_row, text="Events", style=styles["label"]).pack(side=tk.LEFT, padx=(0, 12))
     app.live_event_count_label = ttk.Label(
-        app.live_event_panel,
+        app.live_event_status_row,
         textvariable=app.event_count_var,
         style=styles["value"],
         justify=tk.LEFT,
     )
-    app.live_event_count_label.grid(row=1, column=0, columnspan=4, sticky=tk.W, pady=(5, 0))
+    app.live_event_count_label.pack(side=tk.LEFT, padx=(0, 18))
     app.live_event_range_label = ttk.Label(
-        app.live_event_panel,
+        app.live_event_status_row,
         textvariable=app.event_range_start_var,
         style=styles["value"],
         justify=tk.LEFT,
     )
-    app.live_event_range_label.grid(row=1, column=4, columnspan=5, sticky=tk.W, pady=(5, 0))
+    app.live_event_range_label.pack(side=tk.LEFT)
+
+    ttk.Label(app.live_event_fields_row, text="Label", style=field_styles["label"]).grid(row=0, column=0, sticky=tk.W)
+    app.live_event_label_entry = ttk.Entry(
+        app.live_event_fields_row,
+        textvariable=app.event_label_var,
+        width=14,
+        style=field_styles["entry"],
+    )
+    app.live_event_label_entry.grid(row=0, column=1, sticky=tk.W, padx=(4, 14))
+    ttk.Label(app.live_event_fields_row, text="Notes", style=field_styles["label"]).grid(row=0, column=2, sticky=tk.W)
+    app.live_event_notes_entry = ttk.Entry(
+        app.live_event_fields_row,
+        textvariable=app.event_notes_var,
+        width=32,
+        style=field_styles["entry"],
+    )
+    app.live_event_notes_entry.grid(row=0, column=3, sticky=tk.EW, padx=(4, 0))
+
+    app.live_add_event_button = _live_event_button(app.live_event_actions_row, "Add Point", app.add_event)
+    app.live_add_event_button.pack(side=tk.LEFT, padx=(0, 5))
+    app.live_mark_event_range_start_button = _live_event_button(
+        app.live_event_actions_row,
+        "Start Range",
+        app.mark_event_range_start,
+    )
+    app.live_mark_event_range_start_button.pack(side=tk.LEFT, padx=(0, 5))
+    app.live_add_event_range_button = _live_event_button(app.live_event_actions_row, "End Range", app.add_event_range)
+    app.live_add_event_range_button.pack(side=tk.LEFT, padx=(0, 5))
+    app.live_remove_last_event_button = _live_event_button(app.live_event_actions_row, "Remove Last", app.remove_last_event)
+    app.live_remove_last_event_button.pack(side=tk.LEFT)
 
 
 def _live_event_button(parent: ttk.Frame, text: str, command: object) -> ttk.Button:
