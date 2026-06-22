@@ -6,6 +6,7 @@ the Status panel from the reused ``gui_state`` view-model.
 """
 from __future__ import annotations
 
+import time
 from collections import deque
 from pathlib import Path
 
@@ -50,6 +51,7 @@ from ads1292_studio.display import (
     sweep_speed_labels,
 )
 from ads1292_studio.plots import decimate_extrema_for_plot
+from ads1292_studio.recording_status import format_recording_status
 from ads1292_studio.signal_processing import apply_software_filters
 from ads1292_studio.workers import AcquisitionMode
 
@@ -76,6 +78,9 @@ class MainWindow(QMainWindow):
         self._ch2: deque[float] = deque(maxlen=MAX_POINTS)
         self._sample_count = 0
         self._range_start_s: float | None = None
+        # wall-clock start of the current recording (None when not recording);
+        # drives the live REC status + effective-rate readout
+        self._rec_start_monotonic: float | None = None
         # last-seen lead-off electrode set (drives the contact indicator);
         # None = unknown, so the first sample always refreshes the indicator
         self._lead_off_active: tuple[str, ...] | None = None
@@ -113,6 +118,10 @@ class MainWindow(QMainWindow):
         title_box.addWidget(subtitle)
         lay.addLayout(title_box)
         lay.addStretch(1)
+        self.recording_status = QLabel("")
+        self.recording_status.setObjectName("RecStatus")
+        self.recording_status.setStyleSheet("color: #D24B4B; font-weight: 600; padding-right: 12px;")
+        lay.addWidget(self.recording_status)
         self.connection_pill = pill("Not connected", "bad")
         lay.addWidget(self.connection_pill)
         return frame
@@ -366,6 +375,8 @@ class MainWindow(QMainWindow):
         self._ch2.clear()
         self._sample_count = 0
         self._lead_off_active = None
+        recording = self.save_csv.isChecked() or self.save_h5.isChecked() or self.save_xlsx.isChecked()
+        self._rec_start_monotonic = time.monotonic() if recording else None
         self.controller.start(
             self.port_combo.currentText().strip(),
             save_csv=self.save_csv.isChecked(),
@@ -381,6 +392,7 @@ class MainWindow(QMainWindow):
 
     def _on_stop(self) -> None:
         self.controller.stop()
+        self._rec_start_monotonic = None
         self._set_timer_active(False)
         self._refresh_state()
 
@@ -739,6 +751,16 @@ class MainWindow(QMainWindow):
         else:
             self._set_pill("Not connected", "bad")
         self.status_panel.update_from_state(state)
+        # live recording status (elapsed · samples · effective Hz)
+        if state.streaming and self._rec_start_monotonic is not None:
+            elapsed = time.monotonic() - self._rec_start_monotonic
+            self.recording_status.setText(
+                format_recording_status(self._sample_count, elapsed, recording=True)
+            )
+        else:
+            self.recording_status.setText("")
+            if not state.streaming:
+                self._rec_start_monotonic = None
         # sync calibration factor to live panel (no-op when unchanged)
         cal = self.controller.live_calibration
         uv = cal.mean_uv_per_count if cal is not None else None

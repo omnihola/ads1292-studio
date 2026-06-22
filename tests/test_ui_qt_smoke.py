@@ -464,6 +464,29 @@ def test_finalize_never_deletes_csv_without_a_replacement(tmp_path) -> None:
     assert csv_path.exists(), "CSV must be kept when nothing else was written"
 
 
+def test_recording_status_shows_while_streaming_and_clears_on_stop(qapp) -> None:
+    import time as _time
+
+    win = _make_window(qapp)
+    try:
+        assert win.recording_status.text() == ""
+        # simulate an active recording
+        win.controller.connected_port = "/dev/x"
+        win.controller.is_streaming = True
+        win._rec_start_monotonic = _time.monotonic() - 10.0  # 10 s elapsed
+        win._sample_count = 5000
+        win._refresh_state()
+        text = win.recording_status.text()
+        assert "REC" in text and "5,000 samples" in text and "Hz" in text
+        # stop clears it
+        win.controller.is_streaming = False
+        win._refresh_state()
+        assert win.recording_status.text() == ""
+        assert win._rec_start_monotonic is None
+    finally:
+        win.deleteLater()
+
+
 def test_controller_uses_large_raw_chunk_for_data_completeness(qapp) -> None:
     # RAW (evaluation) mode prioritizes data completeness: a large ~1 s block
     # minimizes inter-block acquisition gaps (least dropped signal) at the cost
