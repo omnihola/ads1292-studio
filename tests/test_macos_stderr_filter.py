@@ -35,3 +35,14 @@ def test_app_installs_macos_stderr_filter_before_tk_initialization() -> None:
 
     assert "install_macos_stderr_filter()" in source
     assert source.index("install_macos_stderr_filter()") < source.index("super().__init__()")
+
+
+def test_qt_app_installs_macos_stderr_filter_before_qapplication() -> None:
+    import inspect
+
+    from ads1292_studio import app_qt
+
+    source = inspect.getsource(app_qt.main)
+
+    assert "install_macos_stderr_filter()" in source
+    assert source.index("install_macos_stderr_filter()") < source.index("QApplication")
