@@ -316,6 +316,29 @@ def test_filter_settings_reflected_in_current_filter_settings(qapp) -> None:
         win.deleteLater()
 
 
+def test_invert_ecg_button_flips_live_traces(qapp) -> None:
+    from collections import deque
+
+    win = _make_window(qapp)
+    try:
+        # seed the live deques with known values
+        win._ch2.extend([100.0, 200.0, 300.0])
+        win._ch1.extend([10.0, 20.0, 30.0])
+        win._sample_count = 3
+        win._invert_btn.setChecked(False)
+        win._redraw_live()
+        y_normal = list(win.live_panel._ecg_line.get_ydata())
+
+        win._invert_btn.setChecked(True)
+        win._redraw_live()
+        y_inverted = list(win.live_panel._ecg_line.get_ydata())
+
+        assert y_inverted == pytest.approx([-v for v in y_normal], abs=1e-6)
+        assert "inv" in win._filter_hint.text()
+    finally:
+        win.deleteLater()
+
+
 def test_main_window_calibration_syncs_to_live_panel(qapp) -> None:
     from ads1292_studio.calibration import LiveStreamCalibration
 

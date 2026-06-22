@@ -154,6 +154,10 @@ class MainWindow(QMainWindow):
             b.toggled.connect(self._on_filter_changed)
             lay.addWidget(b)
             self._filter_btns[f] = b
+        self._invert_btn = QPushButton("⇅ Invert ECG")
+        self._invert_btn.setCheckable(True)
+        self._invert_btn.toggled.connect(self._on_filter_changed)
+        lay.addWidget(self._invert_btn)
         lay.addWidget(self._caps("Scale"))
         for label, items in (("Window", ["8 s"]), ("Gain", ["1x"]), ("Speed", ["25 mm/s"])):
             lay.addWidget(QLabel(label))
@@ -171,8 +175,10 @@ class MainWindow(QMainWindow):
 
     def _update_filter_hint(self) -> None:
         active = [k for k, b in self._filter_btns.items() if b.isChecked()]
-        label = "filters: " + ", ".join(active) if active else "raw"
-        self._filter_hint.setText(f"CH2 Lead I · CH1 Resp · {label}")
+        parts = ["filters: " + ", ".join(active)] if active else ["raw"]
+        if self._invert_btn.isChecked():
+            parts.append("inv")
+        self._filter_hint.setText("CH2 Lead I · CH1 Resp · " + " · ".join(parts))
 
     def _current_filter_settings(self) -> SoftwareFilterSettings:
         return SoftwareFilterSettings(
@@ -516,7 +522,10 @@ class MainWindow(QMainWindow):
         fs = self._current_filter_settings()
         ecg_raw = np.asarray(self._ch2, dtype=float)
         resp_raw = np.asarray(self._ch1, dtype=float)
-        ecg_y = apply_software_filters(ecg_raw, SAMPLE_RATE_HZ, fs).tolist()
+        ecg_filtered = apply_software_filters(ecg_raw, SAMPLE_RATE_HZ, fs)
+        if self._invert_btn.isChecked():
+            ecg_filtered = -ecg_filtered
+        ecg_y = ecg_filtered.tolist()
         resp_y = apply_software_filters(resp_raw, SAMPLE_RATE_HZ, fs).tolist()
         self.live_panel.update_traces(xs, ecg_y, xs, resp_y)
         self._update_live_snr()
