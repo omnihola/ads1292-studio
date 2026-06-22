@@ -99,6 +99,42 @@ def test_metadata_bundle_round_trips(tmp_path: Path) -> None:
     assert bundle["created_at"] == "2026-06-21T20:00:00"
 
 
+def test_live_calibration_surfaced_as_h5_attribute(tmp_path: Path) -> None:
+    import h5py
+
+    from ads1292_studio.acquisition import build_acquisition_provenance
+    from ads1292_studio.calibration import LiveStreamCalibration
+
+    live = LiveStreamCalibration(
+        mean_uv_per_count=2.345, std_uv_per_count=0.01, cv_percent=0.4,
+        runs=5, test_signal_pp_uv=2016.7,
+    )
+    provenance = build_acquisition_provenance(
+        csv_path=tmp_path / "rec.csv", acquisition_mode="live", port="/dev/x",
+        sample_rate_hz=500.0, calibration=Calibration(), live_calibration=live,
+        started_at="2026-06-21T00:00:00",
+    )
+    out = _write(tmp_path, acquisition=provenance)
+
+    # bundle carries the full live calibration
+    _, bundle = read_recording_h5(out)
+    live_block = bundle["acquisition"]["live_calibration"]
+    assert live_block["mean_uv_per_count"] == pytest.approx(2.345)
+    assert live_block["runs"] == 5
+
+    # convenience scalar surfaced as a top-level attribute
+    with h5py.File(out, "r") as f:
+        assert float(f.attrs["live_uv_per_count"]) == pytest.approx(2.345)
+
+
+def test_no_live_calibration_omits_attribute(tmp_path: Path) -> None:
+    import h5py
+
+    out = _write(tmp_path)  # default acquisition has no live calibration
+    with h5py.File(out, "r") as f:
+        assert "live_uv_per_count" not in dict(f.attrs)
+
+
 def test_integrity_hashes_present_and_match(tmp_path: Path) -> None:
     import hashlib
 

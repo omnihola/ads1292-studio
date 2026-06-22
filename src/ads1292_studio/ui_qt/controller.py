@@ -153,13 +153,14 @@ class AcquisitionController:
             self._record_metadata = metadata or SessionMetadata()
             self._record_quality_gate = quality_gate or QualityGate()
             self._record_protocol = protocol or protocol_template()
+            live_calibration = self.live_calibration if mode is AcquisitionMode.LIVE else None
             self._record_provenance = build_acquisition_provenance(
                 csv_path=csv_path,
                 acquisition_mode=mode.value,
                 port=port,
                 sample_rate_hz=SAMPLE_RATE_HZ,
                 calibration=Calibration(),
-                live_calibration=None,
+                live_calibration=live_calibration,
                 started_at=self._record_started_iso,
             )
             self._finalization_pending = True

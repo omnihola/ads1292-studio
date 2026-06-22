@@ -78,6 +78,11 @@ def write_recording_h5(
         f.attrs["sample_rate_hz"] = float(sample_rate_hz)
         f.attrs["csv_name"] = Path(csv_path).name
         f.attrs["sample_count"] = len(samples)
+        # convenience: surface the live calibration scale as a top-level attr
+        live_cal = (bundle.get("acquisition") or {}).get("live_calibration") or {}
+        live_scale = live_cal.get("mean_uv_per_count")
+        if live_scale is not None:
+            f.attrs["live_uv_per_count"] = float(live_scale)
         group = f.create_group("samples")
         for name, array in arrays.items():
             group.create_dataset(name, data=array, compression="gzip", shuffle=True)

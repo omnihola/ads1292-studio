@@ -385,6 +385,24 @@ def test_lead_off_updates_contact_indicator_without_creating_events(qapp) -> Non
         win.deleteLater()
 
 
+def test_start_embeds_live_calibration_into_provenance(qapp, monkeypatch) -> None:
+    from ads1292_studio.calibration import LiveStreamCalibration
+    from ads1292_studio.ui_qt.controller import AcquisitionController
+
+    ctrl = AcquisitionController()
+    ctrl.connected_port = "/dev/x"
+    ctrl.live_calibration = LiveStreamCalibration(
+        mean_uv_per_count=2.5, std_uv_per_count=0.02, cv_percent=0.8,
+        runs=5, test_signal_pp_uv=2016.7,
+    )
+    monkeypatch.setattr(ctrl.worker, "start", lambda *a, **k: None)
+    ctrl.start("/dev/x", save_csv=True)
+    assert ctrl._record_provenance is not None
+    live = ctrl._record_provenance.live_calibration
+    assert live.get("mean_uv_per_count") == pytest.approx(2.5)
+    assert live.get("runs") == 5
+
+
 def test_controller_loads_canonical_h5(qapp, tmp_path) -> None:
     from ads1292_studio.calibration import Calibration
     from ads1292_studio.events import EventMarker
