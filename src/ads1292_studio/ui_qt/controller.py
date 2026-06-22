@@ -41,6 +41,9 @@ from ads1292_studio.workers import AcquisitionMode, LiveWorker
 
 MAX_SAMPLES_PER_DRAIN = 1000
 SAMPLE_RATE_HZ = 500.0
+# RAW (evaluation) mode acquires in blocks; size it to ~0.1 s (≈10 updates/sec)
+# so the live plot scrolls smoothly instead of jumping once per ~1 s block.
+RAW_CHUNK_SAMPLES = 50
 
 
 def _fsync_path(path: Path) -> None:
@@ -73,7 +76,10 @@ class AcquisitionController:
         self.stream_start_results: queue.Queue[StreamStartResult] = queue.Queue()
         self.csv_load_results: queue.Queue[CsvLoadResult] = queue.Queue()
         self.calibration_results: queue.Queue[LiveCalibrationResult] = queue.Queue()
-        self.worker = LiveWorker(self.samples, self.logs, self.stream_start_results)
+        self.worker = LiveWorker(
+            self.samples, self.logs, self.stream_start_results,
+            raw_chunk_samples=RAW_CHUNK_SAMPLES,
+        )
 
         self.connected_port: str | None = None
         self.selected_port: str = ""
