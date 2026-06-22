@@ -85,7 +85,7 @@ QComboBox:focus, QLineEdit:focus {{ border-color: {t['accent']}; }}
 QComboBox::drop-down {{ border: none; width: 18px; }}
 
 /* ---- checkbox ---- */
-QCheckBox {{ color: {t['ink']}; spacing: 7px; }}
+QCheckBox {{ color: {t['ink']}; spacing: 9px; padding: 2px 2px; }}
 QCheckBox::indicator {{ width: 16px; height: 16px; border-radius: 4px; border: 1px solid {t['border_strong']}; background: #FFFFFF; }}
 QCheckBox::indicator:checked {{ background: {t['accent']}; border-color: {t['accent']}; }}
 

@@ -135,15 +135,16 @@ class MainWindow(QMainWindow):
         self.save_csv = QCheckBox("CSV")
         self.save_csv.setChecked(True)
         self.controls["Save CSV"] = self.save_csv
-        lay.addWidget(self.save_csv)
         self.save_h5 = QCheckBox("HDF5")
         self.save_h5.setChecked(True)
         self.controls["Save HDF5"] = self.save_h5
-        lay.addWidget(self.save_h5)
         self.save_xlsx = QCheckBox("XLSX")
         self.save_xlsx.setChecked(False)
         self.controls["Save XLSX"] = self.save_xlsx
-        lay.addWidget(self.save_xlsx)
+        for i, box in enumerate((self.save_csv, self.save_h5, self.save_xlsx)):
+            if i:
+                lay.addSpacing(16)
+            lay.addWidget(box)
         lay.addStretch(1)
         return frame
 
