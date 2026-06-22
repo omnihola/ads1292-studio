@@ -230,3 +230,51 @@ def test_connect_failure_surfaces_without_crashing(qapp) -> None:
         assert win.controller.connected_port is None
     finally:
         win.deleteLater()
+
+
+def test_live_panel_set_calibration_switches_ylabel(qapp) -> None:
+    from ads1292_studio.ui_qt.live_panel import LivePanel
+
+    panel = LivePanel()
+    try:
+        assert "counts" in panel.ax_ecg.get_ylabel().lower()
+        panel.set_calibration(2.5)
+        assert "µV" in panel.ax_ecg.get_ylabel() or "uV" in panel.ax_ecg.get_ylabel()
+        panel.set_calibration(None)
+        assert "counts" in panel.ax_ecg.get_ylabel().lower()
+    finally:
+        panel.deleteLater()
+
+
+def test_live_panel_update_traces_scales_by_calibration(qapp) -> None:
+    from ads1292_studio.ui_qt.live_panel import LivePanel
+
+    panel = LivePanel()
+    try:
+        panel.set_calibration(2.0)
+        panel.update_traces([0.0, 1.0], [10.0, 20.0], [0.0, 1.0], [5.0, 15.0])
+        ecg_y = panel._ecg_line.get_ydata()
+        resp_y = panel._resp_line.get_ydata()
+        assert list(ecg_y) == [20.0, 40.0], f"expected scaled ECG, got {ecg_y}"
+        assert list(resp_y) == [10.0, 30.0], f"expected scaled resp, got {resp_y}"
+    finally:
+        panel.deleteLater()
+
+
+def test_main_window_calibration_syncs_to_live_panel(qapp) -> None:
+    from ads1292_studio.calibration import LiveStreamCalibration
+
+    win = _make_window(qapp)
+    try:
+        assert win.live_panel._uv_per_count is None
+        win.controller.live_calibration = LiveStreamCalibration(
+            mean_uv_per_count=3.2, std_uv_per_count=0.1, cv_percent=1.5,
+            runs=5, test_signal_pp_uv=2016.7,
+        )
+        win._refresh_state()
+        assert win.live_panel._uv_per_count == pytest.approx(3.2)
+        win.controller.live_calibration = None
+        win._refresh_state()
+        assert win.live_panel._uv_per_count is None
+    finally:
+        win.deleteLater()

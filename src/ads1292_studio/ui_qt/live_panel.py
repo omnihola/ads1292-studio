@@ -33,6 +33,7 @@ class LivePanel(FigureCanvasQTAgg):
         self.ax_resp.set_xlabel("Time (s)", fontsize=8)
         self._empty_text = None
         self._event_artists: list = []
+        self._uv_per_count: float | None = None
         self.show_empty("Connect, then Start for CH2 ECG")
 
     def _style_axes(self) -> None:
@@ -55,6 +56,22 @@ class LivePanel(FigureCanvasQTAgg):
         )
         self.draw_idle()
 
+    def set_calibration(self, uv_per_count: float | None) -> None:
+        """Switch Y-axis display between raw counts and calibrated µV."""
+        self._uv_per_count = uv_per_count
+        if uv_per_count is not None:
+            self.ax_ecg.set_ylabel("Amplitude (µV)", fontsize=8)
+            self.ax_resp.set_ylabel("Impedance (µV)", fontsize=8)
+            self.ax_ecg.set_title(
+                f"CH2 ECG Lead I  [cal {uv_per_count:.4g} µV/ct]",
+                loc="left", fontsize=9, color=_T["ink"],
+            )
+        else:
+            self.ax_ecg.set_ylabel("Amplitude (counts)", fontsize=8)
+            self.ax_resp.set_ylabel("Impedance (counts)", fontsize=8)
+            self.ax_ecg.set_title("CH2 ECG Lead I", loc="left", fontsize=9, color=_T["ink"])
+        self.draw_idle()
+
     def update_traces(
         self,
         ecg_x: Sequence[float],
@@ -62,10 +79,17 @@ class LivePanel(FigureCanvasQTAgg):
         resp_x: Sequence[float],
         resp_y: Sequence[float],
     ) -> None:
-        """Replace the trace data and autoscale to the visible window."""
+        """Replace the trace data and autoscale to the visible window.
+
+        If a calibration factor is active, Y values are scaled to µV.
+        """
         if self._empty_text is not None:
             self._empty_text.remove()
             self._empty_text = None
+        scale = self._uv_per_count
+        if scale is not None:
+            ecg_y = [v * scale for v in ecg_y]
+            resp_y = [v * scale for v in resp_y]
         self._ecg_line.set_data(ecg_x, ecg_y)
         self._resp_line.set_data(resp_x, resp_y)
         self._autoscale(self.ax_ecg, ecg_x, ecg_y)

@@ -559,6 +559,11 @@ class MainWindow(QMainWindow):
         else:
             self._set_pill("Not connected", "bad")
         self.status_panel.update_from_state(state)
+        # sync calibration factor to live panel (no-op when unchanged)
+        cal = self.controller.live_calibration
+        uv = cal.mean_uv_per_count if cal is not None else None
+        if uv != self.live_panel._uv_per_count:
+            self.live_panel.set_calibration(uv)
 
     def _set_pill(self, text: str, tone: str) -> None:
         from ads1292_studio.ui_qt.widgets import tone_color
