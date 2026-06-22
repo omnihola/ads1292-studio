@@ -261,6 +261,29 @@ def test_live_panel_update_traces_scales_by_calibration(qapp) -> None:
         panel.deleteLater()
 
 
+def test_info_panel_shows_uv_when_calibration_set(qapp) -> None:
+    from ads1292_studio.ui_qt.analysis_panels import RecordingInfoPanel
+    from ads1292_studio.models import StreamSample
+    import time
+
+    panel = RecordingInfoPanel()
+    samples = [
+        StreamSample(timestamp=i / 500.0, ch1=100, ch2=200,
+                     board_heart_rate=0, board_respiration_rate=0, status_byte=0)
+        for i in range(600)
+    ]
+    panel.set_calibration(2.0)
+    panel.render_recording(samples, 500.0)
+    text = panel.toPlainText()
+    assert "µV" in text, "calibrated info panel should show µV"
+    assert "2.0 µV/ct" in text or "2 µV/ct" in text, "calibration factor should appear"
+
+    panel.set_calibration(None)
+    panel.render_recording(samples, 500.0)
+    text2 = panel.toPlainText()
+    assert "not applied" in text2, "uncalibrated panel should say 'not applied'"
+
+
 def test_main_window_calibration_syncs_to_live_panel(qapp) -> None:
     from ads1292_studio.calibration import LiveStreamCalibration
 

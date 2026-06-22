@@ -500,7 +500,12 @@ class MainWindow(QMainWindow):
             return
         est = estimate_realtime_snr(np.asarray(self._ch2, dtype=float), sample_rate_hz=SAMPLE_RATE_HZ)
         if est.valid:
-            self.event_console.set_snr(f"ECG {est.snr_db:.1f} dB · noise {est.noise_rms_counts:.0f} ct")
+            uv = self.live_panel._uv_per_count
+            if uv is not None:
+                noise_str = f"{est.noise_rms_counts * uv:.1f} µV"
+            else:
+                noise_str = f"{est.noise_rms_counts:.0f} ct"
+            self.event_console.set_snr(f"ECG {est.snr_db:.1f} dB · noise {noise_str}")
         else:
             self.event_console.set_snr("— · acquiring…")
 
@@ -510,6 +515,9 @@ class MainWindow(QMainWindow):
             return
         fs = recording.sample_rate_hz or SAMPLE_RATE_HZ
         metrics = self._update_quality(samples, fs)
+        # pass current calibration to info panel before render
+        cal = self.controller.live_calibration
+        self.info_panel.set_calibration(cal.mean_uv_per_count if cal is not None else None)
         # render every registered recording panel through the uniform interface
         for panel in self._recording_renderers:
             try:

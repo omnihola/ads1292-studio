@@ -148,18 +148,35 @@ class RecordingInfoPanel(QPlainTextEdit):
     def __init__(self) -> None:
         super().__init__()
         self.setReadOnly(True)
+        self._uv_per_count: float | None = None
         self.setPlaceholderText("Load a CSV or finish a recording to see the detailed metrics report.")
+
+    def set_calibration(self, uv_per_count: float | None) -> None:
+        """Store calibration factor; applied on next render_recording call."""
+        self._uv_per_count = uv_per_count
 
     def render_recording(self, samples, sample_rate_hz: float, ecg_source: str | None = None) -> None:
         from ads1292_studio.quality import compute_quality_metrics
 
         m = compute_quality_metrics(tuple(samples), sample_rate_hz=sample_rate_hz)
+        uv = self._uv_per_count
+
+        def _ct(counts: float) -> str:
+            if uv is not None:
+                return f"{counts:.1f} ct  ({counts * uv:.1f} µV)"
+            return f"{counts:.1f} ct"
+
+        cal_line = (
+            f"  calibration       : {uv:.4g} µV/ct" if uv is not None
+            else "  calibration       : not applied (raw counts)"
+        )
         lines = [
             "RECORDING SUMMARY",
             f"  samples           : {m.sample_count}",
             f"  duration          : {m.duration_seconds:.3f} s  @ {sample_rate_hz:.0f} Hz",
             f"  ECG source        : {m.ecg_source}",
             f"  quality label     : {m.quality_label}",
+            cal_line,
             "",
             "CONTACT / RATE",
             f"  contact OK        : {m.contact_ok_percent:.2f}%  ({m.lead_off_bad_samples} bad samples)",
@@ -169,9 +186,9 @@ class RecordingInfoPanel(QPlainTextEdit):
             "MORPHOLOGY / ARTIFACTS",
             f"  QRS clear         : {m.qrs_clear}",
             f"  P / T tentative   : {m.p_tentative} / {m.t_tentative}",
-            f"  baseline drift    : {m.baseline_drift_counts:.1f} ct",
-            f"  noise RMS         : {m.noise_rms_counts:.1f} ct",
-            f"  peak-to-peak      : {m.peak_to_peak_counts:.1f} ct",
+            f"  baseline drift    : {_ct(m.baseline_drift_counts)}",
+            f"  noise RMS         : {_ct(m.noise_rms_counts)}",
+            f"  peak-to-peak      : {_ct(m.peak_to_peak_counts)}",
             f"  channel scores    : CH1={m.score_ch1:.3f}   CH2={m.score_ch2:.3f}",
         ]
         self.setPlainText("\n".join(lines))
