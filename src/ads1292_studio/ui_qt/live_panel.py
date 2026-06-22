@@ -34,7 +34,13 @@ class LivePanel(FigureCanvasQTAgg):
         self._empty_text = None
         self._event_artists: list = []
         self._uv_per_count: float | None = None
+        self._autoscale_enabled = True
         self.show_empty("Connect, then Start for CH2 ECG")
+
+    def set_autoscale(self, enabled: bool) -> None:
+        """Enable/disable Y-axis auto-scaling. When off, the Y range is frozen
+        at its current limits (X still follows the time window)."""
+        self._autoscale_enabled = bool(enabled)
 
     def _style_axes(self) -> None:
         for ax in (self.ax_ecg, self.ax_resp):
@@ -105,8 +111,12 @@ class LivePanel(FigureCanvasQTAgg):
             resp_y = [v * scale for v in resp_y]
         self._ecg_line.set_data(ecg_x, ecg_y)
         self._resp_line.set_data(resp_x, resp_y)
-        self._autoscale(self.ax_ecg, ecg_x, ecg_y)
-        self._autoscale(self.ax_resp, resp_x, resp_y)
+        # X always follows the time window; Y autoscales only when enabled.
+        self._set_xwindow(self.ax_ecg, ecg_x)
+        self._set_xwindow(self.ax_resp, resp_x)
+        if self._autoscale_enabled:
+            self._autoscale_y(self.ax_ecg, ecg_y)
+            self._autoscale_y(self.ax_resp, resp_y)
         self.draw_idle()
 
     def render_recording(self, samples, sample_rate_hz: float, ecg_source: str | None = None) -> None:
@@ -151,10 +161,15 @@ class LivePanel(FigureCanvasQTAgg):
         self.draw_idle()
 
     @staticmethod
-    def _autoscale(ax, xs: Sequence[float], ys: Sequence[float]) -> None:
+    def _set_xwindow(ax, xs: Sequence[float]) -> None:
         if not xs:
             return
         ax.set_xlim(xs[0], xs[-1] if xs[-1] > xs[0] else xs[0] + 1.0)
+
+    @staticmethod
+    def _autoscale_y(ax, ys: Sequence[float]) -> None:
+        if not ys:
+            return
         lo, hi = min(ys), max(ys)
         if hi <= lo:
             hi, lo = lo + 1.0, lo - 1.0

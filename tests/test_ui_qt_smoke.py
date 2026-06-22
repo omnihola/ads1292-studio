@@ -503,6 +503,41 @@ def test_pending_range_start_draws_distinct_vertical_line(qapp) -> None:
         panel.deleteLater()
 
 
+def test_autoscale_off_freezes_y_but_x_still_scrolls(qapp) -> None:
+    from ads1292_studio.ui_qt.live_panel import LivePanel
+
+    panel = LivePanel()
+    try:
+        panel.set_autoscale(True)
+        panel.update_traces([0.0, 1.0], [0.0, 10.0], [0.0, 1.0], [0.0, 5.0])
+        y_before = panel.ax_ecg.get_ylim()
+        # freeze: a much larger signal must NOT expand the Y range
+        panel.set_autoscale(False)
+        panel.update_traces([2.0, 3.0], [0.0, 1000.0], [2.0, 3.0], [0.0, 500.0])
+        y_after = panel.ax_ecg.get_ylim()
+        assert y_after == pytest.approx(y_before), "Y must stay frozen when autoscale off"
+        # but the X window still follows time
+        assert panel.ax_ecg.get_xlim()[1] >= 3.0
+        # re-enabling rescales Y to the data
+        panel.set_autoscale(True)
+        panel.update_traces([4.0, 5.0], [0.0, 1000.0], [4.0, 5.0], [0.0, 500.0])
+        assert panel.ax_ecg.get_ylim()[1] > y_before[1]
+    finally:
+        panel.deleteLater()
+
+
+def test_auto_scale_button_toggles_live_panel(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        assert win.live_panel._autoscale_enabled is True
+        win._auto_btn.setChecked(False)
+        assert win.live_panel._autoscale_enabled is False
+        win._auto_btn.setChecked(True)
+        assert win.live_panel._autoscale_enabled is True
+    finally:
+        win.deleteLater()
+
+
 def test_scale_combos_are_populated_with_all_choices(qapp) -> None:
     win = _make_window(qapp)
     try:

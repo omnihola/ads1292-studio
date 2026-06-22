@@ -167,11 +167,12 @@ class MainWindow(QMainWindow):
         lay.setContentsMargins(18, 8, 18, 8)
         lay.setSpacing(8)
         lay.addWidget(self._caps("Display"))
-        auto = QPushButton("Auto scale")
-        auto.setCheckable(True)
-        auto.setChecked(True)
-        auto.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        lay.addWidget(auto)
+        self._auto_btn = QPushButton("Auto scale")
+        self._auto_btn.setCheckable(True)
+        self._auto_btn.setChecked(True)
+        self._auto_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._auto_btn.toggled.connect(self._on_autoscale_toggled)
+        lay.addWidget(self._auto_btn)
         self._filter_btns: dict[str, QPushButton] = {}
         for f in ("HP", "Notch", "LP", "QRS"):
             b = QPushButton(f)
@@ -214,6 +215,10 @@ class MainWindow(QMainWindow):
     def _on_scale_changed(self) -> None:
         ds = self._current_display_settings()
         self.live_panel.set_sweep_speed(ds.sweep_speed_mm_s)
+        self._redraw_live()
+
+    def _on_autoscale_toggled(self, enabled: bool) -> None:
+        self.live_panel.set_autoscale(enabled)
         self._redraw_live()
 
     def _on_filter_changed(self) -> None:
