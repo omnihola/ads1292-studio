@@ -369,6 +369,16 @@ class AcquisitionController:
                     f"Live calibration: {self.live_calibration.mean_uv_per_count:.4g} uV/count "
                     f"(CV {self.live_calibration.cv_percent:.2f}%)"
                 )
+        # Detect an unexpected end of stream (e.g., device unplugged mid-record):
+        # the worker thread was created and has since died, yet we still believe
+        # we are streaming. (Guard on "thread existed" so simulations without a
+        # real worker thread don't misfire.)
+        thread = getattr(self.worker, "thread", None)
+        worker_finished = thread is not None and not thread.is_alive()
+        if self.is_streaming and not self.is_starting and worker_finished:
+            self.is_streaming = False
+            out.state_changed = True
+            out.errors.append("Streaming stopped unexpectedly (device disconnected?)")
         # finalize a stopped recording once the CSV writer thread has ended
         if self._finalization_pending and not self.is_streaming and not self._worker_alive():
             self._finalize_recording(out)

@@ -435,6 +435,47 @@ def test_finalize_never_deletes_csv_without_a_replacement(tmp_path) -> None:
     assert csv_path.exists(), "CSV must be kept when nothing else was written"
 
 
+def test_unexpected_worker_death_finalizes_and_clears_streaming(qapp, tmp_path) -> None:
+    from ads1292_studio.acquisition import build_acquisition_provenance
+    from ads1292_studio.calibration import Calibration
+    from ads1292_studio.csv_io import CsvRecorder
+    from ads1292_studio.h5_io import recording_h5_path
+    from ads1292_studio.models import StreamSample
+    from ads1292_studio.ui_qt.controller import AcquisitionController
+
+    csv_path = tmp_path / "live" / "2026-06-21-dead-ads1292-studio.csv"
+    csv_path.parent.mkdir(parents=True)
+    with CsvRecorder(csv_path) as rec:
+        for i in range(20):
+            rec.write(StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                                   board_heart_rate=60, board_respiration_rate=15,
+                                   status_byte=0, sample_index=i))
+    ctrl = AcquisitionController()
+    ctrl.recording_path = csv_path
+    ctrl._keep_csv = True
+    ctrl._save_h5 = True
+    ctrl._record_provenance = build_acquisition_provenance(
+        csv_path=csv_path, acquisition_mode="live", port="/dev/x", sample_rate_hz=500.0,
+        calibration=Calibration(), live_calibration=None, started_at="2026-06-21T00:00:00",
+    )
+    ctrl._finalization_pending = True
+    # simulate: device died mid-stream -> we still think we're streaming, but the
+    # worker thread was created and has since finished
+    import threading
+    dead = threading.Thread(target=lambda: None)
+    dead.start()
+    dead.join()
+    ctrl.worker.thread = dead
+    ctrl.is_streaming = True
+    ctrl.is_starting = False
+    assert ctrl._worker_alive() is False
+
+    out = ctrl.drain_results()
+    assert ctrl.is_streaming is False, "streaming flag cleared on unexpected death"
+    assert any("unexpected" in e.lower() for e in out.errors)
+    assert recording_h5_path(csv_path).exists(), "recording auto-finalized to .h5"
+
+
 def test_start_finalizes_pending_previous_recording(qapp, tmp_path, monkeypatch) -> None:
     from ads1292_studio.acquisition import build_acquisition_provenance
     from ads1292_studio.calibration import Calibration
