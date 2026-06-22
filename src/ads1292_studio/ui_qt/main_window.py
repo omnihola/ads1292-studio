@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from ads1292_studio.device import find_ads_port, list_ads_ports
 from ads1292_studio.events import EventMarker, event_from_interval
+from ads1292_studio.lead_off import electrodes_off
 from ads1292_studio.gui_state import gui_control_states, gui_signal_quality_cards
 from ads1292_studio.quality import compute_quality_metrics, estimate_realtime_snr
 from ads1292_studio.ui_qt.analysis_panels import EventLogPanel, PqrstPanel, RecordingInfoPanel, SpectrumPanel
@@ -60,6 +61,9 @@ class MainWindow(QMainWindow):
         self._ch2: deque[float] = deque(maxlen=MAX_POINTS)
         self._sample_count = 0
         self._range_start_s: float | None = None
+        # lead-off auto-annotation state
+        self._lead_off_active: tuple[str, ...] = ()
+        self._lead_off_start_s: float | None = None
 
         root = QWidget()
         root.setObjectName("CentralRoot")
@@ -306,6 +310,8 @@ class MainWindow(QMainWindow):
         self._ch1.clear()
         self._ch2.clear()
         self._sample_count = 0
+        self._lead_off_active = ()
+        self._lead_off_start_s = None
         self.controller.start(
             self.port_combo.currentText().strip(),
             save_csv=self.save_csv.isChecked(),
@@ -318,6 +324,10 @@ class MainWindow(QMainWindow):
         self._refresh_state()
 
     def _on_stop(self) -> None:
+        # capture a lead-off interval still open at stop time
+        if self._lead_off_active and self._lead_off_start_s is not None:
+            self._close_lead_off_interval()
+            self._lead_off_active = ()
         self.controller.stop()
         self._set_timer_active(False)
         self._refresh_state()
@@ -421,6 +431,41 @@ class MainWindow(QMainWindow):
         self.event_log_panel.append_line("Live calibration started (CH2 internal test signal, 5 runs)…")
         self._refresh_state()
 
+    # ---- lead-off contact tracking + auto annotation ----
+    def _process_lead_off(self, status_byte: int) -> None:
+        """Update the live contact indicator and auto-annotate lead-off intervals.
+
+        On a connected->off transition the start time is recorded; when contact
+        is restored (or the off set changes) a range EventMarker is emitted so
+        electrode detachments are captured in the recording for later review.
+        """
+        current = electrodes_off(status_byte)
+        self.event_console.set_contact(current)
+        if current == self._lead_off_active:
+            return
+        # close any open lead-off interval before starting a new state
+        if self._lead_off_active and self._lead_off_start_s is not None:
+            self._close_lead_off_interval()
+        if current:
+            self._lead_off_start_s = self._now_seconds()
+            self.event_log_panel.append_line(
+                f"Lead-off START {self._lead_off_start_s:.2f}s: {', '.join(current)}"
+            )
+        self._lead_off_active = current
+
+    def _close_lead_off_interval(self) -> None:
+        start = self._lead_off_start_s
+        end = self._now_seconds()
+        label = "lead-off: " + ", ".join(self._lead_off_active)
+        marker = event_from_interval(
+            start_seconds=start, end_seconds=end, label=label,
+            notes="auto-detected electrode lead-off",
+        )
+        self.controller.event_markers.append(marker)
+        self.event_log_panel.append_line(f"Lead-off END {end:.2f}s ({label})")
+        self._lead_off_start_s = None
+        self._refresh_events()
+
     # ---- event annotations (real EventMarkers; persisted at finalize, overlaid on plot) ----
     def _now_seconds(self) -> float:
         return self._sample_count / SAMPLE_RATE_HZ
@@ -501,6 +546,7 @@ class MainWindow(QMainWindow):
                 self._ch1.append(float(s.ch1))
                 self._ch2.append(float(s.ch2))
             self._sample_count += len(samples)
+            self._process_lead_off(samples[-1].status_byte)
             self._redraw_live()
         if outcome.loaded_recording is not None:
             self._show_recording(outcome.loaded_recording)

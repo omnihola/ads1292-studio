@@ -157,8 +157,10 @@ class RecordingInfoPanel(QPlainTextEdit):
 
     def render_recording(self, samples, sample_rate_hz: float, ecg_source: str | None = None) -> None:
         from ads1292_studio.quality import compute_quality_metrics
+        from ads1292_studio.lead_off import summarize_lead_off
 
         m = compute_quality_metrics(tuple(samples), sample_rate_hz=sample_rate_hz)
+        loff = summarize_lead_off(s.status_byte for s in samples)
         uv = self._uv_per_count
 
         def _ct(counts: float) -> str:
@@ -180,6 +182,8 @@ class RecordingInfoPanel(QPlainTextEdit):
             "",
             "CONTACT / RATE",
             f"  contact OK        : {m.contact_ok_percent:.2f}%  ({m.lead_off_bad_samples} bad samples)",
+            f"  lead-off RA/LA/LL : {loff.electrode_off_percent['RA']:.1f}% / "
+            f"{loff.electrode_off_percent['LA']:.1f}% / {loff.electrode_off_percent['LL']:.1f}%",
             f"  R peaks           : {m.r_peaks}",
             f"  HR median/min/max : {m.hr_median_bpm:.1f} / {m.hr_min_bpm:.1f} / {m.hr_max_bpm:.1f} bpm",
             "",

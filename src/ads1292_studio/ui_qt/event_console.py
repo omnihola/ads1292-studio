@@ -52,11 +52,14 @@ class EventConsole(QFrame):
         snr_title = _group_head("Realtime SNR")
         self.snr_value = QLabel("— · waiting for ECG window")
         self.snr_value.setObjectName("Muted")
+        self.contact_value = QLabel("Contact —")
+        self.contact_value.setObjectName("Muted")
         self.event_status = QLabel("Events 0 · Range start —")
         self.event_status.setObjectName("Muted")
         top_lay.addWidget(snr_title)
         top_lay.addWidget(self.snr_value)
         top_lay.addStretch(1)
+        top_lay.addWidget(self.contact_value)
         top_lay.addWidget(self.event_status)
         root.addWidget(top)
 
@@ -143,6 +146,19 @@ class EventConsole(QFrame):
 
     def set_snr(self, text: str) -> None:
         self.snr_value.setText(text)
+
+    def set_contact(self, electrodes_off: tuple[str, ...]) -> None:
+        """Show which electrodes are off, or a green OK when fully connected."""
+        from ads1292_studio.ui_qt.widgets import tone_color
+
+        if electrodes_off:
+            tone = "bad"
+            text = "Lead-off: " + ", ".join(electrodes_off)
+        else:
+            tone = "ok"
+            text = "Contact OK"
+        self.contact_value.setText(text)
+        self.contact_value.setStyleSheet(f"color: {tone_color(tone)}; font-weight: 600;")
 
     def set_event_status(self, count: int, range_start: float | None) -> None:
         start = f"{range_start:.1f} s" if range_start is not None else "—"

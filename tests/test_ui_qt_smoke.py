@@ -316,6 +316,33 @@ def test_filter_settings_reflected_in_current_filter_settings(qapp) -> None:
         win.deleteLater()
 
 
+def test_lead_off_auto_annotates_interval_and_updates_contact(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        win._sample_count = 0
+        # connected
+        win._process_lead_off(0x00)
+        assert win._lead_off_active == ()
+        assert "Contact OK" in win.event_console.contact_value.text()
+        # RA goes off at t=2s
+        win._sample_count = 1000  # 1000 / 500 Hz = 2.0 s
+        win._process_lead_off(0x02)
+        assert win._lead_off_active == ("RA",)
+        assert "RA" in win.event_console.contact_value.text()
+        n_before = len(win.controller.event_markers)
+        # contact restored at t=4s -> closes interval as a range event
+        win._sample_count = 2000
+        win._process_lead_off(0x00)
+        assert win._lead_off_active == ()
+        assert len(win.controller.event_markers) == n_before + 1
+        marker = win.controller.event_markers[-1]
+        assert "lead-off" in marker.label and "RA" in marker.label
+        assert marker.timestamp_seconds == pytest.approx(2.0)
+        assert marker.duration_seconds == pytest.approx(2.0)
+    finally:
+        win.deleteLater()
+
+
 def test_invert_ecg_button_flips_live_traces(qapp) -> None:
     from collections import deque
 
