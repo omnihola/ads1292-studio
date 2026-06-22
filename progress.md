@@ -763,6 +763,10 @@
 
 ## Session: 2026-06-21
 
+### Phase 44.5 (iterative hardening — scientific data integrity + GUI extensibility)
+Goal: scientific-grade structured/detailed raw data + extensible GUI. Small verified cycles (change → run → full tests → push).
+- **Iter 1 (data integrity):** Qt recording finalize now also writes a `.manifest.json` via `write_recording_manifest` — schema + sample_count + per-file bytes and SHA-256 checksums for csv/json/xlsx. Every recording is now self-verifying (re-checkable via manifest verify / `verify_session_package`). Finalize test extended to assert the manifest exists and carries `sha256`. 537 tests pass.
+
 ### Phase 44: GUI Modernization (PySide6 / Qt) — design
 - **Status:** in progress (design approved by user; implementation starting)
 - Actions taken:

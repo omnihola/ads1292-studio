@@ -34,6 +34,7 @@ from ads1292_studio.processing import build_processing_settings
 from ads1292_studio.protocol import protocol_template
 from ads1292_studio.quality_gate import QualityGate
 from ads1292_studio.recording_bundle import recording_bundle_path, write_recording_bundle
+from ads1292_studio.recording_manifest import write_recording_manifest
 from ads1292_studio.recording_paths import recording_csv_path
 from ads1292_studio.workers import AcquisitionMode, LiveWorker
 from ads1292_studio.xlsx_io import write_recording_xlsx
@@ -244,9 +245,11 @@ class AcquisitionController:
                 created_at=finalized,
             )
             xlsx_path = write_recording_xlsx(self.recording_path, events=events, sample_rate_hz=SAMPLE_RATE_HZ)
+            manifest_path = write_recording_manifest(self.recording_path, created_at=finalized)
             out.logs.append(f"Recording finalized: {sample_count} samples")
             out.logs.append(f"Recording JSON written: {recording_bundle_path(self.recording_path)}")
             out.logs.append(f"Recording XLSX written: {xlsx_path}")
+            out.logs.append(f"Recording manifest (SHA-256) written: {manifest_path}")
         except Exception as exc:  # noqa: BLE001
             out.errors.append(f"Recording finalization failed: {exc}")
         finally:

@@ -142,6 +142,9 @@ def test_finalize_writes_csv_json_and_xlsx(tmp_path) -> None:
     assert csv_path.exists(), "CSV kept (load-bearing for Export Package/Report)"
     assert csv_path.with_suffix(".json").exists(), "JSON bundle written"
     assert csv_path.with_suffix(".xlsx").exists(), "XLSX written"
+    manifest = csv_path.with_suffix(".manifest.json")
+    assert manifest.exists(), "SHA-256 manifest written"
+    assert "sha256" in manifest.read_text(), "manifest carries checksums"
     assert ctrl.has_pending_recording is False
     assert any("XLSX written" in line for line in out.logs)
 
