@@ -317,26 +317,32 @@ class MainWindow(QMainWindow):
         )
         live_lay.addWidget(self.event_console)
         self.tabs.addTab(live_tab, "Live ECG")
-        # Review tab: full-recording 2-panel view (reuses the live 2-axis canvas)
-        review_tab = QWidget()
-        review_lay = QVBoxLayout(review_tab)
-        review_lay.setContentsMargins(0, 8, 0, 0)
+
+        # Review reuses the live 2-axis canvas; it shows an empty-state hint.
         self.review_panel = LivePanel()
         self.review_panel.show_empty("Load a CSV to review a recording")
-        review_lay.addWidget(self.review_panel, 1)
-        self.tabs.addTab(review_tab, "Review CSV")
         self.pqrst_panel = PqrstPanel()
-        self.tabs.addTab(self._tab_with(self.pqrst_panel), "PQRST Beat")
         self.spectrum_panel = SpectrumPanel()
-        self.tabs.addTab(self._tab_with(self.spectrum_panel), "Spectrum")
         self.info_panel = RecordingInfoPanel()
-        self.tabs.addTab(self._tab_with(self.info_panel, margins=(8, 8, 8, 8)), "Info")
+        # Declarative analysis-tab registry. Each entry is one tab that renders a
+        # loaded recording via the RecordingRenderer protocol
+        # (render_recording(samples, sample_rate_hz, ecg_source)). To add a new
+        # analysis view, append ONE entry here — the tab AND the render loop are
+        # both driven from this list, so a renderer can never be forgotten.
+        analysis_tabs = (
+            ("Review CSV", self.review_panel, (0, 8, 0, 0)),
+            ("PQRST Beat", self.pqrst_panel, (0, 8, 0, 0)),
+            ("Spectrum", self.spectrum_panel, (0, 8, 0, 0)),
+            ("Info", self.info_panel, (8, 8, 8, 8)),
+        )
+        self._recording_renderers = []
+        for label, panel, margins in analysis_tabs:
+            self.tabs.addTab(self._tab_with(panel, margins=margins), label)
+            self._recording_renderers.append(panel)
+
+        # Event Log is a passive console, not a recording renderer.
         self.event_log_panel = EventLogPanel()
         self.tabs.addTab(self._tab_with(self.event_log_panel, margins=(8, 8, 8, 8)), "Event Log")
-        # Registry of panels that render a loaded recording (RecordingRenderer protocol:
-        # any object with render_recording(samples, sample_rate_hz, ecg_source)). To add a
-        # new analysis tab, build the panel, addTab it, and append it here.
-        self._recording_renderers = [self.review_panel, self.pqrst_panel, self.spectrum_panel, self.info_panel]
         clay.addWidget(self.tabs, 1)
         lay.addWidget(center, 1)
 

@@ -464,6 +464,22 @@ def test_finalize_never_deletes_csv_without_a_replacement(tmp_path) -> None:
     assert csv_path.exists(), "CSV must be kept when nothing else was written"
 
 
+def test_analysis_tab_registry_is_consistent(qapp) -> None:
+    # Extensibility contract: every recording-renderer panel implements the
+    # protocol, and the registry drives both the tabs and the render loop.
+    win = _make_window(qapp)
+    try:
+        assert len(win._recording_renderers) == 4
+        for panel in win._recording_renderers:
+            assert hasattr(panel, "render_recording"), f"{type(panel).__name__} missing render_recording"
+        labels = [win.tabs.tabText(i) for i in range(win.tabs.count())]
+        # the four analysis tabs appear in registry order
+        assert labels[1:5] == ["Review CSV", "PQRST Beat", "Spectrum", "Info"]
+        assert labels[0] == "Live ECG" and labels[-1] == "Event Log"
+    finally:
+        win.deleteLater()
+
+
 def test_low_disk_space_blocks_recording_start(qapp, monkeypatch) -> None:
     from PySide6.QtWidgets import QMessageBox
     from ads1292_studio import disk_space
