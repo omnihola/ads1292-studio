@@ -395,11 +395,13 @@ class MainWindow(QMainWindow):
 
     def _on_start(self) -> None:
         mode = AcquisitionMode.RAW if self.mode_combo.currentText().lower().startswith("raw") else AcquisitionMode.LIVE
+        recording = self.save_csv.isChecked() or self.save_h5.isChecked() or self.save_xlsx.isChecked()
+        if recording and not self._confirm_disk_space():
+            return
         self._ch1.clear()
         self._ch2.clear()
         self._sample_count = 0
         self._lead_off_active = None
-        recording = self.save_csv.isChecked() or self.save_h5.isChecked() or self.save_xlsx.isChecked()
         self._rec_start_monotonic = time.monotonic() if recording else None
         self.controller.start(
             self.port_combo.currentText().strip(),
@@ -413,6 +415,23 @@ class MainWindow(QMainWindow):
         )
         self._set_timer_active(True)
         self._refresh_state()
+
+    def _confirm_disk_space(self) -> bool:
+        """Warn (and let the user cancel) if free disk space is low before a
+        recording. Returns True to proceed."""
+        from ads1292_studio.disk_space import free_space_status
+
+        status = free_space_status(self._ECG_ROOT)
+        if status.ok:
+            return True
+        reply = QMessageBox.warning(
+            self, "Low disk space",
+            f"Only {status.free_mb:.0f} MB free at {self._ECG_ROOT}.\n"
+            "A long recording may fill the disk and lose data.\n\nStart anyway?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
 
     def _on_stop(self) -> None:
         self.controller.stop()

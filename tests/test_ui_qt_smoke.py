@@ -464,6 +464,31 @@ def test_finalize_never_deletes_csv_without_a_replacement(tmp_path) -> None:
     assert csv_path.exists(), "CSV must be kept when nothing else was written"
 
 
+def test_low_disk_space_blocks_recording_start(qapp, monkeypatch) -> None:
+    from PySide6.QtWidgets import QMessageBox
+    from ads1292_studio import disk_space
+
+    win = _make_window(qapp)
+    try:
+        started = {"n": 0}
+        win.controller.connected_port = "/dev/x"
+        monkeypatch.setattr(win.controller, "start", lambda *a, **k: started.__setitem__("n", started["n"] + 1))
+        # force "low disk" and user clicks No
+        monkeypatch.setattr(
+            disk_space, "free_space_status",
+            lambda *a, **k: disk_space.FreeSpaceStatus(ok=False, free_bytes=1024, min_free_bytes=disk_space.MIN_FREE_BYTES),
+        )
+        monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *a, **k: QMessageBox.StandardButton.No))
+        win._on_start()
+        assert started["n"] == 0, "recording must not start when user declines low-disk warning"
+        # user clicks Yes -> proceeds
+        monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+        win._on_start()
+        assert started["n"] == 1
+    finally:
+        win.deleteLater()
+
+
 def test_keyboard_shortcuts_registered(qapp) -> None:
     win = _make_window(qapp)
     try:
