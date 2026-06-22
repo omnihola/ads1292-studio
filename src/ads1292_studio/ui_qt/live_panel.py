@@ -56,6 +56,19 @@ class LivePanel(FigureCanvasQTAgg):
         )
         self.draw_idle()
 
+    def set_sweep_speed(self, mm_s: int) -> None:
+        """Set the ECG x-axis minor gridline density (ECG-paper sweep speed).
+
+        25 mm/s -> 0.2 s grid; 50 mm/s -> 0.1 s grid. Minor gridlines carry the
+        density so the major ticks/labels stay readable.
+        """
+        from matplotlib.ticker import MultipleLocator
+
+        minor_seconds = 0.2 if int(mm_s) == 25 else 0.1
+        self.ax_ecg.xaxis.set_minor_locator(MultipleLocator(minor_seconds))
+        self.ax_ecg.grid(True, which="minor", color=_T["border"], linewidth=0.4, alpha=0.45)
+        self.draw_idle()
+
     def set_calibration(self, uv_per_count: float | None) -> None:
         """Switch Y-axis display between raw counts and calibrated µV."""
         self._uv_per_count = uv_per_count

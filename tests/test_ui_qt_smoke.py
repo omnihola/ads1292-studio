@@ -503,6 +503,53 @@ def test_pending_range_start_draws_distinct_vertical_line(qapp) -> None:
         panel.deleteLater()
 
 
+def test_scale_combos_are_populated_with_all_choices(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        windows = [win._window_combo.itemText(i) for i in range(win._window_combo.count())]
+        gains = [win._gain_combo.itemText(i) for i in range(win._gain_combo.count())]
+        speeds = [win._speed_combo.itemText(i) for i in range(win._speed_combo.count())]
+        assert windows == ["4 s", "8 s", "12 s", "16 s"]
+        assert gains == ["0.5x", "1x", "2x", "5x"]
+        assert speeds == ["25 mm/s", "50 mm/s"]
+        # sensible defaults
+        assert win._window_combo.currentText() == "8 s"
+        assert win._gain_combo.currentText() == "1x"
+        assert win._speed_combo.currentText() == "25 mm/s"
+    finally:
+        win.deleteLater()
+
+
+def test_gain_scales_live_ecg(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        win._ch2.extend([10.0, 20.0, 30.0])
+        win._ch1.extend([1.0, 2.0, 3.0])
+        win._sample_count = 3
+        win._gain_combo.setCurrentText("1x")
+        win._redraw_live()
+        base = list(win.live_panel._ecg_line.get_ydata())
+        win._gain_combo.setCurrentText("2x")
+        win._redraw_live()
+        scaled = list(win.live_panel._ecg_line.get_ydata())
+        assert scaled == pytest.approx([v * 2.0 for v in base])
+    finally:
+        win.deleteLater()
+
+
+def test_window_limits_visible_samples(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        win._ch2.extend(float(i) for i in range(5000))
+        win._ch1.extend(float(i) for i in range(5000))
+        win._sample_count = 5000
+        win._window_combo.setCurrentText("4 s")  # 4 s * 500 Hz = 2000 samples
+        win._redraw_live()
+        assert len(win.live_panel._ecg_line.get_ydata()) == 2000
+    finally:
+        win.deleteLater()
+
+
 def test_filter_button_fills_accent_when_checked(qapp) -> None:
     from ads1292_studio.ui_qt.theme import apply_theme
 

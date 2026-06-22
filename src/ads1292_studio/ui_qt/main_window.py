@@ -38,14 +38,25 @@ from ads1292_studio.ui_qt.sidebar_forms import SidebarForms
 from ads1292_studio.ui_qt.status_panel import StatusPanel
 from ads1292_studio.ui_qt.tokens import design_tokens
 from ads1292_studio.ui_qt.widgets import pill
-from ads1292_studio.display import SoftwareFilterSettings
+from ads1292_studio.display import (
+    DISPLAY_WINDOW_CHOICES,
+    EcgDisplaySettings,
+    SoftwareFilterSettings,
+    display_gain_labels,
+    display_window_labels,
+    parse_display_gain,
+    parse_display_window,
+    parse_sweep_speed,
+    sweep_speed_labels,
+)
 from ads1292_studio.signal_processing import apply_software_filters
 from ads1292_studio.workers import AcquisitionMode
 
 _T = design_tokens()
 SAMPLE_RATE_HZ = 500.0
 VISIBLE_SECONDS = 8.0
-MAX_POINTS = int(SAMPLE_RATE_HZ * VISIBLE_SECONDS)
+# hold enough samples for the widest selectable window (16 s)
+MAX_POINTS = int(SAMPLE_RATE_HZ * max(DISPLAY_WINDOW_CHOICES))
 ACTIVE_TICK_MS = 50
 IDLE_TICK_MS = 200
 
@@ -175,16 +186,35 @@ class MainWindow(QMainWindow):
         self._invert_btn.toggled.connect(self._on_filter_changed)
         lay.addWidget(self._invert_btn)
         lay.addWidget(self._caps("Scale"))
-        for label, items in (("Window", ["8 s"]), ("Gain", ["1x"]), ("Speed", ["25 mm/s"])):
-            lay.addWidget(QLabel(label))
-            combo = QComboBox()
-            combo.addItems(items)
-            lay.addWidget(combo)
+        self._window_combo = self._scale_combo(lay, "Window", display_window_labels(), "8 s")
+        self._gain_combo = self._scale_combo(lay, "Gain", display_gain_labels(), "1x")
+        self._speed_combo = self._scale_combo(lay, "Speed", sweep_speed_labels(), "25 mm/s")
         lay.addStretch(1)
         self._filter_hint = QLabel("CH2 Lead I · CH1 Resp · raw")
         self._filter_hint.setObjectName("Faint")
         lay.addWidget(self._filter_hint)
         return frame
+
+    def _scale_combo(self, layout, label: str, items, default: str) -> QComboBox:
+        layout.addWidget(QLabel(label))
+        combo = QComboBox()
+        combo.addItems(list(items))
+        combo.setCurrentText(default)
+        combo.currentTextChanged.connect(self._on_scale_changed)
+        layout.addWidget(combo)
+        return combo
+
+    def _current_display_settings(self) -> EcgDisplaySettings:
+        return EcgDisplaySettings(
+            time_window_seconds=parse_display_window(self._window_combo.currentText()),
+            gain=parse_display_gain(self._gain_combo.currentText()),
+            sweep_speed_mm_s=parse_sweep_speed(self._speed_combo.currentText()),
+        ).normalized()
+
+    def _on_scale_changed(self) -> None:
+        ds = self._current_display_settings()
+        self.live_panel.set_sweep_speed(ds.sweep_speed_mm_s)
+        self._redraw_live()
 
     def _on_filter_changed(self) -> None:
         self._update_filter_hint()
@@ -586,19 +616,23 @@ class MainWindow(QMainWindow):
     def _redraw_live(self) -> None:
         import numpy as np
 
-        n = len(self._ch2)
-        if n == 0:
+        total = len(self._ch2)
+        if total == 0:
             return
-        start_index = self._sample_count - n
-        xs = [(start_index + i) / SAMPLE_RATE_HZ for i in range(n)]
-        fs = self._current_filter_settings()
-        ecg_raw = np.asarray(self._ch2, dtype=float)
-        resp_raw = np.asarray(self._ch1, dtype=float)
-        ecg_filtered = apply_software_filters(ecg_raw, SAMPLE_RATE_HZ, fs)
+        ds = self._current_display_settings()
+        # Window: show only the most recent N seconds of the buffer.
+        visible = min(total, int(ds.time_window_seconds * SAMPLE_RATE_HZ))
+        start_index = self._sample_count - visible
+        xs = [(start_index + i) / SAMPLE_RATE_HZ for i in range(visible)]
+        fsettings = self._current_filter_settings()
+        ecg_raw = np.asarray(list(self._ch2)[-visible:], dtype=float)
+        resp_raw = np.asarray(list(self._ch1)[-visible:], dtype=float)
+        ecg_filtered = apply_software_filters(ecg_raw, SAMPLE_RATE_HZ, fsettings)
         if self._invert_btn.isChecked():
             ecg_filtered = -ecg_filtered
-        ecg_y = ecg_filtered.tolist()
-        resp_y = apply_software_filters(resp_raw, SAMPLE_RATE_HZ, fs).tolist()
+        # Gain: amplitude zoom on the ECG trace.
+        ecg_y = (ecg_filtered * ds.gain).tolist()
+        resp_y = apply_software_filters(resp_raw, SAMPLE_RATE_HZ, fsettings).tolist()
         self.live_panel.update_traces(xs, ecg_y, xs, resp_y)
         self._update_live_snr()
 
