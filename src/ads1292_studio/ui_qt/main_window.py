@@ -35,6 +35,7 @@ from ads1292_studio.ui_qt.analysis_panels import EventLogPanel, PqrstPanel, Reco
 from ads1292_studio.ui_qt.controller import AcquisitionController
 from ads1292_studio.ui_qt.event_console import EventConsole
 from ads1292_studio.ui_qt.live_panel import LivePanel
+from ads1292_studio.ui_qt.preferences import Preferences
 from ads1292_studio.ui_qt.sidebar_forms import SidebarForms
 from ads1292_studio.ui_qt.status_panel import StatusPanel
 from ads1292_studio.ui_qt.tokens import design_tokens
@@ -97,6 +98,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
 
         self._refresh_ports()
+        self._load_preferences()  # restore last-used port / save formats / display
         self._refresh_state()
 
         self._timer = QTimer(self)
@@ -720,6 +722,7 @@ class MainWindow(QMainWindow):
         return metrics
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt override
+        self._save_preferences()  # remember port / save formats / display
         # Never leave a recording CSV-only: finalize json+xlsx before exit.
         if self.controller.has_pending_recording or self.controller.is_streaming:
             outcome = self.controller.finalize_now()
@@ -733,6 +736,56 @@ class MainWindow(QMainWindow):
                     "Recording finalization had errors on close:\n" + "\n".join(outcome.errors),
                 )
         super().closeEvent(event)
+
+    # ---------- preferences (persist port / save formats / display) ----------
+    def _capture_preferences(self) -> Preferences:
+        return Preferences(
+            port=self.port_combo.currentText().strip(),
+            mode=self.mode_combo.currentText(),
+            save_csv=self.save_csv.isChecked(),
+            save_h5=self.save_h5.isChecked(),
+            save_xlsx=self.save_xlsx.isChecked(),
+            window=self._window_combo.currentText(),
+            gain=self._gain_combo.currentText(),
+            speed=self._speed_combo.currentText(),
+        )
+
+    def _apply_preferences(self, prefs: Preferences) -> None:
+        if prefs.port:
+            self.port_combo.setCurrentText(prefs.port)
+        if self.mode_combo.findText(prefs.mode) >= 0:
+            self.mode_combo.setCurrentText(prefs.mode)
+        self.save_csv.setChecked(prefs.save_csv)
+        self.save_h5.setChecked(prefs.save_h5)
+        self.save_xlsx.setChecked(prefs.save_xlsx)
+        for combo, value in (
+            (self._window_combo, prefs.window),
+            (self._gain_combo, prefs.gain),
+            (self._speed_combo, prefs.speed),
+        ):
+            if combo.findText(value) >= 0:
+                combo.setCurrentText(value)
+
+    def _qsettings(self):
+        from PySide6.QtCore import QSettings
+        return QSettings("ADS1292Studio", "ads1292-studio")
+
+    def _load_preferences(self) -> None:
+        try:
+            settings = self._qsettings()
+            data = {k: settings.value(k) for k in Preferences().to_dict() if settings.contains(k)}
+            if data:
+                self._apply_preferences(Preferences.from_dict(data))
+        except Exception as exc:  # noqa: BLE001 - prefs are best-effort
+            self.event_log_panel.append_line(f"preferences load skipped: {exc}")
+
+    def _save_preferences(self) -> None:
+        try:
+            settings = self._qsettings()
+            for key, value in self._capture_preferences().to_dict().items():
+                settings.setValue(key, int(value) if isinstance(value, bool) else value)
+        except Exception:  # noqa: BLE001 - never block close on prefs
+            pass
 
     # ---------- state refresh ----------
     def _refresh_state(self) -> None:

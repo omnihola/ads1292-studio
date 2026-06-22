@@ -464,6 +464,35 @@ def test_finalize_never_deletes_csv_without_a_replacement(tmp_path) -> None:
     assert csv_path.exists(), "CSV must be kept when nothing else was written"
 
 
+def test_preferences_capture_apply_round_trip(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        # set non-default widget states
+        win.save_csv.setChecked(False)
+        win.save_h5.setChecked(True)
+        win.save_xlsx.setChecked(True)
+        win.mode_combo.setCurrentText("Raw Record")
+        win._window_combo.setCurrentText("16 s")
+        win._gain_combo.setCurrentText("2x")
+        win._speed_combo.setCurrentText("50 mm/s")
+        prefs = win._capture_preferences()
+
+        # apply to a fresh window restores the same state
+        win2 = _make_window(qapp)
+        try:
+            win2._apply_preferences(prefs)
+            assert win2.save_csv.isChecked() is False
+            assert win2.save_xlsx.isChecked() is True
+            assert win2.mode_combo.currentText() == "Raw Record"
+            assert win2._window_combo.currentText() == "16 s"
+            assert win2._gain_combo.currentText() == "2x"
+            assert win2._speed_combo.currentText() == "50 mm/s"
+        finally:
+            win2.deleteLater()
+    finally:
+        win.deleteLater()
+
+
 def test_recording_status_shows_while_streaming_and_clears_on_stop(qapp) -> None:
     import time as _time
 
