@@ -249,3 +249,21 @@ def test_canonical_csv_loader_accepts_raw_acquisition_files_for_review(tmp_path:
     assert loaded.samples[0].ch1 == 123
     assert loaded.samples[0].ch2 == -456
     assert loaded.samples[0].lead_off_bits == 5
+
+
+def test_read_recording_csv_preserves_upper_status_bits(tmp_path):
+    # raw-acquisition status is 16-bit; loading via read_recording_csv must not
+    # discard the upper bits (only the low nibble is the lead-off flags)
+    import csv as _csv
+    from ads1292_studio.csv_io import read_recording_csv
+
+    p = tmp_path / "raw.csv"
+    with p.open("w", newline="") as fh:
+        w = _csv.writer(fh)
+        w.writerow(["timestamp", "ch1_counts", "ch2_counts", "status_byte", "lead_off_bits"])
+        w.writerow([0.0, 10, 20, 0x1234, 0x4])  # 16-bit status, low nibble 4
+    rec = read_recording_csv(p)
+    s = rec.samples[0]
+    # upper bits (0x1230) preserved, low nibble = lead_off (0x4)
+    assert s.status_byte == 0x1234
+    assert s.lead_off_bits == 0x4

@@ -70,8 +70,11 @@ IDLE_TICK_MS = 200
 
 
 class MainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, *, load_preferences: bool = True) -> None:
         super().__init__()
+        # Persisted preferences are global (QSettings); tests pass False so they
+        # stay hermetic and aren't influenced by real app runs on the machine.
+        self._prefs_enabled = load_preferences
         self.setWindowTitle("ADS1292 Studio")
         self.resize(1400, 880)
         self.controller = AcquisitionController()
@@ -99,7 +102,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
 
         self._refresh_ports()
-        self._load_preferences()  # restore last-used port / save formats / display
+        if self._prefs_enabled:
+            self._load_preferences()  # restore last-used port / save formats / display
         self._refresh_state()
 
         self._timer = QTimer(self)
@@ -781,7 +785,8 @@ class MainWindow(QMainWindow):
         return metrics
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt override
-        self._save_preferences()  # remember port / save formats / display
+        if self._prefs_enabled:
+            self._save_preferences()  # remember port / save formats / display
         # Never leave a recording CSV-only: finalize json+xlsx before exit.
         if self.controller.has_pending_recording or self.controller.is_streaming:
             outcome = self.controller.finalize_now()

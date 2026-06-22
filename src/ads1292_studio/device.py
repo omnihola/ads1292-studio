@@ -342,8 +342,11 @@ class Ads1x9xDevice:
         if ack_count != requested:
             raise RuntimeError(f"Acquire ACK sample count mismatch: requested {requested}, got {ack_count}")
         samples: list[RawSample] = []
-        expected_frames = requested // 8
-        for _ in range(expected_frames):
+        # Collect the full requested count rather than a fixed frame count, so an
+        # interleaved/non-data frame can't silently truncate the chunk. The
+        # deadline bounds the loop (raises TimeoutError -> caller retries) so a
+        # genuine shortfall fails loudly instead of returning short.
+        while len(samples) < requested:
             frame_type, payload = self._read_frame_by(deadline)
             if frame_type != CMD_ACQUIRE_DATA:
                 continue

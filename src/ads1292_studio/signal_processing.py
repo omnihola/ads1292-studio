@@ -151,6 +151,8 @@ def _channel_selection_score(values, sample_rate_hz: float) -> float:
 
 def detect_r_peaks(values, sample_rate_hz: float = 500.0, *, prefiltered: bool = False) -> tuple[int, ...]:
     arr = as_float_array(values)
+    if not np.isfinite(sample_rate_hz) or sample_rate_hz <= 0:
+        return tuple()
     if arr.size < int(sample_rate_hz):
         return tuple()
     filtered = arr if prefiltered else bandpass(arr, sample_rate_hz)
@@ -170,7 +172,7 @@ def detect_r_peaks(values, sample_rate_hz: float = 500.0, *, prefiltered: bool =
 
 def heart_rate_summary(peaks, sample_rate_hz: float = 500.0) -> HeartRateSummary:
     peak_arr = np.asarray(peaks, dtype=float)
-    if peak_arr.size < 2:
+    if peak_arr.size < 2 or not np.isfinite(sample_rate_hz) or sample_rate_hz <= 0:
         return HeartRateSummary(0.0, 0.0, 0.0, 0)
     rr_seconds = np.diff(peak_arr) / sample_rate_hz
     bpm = 60.0 / rr_seconds
@@ -201,7 +203,8 @@ def pqrst_review(values, peaks, sample_rate_hz: float = 500.0) -> PqrstReview:
     beat_arr = np.vstack(beats)
     avg = np.mean(beat_arr, axis=0)
     r_amp = abs(float(avg[pre]))
-    noise = float(np.median(np.abs(avg[: pre // 2] - np.median(avg[: pre // 2])))) + 1e-9
+    half = max(1, pre // 2)
+    noise = float(np.median(np.abs(avg[:half] - np.median(avg[:half])))) + 1e-9
     p_start = pre - int(0.22 * sample_rate_hz)
     p_end = pre - int(0.08 * sample_rate_hz)
     t_start = pre + int(0.12 * sample_rate_hz)

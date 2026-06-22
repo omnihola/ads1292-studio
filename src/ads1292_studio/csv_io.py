@@ -74,7 +74,9 @@ def read_recording_csv(path: Path | str, sample_rate_hz: float = 500.0) -> Recor
             status_byte = _int_field(row, "status_byte", "lead_off")
             if row.get("lead_off_bits") not in (None, ""):
                 lead_off_bits = _int_field(row, "lead_off_bits") & 0x0F
-                status_byte = (status_byte & 0xF0) | lead_off_bits
+                # preserve all upper status bits (raw status is 16-bit); only the
+                # low nibble carries the lead-off flags
+                status_byte = (status_byte & ~0x0F) | lead_off_bits
             else:
                 lead_off_bits = status_byte & 0x0F
             samples.append(
@@ -210,8 +212,10 @@ class CsvRecorder:
 
     def __exit__(self, exc_type, exc, tb) -> None:
         if self._handle is not None:
-            self._handle.flush()
-            self._handle.close()
+            try:
+                self._handle.flush()
+            finally:
+                self._handle.close()  # always release the handle, even if flush fails
         self._handle = None
         self._writer = None
 
@@ -279,8 +283,10 @@ class RawCsvRecorder:
 
     def __exit__(self, exc_type, exc, tb) -> None:
         if self._handle is not None:
-            self._handle.flush()
-            self._handle.close()
+            try:
+                self._handle.flush()
+            finally:
+                self._handle.close()  # always release the handle, even if flush fails
         self._handle = None
         self._writer = None
 

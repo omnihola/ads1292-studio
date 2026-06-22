@@ -28,7 +28,8 @@ def qapp():
 def _make_window(qapp):
     from ads1292_studio.ui_qt.main_window import MainWindow
 
-    return MainWindow()
+    # load_preferences=False keeps tests hermetic (no machine-global QSettings)
+    return MainWindow(load_preferences=False)
 
 
 def test_window_constructs_with_expected_widgets(qapp) -> None:

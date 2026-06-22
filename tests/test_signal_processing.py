@@ -147,3 +147,23 @@ def test_real_saved_run_selects_ch2_when_available() -> None:
 
     assert result.channel == "CH2"
     assert 90 <= summary.median_bpm <= 115
+
+
+def test_detect_r_peaks_invalid_sample_rate_returns_empty_not_crash():
+    from ads1292_studio.signal_processing import detect_r_peaks
+
+    sig = np.sin(np.linspace(0, 20, 2000)).tolist()
+    # zero / negative / non-finite sample rates must not crash scipy
+    assert detect_r_peaks(sig, sample_rate_hz=0.0) == ()
+    assert detect_r_peaks(sig, sample_rate_hz=-500.0) == ()
+    assert detect_r_peaks(sig, sample_rate_hz=float("nan")) == ()
+
+
+def test_pqrst_review_tiny_sample_rate_does_not_nan_poison():
+    from ads1292_studio.signal_processing import pqrst_review
+
+    # a low sample rate where pre//2 would be 0; must not produce NaN noise
+    sig = (list(range(40)) * 5)
+    review = pqrst_review([float(v) for v in sig], (10, 30), sample_rate_hz=8.0)
+    # qrs_clear etc. are bools, not NaN-derived garbage; just assert it ran
+    assert isinstance(review.qrs_clear, bool)
