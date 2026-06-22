@@ -21,7 +21,6 @@ def build_qss(tokens: dict[str, Any] | None = None) -> str:
 QWidget {{
     background: {t['surface']};
     color: {t['ink']};
-    font-family: -apple-system, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
     font-size: {t['font_body']}px;
 }}
 QMainWindow, #CentralRoot {{ background: {t['surface']}; }}
