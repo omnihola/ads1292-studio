@@ -457,6 +457,40 @@ def test_finalize_empty_recording_keeps_csv_and_skips_h5(tmp_path) -> None:
     assert any("empty" in line.lower() for line in out.logs)
 
 
+def test_finalize_embeds_measured_effective_rate_in_h5(tmp_path) -> None:
+    import h5py
+    from ads1292_studio.acquisition import build_acquisition_provenance
+    from ads1292_studio.calibration import Calibration
+    from ads1292_studio.csv_io import CsvRecorder
+    from ads1292_studio.h5_io import recording_h5_path
+    from ads1292_studio.models import StreamSample
+    from ads1292_studio.ui_qt.controller import AcquisitionController, DrainOutcome
+
+    csv_path = tmp_path / "live" / "2026-06-22-rate-ads1292-studio.csv"
+    csv_path.parent.mkdir(parents=True)
+    with CsvRecorder(csv_path) as rec:
+        for i in range(30):
+            rec.write(StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                                   board_heart_rate=60, board_respiration_rate=15,
+                                   status_byte=0, sample_index=i))
+    ctrl = AcquisitionController()
+    ctrl.recording_path = csv_path
+    ctrl._keep_csv = True
+    ctrl._save_h5 = True
+    # simulate the worker having measured 29 intervals over 0.058 s -> 500 Hz
+    ctrl.worker.acq_first_monotonic = 100.0
+    ctrl.worker.acq_last_monotonic = 100.0 + 29 / 500.0
+    ctrl._record_provenance = build_acquisition_provenance(
+        csv_path=csv_path, acquisition_mode="live", port="/dev/x", sample_rate_hz=500.0,
+        calibration=Calibration(), live_calibration=None, started_at="2026-06-22T00:00:00",
+    )
+    ctrl._finalization_pending = True
+    ctrl._finalize_recording(DrainOutcome())
+    with h5py.File(recording_h5_path(csv_path), "r") as f:
+        assert float(f.attrs["effective_sample_rate_hz"]) == pytest.approx(500.0, abs=1.0)
+        assert float(f.attrs["wall_clock_seconds"]) == pytest.approx(0.058, abs=0.001)
+
+
 def test_finalize_never_deletes_csv_without_a_replacement(tmp_path) -> None:
     # Safety: if CSV is unchecked but no replacement format is written, the
     # only lossless copy must be preserved (never zero copies on disk).

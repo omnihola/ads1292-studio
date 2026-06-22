@@ -54,6 +54,16 @@ class LiveWorker:
         self.thread: threading.Thread | None = None
         self.device: Ads1x9xDevice | None = None
         self.raw_sample_index = 0
+        # wall-clock (monotonic) of the first/last sample actually produced,
+        # for measuring the true effective acquisition rate
+        self.acq_first_monotonic: float | None = None
+        self.acq_last_monotonic: float | None = None
+
+    def _note_sample_wall(self) -> None:
+        now = time.monotonic()
+        if self.acq_first_monotonic is None:
+            self.acq_first_monotonic = now
+        self.acq_last_monotonic = now
 
     def start(
         self,
@@ -67,6 +77,8 @@ class LiveWorker:
         self._stop_and_wait()
         self.stop_event.clear()
         self.raw_sample_index = 0
+        self.acq_first_monotonic = None
+        self.acq_last_monotonic = None
         acquisition_mode = AcquisitionMode(mode)
         self.thread = threading.Thread(
             target=self._run,
@@ -113,6 +125,7 @@ class LiveWorker:
                 self.start_result_queue.put(StreamStartResult(ok=True))
                 self.log_queue.put("Streaming started")
                 for sample in initial_samples:
+                    self._note_sample_wall()
                     self.sample_queue.put(sample)
                     if recorder is not None:
                         recorder.write(sample)
@@ -121,6 +134,7 @@ class LiveWorker:
                 ):
                     if self.stop_event.is_set():
                         break
+                    self._note_sample_wall()
                     self.sample_queue.put(sample)
                     if recorder is not None:
                         recorder.write(sample)
@@ -190,6 +204,7 @@ class LiveWorker:
         )
         self.raw_sample_index += len(reindexed)
         for sample in reindexed:
+            self._note_sample_wall()
             self.sample_queue.put(sample.as_stream_sample())
             if recorder is not None:
                 recorder.write(sample)

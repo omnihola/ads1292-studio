@@ -51,8 +51,13 @@ def write_recording_h5(
     quality_gate: QualityGate,
     processing: RecordingProcessingSettings,
     created_at: str = "",
+    extra_attrs: dict[str, float] | None = None,
 ) -> Path:
-    """Write the canonical .h5 container next to the CSV journal."""
+    """Write the canonical .h5 container next to the CSV journal.
+
+    ``extra_attrs`` is an extensible map of scalar provenance values written as
+    top-level HDF5 attributes (e.g. measured effective_sample_rate_hz).
+    """
     import h5py  # local import keeps h5py optional until actually used
 
     samples = tuple(samples)
@@ -83,6 +88,9 @@ def write_recording_h5(
         live_scale = live_cal.get("mean_uv_per_count")
         if live_scale is not None:
             f.attrs["live_uv_per_count"] = float(live_scale)
+        for key, value in (extra_attrs or {}).items():
+            if value is not None:
+                f.attrs[key] = float(value)
         group = f.create_group("samples")
         for name, array in arrays.items():
             group.create_dataset(name, data=array, compression="gzip", shuffle=True)

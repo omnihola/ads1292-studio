@@ -253,6 +253,19 @@ class AcquisitionController:
             self._finalize_recording(out)
         return out
 
+    def _measured_rate_attrs(self, sample_count: int) -> dict[str, float]:
+        """Effective acquisition rate from the worker's first/last sample wall
+        timestamps. Empty when not measurable (too few samples / no timing)."""
+        first = getattr(self.worker, "acq_first_monotonic", None)
+        last = getattr(self.worker, "acq_last_monotonic", None)
+        if first is None or last is None or last <= first or sample_count < 2:
+            return {}
+        wall = float(last - first)
+        return {
+            "effective_sample_rate_hz": (sample_count - 1) / wall,
+            "wall_clock_seconds": wall,
+        }
+
     def _finalize_recording(self, out: DrainOutcome) -> None:
         if self.recording_path is None or self._record_provenance is None:
             self._finalization_pending = False
@@ -279,6 +292,16 @@ class AcquisitionController:
             )
             events = tuple(self.event_markers)
             out.logs.append(f"Recording finalized: {sample_count} samples")
+            # Measured effective acquisition rate (samples / true wall span from
+            # first to last sample) — research-grade precision provenance that
+            # reveals any acquisition gaps. Accurate for LIVE; approximate for
+            # RAW block mode (first sample stamped at block arrival).
+            extra_attrs = self._measured_rate_attrs(sample_count)
+            if extra_attrs:
+                out.logs.append(
+                    f"Effective acquisition rate: {extra_attrs['effective_sample_rate_hz']:.2f} Hz "
+                    f"over {extra_attrs['wall_clock_seconds']:.3f} s wall"
+                )
             # Write the user-selected formats. The CSV journal is the live,
             # crash-safe source; it is removed only after a replacement format
             # was durably written (fsync'd), never leaving zero lossless copies.
@@ -295,6 +318,7 @@ class AcquisitionController:
                     protocol=self._record_protocol,
                     quality_gate=self._record_quality_gate,
                     processing=build_processing_settings(sample_rate_hz=SAMPLE_RATE_HZ),
+                    extra_attrs=extra_attrs,
                     created_at=finalized,
                 )
                 _fsync_path(h5_path)

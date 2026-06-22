@@ -135,6 +135,15 @@ def test_no_live_calibration_omits_attribute(tmp_path: Path) -> None:
         assert "live_uv_per_count" not in dict(f.attrs)
 
 
+def test_extra_attrs_are_written_as_top_level_h5_attributes(tmp_path: Path) -> None:
+    import h5py
+
+    out = _write(tmp_path, extra_attrs={"effective_sample_rate_hz": 497.3, "wall_clock_seconds": 154.2})
+    with h5py.File(out, "r") as f:
+        assert float(f.attrs["effective_sample_rate_hz"]) == pytest.approx(497.3)
+        assert float(f.attrs["wall_clock_seconds"]) == pytest.approx(154.2)
+
+
 def test_read_recording_h5_rejects_unknown_schema(tmp_path: Path) -> None:
     import h5py
 
