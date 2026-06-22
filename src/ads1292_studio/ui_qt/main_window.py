@@ -11,6 +11,7 @@ from collections import deque
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -104,6 +105,27 @@ class MainWindow(QMainWindow):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
         self._timer.start(IDLE_TICK_MS)
+
+        self._install_shortcuts()
+
+    def _install_shortcuts(self) -> None:
+        # Hands-on-keyboard workflow during a protocol run.
+        self._shortcuts = {}
+        for keys, slot in (
+            ("Space", self._on_toggle_record),  # Start <-> Stop
+            ("P", self._on_add_point),           # quick point-event annotation
+            ("Ctrl+R", self._refresh_ports),     # rescan ports
+        ):
+            sc = QShortcut(QKeySequence(keys), self)
+            sc.activated.connect(slot)
+            self._shortcuts[keys] = sc
+
+    def _on_toggle_record(self) -> None:
+        """Space toggles acquisition: stop if streaming, else start if able."""
+        if self.controller.is_streaming:
+            self._on_stop()
+        elif self.controls["Start"].isEnabled():
+            self._on_start()
 
     # ---------- header ----------
     def _build_header(self) -> QWidget:

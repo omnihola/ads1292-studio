@@ -464,6 +464,35 @@ def test_finalize_never_deletes_csv_without_a_replacement(tmp_path) -> None:
     assert csv_path.exists(), "CSV must be kept when nothing else was written"
 
 
+def test_keyboard_shortcuts_registered(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        for keys in ("Space", "P", "Ctrl+R"):
+            assert keys in win._shortcuts
+    finally:
+        win.deleteLater()
+
+
+def test_space_toggle_starts_and_stops(qapp, monkeypatch) -> None:
+    win = _make_window(qapp)
+    try:
+        calls = {"start": 0, "stop": 0}
+        monkeypatch.setattr(win, "_on_start", lambda: calls.__setitem__("start", calls["start"] + 1))
+        monkeypatch.setattr(win, "_on_stop", lambda: calls.__setitem__("stop", calls["stop"] + 1))
+        # connected, not streaming, Start enabled -> toggle starts
+        win.controller.connected_port = "/dev/x"
+        win._refresh_state()
+        assert win.controls["Start"].isEnabled() is True
+        win._on_toggle_record()
+        assert calls == {"start": 1, "stop": 0}
+        # streaming -> toggle stops
+        win.controller.is_streaming = True
+        win._on_toggle_record()
+        assert calls == {"start": 1, "stop": 1}
+    finally:
+        win.deleteLater()
+
+
 def test_preferences_capture_apply_round_trip(qapp) -> None:
     win = _make_window(qapp)
     try:
