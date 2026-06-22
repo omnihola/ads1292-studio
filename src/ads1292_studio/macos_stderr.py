@@ -15,6 +15,8 @@ MACOS_GUI_NOISE_MARKERS = (
     "Keyboard Layouts: duplicate keyboard layout identifier",
     "Keyboard Layouts: keyboard layout identifier",
     "scheduleApplicationNotification(LSNotificationCode, NSWorkspaceNotificationCenter *)",
+    # benign Qt warning emitted when pyqtgraph imports (QStyleHints theme probe)
+    "QObject::connect(QStyleHints",
 )
 SHOW_IMK_WARNINGS_ENV = "ADS1292_STUDIO_SHOW_IMK_WARNINGS"
 

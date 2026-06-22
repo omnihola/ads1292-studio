@@ -75,6 +75,13 @@ class LivePanel(FigureCanvasQTAgg):
         self.ax_ecg.grid(True, which="minor", color=_T["border"], linewidth=0.4, alpha=0.45)
         self.draw_idle()
 
+    def ecg_y(self) -> list[float]:
+        """Backend-neutral accessor for the plotted ECG y-data (tests)."""
+        return list(self._ecg_line.get_ydata())
+
+    def ecg_x(self) -> list[float]:
+        return list(self._ecg_line.get_xdata())
+
     def set_calibration(self, uv_per_count: float | None) -> None:
         """Switch Y-axis display between raw counts and calibrated µV."""
         self._uv_per_count = uv_per_count

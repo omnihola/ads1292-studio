@@ -46,3 +46,8 @@ def test_qt_app_installs_macos_stderr_filter_before_qapplication() -> None:
 
     assert "install_macos_stderr_filter()" in source
     assert source.index("install_macos_stderr_filter()") < source.index("QApplication")
+
+
+def test_suppresses_pyqtgraph_qstylehints_warning() -> None:
+    line = "qt.core.qobject.connect: QObject::connect(QStyleHints, QStyleHints): unique connections require a pointer to member function of a QObject subclass\n"
+    assert should_suppress_stderr_line(line) is True

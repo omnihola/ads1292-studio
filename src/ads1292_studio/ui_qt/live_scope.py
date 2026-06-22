@@ -48,6 +48,13 @@ class LiveScope(QWidget):
         self._uv_per_count: float | None = None
         self._autoscale_enabled = True
         self._event_items: list = []
+        # Drive ranges explicitly (NOT pyqtgraph autoRange): autoRange is
+        # poisoned by the vertical event-marker InfiniteLines (infinite Y extent
+        # -> range explodes to ~1e12) and doesn't reliably track the data.
+        for plot in (self.p_ecg, self.p_resp):
+            plot.disableAutoRange()
+            plot.setYRange(-1.0, 1.0, padding=0)
+            plot.setXRange(0.0, 8.0, padding=0)
         self.set_calibration(None)  # sets titles + y labels
 
     # ---- public API (mirrors the matplotlib LivePanel) ----
@@ -66,9 +73,24 @@ class LiveScope(QWidget):
         if ex.size:
             right = float(ex[-1]) if ex[-1] > ex[0] else float(ex[0]) + 1.0
             self.p_ecg.setXRange(float(ex[0]), right, padding=0)
+        # Y is computed explicitly from the data (only when autoscale is on),
+        # so event-marker InfiniteLines never poison the range.
         if self._autoscale_enabled:
-            self.p_ecg.enableAutoRange(axis="y")
-            self.p_resp.enableAutoRange(axis="y")
+            self._autoscale_y(self.p_ecg, ey)
+            self._autoscale_y(self.p_resp, ry)
+
+    @staticmethod
+    def _autoscale_y(plot, ys: np.ndarray) -> None:
+        if ys.size == 0:
+            return
+        lo = float(np.min(ys))
+        hi = float(np.max(ys))
+        if not (np.isfinite(lo) and np.isfinite(hi)):
+            return
+        if hi <= lo:
+            hi, lo = lo + 1.0, lo - 1.0
+        pad = (hi - lo) * 0.12
+        plot.setYRange(lo - pad, hi + pad, padding=0)
 
     def set_autoscale(self, enabled: bool) -> None:
         self._autoscale_enabled = bool(enabled)
