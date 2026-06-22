@@ -385,6 +385,49 @@ def test_lead_off_updates_contact_indicator_without_creating_events(qapp) -> Non
         win.deleteLater()
 
 
+def _finalize_with_formats(tmp_path, *, save_csv, save_h5, save_xlsx):
+    from ads1292_studio.acquisition import build_acquisition_provenance
+    from ads1292_studio.calibration import Calibration
+    from ads1292_studio.csv_io import CsvRecorder
+    from ads1292_studio.models import StreamSample
+    from ads1292_studio.ui_qt.controller import AcquisitionController, DrainOutcome
+
+    csv_path = tmp_path / "live" / "2026-06-21-fmt-ads1292-studio.csv"
+    csv_path.parent.mkdir(parents=True)
+    with CsvRecorder(csv_path) as rec:
+        for i in range(30):
+            rec.write(StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                                   board_heart_rate=60, board_respiration_rate=15,
+                                   status_byte=0, sample_index=i))
+    ctrl = AcquisitionController()
+    ctrl.recording_path = csv_path
+    ctrl._keep_csv = save_csv
+    ctrl._save_h5 = save_h5
+    ctrl._save_xlsx = save_xlsx
+    ctrl._record_provenance = build_acquisition_provenance(
+        csv_path=csv_path, acquisition_mode="live", port="/dev/x",
+        sample_rate_hz=500.0, calibration=Calibration(), live_calibration=None,
+        started_at="2026-06-21T00:00:00",
+    )
+    ctrl._finalization_pending = True
+    ctrl._finalize_recording(DrainOutcome())
+    return csv_path
+
+
+def test_finalize_honors_format_selection_h5_and_xlsx_only(tmp_path) -> None:
+    csv_path = _finalize_with_formats(tmp_path, save_csv=False, save_h5=True, save_xlsx=True)
+    assert not csv_path.exists(), "CSV removed when not selected"
+    assert csv_path.with_suffix(".h5").exists(), "HDF5 written"
+    assert csv_path.with_suffix(".xlsx").exists(), "XLSX written"
+
+
+def test_finalize_csv_only_selection(tmp_path) -> None:
+    csv_path = _finalize_with_formats(tmp_path, save_csv=True, save_h5=False, save_xlsx=False)
+    assert csv_path.exists(), "CSV kept"
+    assert not csv_path.with_suffix(".h5").exists(), "no HDF5 when unselected"
+    assert not csv_path.with_suffix(".xlsx").exists(), "no XLSX when unselected"
+
+
 def test_start_embeds_live_calibration_into_provenance(qapp, monkeypatch) -> None:
     from ads1292_studio.calibration import LiveStreamCalibration
     from ads1292_studio.ui_qt.controller import AcquisitionController

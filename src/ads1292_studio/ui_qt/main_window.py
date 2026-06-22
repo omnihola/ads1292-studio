@@ -131,10 +131,19 @@ class MainWindow(QMainWindow):
 
         self._add_control(lay, "Calibrate Live", self._on_calibrate)
 
-        self.save_csv = QCheckBox("Record CSV")
+        lay.addWidget(self._caps("Save"))
+        self.save_csv = QCheckBox("CSV")
         self.save_csv.setChecked(True)
         self.controls["Save CSV"] = self.save_csv
         lay.addWidget(self.save_csv)
+        self.save_h5 = QCheckBox("HDF5")
+        self.save_h5.setChecked(True)
+        self.controls["Save HDF5"] = self.save_h5
+        lay.addWidget(self.save_h5)
+        self.save_xlsx = QCheckBox("XLSX")
+        self.save_xlsx.setChecked(False)
+        self.controls["Save XLSX"] = self.save_xlsx
+        lay.addWidget(self.save_xlsx)
         lay.addStretch(1)
         return frame
 
@@ -320,6 +329,8 @@ class MainWindow(QMainWindow):
         self.controller.start(
             self.port_combo.currentText().strip(),
             save_csv=self.save_csv.isChecked(),
+            save_h5=self.save_h5.isChecked(),
+            save_xlsx=self.save_xlsx.isChecked(),
             mode=mode,
             metadata=self.sidebar.metadata(),
             quality_gate=self.sidebar.quality_gate(),

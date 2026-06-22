@@ -35,6 +35,7 @@ from ads1292_studio.protocol import protocol_template
 from ads1292_studio.quality_gate import QualityGate
 from ads1292_studio.h5_io import is_recording_h5_path, read_recording_h5, write_recording_h5
 from ads1292_studio.recording_paths import recording_csv_path
+from ads1292_studio.xlsx_io import write_recording_xlsx
 from ads1292_studio.workers import AcquisitionMode, LiveWorker
 
 MAX_SAMPLES_PER_DRAIN = 1000
@@ -80,6 +81,11 @@ class AcquisitionController:
         self._record_protocol = protocol_template()
         self._record_provenance = None
         self._record_started_iso = ""
+        # selected output formats (CSV journal is always written live; these
+        # decide what is kept/produced at finalize)
+        self._keep_csv = True
+        self._save_h5 = True
+        self._save_xlsx = False
         self.event_markers: list[EventMarker] = []
 
     # ---- state snapshot (drives the whole UI via gui_state) ----
@@ -134,6 +140,8 @@ class AcquisitionController:
         port: str,
         *,
         save_csv: bool,
+        save_h5: bool = True,
+        save_xlsx: bool = False,
         mode: AcquisitionMode = AcquisitionMode.LIVE,
         metadata: SessionMetadata | None = None,
         quality_gate: QualityGate | None = None,
@@ -144,8 +152,14 @@ class AcquisitionController:
         self.recording_path = None
         self._finalization_pending = False
         self.event_markers = []
+        # CSV journal is the live, crash-safe source for finalize; it is written
+        # whenever ANY format is requested, then kept or removed per save_csv.
+        self._keep_csv = save_csv
+        self._save_h5 = save_h5
+        self._save_xlsx = save_xlsx
+        record = save_csv or save_h5 or save_xlsx
         csv_path = None
-        if save_csv:
+        if record:
             started_at = datetime.now()
             self._record_started_iso = started_at.isoformat(timespec="seconds")
             csv_path = recording_csv_path(started_at=started_at, acquisition_mode=mode)
@@ -234,25 +248,34 @@ class AcquisitionController:
                 last_timestamp_seconds=last_ts,
             )
             events = tuple(self.event_markers)
-            # Canonical container: one .h5 with raw arrays + full metadata +
-            # SHA-256 integrity. The live CSV journal is kept for crash safety;
-            # XLSX/JSON are produced on demand from the .h5 (see h5_export).
-            h5_path = write_recording_h5(
-                self.recording_path,
-                samples=samples,
-                sample_rate_hz=SAMPLE_RATE_HZ,
-                metadata=self._record_metadata,
-                events=events,
-                calibration=Calibration(),
-                acquisition=provenance,
-                protocol=self._record_protocol,
-                quality_gate=self._record_quality_gate,
-                processing=build_processing_settings(sample_rate_hz=SAMPLE_RATE_HZ),
-                created_at=finalized,
-            )
             out.logs.append(f"Recording finalized: {sample_count} samples")
-            out.logs.append(f"Canonical HDF5 written: {h5_path}")
-            out.logs.append(f"CSV journal kept: {self.recording_path}")
+            # Write the user-selected formats. The CSV journal is the live,
+            # crash-safe source; it is kept or removed per the CSV selection.
+            if self._save_h5:
+                h5_path = write_recording_h5(
+                    self.recording_path,
+                    samples=samples,
+                    sample_rate_hz=SAMPLE_RATE_HZ,
+                    metadata=self._record_metadata,
+                    events=events,
+                    calibration=Calibration(),
+                    acquisition=provenance,
+                    protocol=self._record_protocol,
+                    quality_gate=self._record_quality_gate,
+                    processing=build_processing_settings(sample_rate_hz=SAMPLE_RATE_HZ),
+                    created_at=finalized,
+                )
+                out.logs.append(f"Canonical HDF5 written: {h5_path}")
+            if self._save_xlsx:
+                xlsx_path = write_recording_xlsx(
+                    self.recording_path, events=events, sample_rate_hz=SAMPLE_RATE_HZ
+                )
+                out.logs.append(f"XLSX written (Events + Data tabs): {xlsx_path}")
+            if self._keep_csv:
+                out.logs.append(f"CSV journal kept: {self.recording_path}")
+            else:
+                self.recording_path.unlink(missing_ok=True)
+                out.logs.append("CSV journal removed (not selected)")
         except Exception as exc:  # noqa: BLE001
             out.errors.append(f"Recording finalization failed: {exc}")
         finally:
