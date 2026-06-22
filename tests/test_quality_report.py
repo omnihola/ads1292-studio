@@ -39,6 +39,9 @@ def drifting_samples(sample_rate_hz: float = 500.0) -> tuple[StreamSample, ...]:
     ch2 = drift + 8 * np.sin(2 * np.pi * 1.0 * t)
     for peak in np.arange(0.5, 7.8, 0.62):
         ch2 += 450 * np.exp(-0.5 * ((t - peak) / 0.012) ** 2)
+    # realistic high-frequency measurement noise (a real recording always has
+    # some; the robust noise metric reports this, not the QRS slope)
+    ch2 = ch2 + np.random.RandomState(0).normal(0, 3.0, len(t))
     return tuple(
         StreamSample(
             timestamp=index / sample_rate_hz,

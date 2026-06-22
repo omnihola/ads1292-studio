@@ -95,8 +95,9 @@ def estimate_realtime_snr(values: np.ndarray, *, sample_rate_hz: float = 500.0) 
 
     centered = finite_values - float(np.median(finite_values))
     signal_rms = float(np.sqrt(np.mean(centered * centered)))
-    # First-difference RMS is sqrt(2) larger than sample noise for white noise.
-    noise_rms = float(_noise_rms(finite_values) / np.sqrt(2.0))
+    # _noise_rms is already the robust per-sample noise RMS (MAD-based), immune
+    # to QRS-slope inflation.
+    noise_rms = float(_noise_rms(finite_values))
     peak_to_peak = float(np.percentile(finite_values, 95.0) - np.percentile(finite_values, 5.0))
     duration = (finite_values.size - 1) / sample_rate_hz if sample_rate_hz > 0 else 0.0
     if signal_rms <= 1e-12:
@@ -117,8 +118,16 @@ def _baseline_drift(values: np.ndarray, sample_rate_hz: float) -> float:
 
 
 def _noise_rms(values: np.ndarray) -> float:
+    """Robust per-sample noise RMS from the first difference.
+
+    Uses the MEDIAN absolute deviation of the first difference (1.4826*MAD), not
+    the mean square, so the sparse but very steep QRS slopes don't inflate the
+    estimate — a clean tall ECG no longer reads as "noisy". Per-sample white-
+    noise RMS is the diff std / sqrt(2). Still broadband, so it keeps catching
+    in-band muscle/motion/EMI artifacts (unlike a pure high-frequency residual).
+    """
     if values.size < 3:
         return 0.0
     diff = np.diff(values.astype(float))
-    centered = diff - float(np.median(diff))
-    return float(np.sqrt(np.mean(centered * centered)))
+    mad = float(np.median(np.abs(diff - float(np.median(diff)))))
+    return 1.4826 * mad / float(np.sqrt(2.0))
