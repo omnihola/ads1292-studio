@@ -624,6 +624,27 @@ def test_window_limits_visible_samples(qapp) -> None:
         win.deleteLater()
 
 
+def test_wide_window_decimates_but_preserves_peak(qapp) -> None:
+    from ads1292_studio.ui_qt.main_window import MAX_PLOT_POINTS
+
+    win = _make_window(qapp)
+    try:
+        # 16 s window @ 500 Hz = 8000 points (> MAX_PLOT_POINTS)
+        data = [0.0] * 8000
+        data[4000] = 9999.0  # a sharp peak that must survive decimation
+        win._ch2.extend(data)
+        win._ch1.extend([0.0] * 8000)
+        win._sample_count = 8000
+        win._window_combo.setCurrentText("16 s")
+        win._gain_combo.setCurrentText("1x")
+        win._redraw_live()
+        ydata = list(win.live_panel._ecg_line.get_ydata())
+        assert len(ydata) <= MAX_PLOT_POINTS, "wide window must be decimated"
+        assert max(ydata) == pytest.approx(9999.0), "peak must be preserved"
+    finally:
+        win.deleteLater()
+
+
 def test_filter_button_fills_accent_when_checked(qapp) -> None:
     from ads1292_studio.ui_qt.theme import apply_theme
 

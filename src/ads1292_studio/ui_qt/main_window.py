@@ -49,6 +49,7 @@ from ads1292_studio.display import (
     parse_sweep_speed,
     sweep_speed_labels,
 )
+from ads1292_studio.plots import decimate_extrema_for_plot
 from ads1292_studio.signal_processing import apply_software_filters
 from ads1292_studio.workers import AcquisitionMode
 
@@ -57,6 +58,9 @@ SAMPLE_RATE_HZ = 500.0
 VISIBLE_SECONDS = 8.0
 # hold enough samples for the widest selectable window (16 s)
 MAX_POINTS = int(SAMPLE_RATE_HZ * max(DISPLAY_WINDOW_CHOICES))
+# cap plotted points (peak-preserving) so wide windows stay smooth; the default
+# 8 s window (4000 pts) is below this, so the common case is never decimated
+MAX_PLOT_POINTS = 4000
 ACTIVE_TICK_MS = 50
 IDLE_TICK_MS = 200
 
@@ -641,9 +645,13 @@ class MainWindow(QMainWindow):
         if self._invert_btn.isChecked():
             ecg_filtered = -ecg_filtered
         # Gain: amplitude zoom on the ECG trace.
-        ecg_y = (ecg_filtered * ds.gain).tolist()
-        resp_y = apply_software_filters(resp_raw, SAMPLE_RATE_HZ, fsettings).tolist()
-        self.live_panel.update_traces(xs, ecg_y, xs, resp_y)
+        ecg_y = ecg_filtered * ds.gain
+        resp_y = apply_software_filters(resp_raw, SAMPLE_RATE_HZ, fsettings)
+        # Peak-preserving decimation keeps wide windows smooth without losing QRS.
+        xa = np.asarray(xs, dtype=float)
+        ex, ey = decimate_extrema_for_plot(xa, ecg_y, MAX_PLOT_POINTS)
+        rx, ry = decimate_extrema_for_plot(xa, resp_y, MAX_PLOT_POINTS)
+        self.live_panel.update_traces(ex.tolist(), ey.tolist(), rx.tolist(), ry.tolist())
         self._update_live_snr()
 
     def _update_live_snr(self) -> None:
