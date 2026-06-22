@@ -81,3 +81,40 @@ def test_review_pqrst_uses_raw_ecg_channel_not_display_filtered_values(monkeypat
     )
 
     np.testing.assert_allclose(captured["values"], np.asarray([sample.ch2 for sample in samples], dtype=float))
+
+
+def test_review_peak_markers_sit_on_the_smoothed_plotted_curve() -> None:
+    # peak_y must come from the smoothed display curve (what's drawn), not the
+    # raw filtered ecg, so markers don't float off the QRS apex.
+    from ads1292_studio.live_render import display_signal_values
+    from ads1292_studio.plots import smooth_for_plot
+
+    samples = _samples()
+    frame = build_review_render_frame(
+        samples,
+        display_settings=EcgDisplaySettings(time_window_seconds=8, gain=1.0, sweep_speed_mm_s=25),
+        filter_settings=SoftwareFilterSettings(),
+        source="CH2", sample_rate_hz=500.0, smoothing_window=11, max_points=300,
+        ecg_inverted=False, min_ecg_span_counts=8.0, min_resp_span_counts=40.0,
+    )
+    ecg = display_signal_values(
+        np.asarray([s.ch2 for s in samples], dtype=float),
+        filter_enabled=False, filter_settings=SoftwareFilterSettings(),
+        invert=False, gain=1.0, sample_rate_hz=500.0,
+    )
+    display_ecg = smooth_for_plot(ecg, window=11)
+    peaks = list(frame.review.peaks)
+    assert len(peaks) >= 3
+    np.testing.assert_allclose(frame.peak_y, display_ecg[peaks])
+
+
+def test_build_review_render_frame_invalid_rate_yields_finite_axis() -> None:
+    frame = build_review_render_frame(
+        _samples(200),
+        display_settings=EcgDisplaySettings(),
+        filter_settings=SoftwareFilterSettings(),
+        source="CH2", sample_rate_hz=0.0, smoothing_window=5, max_points=200,
+        ecg_inverted=False, min_ecg_span_counts=8.0, min_resp_span_counts=40.0,
+    )
+    assert np.isfinite(frame.x_right)
+    assert np.isfinite(frame.plot_ecg_x).all()

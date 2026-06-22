@@ -228,3 +228,19 @@ def test_live_render_reuses_bandpass_display_for_peak_detection() -> None:
     source = inspect.getsource(build_live_render_frame)
 
     assert "prefiltered=bool(filter_settings.bandpass_enabled)" in source
+
+
+def test_build_live_render_frame_returns_none_for_invalid_sample_rate() -> None:
+    from collections import deque
+    idx = deque(range(100), maxlen=100)
+    ch = deque(range(100), maxlen=100)
+    st = deque([0] * 100, maxlen=100)
+    ds = EcgDisplaySettings()
+    fs = SoftwareFilterSettings()
+    for bad in (0.0, -500.0, float("nan")):
+        frame = build_live_render_frame(
+            indices=idx, ch1=ch, ch2=ch, status=st, display_settings=ds,
+            filter_settings=fs, source="CH2", sample_rate_hz=bad,
+            smoothing_window=5, max_render_points=1000, ecg_inverted=False,
+        )
+        assert frame is None, f"bad sample_rate {bad} must yield no frame"

@@ -77,6 +77,8 @@ def build_live_render_frame(
     max_render_points: int,
     ecg_inverted: bool,
 ) -> LiveRenderFrame | None:
+    if not np.isfinite(sample_rate_hz) or sample_rate_hz <= 0:
+        return None  # a bad/uninitialized rate would poison the x-axis with inf/nan
     visible_count = min(
         len(indices),
         len(ch1),

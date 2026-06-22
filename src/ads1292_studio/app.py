@@ -588,6 +588,16 @@ class App(tk.Tk):
         if self.connected_port != port:
             messagebox.showerror("Not connected", "Press Connect before Start.")
             return
+        # Never orphan a previous recording: if its finalize is still pending,
+        # join the writer and finalize it before resetting state.
+        if self.recording_path is not None and self.recording_finalization_pending:
+            thread = getattr(self.worker, "thread", None)
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=3.0)
+            try:
+                self._finalize_recording_sidecars()
+            except Exception as exc:  # noqa: BLE001 - best-effort, don't block a new start
+                self._log(f"Previous recording finalization failed: {exc}")
         self._clear_buffers()
         self.recording_path = None
         self.recording_finalization_pending = False
@@ -1152,7 +1162,10 @@ class App(tk.Tk):
 
     def _clear_live_event_overlay(self) -> None:
         for artist in self.live_event_overlay_artists:
-            artist.remove()
+            try:
+                artist.remove()
+            except (ValueError, AttributeError):
+                pass  # already removed (e.g. axis cleared by a render frame)
         self.live_event_overlay_artists = []
         self.live_event_overlay_key = None
 
@@ -1492,43 +1505,54 @@ class App(tk.Tk):
         self.tick_after_id = None
         if self.is_closing:
             return
-        self._drain_csv_load_results()
-        self._drain_review_render_results()
-        self._drain_connect_results()
-        self._drain_live_calibration_results()
-        self._drain_stream_start_results()
-        self._sync_worker_stream_state()
-        self._drain_live_quality_results()
-        sample_batch = drain_queue_items(self.samples, MAX_SAMPLES_PER_TICK)
-        sample_backlog = not self.samples.empty()
-        self.sample_index, latest = append_live_sample_batch(
-            sample_batch,
-            start_index=self.sample_index,
-            indices=self.indices,
-            ch1=self.ch1,
-            ch2=self.ch2,
-            status=self.status,
-            board_hr=self.board_hr,
-            board_rr=self.board_rr,
-        )
-        if latest is not None:
-            self._schedule_live_quality_update(
-                source=ADS1292R_ECG_SOURCE,
-                valid_rr=0,
+        sample_backlog = False
+        # A single bad tick must never permanently kill the polling loop (Tk does
+        # not reschedule on an uncaught callback exception). Always reschedule.
+        try:
+            self._drain_csv_load_results()
+            self._drain_review_render_results()
+            self._drain_connect_results()
+            self._drain_live_calibration_results()
+            self._drain_stream_start_results()
+            self._sync_worker_stream_state()
+            self._drain_live_quality_results()
+            sample_batch = drain_queue_items(self.samples, MAX_SAMPLES_PER_TICK)
+            sample_backlog = not self.samples.empty()
+            self.sample_index, latest = append_live_sample_batch(
+                sample_batch,
+                start_index=self.sample_index,
+                indices=self.indices,
+                ch1=self.ch1,
+                ch2=self.ch2,
+                status=self.status,
+                board_hr=self.board_hr,
+                board_rr=self.board_rr,
             )
-            if self._live_tab_visible():
-                # Drain samples every tick, but throttle the expensive live-plot
-                # rebuild during catch-up bursts so it never runs on every 1 ms tick.
-                now = time.monotonic()
-                if not sample_backlog or should_redraw_live(now, self.last_live_redraw_monotonic):
-                    self.last_live_redraw_monotonic = now
-                    self._redraw_live()
-            self._apply_control_states()
-        log_messages = drain_queue_items(self.logs, MAX_LOG_MESSAGES_PER_TICK)
-        self._append_log_messages(log_messages)
-        self._drain_live_quality_results()
-        self._drain_review_render_results()
-        self._schedule_tick(sample_backlog=sample_backlog)
+            if latest is not None:
+                self._schedule_live_quality_update(
+                    source=ADS1292R_ECG_SOURCE,
+                    valid_rr=0,
+                )
+                if self._live_tab_visible():
+                    # Drain samples every tick, but throttle the expensive live-plot
+                    # rebuild during catch-up bursts so it never runs on every 1 ms tick.
+                    now = time.monotonic()
+                    if not sample_backlog or should_redraw_live(now, self.last_live_redraw_monotonic):
+                        self.last_live_redraw_monotonic = now
+                        self._redraw_live()
+                self._apply_control_states()
+            log_messages = drain_queue_items(self.logs, MAX_LOG_MESSAGES_PER_TICK)
+            self._append_log_messages(log_messages)
+            self._drain_live_quality_results()
+            self._drain_review_render_results()
+        except Exception as exc:  # noqa: BLE001 - keep the loop alive
+            try:
+                self._log(f"Tick error (recovered): {exc}")
+            except Exception:
+                pass
+        finally:
+            if not self.is_closing:
+                self._schedule_tick(sample_backlog=sample_backlog)
 
     def _sync_worker_stream_state(self) -> None:
         thread = self.worker.thread
@@ -1987,9 +2011,15 @@ class App(tk.Tk):
         if self.recording_path is not None and self.recording_finalization_pending:
             thread = getattr(self.worker, "thread", None)
             if thread is not None and thread.is_alive():
-                thread.join(timeout=3.0)
+                thread.join(timeout=6.0)  # give the CSV writer time to flush and exit
             try:
                 self._finalize_recording_sidecars()
+                if thread is not None and thread.is_alive():
+                    print(
+                        "Recording finalization skipped on close: CSV writer still "
+                        f"running. CSV is on disk at {self.recording_path}; re-open it "
+                        "to finalize the bundle."
+                    )
             except Exception as exc:  # best-effort; never block window close
                 print(f"Recording finalization on close failed: {exc}")
         if self.live_quality_future is not None and not self.live_quality_future.done():

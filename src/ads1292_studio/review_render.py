@@ -49,6 +49,8 @@ def build_review_render_frame(
     min_ecg_span_counts: float,
     min_resp_span_counts: float,
 ) -> ReviewRenderFrame:
+    if not np.isfinite(sample_rate_hz) or sample_rate_hz <= 0:
+        sample_rate_hz = 500.0  # robust default for review; never an inf/nan time axis
     full_ch1 = np.asarray([sample.ch1 for sample in samples], dtype=float)
     full_ch2 = np.asarray([sample.ch2 for sample in samples], dtype=float)
     status_values = tuple(sample.lead_off_bits for sample in samples)
@@ -79,7 +81,9 @@ def build_review_render_frame(
     plot_status_x, plot_status = decimate_for_plot(x, status_arr, max_points)
     peak_indices = list(review.peaks)
     peak_x = np.asarray(review.peaks, dtype=float) / sample_rate_hz if review.peaks else np.array([], dtype=float)
-    peak_y = ecg[peak_indices] if review.peaks else np.array([], dtype=float)
+    # mark peaks on the SAME (smoothed) curve that is plotted, so the dots sit on
+    # the visible QRS apex rather than floating off the un-smoothed sample value
+    peak_y = display_ecg[peak_indices] if review.peaks else np.array([], dtype=float)
     x_right = max(1.0, float(x[-1]) if x.size else 1.0)
     status_top = max(1.0, float(status_arr.max()) + 0.5 if status_arr.size else 1.0)
     return ReviewRenderFrame(

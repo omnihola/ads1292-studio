@@ -164,3 +164,22 @@ def test_finalize_recording_sidecars_creates_bundle_when_legacy_acquisition_side
 
     assert fake.recording_finalization_pending is False
     assert acquisition_from_bundle(read_recording_bundle(csv_path)).completion["status"] == "finalized"
+
+
+def test_start_finalizes_pending_previous_recording_before_reset() -> None:
+    # Regression: restarting must finalize a still-pending recording first, else
+    # the previous recording is orphaned (CSV + non-finalized bundle).
+    source = inspect.getsource(App.start)
+    assert "recording_finalization_pending" in source
+    assert "_finalize_recording_sidecars()" in source
+    # the finalize must happen BEFORE the state is reset to None
+    assert source.index("_finalize_recording_sidecars()") < source.index("self.recording_path = None")
+
+
+def test_tick_reschedules_even_on_error() -> None:
+    # Regression: an exception in the tick body must not kill the polling loop.
+    source = inspect.getsource(App._tick)
+    assert "finally:" in source
+    assert "_schedule_tick" in source
+    # reschedule lives in the finally so it always runs
+    assert source.index("finally:") < source.rindex("_schedule_tick")
