@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import datetime
-import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -36,6 +35,7 @@ from ads1292_studio.recording_bundle import (
     recording_bundle_path,
 )
 from ads1292_studio.h5_io import read_recording_h5, recording_h5_path
+from ads1292_studio.hashing import sha256_file
 from ads1292_studio.recording_manifest import (
     recording_sample_index_summary,
     verify_recording_manifest,
@@ -259,7 +259,7 @@ def verify_session_package(manifest_path: Path | str) -> PackageVerification:
         if expected_bytes != actual_bytes:
             failures.append(f"{role}: byte mismatch for {relative}")
         expected_sha = item.get("sha256")
-        actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        actual_sha = sha256_file(path)
         if expected_sha != actual_sha:
             failures.append(f"{role}: sha256 mismatch for {relative}")
         if role == "recording_manifest":
@@ -454,10 +454,9 @@ def _completion_audit(
 
 
 def _file_entry(role: str, path: Path, package_dir: Path) -> dict[str, str | int]:
-    data = path.read_bytes()
     return {
         "role": role,
         "path": str(path.relative_to(package_dir)),
         "bytes": path.stat().st_size,
-        "sha256": hashlib.sha256(data).hexdigest(),
+        "sha256": sha256_file(path),
     }

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-import hashlib
 import json
 from pathlib import Path
 
 from ads1292_studio.acquisition import read_acquisition_json
+from ads1292_studio.hashing import sha256_file
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.events import (
     DEFAULT_EVENT_SAMPLE_RATE_HZ,
@@ -182,7 +182,7 @@ def verify_recording_manifest(manifest_path: Path | str) -> RecordingManifestVer
         if expected_bytes != actual_bytes:
             failures.append(f"{role}: byte mismatch for {relative}")
         expected_sha = item.get("sha256")
-        actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        actual_sha = sha256_file(path)
         if expected_sha != actual_sha:
             failures.append(f"{role}: sha256 mismatch for {relative}")
 
@@ -202,12 +202,11 @@ def verify_recording_manifest(manifest_path: Path | str) -> RecordingManifestVer
 
 
 def _file_entry(role: str, path: Path) -> dict[str, str | int]:
-    data = path.read_bytes()
     return {
         "role": role,
         "path": path.name,
         "bytes": path.stat().st_size,
-        "sha256": hashlib.sha256(data).hexdigest(),
+        "sha256": sha256_file(path),
     }
 
 
