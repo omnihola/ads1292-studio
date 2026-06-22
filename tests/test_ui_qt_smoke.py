@@ -464,19 +464,18 @@ def test_finalize_never_deletes_csv_without_a_replacement(tmp_path) -> None:
     assert csv_path.exists(), "CSV must be kept when nothing else was written"
 
 
-def test_controller_uses_small_raw_chunk_for_smooth_plotting(qapp) -> None:
-    # RAW (evaluation) mode acquires in blocks; a 500-sample block = 1 s of
-    # blocking acquire -> ~1 Hz choppy updates. The controller must request a
-    # small block (~0.1 s) so the plot updates ~10x/sec.
+def test_controller_uses_large_raw_chunk_for_data_completeness(qapp) -> None:
+    # RAW (evaluation) mode prioritizes data completeness: a large ~1 s block
+    # minimizes inter-block acquisition gaps (least dropped signal) at the cost
+    # of a choppier live update. RAW is for precise analysis (FFT/scope).
     from ads1292_studio.ui_qt.controller import AcquisitionController
 
     ctrl = AcquisitionController()
-    # ~0.1 s at 500 Hz, rounded down to a multiple of 8
-    assert ctrl.worker.raw_chunk_samples <= 64, (
-        f"raw chunk too large for smooth updates: {ctrl.worker.raw_chunk_samples}"
+    # ~1 s at 500 Hz, rounded down to a multiple of 8 (500 -> 496)
+    assert ctrl.worker.raw_chunk_samples >= 256, (
+        f"raw chunk too small (would drop more signal): {ctrl.worker.raw_chunk_samples}"
     )
     assert ctrl.worker.raw_chunk_samples % 8 == 0
-    assert ctrl.worker.raw_chunk_samples >= 8
 
 
 def test_unexpected_worker_death_finalizes_and_clears_streaming(qapp, tmp_path) -> None:

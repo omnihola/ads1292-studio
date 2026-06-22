@@ -41,9 +41,11 @@ from ads1292_studio.workers import AcquisitionMode, LiveWorker
 
 MAX_SAMPLES_PER_DRAIN = 1000
 SAMPLE_RATE_HZ = 500.0
-# RAW (evaluation) mode acquires in blocks; size it to ~0.1 s (≈10 updates/sec)
-# so the live plot scrolls smoothly instead of jumping once per ~1 s block.
-RAW_CHUNK_SAMPLES = 50
+# RAW (evaluation) mode acquires in request/response blocks. Default to a large
+# ~1 s block (data-complete priority): fewer inter-block gaps -> least dropped
+# signal, at the cost of a choppier (~1 Hz) live update. RAW exists for precise
+# analysis (FFT/scope), so completeness wins over display smoothness here.
+RAW_CHUNK_SAMPLES = 500
 
 
 def _fsync_path(path: Path) -> None:
