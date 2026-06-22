@@ -61,9 +61,9 @@ class MainWindow(QMainWindow):
         self._ch2: deque[float] = deque(maxlen=MAX_POINTS)
         self._sample_count = 0
         self._range_start_s: float | None = None
-        # lead-off auto-annotation state
-        self._lead_off_active: tuple[str, ...] = ()
-        self._lead_off_start_s: float | None = None
+        # last-seen lead-off electrode set (drives the contact indicator);
+        # None = unknown, so the first sample always refreshes the indicator
+        self._lead_off_active: tuple[str, ...] | None = None
 
         root = QWidget()
         root.setObjectName("CentralRoot")
@@ -315,8 +315,7 @@ class MainWindow(QMainWindow):
         self._ch1.clear()
         self._ch2.clear()
         self._sample_count = 0
-        self._lead_off_active = ()
-        self._lead_off_start_s = None
+        self._lead_off_active = None
         self.controller.start(
             self.port_combo.currentText().strip(),
             save_csv=self.save_csv.isChecked(),
@@ -329,10 +328,6 @@ class MainWindow(QMainWindow):
         self._refresh_state()
 
     def _on_stop(self) -> None:
-        # capture a lead-off interval still open at stop time
-        if self._lead_off_active and self._lead_off_start_s is not None:
-            self._close_lead_off_interval()
-            self._lead_off_active = ()
         self.controller.stop()
         self._set_timer_active(False)
         self._refresh_state()
@@ -438,38 +433,20 @@ class MainWindow(QMainWindow):
 
     # ---- lead-off contact tracking + auto annotation ----
     def _process_lead_off(self, status_byte: int) -> None:
-        """Update the live contact indicator and auto-annotate lead-off intervals.
+        """Update the live contact indicator from the per-sample lead-off status.
 
-        On a connected->off transition the start time is recorded; when contact
-        is restored (or the off set changes) a range EventMarker is emitted so
-        electrode detachments are captured in the recording for later review.
+        Lead-off is surfaced as a non-intrusive indicator only — it is NOT
+        auto-annotated as an event. The ADS1292R on this board reports lead-off
+        bits unreliably (often set for the whole capture), which previously
+        produced a spurious yellow event span over the entire recording. The
+        raw status_byte is still persisted to CSV and summarized in the Info
+        tab; real events remain user-driven via the Annotate controls.
         """
         current = electrodes_off(status_byte)
-        self.event_console.set_contact(current)
         if current == self._lead_off_active:
             return
-        # close any open lead-off interval before starting a new state
-        if self._lead_off_active and self._lead_off_start_s is not None:
-            self._close_lead_off_interval()
-        if current:
-            self._lead_off_start_s = self._now_seconds()
-            self.event_log_panel.append_line(
-                f"Lead-off START {self._lead_off_start_s:.2f}s: {', '.join(current)}"
-            )
         self._lead_off_active = current
-
-    def _close_lead_off_interval(self) -> None:
-        start = self._lead_off_start_s
-        end = self._now_seconds()
-        label = "lead-off: " + ", ".join(self._lead_off_active)
-        marker = event_from_interval(
-            start_seconds=start, end_seconds=end, label=label,
-            notes="auto-detected electrode lead-off",
-        )
-        self.controller.event_markers.append(marker)
-        self.event_log_panel.append_line(f"Lead-off END {end:.2f}s ({label})")
-        self._lead_off_start_s = None
-        self._refresh_events()
+        self.event_console.set_contact(current)
 
     # ---- event annotations (real EventMarkers; persisted at finalize, overlaid on plot) ----
     def _now_seconds(self) -> float:
