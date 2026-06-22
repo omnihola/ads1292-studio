@@ -428,6 +428,45 @@ def test_finalize_csv_only_selection(tmp_path) -> None:
     assert not csv_path.with_suffix(".xlsx").exists(), "no XLSX when unselected"
 
 
+def test_finalize_never_deletes_csv_without_a_replacement(tmp_path) -> None:
+    # Safety: if CSV is unchecked but no replacement format is written, the
+    # only lossless copy must be preserved (never zero copies on disk).
+    csv_path = _finalize_with_formats(tmp_path, save_csv=False, save_h5=False, save_xlsx=False)
+    assert csv_path.exists(), "CSV must be kept when nothing else was written"
+
+
+def test_start_finalizes_pending_previous_recording(qapp, tmp_path, monkeypatch) -> None:
+    from ads1292_studio.acquisition import build_acquisition_provenance
+    from ads1292_studio.calibration import Calibration
+    from ads1292_studio.csv_io import CsvRecorder
+    from ads1292_studio.h5_io import recording_h5_path
+    from ads1292_studio.models import StreamSample
+    from ads1292_studio.ui_qt.controller import AcquisitionController
+
+    csv1 = tmp_path / "live" / "2026-06-21-prev-ads1292-studio.csv"
+    csv1.parent.mkdir(parents=True)
+    with CsvRecorder(csv1) as rec:
+        for i in range(20):
+            rec.write(StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                                   board_heart_rate=60, board_respiration_rate=15,
+                                   status_byte=0, sample_index=i))
+    ctrl = AcquisitionController()
+    ctrl.connected_port = "/dev/x"
+    ctrl.recording_path = csv1
+    ctrl._keep_csv = True
+    ctrl._save_h5 = True
+    ctrl._record_provenance = build_acquisition_provenance(
+        csv_path=csv1, acquisition_mode="live", port="/dev/x", sample_rate_hz=500.0,
+        calibration=Calibration(), live_calibration=None, started_at="2026-06-21T00:00:00",
+    )
+    ctrl._finalization_pending = True
+    monkeypatch.setattr(ctrl.worker, "start", lambda *a, **k: None)
+
+    ctrl.start("/dev/x", save_csv=True, save_h5=True)
+    # the previous recording must have been finalized (its .h5 exists) before reset
+    assert recording_h5_path(csv1).exists(), "previous recording was orphaned"
+
+
 def test_start_embeds_live_calibration_into_provenance(qapp, monkeypatch) -> None:
     from ads1292_studio.calibration import LiveStreamCalibration
     from ads1292_studio.ui_qt.controller import AcquisitionController

@@ -12,6 +12,7 @@ worker), a JSON bundle (``write_recording_bundle``), and an ``.xlsx``
 """
 from __future__ import annotations
 
+import os
 import queue
 import threading
 from dataclasses import dataclass, field
@@ -40,6 +41,18 @@ from ads1292_studio.workers import AcquisitionMode, LiveWorker
 
 MAX_SAMPLES_PER_DRAIN = 1000
 SAMPLE_RATE_HZ = 500.0
+
+
+def _fsync_path(path: Path) -> None:
+    """Force a written file to durable storage (best-effort)."""
+    try:
+        fd = os.open(path, os.O_RDONLY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
 
 
 @dataclass
@@ -149,6 +162,10 @@ class AcquisitionController:
     ) -> None:
         if self.connected_port != port or self.is_streaming:
             return
+        # Never orphan a previous recording: if its finalize is still pending
+        # (worker not yet drained), finalize it before resetting state.
+        if self._finalization_pending:
+            self.finalize_now()
         self.recording_path = None
         self._finalization_pending = False
         self.event_markers = []
@@ -250,7 +267,9 @@ class AcquisitionController:
             events = tuple(self.event_markers)
             out.logs.append(f"Recording finalized: {sample_count} samples")
             # Write the user-selected formats. The CSV journal is the live,
-            # crash-safe source; it is kept or removed per the CSV selection.
+            # crash-safe source; it is removed only after a replacement format
+            # was durably written (fsync'd), never leaving zero lossless copies.
+            wrote_replacement = False
             if self._save_h5:
                 h5_path = write_recording_h5(
                     self.recording_path,
@@ -265,17 +284,23 @@ class AcquisitionController:
                     processing=build_processing_settings(sample_rate_hz=SAMPLE_RATE_HZ),
                     created_at=finalized,
                 )
+                _fsync_path(h5_path)
+                wrote_replacement = True
                 out.logs.append(f"Canonical HDF5 written: {h5_path}")
             if self._save_xlsx:
                 xlsx_path = write_recording_xlsx(
                     self.recording_path, events=events, sample_rate_hz=SAMPLE_RATE_HZ
                 )
+                _fsync_path(xlsx_path)
+                wrote_replacement = True
                 out.logs.append(f"XLSX written (Events + Data tabs): {xlsx_path}")
             if self._keep_csv:
                 out.logs.append(f"CSV journal kept: {self.recording_path}")
-            else:
+            elif wrote_replacement:
                 self.recording_path.unlink(missing_ok=True)
                 out.logs.append("CSV journal removed (not selected)")
+            else:
+                out.logs.append("CSV journal kept (no replacement format was written)")
         except Exception as exc:  # noqa: BLE001
             out.errors.append(f"Recording finalization failed: {exc}")
         finally:

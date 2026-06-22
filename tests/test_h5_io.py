@@ -135,6 +135,16 @@ def test_no_live_calibration_omits_attribute(tmp_path: Path) -> None:
         assert "live_uv_per_count" not in dict(f.attrs)
 
 
+def test_read_recording_h5_rejects_unknown_schema(tmp_path: Path) -> None:
+    import h5py
+
+    bad = tmp_path / "bad.h5"
+    with h5py.File(bad, "w") as f:
+        f.attrs["schema"] = "something-else/9"
+    with pytest.raises(ValueError, match="schema"):
+        read_recording_h5(bad)
+
+
 def test_integrity_hashes_present_and_match(tmp_path: Path) -> None:
     import hashlib
 

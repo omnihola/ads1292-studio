@@ -607,8 +607,13 @@ class MainWindow(QMainWindow):
                 self._ch1.append(float(s.ch1))
                 self._ch2.append(float(s.ch2))
             self._sample_count += len(samples)
-            self._process_lead_off(samples[-1].status_byte)
-            self._redraw_live()
+            # A single bad render frame must never kill the live loop or the
+            # ongoing recording (the worker thread keeps writing the CSV).
+            try:
+                self._process_lead_off(samples[-1].status_byte)
+                self._redraw_live()
+            except Exception as exc:  # noqa: BLE001 - keep streaming alive
+                self.event_log_panel.append_line(f"live render skipped a frame: {exc}")
         if outcome.loaded_recording is not None:
             self._show_recording(outcome.loaded_recording)
         if outcome.state_changed or samples:
@@ -662,7 +667,11 @@ class MainWindow(QMainWindow):
         if not samples:
             return
         fs = recording.sample_rate_hz or SAMPLE_RATE_HZ
-        metrics = self._update_quality(samples, fs)
+        try:
+            metrics = self._update_quality(samples, fs)
+        except Exception as exc:  # noqa: BLE001 - never abort the whole view
+            self.event_log_panel.append_line(f"quality metrics failed: {exc}")
+            return
         # pass current calibration to info panel before render
         cal = self.controller.live_calibration
         self.info_panel.set_calibration(cal.mean_uv_per_count if cal is not None else None)
@@ -696,6 +705,13 @@ class MainWindow(QMainWindow):
             outcome = self.controller.finalize_now()
             for line in outcome.logs:
                 print(line)
+            for err in outcome.errors:
+                print(f"ERROR: {err}")
+            if outcome.errors:
+                QMessageBox.critical(
+                    self, "ADS1292 Studio",
+                    "Recording finalization had errors on close:\n" + "\n".join(outcome.errors),
+                )
         super().closeEvent(event)
 
     # ---------- state refresh ----------

@@ -34,10 +34,14 @@ def export_h5_to_xlsx(h5_path: Path | str, out_path: Path | str) -> Path:
     materialized from the .h5 samples next to the target and removed after."""
     from ads1292_studio.xlsx_io import write_recording_xlsx, recording_xlsx_path
 
+    import os
+    import uuid
+
     recording, bundle = read_recording_h5(h5_path)
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    tmp_csv = out.with_suffix(".h5export.tmp.csv")
+    # unique temp name so concurrent/rapid exports never clobber each other
+    tmp_csv = out.with_suffix(f".{os.getpid()}-{uuid.uuid4().hex[:8]}.tmp.csv")
     try:
         write_recording_csv(tmp_csv, recording.samples)
         events = events_from_bundle(bundle)

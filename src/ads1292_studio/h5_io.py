@@ -99,7 +99,18 @@ def read_recording_h5(path: Path | str) -> tuple[Recording, dict[str, Any]]:
     import h5py
 
     with h5py.File(Path(path), "r") as f:
+        schema = _as_text(f.attrs.get("schema", ""))
+        if schema != H5_SCHEMA:
+            raise ValueError(
+                f"unrecognized HDF5 schema {schema!r} (expected {H5_SCHEMA!r}) in {Path(path).name}"
+            )
+        if "samples" not in f or "bundle_json" not in f:
+            raise ValueError(f"HDF5 file is missing required groups: {Path(path).name}")
         group = f["samples"]
+        required = ("timestamp", "ch1", "ch2", "status_byte", "board_heart_rate", "board_respiration_rate")
+        missing = [name for name in required if name not in group]
+        if missing:
+            raise ValueError(f"HDF5 samples group missing datasets {missing}: {Path(path).name}")
         timestamp = group["timestamp"][:]
         ch1 = group["ch1"][:]
         ch2 = group["ch2"][:]
