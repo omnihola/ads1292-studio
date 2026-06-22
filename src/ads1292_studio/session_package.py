@@ -35,6 +35,7 @@ from ads1292_studio.recording_bundle import (
     read_recording_bundle,
     recording_bundle_path,
 )
+from ads1292_studio.h5_io import read_recording_h5, recording_h5_path
 from ads1292_studio.recording_manifest import (
     recording_sample_index_summary,
     verify_recording_manifest,
@@ -77,7 +78,12 @@ def export_session_package(
     source: str = "Auto",
 ) -> SessionPackageExport:
     source_csv = Path(csv_path)
-    recording_manifest_path = write_recording_manifest(source_csv)
+    # The canonical .h5 carries embedded SHA-256 integrity; the legacy CSV
+    # sidecar manifest is only used for legacy (sidecar/bundle) packages.
+    use_h5 = recording_h5_path(source_csv).exists() and not is_recording_bundle_path(
+        recording_bundle_path(source_csv)
+    )
+    recording_manifest_path = None if use_h5 else write_recording_manifest(source_csv)
     output = Path(out_dir)
     package_dir = output / _package_slug(source_csv)
     package_dir.mkdir(parents=True, exist_ok=True)
@@ -102,15 +108,27 @@ def export_session_package(
     processing = build_processing_settings()
     bundle_path = recording_bundle_path(source_csv)
     has_bundle = is_recording_bundle_path(bundle_path)
+    h5_path = recording_h5_path(source_csv)
+    has_h5 = (not has_bundle) and h5_path.exists()
+    bundle = None
     if has_bundle:
         bundle = read_recording_bundle(bundle_path)
         copied = package_dir / bundle_path.name
         shutil.copy2(bundle_path, copied)
         files.append(_file_entry("recording_bundle", copied, package_dir))
-        metadata = metadata_from_bundle(bundle)
-        events = events_from_bundle(bundle)
         event_source_role = "recording_bundle"
         event_source_path = copied.name
+    elif has_h5:
+        # canonical .h5 carries the full bundle; copy it and read metadata from it
+        _, bundle = read_recording_h5(h5_path)
+        copied = package_dir / h5_path.name
+        shutil.copy2(h5_path, copied)
+        files.append(_file_entry("recording_h5", copied, package_dir))
+        event_source_role = "recording_h5"
+        event_source_path = copied.name
+    if bundle is not None:
+        metadata = metadata_from_bundle(bundle)
+        events = events_from_bundle(bundle)
         acquisition = acquisition_from_bundle(bundle)
         calibration = calibration_from_bundle(bundle)
         protocol = protocol_from_bundle(bundle)
@@ -128,7 +146,9 @@ def export_session_package(
         ("recording_manifest", recording_manifest_path),
     )
     for role, sidecar in sidecars:
-        if has_bundle and role != "recording_manifest":
+        if sidecar is None:
+            continue
+        if (has_bundle or has_h5) and role != "recording_manifest":
             continue
         if not sidecar.exists():
             continue
@@ -333,7 +353,7 @@ def _event_annotation_entry(event, *, sample_rate_hz: float) -> dict:
 
 def _sidecar_completeness(files: list[dict]) -> dict:
     present = {str(item.get("role", "")) for item in files}
-    if "recording_bundle" in present:
+    if "recording_bundle" in present or "recording_h5" in present:
         return {
             "required_roles": list(REQUIRED_SIDECAR_ROLES),
             "present_roles": list(REQUIRED_SIDECAR_ROLES),

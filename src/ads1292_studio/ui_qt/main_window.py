@@ -205,6 +205,8 @@ class MainWindow(QMainWindow):
         for name, btn in self.sidebar.buttons.items():
             self.controls[name] = btn
         self.sidebar.buttons["Load CSV"].clicked.connect(self._on_load_csv)
+        self.sidebar.buttons["Export XLSX"].clicked.connect(self._on_export_xlsx)
+        self.sidebar.buttons["Export JSON"].clicked.connect(self._on_export_json)
         self.sidebar.buttons["Export Report"].clicked.connect(self._on_export_report)
         self.sidebar.buttons["Export Package"].clicked.connect(self._on_export_package)
         self.sidebar.buttons["Verify Package"].clicked.connect(self._on_verify_package)
@@ -333,7 +335,8 @@ class MainWindow(QMainWindow):
 
     def _on_load_csv(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Load ADS1292 CSV", str(Path.home() / "Documents" / "ECG"), "CSV files (*.csv);;All files (*)"
+            self, "Load ADS1292 recording", str(Path.home() / "Documents" / "ECG"),
+            "Recordings (*.h5 *.csv);;HDF5 (*.h5);;CSV files (*.csv);;All files (*)",
         )
         if path:
             self.controller.load_csv(Path(path))
@@ -350,6 +353,36 @@ class MainWindow(QMainWindow):
             from ads1292_studio.csv_io import read_recording_csv
             return read_recording_csv(self.controller.recording_path).samples, self.controller.recording_path
         return (), None
+
+    def _pick_h5(self) -> Path | None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Select canonical .h5 recording", str(self._ECG_ROOT), "HDF5 (*.h5)"
+        )
+        return Path(path) if path else None
+
+    def _on_export_xlsx(self) -> None:
+        from ads1292_studio.h5_export import export_h5_to_xlsx
+        h5 = self._pick_h5()
+        if h5 is None:
+            return
+        try:
+            out = export_h5_to_xlsx(h5, h5.with_suffix(".xlsx"))
+            self.event_log_panel.append_line(f"XLSX exported: {out}")
+            QMessageBox.information(self, "Export XLSX", f"Written:\n{out}")
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.critical(self, "Export XLSX", str(exc))
+
+    def _on_export_json(self) -> None:
+        from ads1292_studio.h5_export import export_h5_to_json
+        h5 = self._pick_h5()
+        if h5 is None:
+            return
+        try:
+            out = export_h5_to_json(h5, h5.with_suffix(".json"))
+            self.event_log_panel.append_line(f"JSON exported: {out}")
+            QMessageBox.information(self, "Export JSON", f"Written:\n{out}")
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.critical(self, "Export JSON", str(exc))
 
     def _on_export_report(self) -> None:
         from ads1292_studio.report import export_review_report

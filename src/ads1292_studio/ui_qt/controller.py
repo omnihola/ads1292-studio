@@ -33,7 +33,7 @@ from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.processing import build_processing_settings
 from ads1292_studio.protocol import protocol_template
 from ads1292_studio.quality_gate import QualityGate
-from ads1292_studio.h5_io import write_recording_h5
+from ads1292_studio.h5_io import is_recording_h5_path, read_recording_h5, write_recording_h5
 from ads1292_studio.recording_paths import recording_csv_path
 from ads1292_studio.workers import AcquisitionMode, LiveWorker
 
@@ -180,7 +180,10 @@ class AcquisitionController:
 
     def _load_csv_bg(self, path: Path) -> None:
         try:
-            recording = read_recording_csv(path)
+            if is_recording_h5_path(path):
+                recording, _ = read_recording_h5(path)
+            else:
+                recording = read_recording_csv(path)
             self.csv_load_results.put(CsvLoadResult(path=path, recording=recording))
         except Exception as exc:  # noqa: BLE001
             self.csv_load_results.put(CsvLoadResult(path=path, error=str(exc)))

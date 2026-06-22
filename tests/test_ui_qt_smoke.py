@@ -385,6 +385,40 @@ def test_lead_off_updates_contact_indicator_without_creating_events(qapp) -> Non
         win.deleteLater()
 
 
+def test_controller_loads_canonical_h5(qapp, tmp_path) -> None:
+    from ads1292_studio.calibration import Calibration
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.h5_io import write_recording_h5
+    from ads1292_studio.metadata import SessionMetadata
+    from ads1292_studio.models import StreamSample
+    from ads1292_studio.protocol import TestProtocol
+    from ads1292_studio.quality_gate import QualityGate
+    from ads1292_studio.recording_bundle import AcquisitionProvenance, RecordingProcessingSettings
+    from ads1292_studio.ui_qt.controller import AcquisitionController
+
+    csv_path = tmp_path / "rec-ads1292-studio.csv"
+    csv_path.write_text("journal\n")
+    samples = tuple(
+        StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                     board_heart_rate=60, board_respiration_rate=15, status_byte=0)
+        for i in range(10)
+    )
+    h5 = write_recording_h5(
+        csv_path, samples=samples, sample_rate_hz=500.0,
+        metadata=SessionMetadata(), events=(EventMarker(timestamp_seconds=0.0, label="x"),),
+        calibration=Calibration(), acquisition=AcquisitionProvenance(),
+        protocol=TestProtocol(), quality_gate=QualityGate(),
+        processing=RecordingProcessingSettings(), created_at="2026-06-21T20:00:00",
+    )
+    ctrl = AcquisitionController()
+    ctrl._load_csv_bg(h5)  # synchronous path
+    res = ctrl.csv_load_results.get_nowait()
+    assert res.error is None
+    assert res.recording is not None
+    assert len(res.recording.samples) == 10
+    assert res.recording.samples[4].ch2 == -4
+
+
 def test_pending_range_start_draws_distinct_vertical_line(qapp) -> None:
     from ads1292_studio.ui_qt.live_panel import LivePanel
     from ads1292_studio.ui_qt.tokens import design_tokens

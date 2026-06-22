@@ -72,6 +72,11 @@ class SidebarForms(QTabWidget):
         self._add_button(lay, "Load CSV", primary=True)
 
         lay.addSpacing(6)
+        lay.addWidget(_group_head("Export from .h5"))
+        for name in ("Export XLSX", "Export JSON"):
+            self._add_button(lay, name)
+
+        lay.addSpacing(6)
         lay.addWidget(_group_head("Optional archive"))
         for name in ("Export Report", "Export Package", "Verify Package", "Batch Compare", "Session Index"):
             self._add_button(lay, name)

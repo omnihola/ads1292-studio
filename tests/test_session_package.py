@@ -415,3 +415,44 @@ def test_verify_session_package_fails_when_acquisition_completion_is_open(
     result = verify_session_package(export.manifest_path)
     assert result.ok is False
     assert "acquisition completion audit failed: pending" in result.failures
+
+
+def test_export_package_from_canonical_h5_verifies_ok(tmp_path: Path) -> None:
+    """A package built from the canonical .h5 (no JSON sidecars) includes the
+    .h5 and passes verification via the package manifest + embedded integrity."""
+    from ads1292_studio.h5_io import write_recording_h5
+    from ads1292_studio.protocol import TestProtocol
+    from ads1292_studio.recording_bundle import RecordingProcessingSettings
+
+    csv_path = tmp_path / "live" / "2026-06-21-h5pkg-ads1292-studio.csv"
+    csv_path.parent.mkdir(parents=True)
+    samples = tuple(
+        StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                     board_heart_rate=60, board_respiration_rate=15, status_byte=0)
+        for i in range(40)
+    )
+    write_recording_csv(csv_path, samples)
+    prov = finalize_acquisition_provenance(
+        build_acquisition_provenance(
+            csv_path=csv_path, acquisition_mode="live", port="/dev/x",
+            sample_rate_hz=500.0, calibration=Calibration(), live_calibration=None,
+            started_at="2026-06-21T00:00:00",
+        ),
+        ended_at="2026-06-21T00:01:00", finalized_at="2026-06-21T00:01:00",
+        sample_count=len(samples), first_timestamp_seconds=0.0,
+        last_timestamp_seconds=samples[-1].timestamp,
+    )
+    write_recording_h5(
+        csv_path, samples=samples, sample_rate_hz=500.0,
+        metadata=SessionMetadata(operator="zoe"),
+        events=(EventMarker(timestamp_seconds=0.02, label="motion"),),
+        calibration=Calibration(), acquisition=prov, protocol=TestProtocol(),
+        quality_gate=QualityGate(), processing=RecordingProcessingSettings(),
+        created_at="2026-06-21T00:01:00",
+    )
+
+    export = export_session_package(csv_path=csv_path, out_dir=tmp_path / "packages")
+    names = sorted(p.name for p in export.package_dir.iterdir())
+    assert any(n.endswith(".h5") for n in names), names
+    result = verify_session_package(export.manifest_path)
+    assert result.ok is True, result.failures
