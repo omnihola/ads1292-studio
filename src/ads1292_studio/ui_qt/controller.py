@@ -253,6 +253,11 @@ class AcquisitionController:
             recording = read_recording_csv(self.recording_path)
             samples = recording.samples
             sample_count = len(samples)
+            if sample_count == 0:
+                # Empty capture: never write a degenerate 0-sample .h5 and never
+                # delete the (empty) CSV — keep whatever exists, do nothing else.
+                out.logs.append("Recording was empty (0 samples); nothing finalized, CSV kept")
+                return
             first_ts = samples[0].timestamp if samples else 0.0
             last_ts = samples[-1].timestamp if samples else 0.0
             finalized = datetime.now().isoformat(timespec="seconds")

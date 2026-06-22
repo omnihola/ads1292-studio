@@ -428,6 +428,35 @@ def test_finalize_csv_only_selection(tmp_path) -> None:
     assert not csv_path.with_suffix(".xlsx").exists(), "no XLSX when unselected"
 
 
+def test_finalize_empty_recording_keeps_csv_and_skips_h5(tmp_path) -> None:
+    # Start->Stop with zero samples must not produce a degenerate 0-sample .h5
+    # nor delete the (empty) CSV.
+    from ads1292_studio.acquisition import build_acquisition_provenance
+    from ads1292_studio.calibration import Calibration
+    from ads1292_studio.csv_io import CsvRecorder
+    from ads1292_studio.h5_io import recording_h5_path
+    from ads1292_studio.ui_qt.controller import AcquisitionController, DrainOutcome
+
+    csv_path = tmp_path / "live" / "2026-06-21-empty-ads1292-studio.csv"
+    csv_path.parent.mkdir(parents=True)
+    with CsvRecorder(csv_path):  # header only, no samples
+        pass
+    ctrl = AcquisitionController()
+    ctrl.recording_path = csv_path
+    ctrl._keep_csv = False  # even if unchecked, must not delete the only copy
+    ctrl._save_h5 = True
+    ctrl._record_provenance = build_acquisition_provenance(
+        csv_path=csv_path, acquisition_mode="live", port="/dev/x", sample_rate_hz=500.0,
+        calibration=Calibration(), live_calibration=None, started_at="2026-06-21T00:00:00",
+    )
+    ctrl._finalization_pending = True
+    out = DrainOutcome()
+    ctrl._finalize_recording(out)
+    assert not recording_h5_path(csv_path).exists(), "no .h5 for an empty recording"
+    assert csv_path.exists(), "empty CSV kept (not deleted)"
+    assert any("empty" in line.lower() for line in out.logs)
+
+
 def test_finalize_never_deletes_csv_without_a_replacement(tmp_path) -> None:
     # Safety: if CSV is unchecked but no replacement format is written, the
     # only lossless copy must be preserved (never zero copies on disk).
