@@ -59,11 +59,18 @@ class PqrstPanel(FigureCanvasQTAgg):
         _style(self.ax)
         self.ax.set_xlabel("Time relative to R peak (ms)", fontsize=8)
         self.ax.set_ylabel("Filtered counts", fontsize=8)
+        self._draw_beat(pq, review.source.channel)
+
+    def render_recording(self, samples, sample_rate_hz: float, ecg_source: str | None = None) -> None:
+        """Uniform renderer interface (RecordingRenderer)."""
+        self.show_recording(samples, sample_rate_hz)
+
+    def _draw_beat(self, pq, source_channel: str) -> None:
         if pq.average_beat:
             self.ax.plot(pq.time_ms, pq.average_beat, color=_T["ecg"], linewidth=1.4)
             self.ax.axvline(0, color=_T["bad"], linewidth=1.0, linestyle="--")
             self.ax.set_title(
-                f"PQRST · QRS={pq.qrs_clear} · beats={pq.beats_used} · source {review.source.channel}",
+                f"PQRST · QRS={pq.qrs_clear} · beats={pq.beats_used} · source {source_channel}",
                 loc="left", fontsize=9, color=_T["ink"],
             )
         else:
@@ -86,6 +93,10 @@ class SpectrumPanel(FigureCanvasQTAgg):
         self.ax_fft.set_ylabel("Power", fontsize=8)
         self.ax_hist.set_ylabel("Samples", fontsize=8)
         _empty(self.ax_fft, self, "Load a CSV to view the spectrum")
+
+    def render_recording(self, samples, sample_rate_hz: float, ecg_source: str | None = None) -> None:
+        """Uniform renderer interface (RecordingRenderer)."""
+        self.show_recording(samples, ecg_source or "Auto", sample_rate_hz)
 
     def show_recording(self, samples, source: str, sample_rate_hz: float) -> None:
         analysis = build_spectrum_analysis(samples, source=source, sample_rate_hz=sample_rate_hz)

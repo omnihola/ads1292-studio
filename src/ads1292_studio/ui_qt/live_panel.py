@@ -72,6 +72,17 @@ class LivePanel(FigureCanvasQTAgg):
         self._autoscale(self.ax_resp, resp_x, resp_y)
         self.draw_idle()
 
+    def render_recording(self, samples, sample_rate_hz: float, ecg_source: str | None = None) -> None:
+        """Uniform renderer interface (RecordingRenderer): plot a full recording, decimated."""
+        if not samples:
+            self.show_empty("No samples in recording")
+            return
+        step = max(1, len(samples) // 4000)
+        xs = [s.timestamp for s in samples[::step]]
+        ecg = [float(s.ch2) for s in samples[::step]]
+        resp = [float(s.ch1) for s in samples[::step]]
+        self.update_traces(xs, ecg, xs, resp)
+
     def set_event_markers(self, markers) -> None:
         """Overlay point events (dotted line) and range events (shaded span) on the ECG axis."""
         for art in self._event_artists:

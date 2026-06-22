@@ -214,6 +214,10 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self._tab_with(self.spectrum_panel), "Spectrum")
         self.event_log_panel = EventLogPanel()
         self.tabs.addTab(self._tab_with(self.event_log_panel, margins=(8, 8, 8, 8)), "Event Log")
+        # Registry of panels that render a loaded recording (RecordingRenderer protocol:
+        # any object with render_recording(samples, sample_rate_hz, ecg_source)). To add a
+        # new analysis tab, build the panel, addTab it, and append it here.
+        self._recording_renderers = [self.review_panel, self.pqrst_panel, self.spectrum_panel]
         clay.addWidget(self.tabs, 1)
         lay.addWidget(center, 1)
 
@@ -503,19 +507,14 @@ class MainWindow(QMainWindow):
         if not samples:
             return
         fs = recording.sample_rate_hz or SAMPLE_RATE_HZ
-        # decimate the rendered line for very large recordings (analysis uses full data)
-        step = max(1, len(samples) // 4000)
-        xs = [s.timestamp for s in samples[::step]]
-        ecg = [float(s.ch2) for s in samples[::step]]
-        resp = [float(s.ch1) for s in samples[::step]]
-        self.review_panel.update_traces(xs, ecg, xs, resp)
-        self.tabs.setCurrentWidget(self.tabs.widget(1))  # Review CSV
         metrics = self._update_quality(samples, fs)
-        try:
-            self.pqrst_panel.show_recording(samples, fs)
-            self.spectrum_panel.show_recording(samples, metrics.ecg_source, fs)
-        except Exception as exc:  # noqa: BLE001 - analysis is best-effort
-            self.event_log_panel.append_line(f"Analysis render failed: {exc}")
+        # render every registered recording panel through the uniform interface
+        for panel in self._recording_renderers:
+            try:
+                panel.render_recording(samples, fs, metrics.ecg_source)
+            except Exception as exc:  # noqa: BLE001 - per-panel render is best-effort
+                self.event_log_panel.append_line(f"{type(panel).__name__} render failed: {exc}")
+        self.tabs.setCurrentWidget(self.tabs.widget(1))  # Review CSV
 
     def _update_quality(self, samples, sample_rate_hz: float):
         metrics = compute_quality_metrics(tuple(samples), sample_rate_hz=sample_rate_hz)

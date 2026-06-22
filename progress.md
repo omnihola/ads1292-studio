@@ -766,6 +766,7 @@
 ### Phase 44.5 (iterative hardening — scientific data integrity + GUI extensibility)
 Goal: scientific-grade structured/detailed raw data + extensible GUI. Small verified cycles (change → run → full tests → push).
 - **Iter 1 (data integrity):** Qt recording finalize now also writes a `.manifest.json` via `write_recording_manifest` — schema + sample_count + per-file bytes and SHA-256 checksums for csv/json/xlsx. Every recording is now self-verifying (re-checkable via manifest verify / `verify_session_package`). Finalize test extended to assert the manifest exists and carries `sha256`. 537 tests pass.
+- **Iter 2 (GUI extensibility):** unified all recording-review panels under one `render_recording(samples, sample_rate_hz, ecg_source)` interface (RecordingRenderer) — `LivePanel` (review), `PqrstPanel`, `SpectrumPanel`. `main_window` now holds a `_recording_renderers` registry and `_show_recording` loops over it instead of hardcoding each panel. Adding a new analysis tab is now: build panel with `render_recording` → `addTab` → append to the registry (one line, no edits to load logic). Added `test_recording_renderers_registry_renders_all_panels`. 538 tests pass.
 
 ### Phase 44: GUI Modernization (PySide6 / Qt) — design
 - **Status:** in progress (design approved by user; implementation starting)

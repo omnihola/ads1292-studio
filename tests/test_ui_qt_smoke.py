@@ -182,6 +182,27 @@ def test_export_report_writes_files_from_loaded_recording(qapp, tmp_path, monkey
         win.deleteLater()
 
 
+def test_recording_renderers_registry_renders_all_panels(qapp) -> None:
+    """_show_recording drives every registered RecordingRenderer and switches to Review."""
+    from pathlib import Path
+
+    from ads1292_studio.csv_io import read_recording_csv
+
+    src = Path("recordings/2026-06-18-221342-ads1292-studio.csv")
+    if not src.exists():
+        pytest.skip("baseline recording not available")
+
+    win = _make_window(qapp)
+    try:
+        # every registered panel exposes the uniform interface
+        for panel in win._recording_renderers:
+            assert hasattr(panel, "render_recording")
+        win._show_recording(read_recording_csv(src))
+        assert win.tabs.tabText(win.tabs.currentIndex()) == "Review CSV"
+    finally:
+        win.deleteLater()
+
+
 def test_sidebar_forms_build_quality_gate_and_protocol(qapp) -> None:
     from ads1292_studio.protocol import TestProtocol
     from ads1292_studio.quality_gate import QualityGate
