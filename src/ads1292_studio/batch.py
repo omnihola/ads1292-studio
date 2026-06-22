@@ -71,9 +71,12 @@ def aggregate_recordings(paths: list[Path] | tuple[Path, ...]) -> tuple[BatchRow
     rows: list[BatchRow] = []
     for path in paths:
         csv_path = Path(path)
-        recording = read_recording_csv(csv_path)
-        metadata = _metadata_for(csv_path)
-        metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz)
+        try:
+            recording = read_recording_csv(csv_path)
+            metadata = _metadata_for(csv_path)
+            metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz)
+        except Exception:  # noqa: BLE001 - one bad/missing file must not abort the whole batch
+            continue
         rows.append(
             BatchRow(
                 path=csv_path,
@@ -138,7 +141,7 @@ def export_batch_summary(
     _write_csv(csv_path, rows)
     _write_group_csv(group_csv_path, group_summaries)
     _write_png(png_path, rows, title)
-    html_path.write_text(_html(title, rows, group_summaries, png_path.name))
+    html_path.write_text(_html(title, rows, group_summaries, png_path.name), encoding="utf-8")
     return BatchExport(csv_path, group_csv_path, html_path, png_path, rows, group_summaries)
 
 
@@ -175,7 +178,7 @@ def _write_csv(path: Path, rows: tuple[BatchRow, ...]) -> None:
         "t_tentative",
         "quality_label",
     ]
-    with path.open("w", newline="") as handle:
+    with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
         for row in rows:
@@ -193,7 +196,7 @@ def _write_group_csv(path: Path, groups: tuple[BatchGroupSummary, ...]) -> None:
         "mean_r_peaks",
         "mean_hr_median_bpm",
     ]
-    with path.open("w", newline="") as handle:
+    with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
         for group in groups:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import json
+import math
 from pathlib import Path
 
 from ads1292_studio.quality import QualityMetrics
@@ -46,6 +47,18 @@ class QualityGateResult:
 def evaluate_quality_gate(metrics: QualityMetrics, gate: QualityGate | None = None) -> QualityGateResult:
     gate = (gate or QualityGate()).normalized()
     failures: list[str] = []
+    # A non-finite metric (NaN/inf) makes every threshold comparison False and
+    # would silently pass corrupt data — fail explicitly instead.
+    for name, value in (
+        ("duration", metrics.duration_seconds),
+        ("contact %", metrics.contact_ok_percent),
+        ("median HR", metrics.hr_median_bpm),
+        ("baseline drift", metrics.baseline_drift_counts),
+        ("noise RMS", metrics.noise_rms_counts),
+        ("peak-to-peak", metrics.peak_to_peak_counts),
+    ):
+        if not math.isfinite(value):
+            failures.append(f"{name} is not finite ({value})")
     if metrics.duration_seconds < gate.min_duration_seconds:
         failures.append(f"duration {metrics.duration_seconds:.2f}s < {gate.min_duration_seconds:.2f}s")
     if metrics.contact_ok_percent < gate.min_contact_ok_percent:

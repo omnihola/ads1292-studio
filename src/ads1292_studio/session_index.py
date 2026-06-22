@@ -185,13 +185,13 @@ def export_session_index(
     sidecar_plan_rows = build_sidecar_completion_plan(rows, sidecar_template_dir)
     manifest_plan_rows = build_recording_manifest_repair_plan(rows)
     _write_csv(csv_path, rows)
-    html_path.write_text(_html(title, rows, summary))
+    html_path.write_text(_html(title, rows, summary), encoding="utf-8")
     _write_sidecar_plan_csv(sidecar_plan_csv_path, sidecar_plan_rows)
-    sidecar_plan_html_path.write_text(_sidecar_plan_html(title, sidecar_plan_rows))
+    sidecar_plan_html_path.write_text(_sidecar_plan_html(title, sidecar_plan_rows), encoding="utf-8")
     sidecar_template_paths = write_sidecar_template_bundle(sidecar_template_dir, rows)
     write_sidecar_apply_script(sidecar_apply_script_path, sidecar_plan_rows)
     _write_recording_manifest_plan_csv(manifest_plan_csv_path, manifest_plan_rows)
-    manifest_plan_html_path.write_text(_recording_manifest_plan_html(title, manifest_plan_rows))
+    manifest_plan_html_path.write_text(_recording_manifest_plan_html(title, manifest_plan_rows), encoding="utf-8")
     write_recording_manifest_apply_script(manifest_apply_script_path, manifest_plan_rows)
     return SessionIndexExport(
         csv_path=csv_path,
@@ -235,7 +235,7 @@ def write_sidecar_apply_script(path: Path | str, rows: tuple[SidecarPlanRow, ...
                 "",
             ]
         )
-    script_path.write_text("\n".join(lines) + "\n")
+    script_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     script_path.chmod(0o755)
     return script_path
 
@@ -261,7 +261,7 @@ def write_recording_manifest_apply_script(path: Path | str, rows: tuple[Recordin
                 "",
             ]
         )
-    script_path.write_text("\n".join(lines) + "\n")
+    script_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     script_path.chmod(0o755)
     return script_path
 
@@ -347,7 +347,7 @@ def _looks_like_recording_csv(path: Path) -> bool:
     if "session-index" in path.stem or path.stem.endswith("-groups"):
         return False
     try:
-        with path.open(newline="") as handle:
+        with path.open(newline="", encoding="utf-8") as handle:
             header = next(csv.reader(handle), [])
     except (OSError, StopIteration):
         return False
@@ -621,7 +621,7 @@ def _acquisition_template(row: SessionIndexRow):
 
 def _acquisition_mode_for_csv(path: Path) -> str:
     try:
-        with path.open(newline="") as handle:
+        with path.open(newline="", encoding="utf-8") as handle:
             header = next(csv.reader(handle), [])
     except (OSError, StopIteration):
         return "live_stream"
@@ -682,7 +682,7 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
         "package_ready_status",
         "next_action",
     ]
-    with path.open("w", newline="") as handle:
+    with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
         for row in rows:
@@ -691,7 +691,7 @@ def _write_csv(path: Path, rows: tuple[SessionIndexRow, ...]) -> None:
 
 def _write_sidecar_plan_csv(path: Path, rows: tuple[SidecarPlanRow, ...]) -> None:
     columns = ["relative_path", "sidecar", "target_path", "template_path", "suggested_action"]
-    with path.open("w", newline="") as handle:
+    with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
         for row in rows:
@@ -708,7 +708,7 @@ def _write_sidecar_plan_csv(path: Path, rows: tuple[SidecarPlanRow, ...]) -> Non
 
 def _write_recording_manifest_plan_csv(path: Path, rows: tuple[RecordingManifestPlanRow, ...]) -> None:
     columns = ["relative_path", "manifest_status", "target_path", "suggested_action"]
-    with path.open("w", newline="") as handle:
+    with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
         for row in rows:

@@ -100,3 +100,35 @@ def test_recording_xlsx_contains_events_and_data_sheets(tmp_path: Path) -> None:
     assert "motion" in events_xml
     assert "ch1_counts" in data_xml
     assert "900" in data_xml
+
+
+def test_xlsx_event_label_with_control_char_stays_valid_xml(tmp_path):
+    import xml.etree.ElementTree as ET
+    from ads1292_studio.csv_io import write_recording_csv
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.models import StreamSample
+    from ads1292_studio.xlsx_io import write_recording_xlsx
+
+    csv = tmp_path / "rec.csv"
+    write_recording_csv(csv, [StreamSample(timestamp=0.0, ch1=1, ch2=2,
+                                           board_heart_rate=0, board_respiration_rate=0, status_byte=0)])
+    ev = EventMarker(timestamp_seconds=0.0, label="motion\x01start", notes="line\x0bbreak")
+    out = write_recording_xlsx(csv, events=(ev,), sample_rate_hz=500.0)
+    with zipfile.ZipFile(out) as zf:
+        # both worksheets must be well-formed XML (no illegal control chars)
+        ET.fromstring(zf.read("xl/worksheets/sheet1.xml"))
+        ET.fromstring(zf.read("xl/worksheets/sheet2.xml"))
+
+
+def test_xlsx_is_number_rejects_nonfinite_and_leading_zero():
+    from ads1292_studio.xlsx_io import _is_number
+
+    assert _is_number("500") is True
+    assert _is_number("-3.5") is True
+    assert _is_number("1e3") is True
+    assert _is_number("nan") is False
+    assert _is_number("inf") is False
+    assert _is_number("007") is False   # zero-padded identifier stays text
+    assert _is_number(" 5 ") is False   # whitespace
+    assert _is_number("1_000") is False
+    assert _is_number("+1") is False

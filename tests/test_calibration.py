@@ -71,3 +71,11 @@ def test_live_stream_peak_to_peak_counts_uses_robust_low_high_levels() -> None:
     peak_to_peak = live_stream_peak_to_peak_counts(values)
 
     assert 1063.0 <= peak_to_peak <= 1067.0
+
+
+def test_microvolts_per_count_matches_datasheet_formula():
+    # ADS1292: 1 LSB = (Vref/PGA) / 2^(bits-1). For 2420 mV, PGA 6, 24-bit:
+    from ads1292_studio.calibration import Calibration
+
+    expected = 2420.0 * 1000.0 / (6.0 * 2 ** 23)
+    assert Calibration().microvolts_per_count == expected

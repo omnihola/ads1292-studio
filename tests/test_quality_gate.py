@@ -89,3 +89,22 @@ def test_quality_gate_json_round_trip_preserves_optional_artifact_limits(tmp_pat
 
 def test_quality_gate_template_is_default_gate() -> None:
     assert quality_gate_template() == QualityGate()
+
+
+def test_nan_metric_fails_the_gate():
+    import math
+    from dataclasses import replace
+    from ads1292_studio.quality import compute_quality_metrics
+    from ads1292_studio.quality_gate import QualityGate, evaluate_quality_gate
+    from ads1292_studio.models import StreamSample
+
+    samples = tuple(
+        StreamSample(timestamp=i / 500.0, ch1=0, ch2=int(500 * (i % 2)),
+                     board_heart_rate=0, board_respiration_rate=0, status_byte=0)
+        for i in range(2000)
+    )
+    m = compute_quality_metrics(samples, sample_rate_hz=500.0)
+    bad = replace(m, noise_rms_counts=float("nan"))
+    result = evaluate_quality_gate(bad, QualityGate())
+    assert result.passed is False
+    assert any("not finite" in f for f in result.failures)

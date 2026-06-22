@@ -77,7 +77,7 @@ def write_recording_bundle(
         sample_rate_hz=sample_rate_hz,
         created_at=created_at,
     )
-    output.write_text(json.dumps(payload, indent=2) + "\n")
+    output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return output
 
 

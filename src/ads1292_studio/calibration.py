@@ -25,7 +25,10 @@ class Calibration:
     @property
     def microvolts_per_count(self) -> float:
         normalized = self.normalized()
-        full_scale_counts = float((2 ** (normalized.adc_bits - 1)) - 1)
+        # ADS1292 datasheet: 1 LSB = (2*Vref/PGA) / 2^bits = (Vref/PGA) / 2^(bits-1).
+        # Full-scale codes span 2^(bits-1) per polarity (not 2^(bits-1)-1, which is
+        # the largest positive code, a ~0.12 ppm error).
+        full_scale_counts = float(2 ** (normalized.adc_bits - 1))
         return normalized.vref_mv * 1000.0 / (normalized.pga_gain * full_scale_counts)
 
 

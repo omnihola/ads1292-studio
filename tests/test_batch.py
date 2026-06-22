@@ -100,3 +100,17 @@ def test_export_batch_summary_writes_group_summary_csv_and_html(tmp_path: Path) 
     assert "commercial Ag/AgCl,2,2,100.0" in group_csv
     assert "Group Summary" in html
     assert "Usable %" in html
+
+
+def test_batch_skips_unreadable_files_instead_of_aborting(tmp_path):
+    from ads1292_studio.batch import aggregate_recordings
+    from ads1292_studio.csv_io import write_recording_csv
+    from ads1292_studio.models import StreamSample
+
+    good = tmp_path / "good-ads1292-studio.csv"
+    write_recording_csv(good, [StreamSample(timestamp=0.0, ch1=1, ch2=2,
+                                            board_heart_rate=0, board_respiration_rate=0, status_byte=0)])
+    missing = tmp_path / "does-not-exist.csv"
+    rows = aggregate_recordings([missing, good])  # missing must not abort
+    assert len(rows) == 1
+    assert rows[0].path == good

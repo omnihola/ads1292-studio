@@ -105,7 +105,8 @@ def export_review_report(
             protocol,
             segment_metrics,
             segment_gate_result,
-        )
+        ),
+        encoding="utf-8",
     )
     return ReportExport(html_path, ecg_png, pqrst_png, spectrum_png, metrics, segment_metrics, segment_gate_result)
 

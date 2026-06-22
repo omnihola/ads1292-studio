@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from pathlib import Path
 import zipfile
 from xml.sax.saxutils import escape
@@ -163,7 +164,13 @@ def _cell_xml(row_index: int, column_index: int, value) -> str:
     text = "" if value is None else str(value)
     if _is_number(text):
         return f'<c r="{reference}"><v>{escape(text)}</v></c>'
-    return f'<c r="{reference}" t="inlineStr"><is><t>{escape(text)}</t></is></c>'
+    return f'<c r="{reference}" t="inlineStr"><is><t>{escape(_xml_safe(text))}</t></is></c>'
+
+
+def _xml_safe(text: str) -> str:
+    """Drop characters illegal in XML 1.0 (C0 controls except tab/newline/CR)
+    so a pasted control byte in a label/notes cell can't corrupt the workbook."""
+    return "".join(c for c in text if c in "\t\n\r" or ord(c) >= 0x20)
 
 
 def _column_name(index: int) -> str:
@@ -175,11 +182,11 @@ def _column_name(index: int) -> str:
     return name
 
 
+_NUMBER_RE = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$")
+
+
 def _is_number(value: str) -> bool:
-    if not value:
-        return False
-    try:
-        float(value)
-    except ValueError:
-        return False
-    return True
+    # Strict OOXML-safe numeric test: no whitespace, no '+', no underscores, no
+    # inf/nan, and no leading-zero integers (e.g. a zero-padded "007" id stays
+    # text so Excel doesn't strip the leading zeros).
+    return bool(_NUMBER_RE.match(value))
