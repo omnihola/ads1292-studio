@@ -255,12 +255,20 @@ class AcquisitionController:
 
     def _measured_rate_attrs(self, sample_count: int) -> dict[str, float]:
         """Effective acquisition rate from the worker's first/last sample wall
-        timestamps. Empty when not measurable (too few samples / no timing)."""
+        timestamps. Empty when not measurable (too few samples / no timing) or
+        when the measured span is implausible vs the nominal span — the latter
+        self-guards against stale timestamps leaking from a prior run, so a
+        bogus rate is never written into the research record."""
         first = getattr(self.worker, "acq_first_monotonic", None)
         last = getattr(self.worker, "acq_last_monotonic", None)
         if first is None or last is None or last <= first or sample_count < 2:
             return {}
         wall = float(last - first)
+        nominal = (sample_count - 1) / SAMPLE_RATE_HZ
+        # gaps only ADD wall time; a measured span far from nominal means the
+        # timestamps don't belong to this recording -> discard rather than lie.
+        if nominal <= 0 or not (0.5 * nominal <= wall <= 5.0 * nominal):
+            return {}
         return {
             "effective_sample_rate_hz": (sample_count - 1) / wall,
             "wall_clock_seconds": wall,

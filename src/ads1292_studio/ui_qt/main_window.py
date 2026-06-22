@@ -121,7 +121,15 @@ class MainWindow(QMainWindow):
             self._shortcuts[keys] = sc
 
     def _on_toggle_record(self) -> None:
-        """Space toggles acquisition: stop if streaming, else start if able."""
+        """Space toggles acquisition: stop if streaming, else start if able.
+
+        Ignored while a text field has focus (e.g. the editable port box or the
+        event label/notes) so typing a space doesn't toggle recording.
+        """
+        from PySide6.QtWidgets import QApplication, QLineEdit
+
+        if isinstance(QApplication.focusWidget(), QLineEdit):
+            return
         if self.controller.is_streaming:
             self._on_stop()
         elif self.controls["Start"].isEnabled():
@@ -603,6 +611,10 @@ class MainWindow(QMainWindow):
         return self.event_console.notes_edit.text().strip()
 
     def _on_add_point(self) -> None:
+        # Only annotate when there is a timeline to annotate (streaming or a
+        # loaded recording) — a stray "P" while idle must not create markers.
+        if not (self.controller.is_streaming or self.controller.has_data):
+            return
         marker = EventMarker(
             timestamp_seconds=self._now_seconds(), label=self._event_label(), notes=self._event_notes()
         ).normalized()

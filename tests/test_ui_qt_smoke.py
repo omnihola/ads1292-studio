@@ -539,6 +539,59 @@ def test_low_disk_space_blocks_recording_start(qapp, monkeypatch) -> None:
         win.deleteLater()
 
 
+def test_add_point_ignored_when_idle(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        n = len(win.controller.event_markers)
+        # idle: not streaming, no loaded data -> P must not create a marker
+        win.controller.is_streaming = False
+        win.controller.has_data = False
+        win._on_add_point()
+        assert len(win.controller.event_markers) == n
+        # streaming -> allowed
+        win.controller.is_streaming = True
+        win._on_add_point()
+        assert len(win.controller.event_markers) == n + 1
+    finally:
+        win.deleteLater()
+
+
+def test_space_toggle_ignored_while_typing_in_text_field(qapp, monkeypatch) -> None:
+    from PySide6.QtWidgets import QApplication, QLineEdit
+
+    win = _make_window(qapp)
+    try:
+        win.controller.connected_port = "/dev/x"
+        win._refresh_state()
+        calls = {"n": 0}
+        monkeypatch.setattr(win, "_on_start", lambda: calls.__setitem__("n", calls["n"] + 1))
+        # a text field has focus -> Space must not toggle
+        monkeypatch.setattr(QApplication, "focusWidget", staticmethod(lambda: QLineEdit()))
+        win._on_toggle_record()
+        assert calls["n"] == 0
+        # no text focus -> toggles
+        monkeypatch.setattr(QApplication, "focusWidget", staticmethod(lambda: None))
+        win._on_toggle_record()
+        assert calls["n"] == 1
+    finally:
+        win.deleteLater()
+
+
+def test_measured_rate_discards_implausible_stale_timestamps(qapp, tmp_path) -> None:
+    from ads1292_studio.ui_qt.controller import AcquisitionController
+
+    ctrl = AcquisitionController()
+    # 30 samples nominal span = 29/500 = 0.058 s; a stale 1000 s span is absurd
+    ctrl.worker.acq_first_monotonic = 0.0
+    ctrl.worker.acq_last_monotonic = 1000.0
+    assert ctrl._measured_rate_attrs(30) == {}
+    # a plausible span (~nominal) is accepted
+    ctrl.worker.acq_first_monotonic = 0.0
+    ctrl.worker.acq_last_monotonic = 29 / 500.0
+    attrs = ctrl._measured_rate_attrs(30)
+    assert attrs and abs(attrs["effective_sample_rate_hz"] - 500.0) < 1.0
+
+
 def test_keyboard_shortcuts_registered(qapp) -> None:
     win = _make_window(qapp)
     try:
