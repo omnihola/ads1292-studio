@@ -67,6 +67,16 @@ def test_build_qss_is_deterministic() -> None:
     assert build_qss() == build_qss()
 
 
+def test_build_qss_has_checked_button_rule_with_accent() -> None:
+    qss = build_qss()
+    tokens = design_tokens()
+    assert "QPushButton:checked" in qss, "no :checked rule for toggle buttons"
+    # the checked rule should fill with the accent color
+    checked_idx = qss.index("QPushButton:checked")
+    rule = qss[checked_idx:checked_idx + 120]
+    assert tokens["accent"] in rule, "checked button should use the accent fill"
+
+
 def test_build_qss_accepts_custom_tokens() -> None:
     custom = design_tokens()
     custom["accent"] = "#123456"

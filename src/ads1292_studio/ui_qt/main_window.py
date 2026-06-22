@@ -147,7 +147,6 @@ class MainWindow(QMainWindow):
         lay.setSpacing(8)
         lay.addWidget(self._caps("Display"))
         auto = QPushButton("Auto scale")
-        auto.setObjectName("Primary")
         auto.setCheckable(True)
         auto.setChecked(True)
         auto.setFocusPolicy(Qt.FocusPolicy.NoFocus)

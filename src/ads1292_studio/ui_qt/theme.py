@@ -60,6 +60,8 @@ QPushButton {{
     font-weight: 600;
 }}
 QPushButton:hover {{ border-color: {t['accent']}; color: {t['accent']}; }}
+QPushButton:checked {{ background: {t['accent']}; color: #FFFFFF; border-color: {t['accent']}; }}
+QPushButton:checked:hover {{ background: {t['accent_press']}; color: #FFFFFF; border-color: {t['accent_press']}; }}
 QPushButton:disabled {{ color: {t['ink_faint']}; border-color: {t['border']}; background: {t['panel']}; }}
 QPushButton#Primary {{ background: {t['accent']}; color: #FFFFFF; border-color: {t['accent']}; }}
 QPushButton#Primary:hover {{ background: {t['accent_press']}; border-color: {t['accent_press']}; color: #FFFFFF; }}

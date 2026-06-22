@@ -375,6 +375,35 @@ def test_lead_off_updates_contact_indicator_without_creating_events(qapp) -> Non
         win.deleteLater()
 
 
+def test_filter_button_fills_accent_when_checked(qapp) -> None:
+    from ads1292_studio.ui_qt.theme import apply_theme
+
+    apply_theme(qapp, "light")
+    win = _make_window(qapp)
+    try:
+        win.show()
+        qapp.processEvents()
+        hp = win._filter_btns["HP"]
+
+        def center(btn):
+            img = btn.grab().toImage()
+            c = img.pixelColor(img.width() // 2, img.height() // 2)
+            return c.red(), c.green(), c.blue()
+
+        # unchecked -> light/white background
+        r, g, b = center(hp)
+        assert r > 200 and g > 200 and b > 200, f"unchecked HP not light: {(r,g,b)}"
+        # checked -> accent teal fill #1E88A8 (30,136,168)
+        hp.setChecked(True)
+        qapp.processEvents()
+        r, g, b = center(hp)
+        assert abs(r - 30) < 40 and abs(g - 136) < 40 and abs(b - 168) < 40, (
+            f"checked HP not accent teal: {(r,g,b)}"
+        )
+    finally:
+        win.deleteLater()
+
+
 def test_invert_ecg_button_flips_live_traces(qapp) -> None:
     from collections import deque
 
