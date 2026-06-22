@@ -150,16 +150,19 @@ class MainWindow(QMainWindow):
         auto.setObjectName("Primary")
         auto.setCheckable(True)
         auto.setChecked(True)
+        auto.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         lay.addWidget(auto)
         self._filter_btns: dict[str, QPushButton] = {}
         for f in ("HP", "Notch", "LP", "QRS"):
             b = QPushButton(f)
             b.setCheckable(True)
+            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             b.toggled.connect(self._on_filter_changed)
             lay.addWidget(b)
             self._filter_btns[f] = b
         self._invert_btn = QPushButton("⇅ Invert ECG")
         self._invert_btn.setCheckable(True)
+        self._invert_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._invert_btn.toggled.connect(self._on_filter_changed)
         lay.addWidget(self._invert_btn)
         lay.addWidget(self._caps("Scale"))
@@ -275,6 +278,8 @@ class MainWindow(QMainWindow):
         btn = QPushButton(name)
         if object_name:
             btn.setObjectName(object_name)
+        # NoFocus prevents the macOS native focus ring/glow from sticking after a click
+        btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         btn.clicked.connect(slot)
         self.controls[name] = btn
         layout.addWidget(btn)

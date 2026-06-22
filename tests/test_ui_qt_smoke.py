@@ -316,6 +316,43 @@ def test_filter_settings_reflected_in_current_filter_settings(qapp) -> None:
         win.deleteLater()
 
 
+def test_control_buttons_use_no_focus_to_avoid_macos_focus_glow(qapp) -> None:
+    from PySide6.QtCore import Qt
+
+    win = _make_window(qapp)
+    try:
+        for name in ("Connect", "Start", "Stop", "Refresh", "Calibrate Live"):
+            assert win.controls[name].focusPolicy() == Qt.FocusPolicy.NoFocus, (
+                f"{name} should not retain click focus (macOS focus glow)"
+            )
+    finally:
+        win.deleteLater()
+
+
+def test_disabled_start_button_is_dimmed_not_saturated_green(qapp) -> None:
+    from ads1292_studio.ui_qt.theme import apply_theme
+
+    apply_theme(qapp, "light")
+    win = _make_window(qapp)
+    try:
+        win.show()
+        qapp.processEvents()
+        # streaming -> Start disabled; it must not stay the saturated 'ok' green
+        win.controller.connected_port = "/dev/x"
+        win.controller.is_streaming = True
+        win._refresh_state()
+        qapp.processEvents()
+        start = win.controls["Start"]
+        assert start.isEnabled() is False
+        img = start.grab().toImage()
+        c = img.pixelColor(img.width() // 2, img.height() // 2)
+        # ok green is #2E9E6B (46,158,107). A properly disabled button must differ.
+        is_green = abs(c.red() - 46) < 30 and abs(c.green() - 158) < 30 and abs(c.blue() - 107) < 30
+        assert not is_green, f"disabled Start still green: #{c.red():02X}{c.green():02X}{c.blue():02X}"
+    finally:
+        win.deleteLater()
+
+
 def test_lead_off_auto_annotates_interval_and_updates_contact(qapp) -> None:
     win = _make_window(qapp)
     try:

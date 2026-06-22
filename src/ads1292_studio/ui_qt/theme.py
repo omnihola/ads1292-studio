@@ -66,7 +66,9 @@ QPushButton#Primary:hover {{ background: {t['accent_press']}; border-color: {t['
 QPushButton#Primary:disabled {{ background: {t['panel']}; color: {t['ink_faint']}; border-color: {t['border']}; }}
 QPushButton#Go {{ background: {t['ok']}; color: #FFFFFF; border-color: {t['ok']}; }}
 QPushButton#Go:hover {{ background: {t['ok']}; color: #FFFFFF; }}
+QPushButton#Go:disabled {{ background: {t['panel']}; color: {t['ink_faint']}; border-color: {t['border']}; }}
 QPushButton#Danger {{ background: {t['bad_soft']}; color: {t['bad']}; border-color: {t['bad']}; }}
+QPushButton#Danger:disabled {{ background: {t['panel']}; color: {t['ink_faint']}; border-color: {t['border']}; }}
 
 /* ---- inputs ---- */
 QComboBox, QLineEdit {{
