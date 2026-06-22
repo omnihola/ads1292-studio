@@ -37,6 +37,8 @@ from ads1292_studio.ui_qt.sidebar_forms import SidebarForms
 from ads1292_studio.ui_qt.status_panel import StatusPanel
 from ads1292_studio.ui_qt.tokens import design_tokens
 from ads1292_studio.ui_qt.widgets import pill
+from ads1292_studio.display import SoftwareFilterSettings
+from ads1292_studio.signal_processing import apply_software_filters
 from ads1292_studio.workers import AcquisitionMode
 
 _T = design_tokens()
@@ -145,10 +147,13 @@ class MainWindow(QMainWindow):
         auto.setCheckable(True)
         auto.setChecked(True)
         lay.addWidget(auto)
-        for f in ("HP", "Notch", "LP", "QRS filter"):
+        self._filter_btns: dict[str, QPushButton] = {}
+        for f in ("HP", "Notch", "LP", "QRS"):
             b = QPushButton(f)
             b.setCheckable(True)
+            b.toggled.connect(self._on_filter_changed)
             lay.addWidget(b)
+            self._filter_btns[f] = b
         lay.addWidget(self._caps("Scale"))
         for label, items in (("Window", ["8 s"]), ("Gain", ["1x"]), ("Speed", ["25 mm/s"])):
             lay.addWidget(QLabel(label))
@@ -156,10 +161,26 @@ class MainWindow(QMainWindow):
             combo.addItems(items)
             lay.addWidget(combo)
         lay.addStretch(1)
-        hint = QLabel("CH2 Lead I · CH1 Resp · Contact · raw · 1x · 8 s · 25 mm/s")
-        hint.setObjectName("Faint")
-        lay.addWidget(hint)
+        self._filter_hint = QLabel("CH2 Lead I · CH1 Resp · raw")
+        self._filter_hint.setObjectName("Faint")
+        lay.addWidget(self._filter_hint)
         return frame
+
+    def _on_filter_changed(self) -> None:
+        self._update_filter_hint()
+
+    def _update_filter_hint(self) -> None:
+        active = [k for k, b in self._filter_btns.items() if b.isChecked()]
+        label = "filters: " + ", ".join(active) if active else "raw"
+        self._filter_hint.setText(f"CH2 Lead I · CH1 Resp · {label}")
+
+    def _current_filter_settings(self) -> SoftwareFilterSettings:
+        return SoftwareFilterSettings(
+            highpass_enabled=self._filter_btns["HP"].isChecked(),
+            notch_enabled=self._filter_btns["Notch"].isChecked(),
+            lowpass_enabled=self._filter_btns["LP"].isChecked(),
+            bandpass_enabled=self._filter_btns["QRS"].isChecked(),
+        )
 
     # ---------- body ----------
     def _build_body(self) -> QWidget:
@@ -485,12 +506,19 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "ADS1292 Studio", err)
 
     def _redraw_live(self) -> None:
+        import numpy as np
+
         n = len(self._ch2)
         if n == 0:
             return
         start_index = self._sample_count - n
         xs = [(start_index + i) / SAMPLE_RATE_HZ for i in range(n)]
-        self.live_panel.update_traces(xs, list(self._ch2), xs, list(self._ch1))
+        fs = self._current_filter_settings()
+        ecg_raw = np.asarray(self._ch2, dtype=float)
+        resp_raw = np.asarray(self._ch1, dtype=float)
+        ecg_y = apply_software_filters(ecg_raw, SAMPLE_RATE_HZ, fs).tolist()
+        resp_y = apply_software_filters(resp_raw, SAMPLE_RATE_HZ, fs).tolist()
+        self.live_panel.update_traces(xs, ecg_y, xs, resp_y)
         self._update_live_snr()
 
     def _update_live_snr(self) -> None:

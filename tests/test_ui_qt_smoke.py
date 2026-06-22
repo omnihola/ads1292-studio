@@ -284,6 +284,38 @@ def test_info_panel_shows_uv_when_calibration_set(qapp) -> None:
     assert "not applied" in text2, "uncalibrated panel should say 'not applied'"
 
 
+def test_filter_buttons_change_hint_label(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        assert "raw" in win._filter_hint.text()
+        win._filter_btns["Notch"].setChecked(True)
+        assert "Notch" in win._filter_hint.text()
+        win._filter_btns["HP"].setChecked(True)
+        assert "HP" in win._filter_hint.text()
+        win._filter_btns["Notch"].setChecked(False)
+        win._filter_btns["HP"].setChecked(False)
+        assert "raw" in win._filter_hint.text()
+    finally:
+        win.deleteLater()
+
+
+def test_filter_settings_reflected_in_current_filter_settings(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        fs = win._current_filter_settings()
+        assert not fs.notch_enabled
+        assert not fs.highpass_enabled
+        win._filter_btns["Notch"].setChecked(True)
+        win._filter_btns["HP"].setChecked(True)
+        fs2 = win._current_filter_settings()
+        assert fs2.notch_enabled
+        assert fs2.highpass_enabled
+        assert not fs2.lowpass_enabled
+        assert not fs2.bandpass_enabled
+    finally:
+        win.deleteLater()
+
+
 def test_main_window_calibration_syncs_to_live_panel(qapp) -> None:
     from ads1292_studio.calibration import LiveStreamCalibration
 
