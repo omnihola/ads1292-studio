@@ -511,7 +511,7 @@ class MainWindow(QMainWindow):
     def _refresh_events(self) -> None:
         markers = self.controller.event_markers
         self.event_console.set_event_status(len(markers), self._range_start_s)
-        self.live_panel.set_event_markers(markers)
+        self.live_panel.set_event_markers(markers, pending_range_start=self._range_start_s)
 
     # ---------- tick ----------
     def _set_timer_active(self, active: bool) -> None:

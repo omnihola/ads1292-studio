@@ -107,8 +107,13 @@ class LivePanel(FigureCanvasQTAgg):
         resp = [float(s.ch1) for s in samples[::step]]
         self.update_traces(xs, ecg, xs, resp)
 
-    def set_event_markers(self, markers) -> None:
-        """Overlay point events (dotted line) and range events (shaded span) on the ECG axis."""
+    def set_event_markers(self, markers, pending_range_start: float | None = None) -> None:
+        """Overlay event markers on the ECG axis.
+
+        Point events are a dotted amber line, range events a shaded amber span,
+        and a pending (not-yet-ended) range start is a dashed indigo line so it
+        reads as "range in progress" until End Range closes it.
+        """
         for art in self._event_artists:
             try:
                 art.remove()
@@ -125,6 +130,11 @@ class LivePanel(FigureCanvasQTAgg):
             else:
                 line = self.ax_ecg.axvline(m.timestamp_seconds, color=_T["warn"], linewidth=1.0, linestyle=":")
                 self._event_artists.append(line)
+        if pending_range_start is not None:
+            pending = self.ax_ecg.axvline(
+                pending_range_start, color=_T["indigo"], linewidth=1.4, linestyle="--"
+            )
+            self._event_artists.append(pending)
         self.draw_idle()
 
     @staticmethod

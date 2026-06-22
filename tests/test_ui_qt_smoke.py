@@ -375,6 +375,29 @@ def test_lead_off_updates_contact_indicator_without_creating_events(qapp) -> Non
         win.deleteLater()
 
 
+def test_pending_range_start_draws_distinct_vertical_line(qapp) -> None:
+    from ads1292_studio.ui_qt.live_panel import LivePanel
+    from ads1292_studio.ui_qt.tokens import design_tokens
+
+    panel = LivePanel()
+    try:
+        tokens = design_tokens()
+        # no pending start -> no extra artist
+        panel.set_event_markers([], pending_range_start=None)
+        assert len(panel._event_artists) == 0
+        # pending start -> one vertical line at t, colored distinctly from warn
+        panel.set_event_markers([], pending_range_start=3.5)
+        assert len(panel._event_artists) == 1
+        line = panel._event_artists[0]
+        xs = line.get_xdata()
+        assert xs[0] == pytest.approx(3.5)
+        color = line.get_color()
+        assert color == tokens["indigo"], f"pending range line should be indigo, got {color}"
+        assert color != tokens["warn"], "pending range line must differ from point-event color"
+    finally:
+        panel.deleteLater()
+
+
 def test_filter_button_fills_accent_when_checked(qapp) -> None:
     from ads1292_studio.ui_qt.theme import apply_theme
 
