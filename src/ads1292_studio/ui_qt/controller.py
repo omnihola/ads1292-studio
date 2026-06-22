@@ -33,11 +33,9 @@ from ads1292_studio.models import Recording, StreamSample, StreamStartResult
 from ads1292_studio.processing import build_processing_settings
 from ads1292_studio.protocol import protocol_template
 from ads1292_studio.quality_gate import QualityGate
-from ads1292_studio.recording_bundle import recording_bundle_path, write_recording_bundle
-from ads1292_studio.recording_manifest import write_recording_manifest
+from ads1292_studio.h5_io import write_recording_h5
 from ads1292_studio.recording_paths import recording_csv_path
 from ads1292_studio.workers import AcquisitionMode, LiveWorker
-from ads1292_studio.xlsx_io import write_recording_xlsx
 
 MAX_SAMPLES_PER_DRAIN = 1000
 SAMPLE_RATE_HZ = 500.0
@@ -232,8 +230,13 @@ class AcquisitionController:
                 last_timestamp_seconds=last_ts,
             )
             events = tuple(self.event_markers)
-            write_recording_bundle(
+            # Canonical container: one .h5 with raw arrays + full metadata +
+            # SHA-256 integrity. The live CSV journal is kept for crash safety;
+            # XLSX/JSON are produced on demand from the .h5 (see h5_export).
+            h5_path = write_recording_h5(
                 self.recording_path,
+                samples=samples,
+                sample_rate_hz=SAMPLE_RATE_HZ,
                 metadata=self._record_metadata,
                 events=events,
                 calibration=Calibration(),
@@ -241,15 +244,11 @@ class AcquisitionController:
                 protocol=self._record_protocol,
                 quality_gate=self._record_quality_gate,
                 processing=build_processing_settings(sample_rate_hz=SAMPLE_RATE_HZ),
-                sample_rate_hz=SAMPLE_RATE_HZ,
                 created_at=finalized,
             )
-            xlsx_path = write_recording_xlsx(self.recording_path, events=events, sample_rate_hz=SAMPLE_RATE_HZ)
-            manifest_path = write_recording_manifest(self.recording_path, created_at=finalized)
             out.logs.append(f"Recording finalized: {sample_count} samples")
-            out.logs.append(f"Recording JSON written: {recording_bundle_path(self.recording_path)}")
-            out.logs.append(f"Recording XLSX written: {xlsx_path}")
-            out.logs.append(f"Recording manifest (SHA-256) written: {manifest_path}")
+            out.logs.append(f"Canonical HDF5 written: {h5_path}")
+            out.logs.append(f"CSV journal kept: {self.recording_path}")
         except Exception as exc:  # noqa: BLE001
             out.errors.append(f"Recording finalization failed: {exc}")
         finally:

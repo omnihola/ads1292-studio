@@ -97,8 +97,10 @@ def test_connect_then_start_then_samples_flow(qapp) -> None:
         win.deleteLater()
 
 
-def test_finalize_writes_csv_json_and_xlsx(tmp_path) -> None:
-    """A finalized recording produces all three artifacts (csv kept; json+xlsx added)."""
+def test_finalize_writes_csv_journal_and_canonical_h5(tmp_path) -> None:
+    """A finalized recording keeps the CSV journal and writes the canonical .h5
+    (single source of truth: raw arrays + metadata + SHA-256). JSON/XLSX are no
+    longer auto-written; they are produced on demand from the .h5."""
     from ads1292_studio.acquisition import build_acquisition_provenance
     from ads1292_studio.calibration import Calibration
     from ads1292_studio.csv_io import CsvRecorder
@@ -121,7 +123,7 @@ def test_finalize_writes_csv_json_and_xlsx(tmp_path) -> None:
             )
 
     from ads1292_studio.events import EventMarker
-    from ads1292_studio.recording_bundle import events_from_bundle, read_recording_bundle
+    from ads1292_studio.recording_bundle import events_from_bundle
 
     ctrl = AcquisitionController()
     ctrl.recording_path = csv_path
@@ -140,19 +142,27 @@ def test_finalize_writes_csv_json_and_xlsx(tmp_path) -> None:
     out = DrainOutcome()
     ctrl._finalize_recording(out)
 
-    assert csv_path.exists(), "CSV kept (load-bearing for Export Package/Report)"
-    assert csv_path.with_suffix(".json").exists(), "JSON bundle written"
-    assert csv_path.with_suffix(".xlsx").exists(), "XLSX written"
-    manifest = csv_path.with_suffix(".manifest.json")
-    assert manifest.exists(), "SHA-256 manifest written"
-    assert "sha256" in manifest.read_text(), "manifest carries checksums"
-    assert ctrl.has_pending_recording is False
-    assert any("XLSX written" in line for line in out.logs)
+    from ads1292_studio.h5_io import read_recording_h5, recording_h5_path
 
-    # events are persisted into the JSON bundle
-    bundle = read_recording_bundle(csv_path.with_suffix(".json"))
+    assert csv_path.exists(), "CSV journal kept (crash safety)"
+    h5_path = recording_h5_path(csv_path)
+    assert h5_path.exists(), "canonical .h5 written"
+    # json/xlsx are NOT auto-written anymore (on-demand only)
+    assert not csv_path.with_suffix(".json").exists(), "JSON not auto-written"
+    assert not csv_path.with_suffix(".xlsx").exists(), "XLSX not auto-written"
+    assert ctrl.has_pending_recording is False
+    assert any("HDF5 written" in line for line in out.logs)
+
+    # raw samples + events round-trip through the .h5
+    recording, bundle = read_recording_h5(h5_path)
+    assert len(recording.samples) == 60
     events = events_from_bundle(bundle)
     assert len(events) == 1 and events[0].label == "motion"
+    # integrity hashes embedded
+    import h5py
+
+    with h5py.File(h5_path, "r") as f:
+        assert "integrity" in f and "sha256_ch2" in dict(f["integrity"].attrs)
 
 
 def test_export_report_writes_files_from_loaded_recording(qapp, tmp_path, monkeypatch) -> None:
