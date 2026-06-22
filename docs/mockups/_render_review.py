@@ -28,4 +28,10 @@ app.processEvents()
 win.pqrst_panel.draw()
 win.grab().save("docs/mockups/2026-06-21-pyqt-pqrst.png")
 
+# Info tab (detailed structured metrics)
+info_idx = [win.tabs.tabText(i) for i in range(win.tabs.count())].index("Info")
+win.tabs.setCurrentIndex(info_idx)
+app.processEvents()
+win.grab().save("docs/mockups/2026-06-21-pyqt-info.png")
+
 print("OK rendered; samples:", len(rec.samples))

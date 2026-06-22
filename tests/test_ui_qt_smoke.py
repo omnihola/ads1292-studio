@@ -39,8 +39,9 @@ def test_window_constructs_with_expected_widgets(qapp) -> None:
         assert win.live_panel is not None
         assert win.event_console is not None
         assert win.status_panel is not None
-        assert win.tabs.count() == 5
+        assert win.tabs.count() == 6
         assert win.tabs.tabText(0) == "Live ECG"
+        assert "Info" in [win.tabs.tabText(i) for i in range(win.tabs.count())]
     finally:
         win.deleteLater()
 

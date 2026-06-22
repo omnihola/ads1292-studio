@@ -140,3 +140,38 @@ class EventLogPanel(QPlainTextEdit):
                 self.appendPlainText(f"  {i}. [range] {ev.get('label','')} {ev.get('start',0):.2f}–{ev.get('end',0):.2f}s")
             else:
                 self.appendPlainText(f"  {i}. [point] {ev.get('label','')} @ {ev.get('t',0):.2f}s")
+
+
+class RecordingInfoPanel(QPlainTextEdit):
+    """Detailed, structured per-recording metrics (scientific review)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setReadOnly(True)
+        self.setPlaceholderText("Load a CSV or finish a recording to see the detailed metrics report.")
+
+    def render_recording(self, samples, sample_rate_hz: float, ecg_source: str | None = None) -> None:
+        from ads1292_studio.quality import compute_quality_metrics
+
+        m = compute_quality_metrics(tuple(samples), sample_rate_hz=sample_rate_hz)
+        lines = [
+            "RECORDING SUMMARY",
+            f"  samples           : {m.sample_count}",
+            f"  duration          : {m.duration_seconds:.3f} s  @ {sample_rate_hz:.0f} Hz",
+            f"  ECG source        : {m.ecg_source}",
+            f"  quality label     : {m.quality_label}",
+            "",
+            "CONTACT / RATE",
+            f"  contact OK        : {m.contact_ok_percent:.2f}%  ({m.lead_off_bad_samples} bad samples)",
+            f"  R peaks           : {m.r_peaks}",
+            f"  HR median/min/max : {m.hr_median_bpm:.1f} / {m.hr_min_bpm:.1f} / {m.hr_max_bpm:.1f} bpm",
+            "",
+            "MORPHOLOGY / ARTIFACTS",
+            f"  QRS clear         : {m.qrs_clear}",
+            f"  P / T tentative   : {m.p_tentative} / {m.t_tentative}",
+            f"  baseline drift    : {m.baseline_drift_counts:.1f} ct",
+            f"  noise RMS         : {m.noise_rms_counts:.1f} ct",
+            f"  peak-to-peak      : {m.peak_to_peak_counts:.1f} ct",
+            f"  channel scores    : CH1={m.score_ch1:.3f}   CH2={m.score_ch2:.3f}",
+        ]
+        self.setPlainText("\n".join(lines))

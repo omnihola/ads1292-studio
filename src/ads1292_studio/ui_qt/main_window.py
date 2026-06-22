@@ -29,7 +29,7 @@ from ads1292_studio.device import find_ads_port, list_ads_ports
 from ads1292_studio.events import EventMarker, event_from_interval
 from ads1292_studio.gui_state import gui_control_states, gui_signal_quality_cards
 from ads1292_studio.quality import compute_quality_metrics, estimate_realtime_snr
-from ads1292_studio.ui_qt.analysis_panels import EventLogPanel, PqrstPanel, SpectrumPanel
+from ads1292_studio.ui_qt.analysis_panels import EventLogPanel, PqrstPanel, RecordingInfoPanel, SpectrumPanel
 from ads1292_studio.ui_qt.controller import AcquisitionController
 from ads1292_studio.ui_qt.event_console import EventConsole
 from ads1292_studio.ui_qt.live_panel import LivePanel
@@ -212,12 +212,14 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self._tab_with(self.pqrst_panel), "PQRST Beat")
         self.spectrum_panel = SpectrumPanel()
         self.tabs.addTab(self._tab_with(self.spectrum_panel), "Spectrum")
+        self.info_panel = RecordingInfoPanel()
+        self.tabs.addTab(self._tab_with(self.info_panel, margins=(8, 8, 8, 8)), "Info")
         self.event_log_panel = EventLogPanel()
         self.tabs.addTab(self._tab_with(self.event_log_panel, margins=(8, 8, 8, 8)), "Event Log")
         # Registry of panels that render a loaded recording (RecordingRenderer protocol:
         # any object with render_recording(samples, sample_rate_hz, ecg_source)). To add a
         # new analysis tab, build the panel, addTab it, and append it here.
-        self._recording_renderers = [self.review_panel, self.pqrst_panel, self.spectrum_panel]
+        self._recording_renderers = [self.review_panel, self.pqrst_panel, self.spectrum_panel, self.info_panel]
         clay.addWidget(self.tabs, 1)
         lay.addWidget(center, 1)
 
