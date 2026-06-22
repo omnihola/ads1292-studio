@@ -36,6 +36,7 @@ from ads1292_studio.ui_qt.analysis_panels import EventLogPanel, PqrstPanel, Reco
 from ads1292_studio.ui_qt.controller import AcquisitionController
 from ads1292_studio.ui_qt.event_console import EventConsole
 from ads1292_studio.ui_qt.live_panel import LivePanel
+from ads1292_studio.ui_qt.live_scope import LiveScope
 from ads1292_studio.ui_qt.preferences import Preferences
 from ads1292_studio.ui_qt.sidebar_forms import SidebarForms
 from ads1292_studio.ui_qt.status_panel import StatusPanel
@@ -317,7 +318,7 @@ class MainWindow(QMainWindow):
         live_lay = QVBoxLayout(live_tab)
         live_lay.setContentsMargins(0, 8, 0, 0)
         live_lay.setSpacing(10)
-        self.live_panel = LivePanel()
+        self.live_panel = LiveScope()  # pyqtgraph real-time scope (fast)
         live_lay.addWidget(self.live_panel, 1)
         self.event_console = EventConsole(
             on_add_point=self._on_add_point,

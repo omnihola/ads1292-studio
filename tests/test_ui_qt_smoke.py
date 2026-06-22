@@ -896,10 +896,10 @@ def test_gain_scales_live_ecg(qapp) -> None:
         win._sample_count = 3
         win._gain_combo.setCurrentText("1x")
         win._redraw_live()
-        base = list(win.live_panel._ecg_line.get_ydata())
+        base = list(win.live_panel.ecg_y())
         win._gain_combo.setCurrentText("2x")
         win._redraw_live()
-        scaled = list(win.live_panel._ecg_line.get_ydata())
+        scaled = list(win.live_panel.ecg_y())
         assert scaled == pytest.approx([v * 2.0 for v in base])
     finally:
         win.deleteLater()
@@ -913,7 +913,7 @@ def test_window_limits_visible_samples(qapp) -> None:
         win._sample_count = 5000
         win._window_combo.setCurrentText("4 s")  # 4 s * 500 Hz = 2000 samples
         win._redraw_live()
-        assert len(win.live_panel._ecg_line.get_ydata()) == 2000
+        assert len(win.live_panel.ecg_y()) == 2000
     finally:
         win.deleteLater()
 
@@ -932,7 +932,7 @@ def test_wide_window_decimates_but_preserves_peak(qapp) -> None:
         win._window_combo.setCurrentText("16 s")
         win._gain_combo.setCurrentText("1x")
         win._redraw_live()
-        ydata = list(win.live_panel._ecg_line.get_ydata())
+        ydata = list(win.live_panel.ecg_y())
         assert len(ydata) <= MAX_PLOT_POINTS, "wide window must be decimated"
         assert max(ydata) == pytest.approx(9999.0), "peak must be preserved"
     finally:
@@ -979,11 +979,11 @@ def test_invert_ecg_button_flips_live_traces(qapp) -> None:
         win._sample_count = 3
         win._invert_btn.setChecked(False)
         win._redraw_live()
-        y_normal = list(win.live_panel._ecg_line.get_ydata())
+        y_normal = list(win.live_panel.ecg_y())
 
         win._invert_btn.setChecked(True)
         win._redraw_live()
-        y_inverted = list(win.live_panel._ecg_line.get_ydata())
+        y_inverted = list(win.live_panel.ecg_y())
 
         assert y_inverted == pytest.approx([-v for v in y_normal], abs=1e-6)
         assert "inv" in win._filter_hint.text()

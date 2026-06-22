@@ -15,6 +15,7 @@ dependencies = [
   "scipy",
   "PySide6",
   "h5py",
+  "pyqtgraph",
 ]
 
 [project.scripts]
