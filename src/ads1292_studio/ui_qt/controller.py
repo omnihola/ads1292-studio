@@ -293,7 +293,7 @@ class AcquisitionController:
             "wall_clock_seconds": wall,
         }
 
-    def _finalize_recording(self, out: DrainOutcome) -> None:
+    def _finalize_recording(self, out: DrainOutcome, events_snapshot=None) -> None:
         if self.recording_path is None or self._record_provenance is None:
             self._finalization_pending = False
             return
@@ -317,7 +317,10 @@ class AcquisitionController:
                 first_timestamp_seconds=first_ts,
                 last_timestamp_seconds=last_ts,
             )
-            events = tuple(self.event_markers)
+            # Use the snapshot captured when finalize was scheduled (the
+            # background thread must not read self.event_markers, which the GUI
+            # thread can mutate via a concurrent load or post-stop annotation).
+            events = tuple(self.event_markers) if events_snapshot is None else tuple(events_snapshot)
             out.logs.append(f"Recording finalized: {sample_count} samples")
             # Measured effective acquisition rate (samples / true wall span from
             # first to last sample) — research-grade precision provenance that
@@ -456,7 +459,12 @@ class AcquisitionController:
             and not self._worker_alive()
             and self._finalize_thread is None
         ):
-            self._finalize_thread = threading.Thread(target=self._finalize_bg, daemon=True)
+            # Snapshot the events HERE on the GUI thread, before the worker starts,
+            # so a concurrent load/annotation can't corrupt the finalized record.
+            events_snapshot = tuple(self.event_markers)
+            self._finalize_thread = threading.Thread(
+                target=self._finalize_bg, args=(events_snapshot,), daemon=True
+            )
             self._finalize_thread.start()
             out.state_changed = True
         while True:
@@ -470,15 +478,17 @@ class AcquisitionController:
             out.state_changed = True
         return out
 
-    def _finalize_bg(self) -> None:
+    def _finalize_bg(self, events_snapshot) -> None:
         """Run _finalize_recording on a background thread and queue its result.
 
-        Safe because the only mutators of the recording state it reads
-        (recording_path, provenance, event_markers, save flags) are start() and
-        finalize_now(), both of which join this thread before resetting.
+        recording_path / provenance / save flags are only mutated by start() and
+        finalize_now(), which join this thread before resetting. event_markers is
+        the exception — it IS mutated by a concurrent load or post-stop
+        annotation — so it is snapshotted on the GUI thread at spawn and passed
+        in here rather than read from self.
         """
         background_out = DrainOutcome()
-        self._finalize_recording(background_out)
+        self._finalize_recording(background_out, events_snapshot=events_snapshot)
         self.finalize_results.put(background_out)
 
     def drain_samples(self, limit: int = MAX_SAMPLES_PER_DRAIN) -> list[StreamSample]:

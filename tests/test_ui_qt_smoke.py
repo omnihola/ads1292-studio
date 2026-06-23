@@ -166,6 +166,73 @@ def test_finalize_writes_csv_journal_and_canonical_h5(tmp_path) -> None:
         assert "integrity" in f and "sha256_ch2" in dict(f["integrity"].attrs)
 
 
+def _pending_finalize_controller(tmp_path, label_in_markers="LATER-MUTATION"):
+    """A controller with a CSV journal staged for finalize and a 'stale' event in
+    self.event_markers (simulating a concurrent load/annotation during finalize)."""
+    from ads1292_studio.acquisition import build_acquisition_provenance
+    from ads1292_studio.calibration import Calibration
+    from ads1292_studio.csv_io import CsvRecorder
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.ui_qt.controller import AcquisitionController
+
+    csv_path = tmp_path / "live" / "2026-06-23-snap-ads1292-studio.csv"
+    csv_path.parent.mkdir(parents=True)
+    with CsvRecorder(csv_path) as rec:
+        for i in range(20):
+            rec.write(StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                                   board_heart_rate=60, board_respiration_rate=15,
+                                   status_byte=0, sample_index=i))
+    ctrl = AcquisitionController()
+    ctrl.recording_path = csv_path
+    ctrl._keep_csv = True
+    ctrl._save_h5 = True
+    ctrl._record_provenance = build_acquisition_provenance(
+        csv_path=csv_path, acquisition_mode="live", port="/dev/x", sample_rate_hz=500.0,
+        calibration=Calibration(), live_calibration=None, started_at="2026-06-21T00:00:00",
+    )
+    ctrl._finalization_pending = True
+    ctrl.event_markers = [EventMarker(timestamp_seconds=99.0, label=label_in_markers)]
+    return ctrl, csv_path
+
+
+def test_finalize_honors_event_snapshot_over_self_event_markers(qapp, tmp_path) -> None:
+    """The .h5 must embed the events captured when finalize was scheduled, not
+    whatever self.event_markers becomes if a load/annotation mutates it while the
+    background finalize runs (a data-integrity race the snapshot closes)."""
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.h5_io import read_recording_h5, recording_h5_path
+    from ads1292_studio.recording_bundle import events_from_bundle
+    from ads1292_studio.ui_qt.controller import DrainOutcome
+
+    ctrl, csv_path = _pending_finalize_controller(tmp_path)
+    snapshot = (EventMarker(timestamp_seconds=0.01, label="at-stop"),)
+
+    ctrl._finalize_recording(DrainOutcome(), events_snapshot=snapshot)
+
+    _, bundle = read_recording_h5(recording_h5_path(csv_path))
+    assert [e.label for e in events_from_bundle(bundle)] == ["at-stop"]
+
+
+def test_background_finalize_snapshots_events_at_spawn(qapp, tmp_path) -> None:
+    """drain_results captures the event snapshot before starting the finalize
+    thread, so mutating event_markers afterwards can't corrupt the finalized .h5."""
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.h5_io import read_recording_h5, recording_h5_path
+    from ads1292_studio.recording_bundle import events_from_bundle
+
+    ctrl, csv_path = _pending_finalize_controller(tmp_path, label_in_markers="at-stop")
+    ctrl.event_markers = [EventMarker(timestamp_seconds=0.01, label="at-stop")]
+
+    ctrl.drain_results()  # spawns the background finalize, snapshotting events now
+    # Simulate a concurrent load/annotation replacing the events after spawn:
+    ctrl.event_markers = [EventMarker(timestamp_seconds=99.0, label="WRONG")]
+    if ctrl._finalize_thread is not None:
+        ctrl._finalize_thread.join(timeout=10.0)
+
+    _, bundle = read_recording_h5(recording_h5_path(csv_path))
+    assert [e.label for e in events_from_bundle(bundle)] == ["at-stop"]
+
+
 def test_export_report_writes_files_from_loaded_recording(qapp, tmp_path, monkeypatch) -> None:
     """The Export Report archive action reuses the core exporter and writes output."""
     from pathlib import Path
