@@ -1,6 +1,6 @@
 from collections import deque
 
-from ads1292_studio.gui_samples import append_live_sample_batch
+from ads1292_studio.gui_samples import append_live_sample_batch, live_buffer_samples
 from ads1292_studio.models import StreamSample
 
 
@@ -72,3 +72,30 @@ def test_append_live_sample_batch_keeps_empty_batch_noop() -> None:
     assert list(status) == [4]
     assert list(board_hr) == [5]
     assert list(board_rr) == [6]
+
+
+def test_live_buffer_samples_uses_absolute_index_for_timestamps() -> None:
+    """After the ring buffer wraps, the first retained sample is NOT index 0.
+
+    Rebuilding export samples must use the absolute stored index for timestamps
+    so they share one time origin with event markers (recorded as
+    sample_index / rate). enumerate() would re-zero the window and misplace
+    event overlays in the exported report.
+    """
+    indices = deque([5000, 5500, 6000])  # wrapped: window no longer starts at 0
+    ch1 = deque([10, 11, 12])
+    ch2 = deque([-1, -2, -3])
+    status = deque([1, 2, 3])
+
+    out = live_buffer_samples(indices, ch1, ch2, status, sample_rate_hz=500.0)
+
+    assert [s.timestamp for s in out] == [10.0, 11.0, 12.0]  # absolute, not 0/0.001/0.002
+    assert [s.ch1 for s in out] == [10, 11, 12]
+    assert [s.ch2 for s in out] == [-1, -2, -3]
+    assert [s.status_byte for s in out] == [1, 2, 3]
+    assert [s.sample_index for s in out] == [5000, 5500, 6000]
+
+
+def test_live_buffer_samples_empty_returns_empty() -> None:
+    out = live_buffer_samples(deque(), deque(), deque(), deque(), sample_rate_hz=500.0)
+    assert out == ()

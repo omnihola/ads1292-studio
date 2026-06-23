@@ -51,7 +51,7 @@ from ads1292_studio.events import (
     remove_event_at_index,
 )
 from ads1292_studio.gui_quality import build_quality_text, protocol_ready_for_live_quality
-from ads1292_studio.gui_samples import append_live_sample_batch
+from ads1292_studio.gui_samples import append_live_sample_batch, live_buffer_samples
 from ads1292_studio.gui_log import append_log_messages, log_tab_is_visible
 from ads1292_studio.gui_forms import (
     _calibration_from_values,
@@ -886,16 +886,11 @@ class App(tk.Tk):
         if self.loaded_samples:
             samples = self.loaded_samples
         elif self.ch1 and self.ch2:
-            samples = tuple(
-                StreamSample(
-                    timestamp=index / SAMPLE_RATE_HZ,
-                    ch1=int(ch1),
-                    ch2=int(ch2),
-                    board_heart_rate=0,
-                    board_respiration_rate=0,
-                    status_byte=int(status),
-                )
-                for index, (ch1, ch2, status) in enumerate(zip(self.ch1, self.ch2, self.status))
+            # Use the absolute stored indices, not enumerate(): the live deques
+            # are bounded, so after they wrap the window no longer starts at 0
+            # and event overlays (recorded in absolute seconds) would misplace.
+            samples = live_buffer_samples(
+                self.indices, self.ch1, self.ch2, self.status, sample_rate_hz=SAMPLE_RATE_HZ
             )
         else:
             messagebox.showerror("No data", "Load a CSV or record data before exporting a report.")
