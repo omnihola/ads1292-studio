@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from ads1292_studio.acquisition import (
     build_acquisition_provenance,
     finalize_acquisition_provenance,
@@ -317,6 +319,25 @@ def test_cli_batch_warns_when_no_recordings_found(tmp_path: Path, capsys) -> Non
 
     assert "rows=0" in captured
     assert "no recording" in captured.lower()
+
+
+def test_cli_review_missing_file_gives_clean_error(tmp_path: Path) -> None:
+    """A typo'd recording path must produce a clean message, not a raw traceback."""
+    with pytest.raises(SystemExit) as exc:
+        main(["review", str(tmp_path / "does-not-exist.csv")])
+    assert "no such recording" in str(exc.value).lower()
+
+
+def test_cli_qc_directory_argument_gives_clean_error(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["qc", str(tmp_path)])
+    assert "directory" in str(exc.value).lower()
+
+
+def test_cli_manifest_missing_file_gives_clean_error(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["manifest", str(tmp_path / "nope.csv")])
+    assert "no such recording" in str(exc.value).lower()
 
 
 def test_cli_qc_returns_success_for_good_recording(tmp_path: Path) -> None:

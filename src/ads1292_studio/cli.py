@@ -40,6 +40,17 @@ def _port_from_args(args: argparse.Namespace) -> str:
     return port
 
 
+def _require_recording_csv(path: Path) -> Path:
+    """Validate a user-provided recording path up front so a typo or wrong path
+    yields a clean message instead of a raw FileNotFoundError/IsADirectoryError
+    traceback (per the project's user-facing-error standard)."""
+    if not path.exists():
+        raise SystemExit(f"no such recording: {path}")
+    if path.is_dir():
+        raise SystemExit(f"expected a recording CSV file, got a directory: {path}")
+    return path
+
+
 def cmd_firmware(args: argparse.Namespace) -> int:
     with Ads1x9xDevice(_port_from_args(args)) as device:
         print(device.query_firmware())
@@ -76,7 +87,7 @@ def cmd_stream(args: argparse.Namespace) -> int:
 
 
 def cmd_review(args: argparse.Namespace) -> int:
-    recording = read_recording_csv(args.csv)
+    recording = read_recording_csv(_require_recording_csv(args.csv))
     ch1 = np.array([sample.ch1 for sample in recording.samples], dtype=float)
     ch2 = np.array([sample.ch2 for sample in recording.samples], dtype=float)
     result = review_channels(ch1, ch2, sample_rate_hz=recording.sample_rate_hz, source=args.source)
@@ -116,7 +127,7 @@ def cmd_report(args: argparse.Namespace) -> int:
         return 0
     if args.csv is None:
         raise SystemExit("CSV path is required unless writing a template")
-    recording = read_recording_csv(args.csv)
+    recording = read_recording_csv(_require_recording_csv(args.csv))
     metadata = read_metadata_json(args.meta) if args.meta else None
     events = read_events_json(args.events) if args.events else tuple()
     calibration = read_calibration_json(args.calibration) if args.calibration else calibration_template()
@@ -200,12 +211,13 @@ def cmd_index(args: argparse.Namespace) -> int:
 
 
 def cmd_manifest(args: argparse.Namespace) -> int:
-    manifest_path = write_recording_manifest(args.csv)
+    manifest_path = write_recording_manifest(_require_recording_csv(args.csv))
     print(f"manifest={manifest_path}")
     return 0
 
 
 def cmd_package(args: argparse.Namespace) -> int:
+    _require_recording_csv(args.csv)
     export = export_session_package(csv_path=args.csv, out_dir=args.out, title=args.title, source=args.source)
     print(f"package={export.package_dir}")
     print(f"manifest={export.manifest_path}")
@@ -234,7 +246,7 @@ def cmd_verify_recording(args: argparse.Namespace) -> int:
 
 
 def cmd_qc(args: argparse.Namespace) -> int:
-    recording = read_recording_csv(args.csv)
+    recording = read_recording_csv(_require_recording_csv(args.csv))
     metrics = compute_quality_metrics(recording.samples, sample_rate_hz=recording.sample_rate_hz, source=args.source)
     gate = QualityGate(
         min_duration_seconds=args.min_duration,
