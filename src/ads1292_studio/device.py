@@ -256,19 +256,6 @@ class Ads1x9xDevice:
             payload = self._read_exact(1)
         return frame_type, payload
 
-    def _read_frame_until_end(self) -> tuple[int, bytes]:
-        while True:
-            byte = self._read_exact(1)[0]
-            if byte == START:
-                break
-        frame_type = self._read_exact(1)[0]
-        payload = bytearray()
-        while True:
-            byte = self._read_exact(1)[0]
-            if byte == END:
-                return frame_type, bytes(payload)
-            payload.append(byte)
-
     def _read_frame_until_end_by(self, deadline: float) -> tuple[int, bytes]:
         while True:
             byte = self._read_exact_until(1, deadline)[0]
