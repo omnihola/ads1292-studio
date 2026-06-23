@@ -112,3 +112,26 @@ def test_parse_acquire_payload_rejects_bad_end_marker() -> None:
         assert "bad acquire trailer" in str(exc)
     else:
         raise AssertionError("bad acquire trailer was accepted")
+
+
+def test_parse_stream_payload_rejects_truncated_frame() -> None:
+    """A short USB frame must fail loudly, not silently decode garbage samples."""
+    truncated = _payload_with_trailer((0x03, 0x03))[:40]  # < 61 bytes
+
+    try:
+        parse_stream_payload(truncated, start_timestamp=0.0, sample_rate_hz=500.0, start_index=0)
+    except ValueError as exc:
+        assert "too short" in str(exc)
+    else:
+        raise AssertionError("truncated stream payload was accepted")
+
+
+def test_parse_acquire_payload_rejects_truncated_frame() -> None:
+    truncated = bytes([0x00, 0x00] + [0x00] * 20 + [0x03])  # < 51 bytes
+
+    try:
+        parse_acquire_payload(truncated, start_timestamp=0.0, sample_rate_hz=500.0, start_index=0)
+    except ValueError as exc:
+        assert "too short" in str(exc)
+    else:
+        raise AssertionError("truncated acquire payload was accepted")
