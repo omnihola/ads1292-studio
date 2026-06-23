@@ -29,6 +29,57 @@ def synthetic_two_channel_recording(sample_rate_hz: float = 500.0) -> tuple[np.n
     return ch1, ch2
 
 
+def synthetic_ecg_at_bpm(
+    bpm: float,
+    *,
+    seconds: float = 20.0,
+    sample_rate_hz: float = 500.0,
+    noise: float = 0.0,
+    wander: float = 0.0,
+    seed: int = 1,
+) -> tuple[np.ndarray, int]:
+    """Synthetic single-channel ECG with Gaussian QRS spikes at a KNOWN rate.
+
+    Returns (signal, true_beat_count) so tests can validate measured HR against
+    ground truth — the instrument's core scientific purpose."""
+    rng = np.random.default_rng(seed)
+    t = np.arange(0, seconds, 1 / sample_rate_hz)
+    ecg = np.zeros_like(t)
+    rr = 60.0 / bpm
+    peak_times = np.arange(rr * 0.5, seconds - rr * 0.5, rr)
+    for peak in peak_times:
+        ecg += 420 * np.exp(-0.5 * ((t - peak) / 0.012) ** 2)
+    if wander:
+        ecg += wander * np.sin(2 * np.pi * 0.15 * t)
+    if noise:
+        ecg += rng.normal(0, noise, t.size)
+    return ecg, len(peak_times)
+
+
+@pytest.mark.parametrize("bpm", [50, 60, 75, 100, 120])
+def test_heart_rate_matches_known_bpm_on_clean_ecg(bpm: int) -> None:
+    """Ground-truth validation: measured median HR must equal the synthesized
+    rate, and the peak count must match the true beat count."""
+    ecg, true_beats = synthetic_ecg_at_bpm(bpm)
+
+    peaks = detect_r_peaks(ecg, sample_rate_hz=500.0)
+    summary = heart_rate_summary(peaks, sample_rate_hz=500.0)
+
+    assert len(peaks) == true_beats
+    assert summary.median_bpm == pytest.approx(bpm, abs=1.0)
+
+
+@pytest.mark.parametrize("bpm", [60, 75, 100])
+def test_median_heart_rate_is_robust_to_noise_and_baseline_wander(bpm: int) -> None:
+    """Under realistic noise + baseline wander the reported median HR must stay
+    accurate even if a few spurious peaks appear (median is the robust metric)."""
+    ecg, _ = synthetic_ecg_at_bpm(bpm, noise=15.0, wander=80.0, seed=7)
+
+    summary = heart_rate_summary(detect_r_peaks(ecg, sample_rate_hz=500.0), sample_rate_hz=500.0)
+
+    assert summary.median_bpm == pytest.approx(bpm, abs=3.0)
+
+
 def test_choose_ecg_channel_selects_channel_with_qrs_spikes() -> None:
     ch1, ch2 = synthetic_two_channel_recording()
 
