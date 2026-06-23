@@ -128,6 +128,61 @@ def test_csv_reader_prefers_canonical_lead_off_bits_over_stale_status_low_nibble
     assert loaded.samples[0].lead_off_bits == 0
 
 
+def test_csv_reader_falls_back_to_raw24_columns(tmp_path: Path) -> None:
+    """ch1_raw24/ch2_raw24 are the third-priority fallback for the channels."""
+    path = tmp_path / "raw-as-stream.csv"
+    path.write_text(
+        "timestamp,sample_index,ch1_raw24,ch2_raw24,status_byte\n"
+        "0.0,0,123456,-654321,0\n"
+    )
+
+    loaded = read_recording_csv(path)
+
+    assert loaded.samples[0].ch1 == 123456
+    assert loaded.samples[0].ch2 == -654321
+
+
+def test_csv_reader_accepts_legacy_index_column(tmp_path: Path) -> None:
+    """The legacy 'index' column is the second-priority sample_index fallback."""
+    path = tmp_path / "legacy-index.csv"
+    path.write_text(
+        "timestamp,index,ch1_counts,ch2_counts,status_byte\n"
+        "0.0,42,7,8,0\n"
+    )
+
+    loaded = read_recording_csv(path)
+
+    assert loaded.samples[0].sample_index == 42
+
+
+def test_csv_reader_missing_sample_index_defaults_to_row_position(tmp_path: Path) -> None:
+    path = tmp_path / "no-index.csv"
+    path.write_text(
+        "timestamp,ch1_counts,ch2_counts,status_byte\n"
+        "0.0,1,2,0\n"
+        "0.002,3,4,0\n"
+    )
+
+    loaded = read_recording_csv(path)
+
+    assert [s.sample_index for s in loaded.samples] == [0, 1]
+
+
+def test_csv_reader_per_row_channel_fallback_when_primary_cell_is_empty(tmp_path: Path) -> None:
+    """When both a primary and a legacy channel column exist, an empty primary
+    cell falls back to the legacy column for THAT row (per-row, not per-file)."""
+    path = tmp_path / "mixed.csv"
+    path.write_text(
+        "timestamp,ch1_counts,ecg_counts,ch2_counts,status_byte\n"
+        "0.0,,55,8,0\n"   # ch1_counts empty -> use ecg_counts (55)
+        "0.002,11,55,8,0\n"  # ch1_counts present -> use it (11)
+    )
+
+    loaded = read_recording_csv(path)
+
+    assert [s.ch1 for s in loaded.samples] == [55, 11]
+
+
 def test_csv_recorder_flushes_in_batches_and_on_close(tmp_path: Path, monkeypatch) -> None:
     path = tmp_path / "recording.csv"
     samples = [

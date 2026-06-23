@@ -66,32 +66,66 @@ def _stream_sample_index(sample: StreamSample, fallback: int) -> int:
     return int(sample.sample_index) if sample.sample_index is not None else int(fallback)
 
 
+def _resolve_column_indices(header: list[str], names: tuple[str, ...]) -> tuple[int, ...]:
+    """Column indices for the given logical field names, in priority order.
+
+    Resolving names->indices ONCE from the header (instead of a dict lookup per
+    field per row) is what makes the streamed read fast; returning all matching
+    indices preserves the per-row fallback (an empty primary cell falls back to
+    the next name for that row)."""
+    position = {name: index for index, name in enumerate(header)}
+    return tuple(position[name] for name in names if name in position)
+
+
+def _row_first_nonempty(row: list[str], columns: tuple[int, ...]) -> str | None:
+    for index in columns:
+        if index < len(row):
+            value = row[index]
+            if value not in (None, ""):
+                return value
+    return None
+
+
+def _row_int(row: list[str], columns: tuple[int, ...], default: int = 0) -> int:
+    value = _row_first_nonempty(row, columns)
+    return int(float(value)) if value is not None else default
+
+
+def _row_float(row: list[str], columns: tuple[int, ...], default: float = 0.0) -> float:
+    value = _row_first_nonempty(row, columns)
+    return float(value) if value is not None else default
+
+
 def read_recording_csv(path: Path | str, sample_rate_hz: float = 500.0) -> Recording:
     csv_path = Path(path)
     samples: list[StreamSample] = []
     with csv_path.open(newline="") as handle:
-        for row_index, row in enumerate(csv.DictReader(handle)):
-            status_byte = _int_field(row, "status_byte", "lead_off")
-            if row.get("lead_off_bits") not in (None, ""):
-                lead_off_bits = _int_field(row, "lead_off_bits") & 0x0F
+        reader = csv.reader(handle)
+        header = next(reader, [])
+        ts_cols = _resolve_column_indices(header, ("timestamp",))
+        ch1_cols = _resolve_column_indices(header, ("ch1_counts", "ecg_counts", "ch1_raw24"))
+        ch2_cols = _resolve_column_indices(header, ("ch2_counts", "resp_counts", "ch2_raw24"))
+        hr_cols = _resolve_column_indices(header, ("board_heart_rate", "heart_rate"))
+        rr_cols = _resolve_column_indices(header, ("board_respiration_rate", "respiration_rate"))
+        status_cols = _resolve_column_indices(header, ("status_byte", "lead_off"))
+        lead_off_cols = _resolve_column_indices(header, ("lead_off_bits",))
+        index_cols = _resolve_column_indices(header, ("sample_index", "index"))
+        for row_index, row in enumerate(reader):
+            status_byte = _row_int(row, status_cols)
+            lead_off_value = _row_first_nonempty(row, lead_off_cols)
+            if lead_off_value is not None:
                 # preserve all upper status bits (raw status is 16-bit); only the
                 # low nibble carries the lead-off flags
-                status_byte = (status_byte & ~0x0F) | lead_off_bits
-            else:
-                lead_off_bits = status_byte & 0x0F
+                status_byte = (status_byte & ~0x0F) | (int(float(lead_off_value)) & 0x0F)
             samples.append(
                 StreamSample(
-                    timestamp=_float_field(row, "timestamp"),
-                    ch1=_int_field(row, "ch1_counts", "ecg_counts", "ch1_raw24"),
-                    ch2=_int_field(row, "ch2_counts", "resp_counts", "ch2_raw24"),
-                    board_heart_rate=_int_field(row, "board_heart_rate", "heart_rate"),
-                    board_respiration_rate=_int_field(
-                        row,
-                        "board_respiration_rate",
-                        "respiration_rate",
-                    ),
+                    timestamp=_row_float(row, ts_cols),
+                    ch1=_row_int(row, ch1_cols),
+                    ch2=_row_int(row, ch2_cols),
+                    board_heart_rate=_row_int(row, hr_cols),
+                    board_respiration_rate=_row_int(row, rr_cols),
                     status_byte=status_byte,
-                    sample_index=_int_field(row, "sample_index", "index", default=row_index),
+                    sample_index=_row_int(row, index_cols, default=row_index),
                 )
             )
     return Recording(path=csv_path, samples=tuple(samples), sample_rate_hz=sample_rate_hz)
