@@ -168,6 +168,14 @@ def cmd_batch(args: argparse.Namespace) -> int:
 
 
 def cmd_index(args: argparse.Namespace) -> int:
+    root = Path(args.root)
+    # Surface the silent-empty-index footguns instead of reporting bogus success:
+    # index scans a directory tree (rglob), so a file root or a directory with no
+    # recordings yields an empty index with no diagnostic.
+    if not root.is_dir():
+        print(f"index expects a directory; '{root}' is not a directory")
+    elif not discover_recording_csvs(root):
+        print(f"no recording CSVs found under {root}")
     export = export_session_index(root=args.root, out_dir=args.out, title=args.title)
     print(f"csv={export.csv_path}")
     print(f"html={export.html_path}")

@@ -263,6 +263,30 @@ def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
     assert "python -m ads1292_studio manifest" in manifest_apply_script.read_text()
 
 
+def test_cli_index_warns_when_no_recordings_found(tmp_path: Path, capsys) -> None:
+    """An empty/no-recording directory must not silently produce an empty index."""
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    main(["index", str(empty), "--out", str(tmp_path / "idx")])
+    captured = capsys.readouterr().out
+
+    assert "rows=0" in captured
+    assert "no recording" in captured.lower()
+
+
+def test_cli_index_warns_when_given_a_file_instead_of_directory(tmp_path: Path, capsys) -> None:
+    """`index <file>` silently produced an empty index (rglob on a file finds
+    nothing); it must now flag the misuse instead of reporting bogus success."""
+    csv_path = tmp_path / "rec.csv"
+    _write_small_csv(csv_path)
+
+    main(["index", str(csv_path), "--out", str(tmp_path / "idx")])
+    captured = capsys.readouterr().out.lower()
+
+    assert "not a directory" in captured or "no recording" in captured
+
+
 def test_cli_batch_accepts_a_directory_of_recordings(tmp_path: Path, capsys) -> None:
     """`batch <dir>` should discover and process the recordings inside it, like
     `index <dir>` does — not silently produce a zero-row summary."""
