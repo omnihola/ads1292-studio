@@ -1,4 +1,7 @@
+import json
 from pathlib import Path
+
+import pytest
 
 from ads1292_studio.protocol import ProtocolStep, TestProtocol, protocol_template, read_protocol_json, write_protocol_json
 
@@ -50,3 +53,43 @@ def test_protocol_template_is_immediately_writable(tmp_path: Path) -> None:
     assert loaded.name == "MOTAC ECG validation"
     assert loaded.steps[0].label == "baseline"
     assert loaded.steps[1].label == "motion"
+
+
+def test_read_protocol_tolerates_unknown_step_keys(tmp_path: Path) -> None:
+    """A hand-edited or schema-evolved step with an extra key must not crash the
+    load (which would also abort CLI --protocol and session packaging)."""
+    path = tmp_path / "protocol.json"
+    path.write_text(json.dumps({
+        "name": "x",
+        "steps": [{"start_seconds": 0, "duration_seconds": 10, "label": "a",
+                   "instruction": "b", "color": "red"}],  # 'color' is not a field
+    }))
+
+    loaded = read_protocol_json(path)
+
+    assert len(loaded.steps) == 1
+    assert loaded.steps[0].label == "a"
+    assert loaded.steps[0].duration_seconds == 10.0
+
+
+def test_read_protocol_defaults_missing_step_keys(tmp_path: Path) -> None:
+    """A step missing a required key must default it, not raise TypeError."""
+    path = tmp_path / "protocol.json"
+    path.write_text(json.dumps({
+        "name": "x",
+        "steps": [{"start_seconds": 5, "duration_seconds": 10, "label": "a"}],  # no 'instruction'
+    }))
+
+    loaded = read_protocol_json(path)
+
+    assert len(loaded.steps) == 1
+    assert loaded.steps[0].label == "a"
+    assert loaded.steps[0].instruction  # filled with the normalized fallback
+
+
+def test_read_protocol_rejects_non_object_json(tmp_path: Path) -> None:
+    path = tmp_path / "protocol.json"
+    path.write_text(json.dumps([1, 2, 3]))  # valid JSON, wrong shape
+
+    with pytest.raises(ValueError):
+        read_protocol_json(path)

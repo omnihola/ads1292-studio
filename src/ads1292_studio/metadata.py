@@ -34,6 +34,8 @@ def _clean(value: str, fallback: str) -> str:
 
 def read_metadata_json(path: Path | str) -> SessionMetadata:
     data = json.loads(Path(path).read_text())
+    if not isinstance(data, dict):
+        raise ValueError(f"{Path(path).name}: metadata JSON must be an object")
     allowed = {field.name for field in SessionMetadata.__dataclass_fields__.values()}
     filtered = {key: value for key, value in data.items() if key in allowed}
     return SessionMetadata(**filtered).normalized()

@@ -48,7 +48,10 @@ class TestProtocol:
 
 def read_protocol_json(path: Path | str) -> TestProtocol:
     data = json.loads(Path(path).read_text())
-    steps = tuple(ProtocolStep(**item).normalized() for item in data.get("steps", []))
+    if not isinstance(data, dict):
+        raise ValueError(f"{Path(path).name}: protocol JSON must be an object")
+    raw_steps = data.get("steps", [])
+    steps = tuple(_step_from_mapping(item) for item in raw_steps if isinstance(item, dict))
     return TestProtocol(
         name=str(data.get("name", "")),
         objective=str(data.get("objective", "")),
@@ -56,6 +59,22 @@ def read_protocol_json(path: Path | str) -> TestProtocol:
         steps=steps,
         acceptance_notes=str(data.get("acceptance_notes", "")),
     ).normalized()
+
+
+def _step_from_mapping(item: dict) -> ProtocolStep:
+    """Build a ProtocolStep from an untrusted mapping: drop unknown keys and
+    default missing ones, mirroring metadata.read_metadata_json. Without this a
+    hand-edited or schema-evolved step crashes the whole load — and, via
+    session packaging, the entire package build."""
+    allowed = {field.name for field in ProtocolStep.__dataclass_fields__.values()}
+    fields: dict[str, object] = {
+        "start_seconds": 0.0,
+        "duration_seconds": 0.0,
+        "label": "",
+        "instruction": "",
+    }
+    fields.update({key: value for key, value in item.items() if key in allowed})
+    return ProtocolStep(**fields)
 
 
 def write_protocol_json(path: Path | str, protocol: TestProtocol) -> None:
