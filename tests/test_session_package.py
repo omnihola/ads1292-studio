@@ -456,3 +456,64 @@ def test_export_package_from_canonical_h5_verifies_ok(tmp_path: Path) -> None:
     assert any(n.endswith(".h5") for n in names), names
     result = verify_session_package(export.manifest_path)
     assert result.ok is True, result.failures
+
+
+def test_h5_package_catches_intra_file_corruption_even_when_manifest_matches(tmp_path: Path) -> None:
+    """Corrupt a sample array inside the packaged .h5, then re-stamp the manifest's
+    whole-file sha256 so the file-level check passes. Verification must STILL fail,
+    because the embedded write-time per-array hash no longer matches. This is the
+    defense-in-depth the integrity group exists for."""
+    import hashlib
+    import json
+
+    import h5py
+
+    from ads1292_studio.h5_io import write_recording_h5
+    from ads1292_studio.protocol import TestProtocol
+    from ads1292_studio.recording_bundle import RecordingProcessingSettings
+
+    csv_path = tmp_path / "live" / "2026-06-21-h5corrupt-ads1292-studio.csv"
+    csv_path.parent.mkdir(parents=True)
+    samples = tuple(
+        StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                     board_heart_rate=60, board_respiration_rate=15, status_byte=0)
+        for i in range(40)
+    )
+    write_recording_csv(csv_path, samples)
+    prov = finalize_acquisition_provenance(
+        build_acquisition_provenance(
+            csv_path=csv_path, acquisition_mode="live", port="/dev/x",
+            sample_rate_hz=500.0, calibration=Calibration(), live_calibration=None,
+            started_at="2026-06-21T00:00:00",
+        ),
+        ended_at="2026-06-21T00:01:00", finalized_at="2026-06-21T00:01:00",
+        sample_count=len(samples), first_timestamp_seconds=0.0,
+        last_timestamp_seconds=samples[-1].timestamp,
+    )
+    write_recording_h5(
+        csv_path, samples=samples, sample_rate_hz=500.0,
+        metadata=SessionMetadata(operator="zoe"), events=(),
+        calibration=Calibration(), acquisition=prov, protocol=TestProtocol(),
+        quality_gate=QualityGate(), processing=RecordingProcessingSettings(),
+        created_at="2026-06-21T00:01:00",
+    )
+    export = export_session_package(csv_path=csv_path, out_dir=tmp_path / "packages")
+
+    h5_in_pkg = next(p for p in export.package_dir.iterdir() if p.suffix == ".h5")
+    with h5py.File(h5_in_pkg, "r+") as f:
+        ch1 = f["samples"]["ch1"][:]
+        ch1[0] += 13  # corrupt; integrity.attrs left untouched
+        f["samples"]["ch1"][:] = ch1
+
+    # Re-stamp the manifest so the whole-file sha256 matches the corrupt file.
+    manifest = json.loads(export.manifest_path.read_text())
+    new_sha = hashlib.sha256(h5_in_pkg.read_bytes()).hexdigest()
+    for item in manifest["files"]:
+        if item.get("role") == "recording_h5":
+            item["sha256"] = new_sha
+            item["bytes"] = h5_in_pkg.stat().st_size
+    export.manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+    result = verify_session_package(export.manifest_path)
+    assert result.ok is False
+    assert any("ch1" in failure for failure in result.failures), result.failures

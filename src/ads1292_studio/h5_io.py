@@ -8,6 +8,7 @@ crash safety during acquisition.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
@@ -142,6 +143,59 @@ def read_recording_h5(path: Path | str) -> tuple[Recording, dict[str, Any]]:
         for i in range(len(timestamp))
     )
     return Recording(path=h5_path, samples=samples, sample_rate_hz=sample_rate_hz), bundle
+
+
+@dataclass(frozen=True)
+class H5Verification:
+    path: Path
+    ok: bool
+    checked_arrays: int
+    failures: tuple[str, ...]
+
+
+def verify_recording_h5(path: Path | str) -> H5Verification:
+    """Verify a .h5 against its embedded write-time integrity hashes.
+
+    Recomputes ``sha256(dataset.tobytes())`` for every sample array and compares
+    it to the value stored in the ``integrity`` group at write time, and checks
+    the ``sample_count`` attr against the actual array lengths. This catches
+    intra-file corruption that a package manifest's whole-file sha256 cannot:
+    that hash is computed *after* corruption (over the already-corrupt file) and
+    would pass, whereas the per-array hashes are anchored at write time.
+    """
+    import h5py
+
+    h5_path = Path(path)
+    failures: list[str] = []
+    checked = 0
+    try:
+        with h5py.File(h5_path, "r") as f:
+            if "samples" not in f:
+                return H5Verification(h5_path, False, 0, ("missing samples group",))
+            integrity = f["integrity"].attrs if "integrity" in f else {}
+            group = f["samples"]
+            lengths: set[int] = set()
+            for name in group:
+                array = group[name][:]
+                lengths.add(int(array.shape[0]))
+                expected = integrity.get(f"sha256_{name}")
+                if expected is None:
+                    failures.append(f"{name}: missing integrity hash")
+                    continue
+                actual = hashlib.sha256(np.asarray(array).tobytes()).hexdigest()
+                if _as_text(expected) != actual:
+                    failures.append(f"{name}: sha256 mismatch")
+                checked += 1
+            declared = f.attrs.get("sample_count")
+            if declared is not None and lengths and {int(declared)} != lengths:
+                failures.append(
+                    f"sample_count {int(declared)} does not match array lengths {sorted(lengths)}"
+                )
+            if len(lengths) > 1:
+                failures.append(f"sample arrays have inconsistent lengths {sorted(lengths)}")
+    except Exception as exc:  # noqa: BLE001 - surface any read/parse failure as a verification failure
+        return H5Verification(h5_path, False, checked, (f"could not read .h5: {exc}",))
+    return H5Verification(h5_path, not failures, checked, tuple(failures))
 
 
 def _sample_arrays(samples: tuple[StreamSample, ...]) -> dict[str, np.ndarray]:

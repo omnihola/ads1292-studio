@@ -169,3 +169,50 @@ def test_integrity_hashes_present_and_match(tmp_path: Path) -> None:
     with h5py.File(out, "r") as f:
         assert "integrity" in f
         assert f["integrity"].attrs["sha256_ch2"] == expected
+
+
+def test_verify_recording_h5_passes_for_clean_file(tmp_path: Path) -> None:
+    from ads1292_studio.h5_io import verify_recording_h5
+
+    out = _write(tmp_path)
+    result = verify_recording_h5(out)
+    assert result.ok is True
+    assert result.failures == ()
+    assert result.checked_arrays == 6  # all six sample datasets
+
+
+def test_verify_recording_h5_detects_corrupted_array(tmp_path: Path) -> None:
+    """A flipped sample value whose stored hash is left intact must be caught.
+
+    This is the failure the embedded integrity group exists for: the whole-file
+    sha256 in a package manifest is computed *after* this corruption, so it would
+    faithfully hash the corrupt file and pass. Only the write-time per-array hash
+    catches it.
+    """
+    import h5py
+
+    from ads1292_studio.h5_io import verify_recording_h5
+
+    out = _write(tmp_path)
+    with h5py.File(out, "r+") as f:
+        ch2 = f["samples"]["ch2"][:]
+        ch2[0] += 7  # corrupt one value; leave integrity.attrs untouched
+        f["samples"]["ch2"][:] = ch2
+
+    result = verify_recording_h5(out)
+    assert result.ok is False
+    assert any("ch2" in failure for failure in result.failures)
+
+
+def test_verify_recording_h5_detects_sample_count_mismatch(tmp_path: Path) -> None:
+    import h5py
+
+    from ads1292_studio.h5_io import verify_recording_h5
+
+    out = _write(tmp_path)
+    with h5py.File(out, "r+") as f:
+        f.attrs["sample_count"] = 999  # array length is 20
+
+    result = verify_recording_h5(out)
+    assert result.ok is False
+    assert any("sample_count" in failure for failure in result.failures)

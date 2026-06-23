@@ -34,7 +34,7 @@ from ads1292_studio.recording_bundle import (
     read_recording_bundle,
     recording_bundle_path,
 )
-from ads1292_studio.h5_io import read_recording_h5, recording_h5_path
+from ads1292_studio.h5_io import read_recording_h5, recording_h5_path, verify_recording_h5
 from ads1292_studio.hashing import sha256_file
 from ads1292_studio.recording_manifest import (
     recording_sample_index_summary,
@@ -78,8 +78,10 @@ def export_session_package(
     source: str = "Auto",
 ) -> SessionPackageExport:
     source_csv = Path(csv_path)
-    # The canonical .h5 carries embedded SHA-256 integrity; the legacy CSV
-    # sidecar manifest is only used for legacy (sidecar/bundle) packages.
+    # The canonical .h5 carries embedded write-time SHA-256 integrity, which
+    # verify_session_package checks via verify_recording_h5() for the
+    # recording_h5 role; the legacy CSV sidecar manifest is only used for legacy
+    # (sidecar/bundle) packages.
     use_h5 = recording_h5_path(source_csv).exists() and not is_recording_bundle_path(
         recording_bundle_path(source_csv)
     )
@@ -266,6 +268,10 @@ def verify_session_package(manifest_path: Path | str) -> PackageVerification:
             result = verify_recording_manifest(path)
             if not result.ok:
                 failures.extend(f"recording_manifest: {failure}" for failure in result.failures)
+        if role == "recording_h5":
+            h5_result = verify_recording_h5(path)
+            if not h5_result.ok:
+                failures.extend(f"recording_h5: {failure}" for failure in h5_result.failures)
     missing_roles = tuple(data.get("sidecar_completeness", {}).get("missing_roles", ()))
     if missing_roles:
         failures.append(f"required sidecars missing: {', '.join(missing_roles)}")
