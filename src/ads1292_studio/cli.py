@@ -48,12 +48,14 @@ def cmd_firmware(args: argparse.Namespace) -> int:
 
 def cmd_stream(args: argparse.Namespace) -> int:
     port = _port_from_args(args)
-    deadline = time.monotonic() + args.seconds
     with Ads1x9xDevice(port) as device:
         recorder_cm = CsvRecorder(args.csv) if args.csv else None
         recorder = recorder_cm.__enter__() if recorder_cm else None
         try:
             device.start_stream()
+            # Start the capture clock only once streaming is live, so serial-open
+            # and stream-start latency don't shorten the requested window.
+            deadline = time.monotonic() + args.seconds
             count = 0
             for sample in device.iter_stream_samples(
                 should_continue=lambda: time.monotonic() < deadline

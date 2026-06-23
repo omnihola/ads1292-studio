@@ -377,3 +377,44 @@ def test_cli_stream_passes_deadline_predicate_to_device(monkeypatch, capsys) -> 
     assert rc == 0
     assert _CliStreamSpyDevice.instances, "cmd_stream never constructed a device"
     assert callable(_CliStreamSpyDevice.instances[0].should_continue)
+
+
+def test_cli_stream_capture_window_starts_after_streaming_begins(monkeypatch) -> None:
+    """The capture deadline must start when streaming begins, not at construction.
+
+    Connect + start latency must not be charged against the requested --seconds
+    window. Here connect (5s) + start (1s) latency exceeds the 3s window; with the
+    old code the deadline expired before the first sample, capturing nothing.
+    """
+    clock = {"t": 1000.0}
+    monkeypatch.setattr(cli.time, "monotonic", lambda: clock["t"])
+    captured: dict[str, object] = {}
+
+    class _LatentDevice:
+        def __init__(self, port, *args, **kwargs) -> None:
+            pass
+
+        def __enter__(self) -> "_LatentDevice":
+            clock["t"] += 5.0  # simulate serial open / connect latency
+            return self
+
+        def __exit__(self, *exc) -> None:
+            return None
+
+        def start_stream(self) -> None:
+            clock["t"] += 1.0  # simulate stream-start latency
+
+        def stop_stream(self) -> None:
+            return None
+
+        def iter_stream_samples(self, *, should_continue=None):
+            captured["pred"] = should_continue
+            return iter(())
+
+    monkeypatch.setattr(cli, "Ads1x9xDevice", _LatentDevice)
+    rc = cli.main(["stream", "--port", "fake-port", "--seconds", "3"])
+
+    assert rc == 0
+    # At the instant streaming begins the full 3s window must still be ahead.
+    assert callable(captured.get("pred"))
+    assert captured["pred"]() is True
