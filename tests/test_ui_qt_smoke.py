@@ -540,6 +540,46 @@ def test_low_disk_space_blocks_recording_start(qapp, monkeypatch) -> None:
         win.deleteLater()
 
 
+def test_live_redraw_skipped_when_live_tab_is_hidden(qapp) -> None:
+    """During acquisition the expensive live redraw (filter + decimate +
+    canvas.draw) must not run when the user is viewing another tab — that CPU is
+    wasted since the live plot isn't visible. Samples are still buffered."""
+    from ads1292_studio.models import StreamSample
+
+    win = _make_window(qapp)
+    try:
+        calls = {"n": 0}
+        win._redraw_live = lambda: calls.__setitem__("n", calls["n"] + 1)
+
+        def seed(k: int) -> None:
+            for i in range(k):
+                win.controller.samples.put(StreamSample(
+                    timestamp=i / 500.0, ch1=i, ch2=-i, board_heart_rate=60,
+                    board_respiration_rate=15, status_byte=0, sample_index=i))
+
+        win.controller.is_streaming = True
+
+        # Hidden live tab -> tick buffers samples but skips the redraw.
+        win.tabs.setCurrentIndex(1)  # Review CSV
+        assert win._live_tab_visible() is False
+        before = win._sample_count
+        calls["n"] = 0
+        seed(10)
+        win._tick()
+        assert calls["n"] == 0, "redraw must be skipped while the live tab is hidden"
+        assert win._sample_count == before + 10, "samples are still buffered while hidden"
+
+        # Visible live tab -> tick redraws.
+        win.tabs.setCurrentIndex(0)  # Live ECG
+        assert win._live_tab_visible() is True
+        calls["n"] = 0
+        seed(10)
+        win._tick()
+        assert calls["n"] >= 1, "redraw runs when the live tab is visible"
+    finally:
+        win.deleteLater()
+
+
 def test_add_point_ignored_when_idle(qapp) -> None:
     win = _make_window(qapp)
     try:

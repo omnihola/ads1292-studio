@@ -314,6 +314,7 @@ class MainWindow(QMainWindow):
         clay.setSpacing(11)
         self.tabs = QTabWidget()
         live_tab = QWidget()
+        self._live_tab = live_tab  # reference so _tick can skip the redraw when hidden
         live_lay = QVBoxLayout(live_tab)
         live_lay.setContentsMargins(0, 8, 0, 0)
         live_lay.setSpacing(10)
@@ -355,6 +356,9 @@ class MainWindow(QMainWindow):
         # Event Log is a passive console, not a recording renderer.
         self.event_log_panel = EventLogPanel()
         self.tabs.addTab(self._tab_with(self.event_log_panel, margins=(8, 8, 8, 8)), "Event Log")
+        # Refresh the live plot when the user switches back to it, since the
+        # per-tick redraw is skipped while the live tab is hidden.
+        self.tabs.currentChanged.connect(self._on_tab_changed)
         clay.addWidget(self.tabs, 1)
         lay.addWidget(center, 1)
 
@@ -701,7 +705,10 @@ class MainWindow(QMainWindow):
             # ongoing recording (the worker thread keeps writing the CSV).
             try:
                 self._process_lead_off(samples[-1].status_byte)
-                self._redraw_live()
+                # Skip the expensive live redraw when the live tab isn't visible:
+                # the buffers above stay current, so switching back redraws fresh.
+                if self._live_tab_visible():
+                    self._redraw_live()
             except Exception as exc:  # noqa: BLE001 - keep streaming alive
                 self.event_log_panel.append_line(f"live render skipped a frame: {exc}")
         if outcome.loaded_recording is not None:
@@ -712,6 +719,15 @@ class MainWindow(QMainWindow):
             self._set_timer_active(False)
         for err in outcome.errors:
             QMessageBox.critical(self, "ADS1292 Studio", err)
+
+    def _live_tab_visible(self) -> bool:
+        return self.tabs.currentWidget() is self._live_tab
+
+    def _on_tab_changed(self, _index: int) -> None:
+        # Switching back to the live tab: redraw once so it isn't stale (the
+        # per-tick redraw was skipped while hidden).
+        if self._live_tab_visible() and len(self._ch2):
+            self._redraw_live()
 
     def _redraw_live(self) -> None:
         import numpy as np
