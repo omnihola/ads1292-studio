@@ -3,7 +3,11 @@ import numpy as np
 from ads1292_studio.models import StreamSample
 from ads1292_studio.protocol import ProtocolStep, TestProtocol
 from ads1292_studio.quality_gate import QualityGate
-from ads1292_studio.segments import analyze_protocol_segments, evaluate_segment_quality_gates
+from ads1292_studio.segments import (
+    SegmentMetrics,
+    analyze_protocol_segments,
+    evaluate_segment_quality_gates,
+)
 
 
 def _protocol_samples(sample_rate_hz: float = 500.0) -> tuple[StreamSample, ...]:
@@ -87,6 +91,28 @@ def test_evaluate_segment_quality_gates_marks_motion_failures() -> None:
     assert result.segment_results[1].label == "motion"
     assert result.segment_results[1].passed is False
     assert any("motion: noise RMS" in failure for failure in result.failures)
+
+
+def test_evaluate_segment_quality_gates_normalizes_out_of_range_gate() -> None:
+    """The segment gate must clamp an out-of-range gate like the recording-level
+    evaluate_quality_gate does, so the two QC verdicts agree on the same data.
+
+    Regression: evaluate_segment_quality_gates used the gate raw, so an invalid
+    min_contact_ok_percent (e.g. 150) was applied as-is to segments while the
+    recording-level gate clamped it to 100 — divergent verdicts.
+    """
+    seg = SegmentMetrics(
+        label="baseline", start_seconds=0.0, duration_seconds=10.0, sample_count=5000,
+        ecg_source="CH2", contact_ok_percent=100.0, r_peaks=10, hr_median_bpm=60.0,
+        baseline_drift_counts=1.0, noise_rms_counts=1.0, peak_to_peak_counts=100.0,
+        quality_label="Good",
+    )
+    gate = QualityGate(min_contact_ok_percent=150.0)  # invalid; normalizes to 100
+
+    result = evaluate_segment_quality_gates([seg], gate)
+
+    assert result.passed is True
+    assert not any("contact" in failure for failure in result.failures)
 
 
 def test_evaluate_segment_quality_gates_fails_empty_segments() -> None:

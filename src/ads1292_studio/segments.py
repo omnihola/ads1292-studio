@@ -106,7 +106,9 @@ def evaluate_segment_quality_gates(
     segments: tuple[SegmentMetrics, ...] | list[SegmentMetrics],
     gate: QualityGate | None = None,
 ) -> SegmentQualityGateResult:
-    gate = gate or QualityGate()
+    # Normalize like evaluate_quality_gate so an out-of-range gate yields the
+    # same verdict at the segment and recording levels.
+    gate = (gate or QualityGate()).normalized()
     segment_results = tuple(_evaluate_segment(segment, gate) for segment in segments)
     failures = tuple(failure for result in segment_results for failure in result.failures)
     return SegmentQualityGateResult(

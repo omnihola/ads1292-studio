@@ -614,10 +614,13 @@ class MainWindow(QMainWindow):
     def _event_notes(self) -> str:
         return self.event_console.notes_edit.text().strip()
 
+    def _can_annotate(self) -> bool:
+        # Only annotate when there is a timeline: an active stream or a loaded
+        # recording. A stray annotation while idle has no valid time base.
+        return self.controller.is_streaming or self.controller.has_data
+
     def _on_add_point(self) -> None:
-        # Only annotate when there is a timeline to annotate (streaming or a
-        # loaded recording) — a stray "P" while idle must not create markers.
-        if not (self.controller.is_streaming or self.controller.has_data):
+        if not self._can_annotate():
             return
         marker = EventMarker(
             timestamp_seconds=self._now_seconds(), label=self._event_label(), notes=self._event_notes()
@@ -627,10 +630,14 @@ class MainWindow(QMainWindow):
         self._refresh_events()
 
     def _on_start_range(self) -> None:
+        if not self._can_annotate():
+            return
         self._range_start_s = self._now_seconds()
         self._refresh_events()
 
     def _on_end_range(self) -> None:
+        if not self._can_annotate():
+            return
         if self._range_start_s is not None:
             marker = event_from_interval(
                 start_seconds=self._range_start_s, end_seconds=self._now_seconds(),
@@ -644,6 +651,8 @@ class MainWindow(QMainWindow):
         self._refresh_events()
 
     def _on_add_manual_range(self) -> None:
+        if not self._can_annotate():
+            return
         try:
             start = float(self.event_console.manual_start_edit.text())
             end = float(self.event_console.manual_end_edit.text())

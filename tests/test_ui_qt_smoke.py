@@ -557,6 +557,28 @@ def test_add_point_ignored_when_idle(qapp) -> None:
         win.deleteLater()
 
 
+def test_range_annotation_ignored_when_idle(qapp) -> None:
+    """Range start/end share the point-event idle guard: a stray range while idle
+    must not arm a pending range or create a bogus 0-0s marker."""
+    win = _make_window(qapp)
+    try:
+        n = len(win.controller.event_markers)
+        win.controller.is_streaming = False
+        win.controller.has_data = False
+        win._on_start_range()
+        assert win._range_start_s is None  # idle: must not arm a pending range
+        win._on_end_range()
+        assert len(win.controller.event_markers) == n  # idle: no marker created
+        # streaming -> allowed
+        win.controller.is_streaming = True
+        win._on_start_range()
+        assert win._range_start_s is not None
+        win._on_end_range()
+        assert len(win.controller.event_markers) == n + 1
+    finally:
+        win.deleteLater()
+
+
 def test_space_toggle_ignored_while_typing_in_text_field(qapp, monkeypatch) -> None:
     from PySide6.QtWidgets import QApplication, QLineEdit
 
