@@ -362,7 +362,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except OSError as exc:
+        # CLI boundary: turn an unanticipated filesystem error (bad --out, no
+        # permission, etc.) into a clean message + non-zero exit instead of a raw
+        # traceback. Explicit input validation above raises SystemExit, which is
+        # not an OSError and passes straight through with its own message.
+        target = getattr(exc, "filename", None)
+        message = exc.strerror or str(exc)
+        raise SystemExit(f"error: {message}" + (f": {target}" if target else ""))
 
 
 if __name__ == "__main__":

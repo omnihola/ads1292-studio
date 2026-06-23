@@ -321,6 +321,20 @@ def test_cli_batch_warns_when_no_recordings_found(tmp_path: Path, capsys) -> Non
     assert "no recording" in captured.lower()
 
 
+def test_cli_out_pointing_at_existing_file_gives_clean_error(tmp_path: Path) -> None:
+    """--out at an existing file (not a dir) must not dump a raw FileExistsError;
+    the top-level CLI guard converts OSError into a clean message + non-zero exit."""
+    csv_path = tmp_path / "rec.csv"
+    _write_small_csv(csv_path)
+    existing_file = tmp_path / "not-a-dir"
+    existing_file.write_text("x")
+
+    with pytest.raises(SystemExit) as exc:
+        main(["report", str(csv_path), "--out", str(existing_file)])
+    assert str(exc.value)  # a message, not an empty/默认 exit
+    assert "Traceback" not in str(exc.value)
+
+
 def test_cli_review_missing_file_gives_clean_error(tmp_path: Path) -> None:
     """A typo'd recording path must produce a clean message, not a raw traceback."""
     with pytest.raises(SystemExit) as exc:
