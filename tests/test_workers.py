@@ -322,6 +322,42 @@ class _RawTimeoutThenSamplesDevice(_FakeRawDevice):
         )
 
 
+class _RawFailsAfterFirstChunkDevice(_FakeRawDevice):
+    def acquire_raw_samples(self, sample_count: int):
+        self.raw_calls.append(sample_count)
+        if len(self.raw_calls) == 1:
+            return (
+                RawSample(timestamp=0.0, sample_index=0, ch1_raw24=5, ch2_raw24=6, status_byte=0),
+            )
+        raise RuntimeError("device disconnected mid-stream")
+
+
+def test_worker_raw_mode_does_not_publish_failure_after_successful_start(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Once raw acquisition has published ok=True, a later chunk error must not
+    publish a contradicting ok=False onto the single-shot start-result queue."""
+    monkeypatch.setattr(workers, "Ads1x9xDevice", _RawFailsAfterFirstChunkDevice)
+    _RawFailsAfterFirstChunkDevice.instances.clear()
+    start_queue: queue.Queue = queue.Queue()
+    worker = LiveWorker(queue.Queue(), queue.Queue(), start_queue, raw_chunk_samples=8)
+
+    worker.start("fake-port", tmp_path / "raw.csv", mode=AcquisitionMode.RAW)
+    first = start_queue.get(timeout=2.0)
+    if worker.thread:
+        worker.thread.join(timeout=2.0)  # let the 2nd chunk crash the worker
+
+    remaining = []
+    while True:
+        try:
+            remaining.append(start_queue.get_nowait())
+        except queue.Empty:
+            break
+
+    assert first == StreamStartResult(ok=True)
+    assert remaining == []  # no contradicting ok=False after a successful start
+
+
 def test_worker_raw_mode_acquires_raw_samples_without_starting_live_stream(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(workers, "Ads1x9xDevice", _FakeRawDevice)
     _FakeRawDevice.instances.clear()

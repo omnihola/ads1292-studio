@@ -6,6 +6,7 @@ from pathlib import Path
 import queue
 import threading
 import time
+from typing import Callable
 
 from ads1292_studio.calibration import Calibration, LiveStreamCalibration
 from ads1292_studio.csv_io import CsvRecorder, RawCsvRecorder
@@ -117,8 +118,11 @@ class LiveWorker:
                 except Exception as exc:
                     self.log_queue.put(f"Firmware query failed: {exc}")
                 if mode is AcquisitionMode.RAW:
-                    self._run_raw(device, recorder)
-                    started = True
+                    def _mark_started() -> None:
+                        nonlocal started
+                        started = True
+
+                    self._run_raw(device, recorder, on_started=_mark_started)
                     return
                 initial_samples = self._start_stream_and_wait_for_data(device)
                 started = True
@@ -170,10 +174,20 @@ class LiveWorker:
             return RawCsvRecorder(csv_path, calibration=calibration or Calibration())
         return CsvRecorder(csv_path, live_calibration=live_calibration)
 
-    def _run_raw(self, device: Ads1x9xDevice, recorder: RawCsvRecorder | None) -> None:
+    def _run_raw(
+        self,
+        device: Ads1x9xDevice,
+        recorder: RawCsvRecorder | None,
+        *,
+        on_started: "Callable[[], None] | None" = None,
+    ) -> None:
         self.log_queue.put(f"Raw acquisition mode: {self.raw_chunk_samples} samples per chunk")
         first_chunk = self._acquire_raw_chunk_with_retry(device)
         sample_rate_hz = float(getattr(device, "sample_rate_hz", 500.0))
+        # Mark started atomically with publishing ok=True, so a later chunk error
+        # can't make _run's except handler publish a contradicting ok=False.
+        if on_started is not None:
+            on_started()
         self.start_result_queue.put(StreamStartResult(ok=True))
         self.log_queue.put("Raw acquisition started")
         self._emit_raw_samples(first_chunk, recorder, sample_rate_hz=sample_rate_hz)
