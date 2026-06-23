@@ -813,6 +813,68 @@ def test_controller_loads_canonical_h5(qapp, tmp_path) -> None:
     assert res.recording.samples[4].ch2 == -4
 
 
+def test_loading_a_recording_clears_stale_event_markers(qapp, tmp_path) -> None:
+    """Events from a previous session must not leak into a newly loaded recording.
+
+    Regression: controller.event_markers was cleared only in start(), so after
+    recording session A (with events) and then loading file B, A's events
+    persisted and would ride along into any export/re-record of B."""
+    from ads1292_studio.csv_io import CsvRecorder
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.models import StreamSample
+    from ads1292_studio.ui_qt.controller import AcquisitionController
+
+    csv_path = tmp_path / "load-b-ads1292-studio.csv"
+    with CsvRecorder(csv_path) as rec:
+        for i in range(10):
+            rec.write(StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                                   board_heart_rate=60, board_respiration_rate=15,
+                                   status_byte=0, sample_index=i))
+
+    ctrl = AcquisitionController()
+    ctrl.event_markers = [EventMarker(timestamp_seconds=1.0, label="from-session-A")]
+    ctrl._load_csv_bg(csv_path)  # synchronous path
+    ctrl.drain_results()
+
+    assert ctrl.event_markers == [], "stale events must be cleared on load"
+
+
+def test_loading_canonical_h5_surfaces_its_own_events(qapp, tmp_path) -> None:
+    """Loading an .h5 must populate the recording's embedded events, not drop them."""
+    from ads1292_studio.calibration import Calibration
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.h5_io import write_recording_h5
+    from ads1292_studio.metadata import SessionMetadata
+    from ads1292_studio.models import StreamSample
+    from ads1292_studio.protocol import TestProtocol
+    from ads1292_studio.quality_gate import QualityGate
+    from ads1292_studio.recording_bundle import AcquisitionProvenance, RecordingProcessingSettings
+    from ads1292_studio.ui_qt.controller import AcquisitionController
+
+    csv_path = tmp_path / "rec-with-events-ads1292-studio.csv"
+    csv_path.write_text("journal\n")
+    samples = tuple(
+        StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                     board_heart_rate=60, board_respiration_rate=15, status_byte=0)
+        for i in range(10)
+    )
+    h5 = write_recording_h5(
+        csv_path, samples=samples, sample_rate_hz=500.0,
+        metadata=SessionMetadata(),
+        events=(EventMarker(timestamp_seconds=0.01, label="motion", notes="arm"),),
+        calibration=Calibration(), acquisition=AcquisitionProvenance(),
+        protocol=TestProtocol(), quality_gate=QualityGate(),
+        processing=RecordingProcessingSettings(), created_at="2026-06-21T20:00:00",
+    )
+
+    ctrl = AcquisitionController()
+    ctrl.event_markers = [EventMarker(timestamp_seconds=99.0, label="stale")]
+    ctrl._load_csv_bg(h5)
+    ctrl.drain_results()
+
+    assert [m.label for m in ctrl.event_markers] == ["motion"]
+
+
 def test_pending_range_start_draws_distinct_vertical_line(qapp) -> None:
     from ads1292_studio.ui_qt.live_panel import LivePanel
     from ads1292_studio.ui_qt.tokens import design_tokens

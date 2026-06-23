@@ -751,6 +751,12 @@ class MainWindow(QMainWindow):
         samples = recording.samples
         if not samples:
             return
+        # A loaded recording is not the live stream: reset the live sample clock
+        # and any pending range so stale state can't mistime new annotations, and
+        # refresh the overlay to reflect the loaded recording's own events.
+        self._sample_count = 0
+        self._range_start_s = None
+        self._refresh_events()
         fs = recording.sample_rate_hz or SAMPLE_RATE_HZ
         try:
             metrics = self._update_quality(samples, fs)

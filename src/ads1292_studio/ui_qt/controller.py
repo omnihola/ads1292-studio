@@ -27,6 +27,7 @@ from ads1292_studio.calibration import Calibration, LiveStreamCalibration
 from ads1292_studio.csv_io import read_recording_csv
 from ads1292_studio.device import Ads1x9xDevice
 from ads1292_studio.events import EventMarker
+from ads1292_studio.recording_bundle import events_from_bundle
 from ads1292_studio.gui_state import GuiState
 from ads1292_studio.gui_workers import ConnectResult, CsvLoadResult, LiveCalibrationResult
 from ads1292_studio.metadata import SessionMetadata
@@ -220,11 +221,13 @@ class AcquisitionController:
 
     def _load_csv_bg(self, path: Path) -> None:
         try:
+            events: tuple[EventMarker, ...] = ()
             if is_recording_h5_path(path):
-                recording, _ = read_recording_h5(path)
+                recording, bundle = read_recording_h5(path)
+                events = tuple(events_from_bundle(bundle))  # the .h5 carries its own events
             else:
-                recording = read_recording_csv(path)
-            self.csv_load_results.put(CsvLoadResult(path=path, recording=recording))
+                recording = read_recording_csv(path)  # CSV journal has no inline events
+            self.csv_load_results.put(CsvLoadResult(path=path, recording=recording, events=events))
         except Exception as exc:  # noqa: BLE001
             self.csv_load_results.put(CsvLoadResult(path=path, error=str(exc)))
 
@@ -397,6 +400,9 @@ class AcquisitionController:
                 self.has_data = True
                 self.loaded_samples = res.recording.samples
                 self.loaded_csv_path = res.path
+                # Replace (not append) the in-memory events with the loaded
+                # recording's own, so a previous session's events can't leak in.
+                self.event_markers = list(res.events)
                 out.loaded_recording = res.recording
                 out.logs.append(f"Loaded {len(res.recording.samples)} samples from {res.path.name}")
         while True:

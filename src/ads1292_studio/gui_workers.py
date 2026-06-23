@@ -8,6 +8,7 @@ from typing import Protocol, TypeVar
 
 from ads1292_studio.calibration import LiveStreamCalibration
 from ads1292_studio.display import EcgDisplaySettings, SoftwareFilterSettings
+from ads1292_studio.events import EventMarker
 from ads1292_studio.gui_specs import ADS1292R_ECG_SOURCE
 from ads1292_studio.models import Recording, StreamSample
 from ads1292_studio.quality import QualityMetrics, compute_quality_metrics
@@ -37,6 +38,7 @@ class CsvLoadResult:
     display_settings: EcgDisplaySettings | None = None
     filter_settings: SoftwareFilterSettings | None = None
     error: str | None = None
+    events: tuple[EventMarker, ...] = ()
 
 
 @dataclass(frozen=True)
