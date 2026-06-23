@@ -748,7 +748,52 @@ def test_unexpected_worker_death_finalizes_and_clears_streaming(qapp, tmp_path) 
     out = ctrl.drain_results()
     assert ctrl.is_streaming is False, "streaming flag cleared on unexpected death"
     assert any("unexpected" in e.lower() for e in out.errors)
+    # finalize now runs off the GUI thread; wait for it before asserting the file
+    if ctrl._finalize_thread is not None:
+        ctrl._finalize_thread.join(timeout=10.0)
     assert recording_h5_path(csv_path).exists(), "recording auto-finalized to .h5"
+
+
+def test_drain_results_finalizes_off_the_gui_thread(qapp, tmp_path) -> None:
+    """The per-tick finalize must run on a background thread (so a long
+    recording's .h5/.xlsx write never freezes the UI), with its result surfaced
+    on a later drain."""
+    from ads1292_studio.acquisition import build_acquisition_provenance
+    from ads1292_studio.calibration import Calibration
+    from ads1292_studio.csv_io import CsvRecorder
+    from ads1292_studio.h5_io import recording_h5_path
+    from ads1292_studio.models import StreamSample
+    from ads1292_studio.ui_qt.controller import AcquisitionController
+
+    csv_path = tmp_path / "live" / "2026-06-23-bg-ads1292-studio.csv"
+    csv_path.parent.mkdir(parents=True)
+    with CsvRecorder(csv_path) as rec:
+        for i in range(20):
+            rec.write(StreamSample(timestamp=i / 500.0, ch1=i, ch2=-i,
+                                   board_heart_rate=60, board_respiration_rate=15,
+                                   status_byte=0, sample_index=i))
+    ctrl = AcquisitionController()
+    ctrl.recording_path = csv_path
+    ctrl._keep_csv = True
+    ctrl._save_h5 = True
+    ctrl._record_provenance = build_acquisition_provenance(
+        csv_path=csv_path, acquisition_mode="live", port="/dev/x", sample_rate_hz=500.0,
+        calibration=Calibration(), live_calibration=None, started_at="2026-06-21T00:00:00",
+    )
+    ctrl._finalization_pending = True  # stopped, worker already dead (thread is None)
+
+    out = ctrl.drain_results()
+    # A background finalize thread was spawned (not finalized inline).
+    assert ctrl._finalize_thread is not None
+    assert not any("finalized" in log for log in out.logs)
+
+    ctrl._finalize_thread.join(timeout=10.0)
+    assert recording_h5_path(csv_path).exists(), "background finalize wrote the .h5"
+
+    # The next drain surfaces the finalize result and clears the thread handle.
+    out2 = ctrl.drain_results()
+    assert ctrl._finalize_thread is None
+    assert any("finalized" in log for log in out2.logs)
 
 
 def test_start_finalizes_pending_previous_recording(qapp, tmp_path, monkeypatch) -> None:

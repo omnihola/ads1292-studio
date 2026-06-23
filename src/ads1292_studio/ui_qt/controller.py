@@ -79,6 +79,10 @@ class AcquisitionController:
         self.stream_start_results: queue.Queue[StreamStartResult] = queue.Queue()
         self.csv_load_results: queue.Queue[CsvLoadResult] = queue.Queue()
         self.calibration_results: queue.Queue[LiveCalibrationResult] = queue.Queue()
+        # Per-tick finalize runs off the GUI thread (it reads the CSV and writes
+        # .h5/.xlsx, seconds for long recordings); its result is drained here.
+        self.finalize_results: queue.Queue[DrainOutcome] = queue.Queue()
+        self._finalize_thread: threading.Thread | None = None
         self.worker = LiveWorker(
             self.samples, self.logs, self.stream_start_results,
             raw_chunk_samples=RAW_CHUNK_SAMPLES,
@@ -171,9 +175,10 @@ class AcquisitionController:
     ) -> None:
         if self.connected_port != port or self.is_streaming:
             return
-        # Never orphan a previous recording: if its finalize is still pending
-        # (worker not yet drained), finalize it before resetting state.
-        if self._finalization_pending:
+        # Never orphan a previous recording: if its finalize is still pending or
+        # a background finalize is in flight, finish it before resetting state
+        # (so the finalize thread can't read recording_path/events mid-reset).
+        if self._finalization_pending or self._finalize_thread is not None:
             self.finalize_now()
         self.recording_path = None
         self._finalization_pending = False
@@ -252,7 +257,18 @@ class AcquisitionController:
         thread = getattr(self.worker, "thread", None)
         if thread is not None:
             thread.join(timeout=3.0)
-        if self._finalization_pending:
+        # If a per-tick background finalize is already running, wait for it and
+        # adopt its result rather than finalizing the same recording twice.
+        if self._finalize_thread is not None:
+            self._finalize_thread.join(timeout=15.0)
+            self._finalize_thread = None
+            try:
+                background_out = self.finalize_results.get_nowait()
+                out.logs.extend(background_out.logs)
+                out.errors.extend(background_out.errors)
+            except queue.Empty:
+                pass
+        elif self._finalization_pending:
             self._finalize_recording(out)
         return out
 
@@ -430,11 +446,40 @@ class AcquisitionController:
             self.is_streaming = False
             out.state_changed = True
             out.errors.append("Streaming stopped unexpectedly (device disconnected?)")
-        # finalize a stopped recording once the CSV writer thread has ended
-        if self._finalization_pending and not self.is_streaming and not self._worker_alive():
-            self._finalize_recording(out)
+        # Finalize a stopped recording once the CSV writer thread has ended.
+        # Run it OFF the GUI thread: reading the CSV and writing .h5/.xlsx takes
+        # seconds for long recordings and would otherwise freeze the UI after
+        # Stop. The thread handle guards against spawning more than one.
+        if (
+            self._finalization_pending
+            and not self.is_streaming
+            and not self._worker_alive()
+            and self._finalize_thread is None
+        ):
+            self._finalize_thread = threading.Thread(target=self._finalize_bg, daemon=True)
+            self._finalize_thread.start()
+            out.state_changed = True
+        while True:
+            try:
+                background_out = self.finalize_results.get_nowait()
+            except queue.Empty:
+                break
+            self._finalize_thread = None
+            out.logs.extend(background_out.logs)
+            out.errors.extend(background_out.errors)
             out.state_changed = True
         return out
+
+    def _finalize_bg(self) -> None:
+        """Run _finalize_recording on a background thread and queue its result.
+
+        Safe because the only mutators of the recording state it reads
+        (recording_path, provenance, event_markers, save flags) are start() and
+        finalize_now(), both of which join this thread before resetting.
+        """
+        background_out = DrainOutcome()
+        self._finalize_recording(background_out)
+        self.finalize_results.put(background_out)
 
     def drain_samples(self, limit: int = MAX_SAMPLES_PER_DRAIN) -> list[StreamSample]:
         drained: list[StreamSample] = []
