@@ -14,6 +14,10 @@ from ads1292_studio.signal_processing import HeartRateSummary, apply_software_fi
 
 MIN_PEAK_DETECTION_SECONDS = 1.0
 MIN_PEAK_DETECTION_SPAN_COUNTS = 1e-9
+# Contact is good enough for live peak detection when at least this fraction of
+# the visible window is fully attached (status == 0). Matches the quality gate's
+# min_contact_ok_percent default of 95%.
+MIN_CONTACT_OK_FRACTION = 0.95
 
 
 @dataclass(frozen=True)
@@ -111,7 +115,10 @@ def build_live_render_frame(
     visible_ecg_plot = smooth_for_plot(visible_ecg, window=smoothing_window)
     visible_resp_plot = smooth_for_plot(visible_resp, window=smoothing_window)
     visible_status = deque_tail_array(status, visible_count, dtype=float)
-    contact_ok = bool(np.any(visible_status == 0.0))
+    # Contact is OK only when most of the window is attached, not when a single
+    # sample happens to read 0 (np.any would let one good sample mask total
+    # lead-off and run R-peak detection on a disconnected trace).
+    contact_ok = bool(visible_status.size and np.mean(visible_status == 0.0) >= MIN_CONTACT_OK_FRACTION)
     ecg_has_signal = bool(np.ptp(visible_ecg) > MIN_PEAK_DETECTION_SPAN_COUNTS)
     if contact_ok and ecg_has_signal and visible_count >= int(MIN_PEAK_DETECTION_SECONDS * sample_rate_hz):
         peaks = tuple(

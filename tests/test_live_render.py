@@ -199,6 +199,45 @@ def test_live_render_skips_peak_detection_when_visible_window_is_lead_off(monkey
     assert frame.heart_rate.valid_rr_count == 0
 
 
+def test_live_render_skips_peak_detection_when_window_is_mostly_lead_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A window that is only partially attached must NOT pass the contact gate.
+
+    Regression: contact_ok used np.any(status == 0), so a single attached sample
+    made contact "OK" and R-peak detection ran on a mostly-disconnected trace,
+    producing bogus live HR. Contact is OK only when >=95% of the window is
+    attached (matching the quality gate's min_contact_ok_percent default).
+    """
+
+    def fail_detect(*_args: object, **_kwargs: object) -> tuple[int, ...]:
+        raise AssertionError("R peak detection should skip mostly lead-off windows")
+
+    monkeypatch.setattr(live_render, "detect_r_peaks", fail_detect)
+
+    # 600 samples, only 60 (10%) attached -> below the 95% contact threshold.
+    status = deque((0 if index < 60 else 0x0F for index in range(600)), maxlen=600)
+    ecg = deque((float(index % 100) for index in range(600)), maxlen=600)  # non-flat -> has "signal"
+
+    frame = build_live_render_frame(
+        indices=deque(range(600), maxlen=600),
+        ch1=deque((0.0 for _ in range(600)), maxlen=600),
+        ch2=ecg,
+        status=status,
+        display_settings=EcgDisplaySettings(time_window_seconds=2.0),
+        filter_settings=SoftwareFilterSettings(),
+        source="CH2",
+        sample_rate_hz=500.0,
+        smoothing_window=1,
+        max_render_points=100,
+        ecg_inverted=False,
+    )
+
+    assert frame is not None
+    assert frame.peaks == ()
+    assert frame.heart_rate.valid_rr_count == 0
+
+
 def test_live_render_skips_peak_detection_for_flatline_ecg(monkeypatch: pytest.MonkeyPatch) -> None:
     def fail_detect(*_args: object, **_kwargs: object) -> tuple[int, ...]:
         raise AssertionError("R peak detection should skip flatline live ECG windows")
