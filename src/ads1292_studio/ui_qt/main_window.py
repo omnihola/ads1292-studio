@@ -739,7 +739,9 @@ class MainWindow(QMainWindow):
         # Window: show only the most recent N seconds of the buffer.
         visible = min(total, int(ds.time_window_seconds * SAMPLE_RATE_HZ))
         start_index = self._sample_count - visible
-        xs = [(start_index + i) / SAMPLE_RATE_HZ for i in range(visible)]
+        # Vectorized time axis (avoids a per-frame Python list-comp over up to
+        # ~15k points each ~50 ms tick); equivalent to (start+i)/fs.
+        xa = (start_index + np.arange(visible)) / SAMPLE_RATE_HZ
         fsettings = self._current_filter_settings()
         ecg_raw = np.asarray(list(self._ch2)[-visible:], dtype=float)
         resp_raw = np.asarray(list(self._ch1)[-visible:], dtype=float)
@@ -750,7 +752,6 @@ class MainWindow(QMainWindow):
         ecg_y = ecg_filtered * ds.gain
         resp_y = apply_software_filters(resp_raw, SAMPLE_RATE_HZ, fsettings)
         # Peak-preserving decimation keeps wide windows smooth without losing QRS.
-        xa = np.asarray(xs, dtype=float)
         ex, ey = decimate_extrema_for_plot(xa, ecg_y, MAX_PLOT_POINTS)
         rx, ry = decimate_extrema_for_plot(xa, resp_y, MAX_PLOT_POINTS)
         self.live_panel.update_traces(ex.tolist(), ey.tolist(), rx.tolist(), ry.tolist())
