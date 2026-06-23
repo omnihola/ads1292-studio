@@ -18,7 +18,7 @@ from ads1292_studio.quality_gate import QualityGate, evaluate_quality_gate
 from ads1292_studio.recording_manifest import verify_recording_manifest, write_recording_manifest
 from ads1292_studio.report import export_review_report
 from ads1292_studio.segments import analyze_protocol_segments, evaluate_segment_quality_gates
-from ads1292_studio.session_index import export_session_index
+from ads1292_studio.session_index import discover_recording_csvs, export_session_index
 from ads1292_studio.session_package import export_session_package, verify_session_package
 from ads1292_studio.signal_processing import review_channels
 
@@ -140,8 +140,24 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_batch_inputs(paths: list[Path]) -> list[Path]:
+    """Expand any directory arguments to the recording CSVs inside them (like
+    `index`), so `batch <dir>` works instead of silently treating the directory
+    as an unreadable 'recording'. Explicit file paths pass through unchanged."""
+    resolved: list[Path] = []
+    for path in paths:
+        if path.is_dir():
+            resolved.extend(discover_recording_csvs(path))
+        else:
+            resolved.append(path)
+    return resolved
+
+
 def cmd_batch(args: argparse.Namespace) -> int:
-    export = export_batch_summary(paths=args.csvs, out_dir=args.out, title=args.title)
+    paths = _resolve_batch_inputs(list(args.csvs))
+    if not paths:
+        print("no recording CSVs found in the given path(s)")
+    export = export_batch_summary(paths=paths, out_dir=args.out, title=args.title)
     print(f"csv={export.csv_path}")
     print(f"group_csv={export.group_csv_path}")
     print(f"html={export.html_path}")

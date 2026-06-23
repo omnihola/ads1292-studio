@@ -263,6 +263,38 @@ def test_cli_index_writes_session_library(tmp_path: Path, capsys) -> None:
     assert "python -m ads1292_studio manifest" in manifest_apply_script.read_text()
 
 
+def test_cli_batch_accepts_a_directory_of_recordings(tmp_path: Path, capsys) -> None:
+    """`batch <dir>` should discover and process the recordings inside it, like
+    `index <dir>` does — not silently produce a zero-row summary."""
+    _write_small_csv(tmp_path / "rec.csv")
+
+    assert main(["batch", str(tmp_path), "--out", str(tmp_path / "batch")]) == 0
+    captured = capsys.readouterr().out
+
+    assert "rows=1" in captured
+
+
+def test_cli_batch_still_accepts_explicit_csv_files(tmp_path: Path, capsys) -> None:
+    csv_path = tmp_path / "rec.csv"
+    _write_small_csv(csv_path)
+
+    assert main(["batch", str(csv_path), "--out", str(tmp_path / "batch")]) == 0
+
+    assert "rows=1" in capsys.readouterr().out
+
+
+def test_cli_batch_warns_when_no_recordings_found(tmp_path: Path, capsys) -> None:
+    """An empty directory must not silently report success with no diagnostic."""
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    main(["batch", str(empty), "--out", str(tmp_path / "batch")])
+    captured = capsys.readouterr().out
+
+    assert "rows=0" in captured
+    assert "no recording" in captured.lower()
+
+
 def test_cli_qc_returns_success_for_good_recording(tmp_path: Path) -> None:
     csv_path = tmp_path / "recording.csv"
     _write_small_csv(csv_path)

@@ -152,13 +152,19 @@ class SessionIndexExport:
     manifest_plan_rows: tuple[RecordingManifestPlanRow, ...]
 
 
+def discover_recording_csvs(root: Path | str) -> tuple[Path, ...]:
+    """Recording CSVs under ``root`` (recursive), excluding index/summary files.
+
+    The single source of truth for "what counts as a recording" so directory
+    scans agree across commands (session index AND batch)."""
+    return tuple(
+        path for path in sorted(Path(root).rglob("*.csv")) if _looks_like_recording_csv(path)
+    )
+
+
 def scan_recording_directory(root: Path | str) -> tuple[SessionIndexRow, ...]:
     root_path = Path(root)
-    rows = tuple(
-        _row_for_csv(path, root_path)
-        for path in sorted(root_path.rglob("*.csv"))
-        if _looks_like_recording_csv(path)
-    )
+    rows = tuple(_row_for_csv(path, root_path) for path in discover_recording_csvs(root_path))
     return tuple(row for row in rows if row is not None)
 
 
