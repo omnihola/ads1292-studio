@@ -56,10 +56,13 @@ def synthetic_ecg_at_bpm(
     return ecg, len(peak_times)
 
 
-@pytest.mark.parametrize("bpm", [50, 60, 75, 100, 120])
+@pytest.mark.parametrize("bpm", [50, 60, 75, 100, 120, 160, 170])
 def test_heart_rate_matches_known_bpm_on_clean_ecg(bpm: int) -> None:
-    """Ground-truth validation: measured median HR must equal the synthesized
-    rate, and the peak count must match the true beat count."""
+    """Ground-truth validation across the physiological range, up to the
+    detector's ~171 bpm ceiling (the 0.35 s refractory distance) which comfortably
+    covers the validation protocol's baseline/motion/recovery rates. Measured
+    median HR must equal the synthesized rate, and the peak count must match the
+    true beat count."""
     ecg, true_beats = synthetic_ecg_at_bpm(bpm)
 
     peaks = detect_r_peaks(ecg, sample_rate_hz=500.0)
