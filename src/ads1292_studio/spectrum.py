@@ -46,9 +46,11 @@ def _selected_channel(samples: tuple[StreamSample, ...], source: str) -> np.ndar
 
 
 def _fft_power(values: np.ndarray, sample_rate_hz: float, max_frequency_hz: float) -> tuple[np.ndarray, np.ndarray]:
-    centered = values - np.mean(values)
-    if centered.size < 2:
+    # Guard before np.mean: an empty array would otherwise warn ("Mean of empty
+    # slice") and center on NaN before this check could return.
+    if values.size < 2:
         return np.array([], dtype=float), np.array([], dtype=float)
+    centered = values - np.mean(values)
     window = np.hanning(centered.size)
     spectrum = np.fft.rfft(centered * window)
     frequencies = np.fft.rfftfreq(centered.size, d=1.0 / float(sample_rate_hz))
