@@ -1,254 +1,351 @@
 # ADS1292 Studio
 
-ADS1292 Studio is a macOS-friendly research acquisition, recording, and review
-app for TI ADS1292RECG-FE / ADS1x9x ECG-FE boards. It was built for MOTAC gel
-ECG electrode validation, where the workflow needs to be simple enough for
-bench testing but explicit enough for auditable research records.
+ADS1292 Studio is a macOS-friendly ECG acquisition, recording, and review app
+for the TI ADS1292RECG-FE / ADS1x9x ECG-FE board family. It was built for MOTAC
+gel electrode validation, where the workflow needs to be fast enough for bench
+testing and explicit enough for research records.
 
 This is not diagnostic medical software. It is for feasibility evaluation,
-material comparison, waveform-quality review, and experiment documentation.
+materials comparison, signal-quality review, and experiment documentation.
+
+## Current App Status
+
+- Main GUI: PySide6 / Qt.
+- Live plot engine: pyqtgraph (`LiveScope`) for real-time ECG and respiration.
+- Offline plots/reports: Matplotlib, SciPy, seaborn styling where appropriate.
+- Tested runtime on this machine: `sensor` conda environment with PySide6 6.9.x.
+- Default sample-rate assumption: 500 Hz.
+- Default channel interpretation: CH2 is ECG Lead I-like signal; CH1 is
+  respiration/raw impedance.
+
+The legacy Tk GUI is still present for comparison and regression coverage, but
+new work should target the Qt front end.
 
 ## Quick Start
 
-From this folder (launches the modern PySide6 GUI):
-
-```bash
-PYTHONPATH=src conda run -n sensor python -m ads1292_studio
-```
-
-or:
+From this folder:
 
 ```bash
 ./run_gui_sensor.sh
 ```
 
-The default GUI is now the PySide6 (Qt) app (`ads1292-studio` / `ads1292-studio-qt`).
-The legacy Tk app is still available as `ads1292-studio-tk` or
-`python -m ads1292_studio.app`.
+Equivalent explicit command:
 
-The GUI workflow is intentionally manual:
+```bash
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio
+```
+
+Installed console entry points:
+
+```bash
+ads1292-studio      # Qt GUI
+ads1292-studio-qt   # Qt GUI
+ads1292-studio-tk   # legacy Tk GUI
+ads1292-studio-cli  # command-line tools
+```
+
+If the board is not auto-detected, type the serial path manually. On macOS this
+is usually `/dev/cu.usbmodem*` or `/dev/cu.usbserial*`.
+
+## Bench Workflow
 
 1. Plug in the ADS1292RECG-FE board.
 2. Press `Refresh`.
-3. Select or type the serial port.
+3. Select or type the port.
 4. Press `Connect`.
 5. Choose `Live Monitor` or `Raw Record`.
-6. Keep `Save CSV` enabled if the session should be recorded.
+6. Select output formats: `CSV`, `HDF5`, `XLSX`.
 7. Press `Start`.
-8. Add point/range events during the session if needed.
-9. Press `Stop` to close the writer and finalize recording files.
+8. Add point or range events during the session if needed.
+9. Press `Stop` to close acquisition and finalize files.
+10. Review the recording in `Review CSV`, `PQRST Beat`, `Spectrum`, and `Info`.
 
-If no board is auto-detected, a manual `/dev/cu.usbmodem*` or
-`/dev/cu.usbserial*` path can still be typed and probed with `Connect`.
+Connection and acquisition are intentionally separate. `Connect` proves that the
+selected port is the board. `Start` starts a new acquisition. `Stop` finalizes
+the current session.
 
-## Hardware and Signal Mapping
+## Hardware Mapping
 
-The default mapping is ADS1292R-specific:
+The app uses the board-specific ADS1292R interpretation that has been used in
+MOTAC testing:
 
-- `CH2`: ECG Lead I-like signal, labeled `CH2 Lead I (LA-RA)`.
-- `CH1`: respiration / raw impedance channel.
-- `lead_off_bits`: contact and electrode-off state from the ADS1292 status byte.
-- Sample rate: 500 Hz in the current app assumptions.
+| Signal | App label | Meaning |
+| --- | --- | --- |
+| CH2 | `CH2 ECG Lead I (LA-RA)` | ECG Lead I-like signal |
+| CH1 | `CH1 raw impedance` | respiration / impedance channel |
+| status low bits | `lead_off_bits` | lead-off / contact status |
+| sample rate | `500 Hz` | nominal app assumption |
 
-The live screen is synchronized as three panels:
-
-1. `CH2 ECG Lead I`
-2. `CH1 respiration raw`
-3. `lead-off / contact status`
-
-The three panels share the same time axis so motion, breathing, contact loss,
-and ECG changes can be compared directly.
-
-## Main GUI Features
-
-### Acquisition Controls
-
-The top toolbar separates physical connection from acquisition:
-
-- `Refresh`: rescan likely ADS1292 serial ports.
-- `Connect`: open the selected port and query firmware.
-- `Start`: start the selected acquisition mode only after a confirmed
-  connection.
-- `Stop`: stop the active worker and finalize recording files.
-- `Save CSV`: decide whether Start opens a recording file.
-- `Live Monitor` / `Raw Record`: choose the acquisition mode.
-- `Calibrate Live`: run the board's internal test signal flow to estimate the
-  live processed stream scale in `uV/count`.
-
-Controls are state-gated. For example, Start is disabled until the selected
-port matches the connected port, and the port field locks while connecting or
-streaming so a mid-recording edit cannot silently switch devices.
-
-### Display Controls
-
-The display toolbar is for visualization, not for changing saved raw counts:
-
-- `Window`: rolling time window, such as 8 s.
-- `Gain`: display multiplier for viewing.
-- `Speed`: ECG-paper sweep cue, such as 25 or 50 mm/s.
-- `Auto scale`: robust per-panel scaling.
-- `HP`, `Notch`, `LP`, `Bandpass`: optional software display filters.
-
-Saved CSV values preserve the acquired counts. Display filters, gain, smoothing,
-and axis scaling are for screen/review readability unless explicitly written as
-processing metadata in the recording JSON.
-
-### Workspace Tabs
-
-The main workspace has five tabs:
-
-- `Live ECG`: rolling ECG, respiration, and contact panels.
-- `Review CSV`: offline replay of a loaded recording.
-- `PQRST Beat`: average beat morphology review aligned to detected R peaks.
-- `Spectrum`: FFT spectrum and amplitude histogram for offline review.
-- `Event Log`: timestamped app logs and event history.
-
-The sidebar is split into a fixed `Status` column plus task tabs:
-
-- `Session`: metadata, recording notes, and event annotation controls.
-- `Validation`: calibration, quality gates, report/package actions, and session
-  index tools.
-- `Protocol`: baseline/motion/recovery protocol text and safety notes.
-
-The fixed Status panel shows the next valid operator action, connection state,
-selected channel map, signal-quality summary, current recording path, event
-count, and storage state.
-
-### Events
-
-Events are for marking experimental context, not for altering the waveform:
-
-- `Add Point Event`: add one timestamp, for example `touch`, `motion`, or
-  `electrode adjust`.
-- `Start Range`: mark the beginning of an interval.
-- `End Range`: close the interval at the current recording time.
-- `Add Manual Range`: add an exact start/end interval from typed seconds.
-- `Remove Last Event` and `Remove Event #`: correct annotations without
-  deleting the whole session.
-
-Point events draw as dashed vertical markers. Range events draw as shaded spans.
-The same overlay geometry is used in Live ECG, Review CSV, and exported reports.
+Lead-off is displayed as a status indicator and saved as raw status data. It is
+not automatically converted into event annotations, because this board can keep
+lead-off bits asserted in ways that would otherwise produce misleading full-run
+event spans.
 
 ## Acquisition Modes
 
 ### Live Monitor
 
-`Live Monitor` uses the ADS1x9x firmware streaming command. The app parses the
-stream as signed 16-bit `ch1` and `ch2` count values with board heart-rate,
-respiration-rate, and status fields. This mode is the default for live ECG
-screening because it streams continuously and updates smoothly.
+`Live Monitor` uses the ADS1x9x firmware streaming command. The firmware stream
+is parsed as signed 16-bit values for CH1 and CH2, plus board heart-rate,
+respiration-rate, and status fields.
 
-Live CSV columns:
+Use this mode for:
 
-- `timestamp`
-- `sample_index`
-- `ch1_counts`
-- `ch2_counts`
-- `board_heart_rate`
-- `board_respiration_rate`
-- `status_byte`
-- `lead_off_bits`
+- normal ECG hookup testing;
+- real-time waveform viewing;
+- electrode/contact troubleshooting;
+- MOTAC gel screening where continuous display smoothness matters.
 
-If live calibration was run before recording, extra columns are appended:
-
-- `live_scale_uv_per_count`
-- `live_scale_std_uv_per_count`
-- `live_scale_cv_percent`
-- `live_scale_runs`
-- `live_test_signal_pp_uv`
-- `live_scale_type`
-
-The live `uV/count` value is empirical for this firmware stream. It is measured
-from repeated internal-test-signal runs and saved with the CSV so later analysis
-knows the scale used for that recording.
+Live mode can be calibrated with the board's internal test signal. The measured
+live scale is empirical for the firmware stream and is saved as metadata when a
+live recording is made.
 
 ### Raw Record
 
-`Raw Record` uses the ADS1x9x acquire-data command and records 24-bit ADC
-values in chunks. This mode is better for scale-rigorous experiments because it
-uses the ADS1292 ADC count scale from `Vref`, `PGA gain`, and `adc_bits`.
+`Raw Record` uses the ADS1x9x acquire-data command and records signed 24-bit ADC
+codes. Acquisition is chunked request/response rather than continuous streaming.
 
-Raw CSV columns:
+Use this mode for:
 
-- `timestamp`
-- `sample_index`
-- `ch1_raw24`
-- `ch2_raw24`
-- `ch1_uv`
-- `ch2_uv`
-- `status_byte`
-- `lead_off_bits`
-- `vref_mv`
-- `pga_gain`
-- `adc_bits`
-- `raw_lsb_uv_per_count`
-- `acquisition_mode`
+- scale-rigorous data capture;
+- FFT/spectrum checks;
+- waveform work where the raw ADC value matters;
+- experiments where you want the ADC count scale from Vref, PGA gain, and ADC
+  bit depth.
 
-Raw mode can look less smooth in the live GUI because it is chunked
-request/response acquisition rather than continuous streaming. That is a UI
-tradeoff, not a reason to discard the raw values.
+Raw mode can update less smoothly on screen because the app receives data in
+blocks. That is an acquisition-mode tradeoff, not a reason to discard the data.
+The GUI resets the live plot range at every new Start so switching from 16-bit
+live display to 24-bit raw display does not hide the first raw frame.
 
-## Recording Files
+## Display Controls
 
-When `Save CSV` is enabled, pressing Start creates a timestamped recording under
-`~/Documents/ECG/`. Live monitor sessions go to `~/Documents/ECG/live/`; raw ADC
-sessions go to `~/Documents/ECG/raw/`. The CSV writer opens at Start and closes
-after Stop. A second Start creates a new file; it does not append to the
-previous stopped session.
+Display controls change visualization only. They do not rewrite the acquired
+counts saved to disk.
 
-For a recording named:
+| Control | Purpose |
+| --- | --- |
+| `Window` | rolling time window, such as 4/8/12/16 s |
+| `Gain` | display multiplier for ECG viewing |
+| `Speed` | ECG-paper time-grid cue, 25 or 50 mm/s |
+| `Auto scale` | automatic y-range tracking |
+| `HP` | high-pass display filter |
+| `Notch` | 60 Hz notch display filter |
+| `LP` | low-pass display filter |
+| `QRS` | QRS-oriented bandpass display filter |
+| `Invert ECG` | visual polarity flip for ECG display |
+
+Filters are useful for real-time readability. For morphology arguments, inspect
+raw data and average-beat views rather than relying only on the live display
+filter state.
+
+## Main GUI Layout
+
+The Qt GUI has three practical zones:
+
+- Top toolbars: port, connection, mode, output format, display controls.
+- Center workspace: live plot and analysis tabs.
+- Right status panel: next step, connection, channel map, signal quality, and
+  recording state.
+
+Workspace tabs:
+
+| Tab | Purpose |
+| --- | --- |
+| `Live ECG` | synchronized rolling CH2 ECG and CH1 respiration plots |
+| `Review CSV` | offline replay of CSV or HDF5 recordings |
+| `PQRST Beat` | average-beat morphology review aligned to detected R peaks |
+| `Spectrum` | FFT spectrum and amplitude histogram |
+| `Info` | recording metadata, event, calibration, and provenance summary |
+| `Event Log` | app logs, acquisition logs, event history |
+
+The live ECG area also contains the real-time SNR strip and event annotation
+console below the plots.
+
+## Event Logic
+
+Events describe what happened during the experiment. They never alter the raw
+signal.
+
+There are two event types:
+
+- Point event: one timestamp, e.g. `motion`, `touch`, `adjust electrode`.
+- Range event: start time plus duration, e.g. `motion interval` or `bad contact`.
+
+Live controls:
+
+| Control | Meaning |
+| --- | --- |
+| `Event label` | short event name |
+| `Event notes` | optional free-text notes |
+| `Add Point Event` | add label/notes at the current sample clock |
+| `Start Range` | remember the current sample clock as range start |
+| `End Range` | create a range from remembered start to now |
+| manual start/end fields | create an exact range from typed seconds |
+| `Remove Last` | remove the most recent event |
+| `Remove Event #` | remove a numbered event |
+
+Quick point/range buttons only work while streaming because they depend on the
+live sample clock. Manual ranges can be added when streaming or when reviewing a
+loaded recording.
+
+Event overlays are shared across Live ECG, Review CSV, reports, JSON/HDF5, and
+XLSX export so event timing stays consistent.
+
+## Data Saving Logic
+
+All new recordings are written under:
+
+```text
+~/Documents/ECG/
+```
+
+Mode-specific folders:
+
+```text
+~/Documents/ECG/live/
+~/Documents/ECG/raw/
+```
+
+Path examples:
 
 ```text
 ~/Documents/ECG/live/2026-06-21-125109-008670-ads1292-studio.csv
+~/Documents/ECG/raw/2026-06-21-125109-008670-ads1292-raw.csv
 ```
 
-the app can produce:
+Important rules:
 
-- `.csv`: acquired samples.
-- `.json`: unified recording bundle with metadata, events, calibration,
-  acquisition provenance, protocol, quality gate, and display/processing
-  settings.
-- `.xlsx`: two-sheet workbook with `Events` and `Data`.
-- `.manifest.json`: generated or refreshed when a manifest/package workflow is
-  used, with hashes for audit checks.
-- report files: HTML plus PNG figures for ECG, PQRST, and spectrum review.
-- package folder: raw CSV, sidecars, reports, and SHA256 manifest.
+- A new file is chosen when `Start` is pressed.
+- `Stop` closes the worker and finalizes selected outputs.
+- A second Start creates a second session. It does not append to the previous
+  stopped recording.
+- CSV is the live crash-safe journal whenever any output format is selected.
+- HDF5 and XLSX are produced after Stop from the CSV journal.
+- If CSV is not selected but HDF5 or XLSX is selected, the CSV journal may be
+  removed after the replacement file is durably written.
+- Empty captures are kept as CSV only and are not converted into degenerate HDF5
+  files.
 
-The current preferred recording companion is the unified `.json` bundle. Older
-sidecars such as `.events.json`, `.calibration.json`, `.protocol.json`,
-`.quality-gate.json`, `.acquisition.json`, and `.processing.json` are still
-loaded for compatibility when no unified bundle is present.
+Output formats:
 
-The `.xlsx` workbook is written only when the CSV exists and the acquisition
-worker has stopped. It is designed for convenient inspection in Excel while the
-CSV/JSON pair remains the primary machine-readable record.
+| Format | Role |
+| --- | --- |
+| CSV | live journal and simple machine-readable sample table |
+| HDF5 | canonical recording container with samples, bundle metadata, and hashes |
+| XLSX | Excel-friendly workbook with `Events` and `Data` sheets |
+| JSON | exportable metadata bundle derived from HDF5/recording tools |
+| report | HTML plus PNG review figures |
+| package | self-contained package with manifest and SHA256 verification |
 
-## Review and Analysis
+## CSV Columns
+
+### Live CSV
+
+Typical live columns:
+
+```text
+timestamp
+sample_index
+ch1_counts
+ch2_counts
+board_heart_rate
+board_respiration_rate
+status_byte
+lead_off_bits
+```
+
+If live calibration was run before recording, live scale columns are appended:
+
+```text
+live_scale_uv_per_count
+live_scale_std_uv_per_count
+live_scale_cv_percent
+live_scale_runs
+live_test_signal_pp_uv
+live_scale_type
+```
+
+### Raw CSV
+
+Typical raw columns:
+
+```text
+timestamp
+sample_index
+ch1_raw24
+ch2_raw24
+ch1_uv
+ch2_uv
+status_byte
+lead_off_bits
+vref_mv
+pga_gain
+adc_bits
+raw_lsb_uv_per_count
+acquisition_mode
+```
+
+`ch1_raw24` and `ch2_raw24` are signed 24-bit ADC codes. `ch1_uv` and `ch2_uv`
+are derived from the raw ADC scale stored in the same row.
+
+## Calibration and Units
+
+There are two different scale concepts:
+
+1. Raw ADC scale: derived from Vref, PGA gain, and ADC bit depth.
+2. Live-stream scale: empirical scale for the board firmware's processed
+   streaming output.
+
+Raw ADC data is the better path when the exact ADC count scale matters. Live
+stream calibration is useful when you are using the firmware's continuous live
+stream and need an empirical `uV/count` estimate for that stream.
+
+Do not mix the two scales without explicitly documenting which acquisition mode
+produced the recording.
+
+## Real-Time Quality Readouts
+
+The live screen computes a lightweight real-time SNR estimate from the current
+ECG window. It displays:
+
+- approximate SNR in dB;
+- noise RMS in counts or uV if a live calibration is active;
+- contact state from lead-off bits;
+- current event count and pending range start.
+
+The SNR estimate is a screening metric for live operation. It is not a substitute
+for offline quality review, contact inspection, and morphology checks.
+
+## Offline Review and Analysis
 
 Offline review computes:
 
-- ECG source selection or override.
-- R-peak detection.
-- HR summary from R-R intervals.
-- Contact percentage from lead-off bits.
-- QRS clarity.
-- Tentative P and T visibility from average-beat windows.
-- Baseline drift, noise RMS, and peak-to-peak artifact metrics.
-- Protocol-segment metrics when a protocol is available.
-- FFT spectrum and amplitude histogram.
+- ECG channel choice or source override;
+- R-peak detection;
+- heart-rate summary from R-R intervals;
+- contact percentage from lead-off bits;
+- QRS clarity;
+- tentative P-wave and T-wave visibility;
+- baseline drift;
+- noise RMS;
+- peak-to-peak artifact metrics;
+- FFT spectrum;
+- amplitude histogram;
+- protocol-segment metrics when a protocol is available.
 
-Important interpretation rules:
+Interpretation rules:
 
 - P/T labels are tentative screening labels, not clinical confirmation.
-- PQRST review uses raw selected channel data for morphology analysis.
-- Report ECG plots use a fixed QRS-oriented bandpass for export consistency.
-- GUI display filters are for viewing; they should not be treated as the only
-  morphology-preserving analysis path.
+- PQRST analysis uses raw selected-channel data, not the current live-display
+  filter state.
+- Reports use a fixed QRS-oriented bandpass for ECG export consistency.
+- Live display filters are for viewing; saved data remains the acquired count
+  stream.
 
 ## CLI
 
-The CLI mirrors the GUI workflows and is useful for smoke tests, reports, batch
-comparison, and folder-level audit.
+Use the CLI for headless checks, reports, packages, and batch/index work.
 
 ```bash
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli ports
@@ -257,10 +354,12 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli stream --port /d
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli review ~/Documents/ECG/live/test.csv
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report ~/Documents/ECG/live/test.csv --out reports
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli qc ~/Documents/ECG/live/test.csv
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli manifest ~/Documents/ECG/live/test.csv
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-recording ~/Documents/ECG/live/test.manifest.json
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli package ~/Documents/ECG/live/test.csv --out packages
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli verify-package packages/<session>/manifest.json
-PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch recording-a.csv recording-b.csv --out reports/batch
-PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index recordings --out reports/session-index
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli batch ~/Documents/ECG/live --out reports/batch
+PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli index ~/Documents/ECG --out reports/session-index
 ```
 
 Template helpers:
@@ -272,147 +371,173 @@ PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-c
 PYTHONPATH=src conda run -n sensor python -m ads1292_studio.cli report --write-protocol-template reports/protocol-template.json
 ```
 
-Session index export scans a recordings folder, ignores generated summary CSVs,
-and writes CSV/HTML library tables with signal status, sidecar completeness,
-package-readiness, and next-action recommendations. It also stages sidecar
-templates and safe copy scripts so incomplete records can be completed without
-overwriting existing sidecars.
+## Troubleshooting
+
+### No port found
+
+- Press `Refresh`.
+- Check for `/dev/cu.usbmodem*` or `/dev/cu.usbserial*`.
+- Type the port manually and press `Connect`.
+- Make sure Parallels or another app has not captured the USB device.
+
+### Connect works but Start appears to do nothing
+
+- Check that the selected port still matches the connected port.
+- Watch the Event Log for worker errors.
+- Unplug/replug the board, then reconnect.
+- If Raw mode times out, use Live Monitor first to confirm the board path and
+  firmware response.
+
+### Live works but Raw display looks blank
+
+Raw mode uses 24-bit count values and a chunked acquisition path. Starting a new
+recording resets the pyqtgraph view range so the first raw frame becomes
+visible. If a window still looks blank, confirm that:
+
+- acquisition state says `streaming`;
+- SNR/contact values are changing;
+- Auto scale is enabled;
+- the selected mode is really `Raw Record`;
+- the Event Log does not show acquire timeouts.
+
+### Raw mode looks choppy
+
+This is expected. Raw mode prioritizes data completeness by acquiring larger
+blocks. Live Monitor is the smooth display mode.
+
+### Bandpass or filters make morphology look different
+
+Filters are display processing. They can make R peaks easier to see but can also
+change Q/S/P/T appearance. Use raw review plus average-beat morphology when the
+shape itself is the claim.
+
+### CSV seems empty
+
+Check the file size and whether Stop/finalization completed. If a capture has
+zero samples, the app keeps the CSV and skips HDF5 finalization. If CSV was not
+selected but HDF5/XLSX was selected, the CSV journal may be removed after the
+replacement output is written.
+
+## Project Structure
+
+Key modules:
+
+| Path | Responsibility |
+| --- | --- |
+| `src/ads1292_studio/app_qt.py` | Qt app entry point |
+| `src/ads1292_studio/ui_qt/main_window.py` | Qt main-window assembly and tick loop |
+| `src/ads1292_studio/ui_qt/controller.py` | acquisition controller, queues, finalization |
+| `src/ads1292_studio/ui_qt/live_scope.py` | pyqtgraph live ECG/respiration scope |
+| `src/ads1292_studio/ui_qt/event_console.py` | SNR strip and annotation controls |
+| `src/ads1292_studio/ui_qt/status_panel.py` | fixed right-side status cards |
+| `src/ads1292_studio/workers.py` | serial acquisition worker for live and raw modes |
+| `src/ads1292_studio/device.py` | ADS1x9x serial protocol and frame parsers |
+| `src/ads1292_studio/models.py` | sample and review dataclasses |
+| `src/ads1292_studio/csv_io.py` | CSV readers/writers for live and raw recordings |
+| `src/ads1292_studio/h5_io.py` | canonical HDF5 writer/reader/verifier |
+| `src/ads1292_studio/xlsx_io.py` | two-sheet XLSX export |
+| `src/ads1292_studio/recording_paths.py` | `~/Documents/ECG/live` and `raw` paths |
+| `src/ads1292_studio/recording_bundle.py` | metadata/events/calibration/provenance bundle |
+| `src/ads1292_studio/signal_processing.py` | filters, R peaks, HR, PQRST screening |
+| `src/ads1292_studio/quality.py` | signal-quality and SNR metrics |
+| `src/ads1292_studio/spectrum.py` | FFT and histogram analysis |
+| `src/ads1292_studio/report.py` | HTML/PNG report export |
+| `src/ads1292_studio/session_package.py` | package export and verification |
+| `src/ads1292_studio/session_index.py` | folder-level recording index |
+| `src/ads1292_studio/app.py` | legacy Tk app |
 
 ## Design Logic
 
-### 1. Preserve Acquired Data First
+1. Preserve acquired data first.
+   Display gain, filters, smoothing, decimation, and autoscale are presentation
+   layers. The saved count stream is the primary record.
 
-The app always treats acquired counts as the primary record. Display gain,
-filters, smoothing, decimation, and autoscale are presentation layers. Calibration
-metadata is saved beside the data rather than destructively rewriting the raw
-recording.
+2. Keep connection, acquisition, and finalization explicit.
+   `Connect` validates the board. `Start` creates a session. `Stop` finalizes
+   the selected outputs.
 
-### 2. Keep Acquisition Simple and Explicit
+3. Keep serial I/O off the GUI thread.
+   Worker threads own device reads and CSV writes. The Qt timer drains queues and
+   updates UI state.
 
-Connection and acquisition are separate states. Start requires a confirmed port.
-Stop only applies while streaming. Save CSV locks once acquisition begins because
-the output path is chosen at Start. This prevents ambiguous sessions such as
-"which port/file did this data come from?"
+4. Make real-time plotting lightweight.
+   pyqtgraph handles the live trace. The app uses peak-preserving decimation
+   before plotting wide windows.
 
-### 3. Separate Live UI from Worker I/O
+5. Avoid broad hardware register editing in the normal GUI.
+   Arbitrary ADS1292 register writes can silently change acquisition state and
+   make records hard to compare. The normal GUI exposes safer workflows only.
 
-Serial I/O runs in `LiveWorker` on a background thread. Tkinter owns the UI
-thread. Samples move through queues, and GUI ticks drain bounded batches so the
-window remains responsive during acquisition.
+6. Use one event model everywhere.
+   `EventMarker` drives live overlays, review overlays, reports, JSON/HDF5, and
+   XLSX export.
 
-### 4. Keep Expensive Analysis Single-Flight
+7. Use HDF5 as the canonical post-recording container.
+   HDF5 stores samples, metadata bundle, and per-array integrity hashes. CSV is
+   the live journal and simple exchange format.
 
-Quality analysis and offline render work run in background futures. The app uses
-generation-aware result draining and single-flight scheduling so stale review
-jobs do not pile up behind the newest data.
+8. Keep research provenance visible.
+   Recordings include acquisition mode, port, timestamps, calibration, protocol,
+   quality gate, processing settings, events, and measured effective sample rate
+   when available.
 
-### 5. Share One Annotation Model
+## Development
 
-`EventMarker` is the single model for point and interval annotations. The same
-event-overlay core builds geometry for live display, offline review, reports,
-XLSX, and JSON bundles. This keeps event timing consistent across outputs.
-
-### 6. Make GUI State Deterministic
-
-Toolbar states, status cards, workflow hints, cursor changes, and connection
-badges are derived from one immutable `GuiState` snapshot. This avoids separate
-pieces of UI disagreeing about whether the app is idle, connected, starting,
-streaming, loading, or packaging.
-
-### 7. Keep Plot Mutation Local
-
-`app.py` orchestrates workflow; plot creation and artist updates live in
-`gui_plots.py`, `live_render.py`, and `review_render.py`. Render helpers build
-data frames; GUI plot helpers apply changed-only Matplotlib artist updates.
-
-### 8. Prefer Auditability over Hidden Automation
-
-Recording bundles include acquisition provenance, calibration, quality gates,
-protocol steps, and processing settings. Session packages include hashes. The
-operator can later prove which file, scale, contact status, and annotations were
-used for a figure.
-
-### 9. Avoid Risky Hardware Configuration by Default
-
-The app supports safe connection, stream/acquire, firmware query, raw ADC
-capture, and live test-signal calibration. It does not expose a broad register
-write panel in the normal GUI because arbitrary ADS1292 register writes can
-change the acquisition state and make records harder to compare.
-
-## Module Map
-
-- `app.py`: Tkinter application orchestration and user workflows.
-- `gui_layout.py`: header, toolbar, sidebar, workspace shell, and button wiring.
-- `gui_specs.py`: visual constants, tab labels, channel labels, and layout specs.
-- `gui_state.py`: immutable GUI state, control gating, status cards, workflow
-  hints, and changed-only UI helpers.
-- `gui_plots.py`: Matplotlib panel creation and artist updates.
-- `live_render.py`: rolling-window live render frame construction.
-- `review_render.py`: offline review render frame construction.
-- `workers.py`: serial acquisition worker, live mode, raw mode, CSV writer
-  ownership.
-- `device.py`: ADS1x9x serial protocol, port detection, firmware query,
-  streaming frames, raw acquire frames, and live calibration register sequence.
-- `csv_io.py`: live CSV, raw CSV, import compatibility, and recorder classes.
-- `xlsx_io.py`: lightweight XLSX writer with `Events` and `Data` sheets.
-- `recording_bundle.py`: unified JSON bundle for metadata/events/calibration/
-  acquisition/protocol/quality/processing.
-- `recording_manifest.py`: SHA256 manifest generation and verification support.
-- `session_package.py`: export and verify self-contained session packages.
-- `signal_processing.py`: filters, channel selection, R peaks, HR, and PQRST
-  screening.
-- `quality.py` and `quality_gate.py`: quality metrics and pass/fail evaluation.
-- `events.py` and `event_overlay.py`: event model, event IDs, sample indices,
-  log formatting, and overlay geometry.
-- `report.py`: HTML and PNG report export.
-- `spectrum.py`: FFT spectrum and raw-count histogram analysis.
-- `session_index.py`: folder-level recording library and sidecar/manifest audit.
-- `batch.py`: multi-recording comparison summaries.
-- `calibration.py`: raw ADC scale and empirical live-stream calibration.
-- `acquisition.py`: acquisition provenance and user-readable summaries.
-- `protocol.py` and `segments.py`: protocol templates and segment metrics.
-- `matplotlib_runtime.py` and `macos_stderr.py`: macOS runtime cleanup for
-  Matplotlib/Tk noise and cache behavior.
-
-## Development Notes
-
-- Keep `app.py` as an orchestrator. Put layout in `gui_layout.py`, state logic
-  in `gui_state.py`, render-frame creation in `live_render.py` /
-  `review_render.py`, and Matplotlib artist mutation in `gui_plots.py`.
-- Keep the live render path lightweight. Do not recreate Matplotlib artists on
-  every tick if data, limits, labels, or overlay keys did not change.
-- Keep ECG, respiration, and contact x-limits synchronized in every live frame.
-- Use stride/extrema decimation deliberately: live plotting should read as a
-  smooth rolling signal; offline review and reports should preserve narrow
-  spikes.
-- Do not spend GUI time detecting R peaks when the contact window is fully
-  lead-off, when the signal is flat, or when fewer than one second of samples is
-  available.
-- Keep contact/status as a crisp digital trace. Do not smooth it like ECG.
-- Keep event overlay geometry in the pure `event_overlay.py` core so live,
-  review, report, XLSX, and JSON timing stay aligned.
-- Keep log rendering batched in `gui_log.py`; do not autoscroll hidden log tabs.
-- Keep sidebar and workspace tab strips keyboard-accessible with stable widths
-  so hover/selection does not reflow the layout.
-- Keep Quality, Report, Package, Batch, and Session Index paths usable without
-  live hardware.
-- Keep tests hardware-free where possible by mocking devices and testing parser,
-  worker, state, render, and file-output behavior independently.
-
-## Tests
-
-Run the full suite:
+Install or run in the `sensor` environment used on this machine. For local dev:
 
 ```bash
-pytest -q
+PYTHONPATH=src QT_QPA_PLATFORM=offscreen conda run -n sensor pytest -q
 ```
 
-The test suite covers parser behavior, acquisition workers, live/raw CSV output,
-GUI control state, event overlays, quality metrics, reports, packages, XLSX,
-session index, plotting, and macOS runtime handling.
+Targeted GUI/display checks:
+
+```bash
+PYTHONPATH=src QT_QPA_PLATFORM=offscreen conda run -n sensor pytest tests/test_live_scope.py tests/test_ui_qt_smoke.py -q
+```
+
+Useful principles for future changes:
+
+- Keep `main_window.py` as orchestration, not signal-processing logic.
+- Put live plot behavior in `live_scope.py`.
+- Put acquisition/finalization behavior in `controller.py` and `workers.py`.
+- Keep file-format changes covered by tests in `tests/test_csv_io.py`,
+  `tests/test_h5_io.py`, `tests/test_h5_export.py`, and
+  `tests/test_recording_bundle_xlsx.py`.
+- Keep hardware-free tests for parser, worker, UI state, render, and export
+  behavior.
+- Do not make display filters mutate saved data.
+- Do not make event annotations depend on hidden GUI-only state.
+
+## Test Coverage
+
+The test suite covers:
+
+- ADS1x9x stream and acquire parsers;
+- live and raw worker behavior;
+- port discovery;
+- Qt control gating and smoke tests;
+- pyqtgraph live scope behavior;
+- event overlay consistency;
+- CSV/HDF5/XLSX export;
+- recording bundles and package manifests;
+- signal processing and quality metrics;
+- spectrum and histogram analysis;
+- report generation;
+- batch and session-index tools;
+- macOS runtime handling.
+
+Current expected command:
+
+```bash
+PYTHONPATH=src QT_QPA_PLATFORM=offscreen conda run -n sensor pytest -q
+```
 
 ## Safety
 
-Use a battery-powered laptop for body-contact tests. Do not charge the laptop
-during recording and do not connect other earth-referenced instruments to the
-subject.
+For body-contact ECG tests:
+
+- Use a battery-powered laptop.
+- Do not charge the laptop during body-contact recording.
+- Do not connect other earth-referenced instruments to the subject.
+- Do not use the board or this software for diagnosis or clinical decisions.
+- Treat all recordings as research/feasibility data only.
