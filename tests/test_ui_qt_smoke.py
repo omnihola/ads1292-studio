@@ -1271,6 +1271,69 @@ def test_live_redraw_visible_when_autoscale_off_before_first_samples(qapp) -> No
         win.deleteLater()
 
 
+def test_raw_record_start_resets_live_scope_range_when_autoscale_off(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        # A live monitor run can initialize the pyqtgraph Y range around small
+        # 16-bit live-count values.
+        win._ch2.extend(float(i % 20) for i in range(1000))
+        win._ch1.extend(float(i % 3) for i in range(1000))
+        win._sample_count = 1000
+        win._redraw_live()
+
+        # If the user records RAW next with fixed scaling, the first raw frame
+        # still has to become visible instead of staying outside the old range.
+        win._auto_btn.setChecked(False)
+        win.mode_combo.setCurrentText("Raw Record")
+        win._ch1.clear()
+        win._ch2.clear()
+        win._sample_count = 0
+        win._reset_live_scope_for_new_acquisition()
+        win._ch2.extend(780000.0 + ((i % 50) - 25) * 10.0 for i in range(4000))
+        win._ch1.extend(8388600.0 + ((i % 20) - 10) for i in range(4000))
+        win._sample_count = 4000
+        win._redraw_live()
+
+        ecg_y = list(win.live_panel.ecg_y())
+        resp_y = list(win.live_panel._resp_curve.getData()[1])
+        ecg_ymin, ecg_ymax = win.live_panel.p_ecg.vb.viewRange()[1]
+        resp_ymin, resp_ymax = win.live_panel.p_resp.vb.viewRange()[1]
+        assert ecg_ymin < min(ecg_y) < ecg_ymax
+        assert ecg_ymin < max(ecg_y) < ecg_ymax
+        assert resp_ymin < min(resp_y) < resp_ymax
+        assert resp_ymin < max(resp_y) < resp_ymax
+    finally:
+        win.deleteLater()
+
+
+def test_start_action_resets_live_scope_view_state(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        win._ch2.extend(float(i % 20) for i in range(1000))
+        win._ch1.extend(float(i % 3) for i in range(1000))
+        win._sample_count = 1000
+        win._redraw_live()
+        assert win.live_panel._ecg_range_initialized is True
+
+        started = {}
+
+        def fake_start(*args, **kwargs):
+            started["args"] = args
+            started["kwargs"] = kwargs
+
+        win.save_csv.setChecked(False)
+        win.save_h5.setChecked(False)
+        win.save_xlsx.setChecked(False)
+        win.controller.start = fake_start
+        win._on_start()
+
+        assert "kwargs" in started
+        assert win.live_panel._ecg_range_initialized is False
+        assert win.live_panel.ecg_y() == []
+    finally:
+        win.deleteLater()
+
+
 def test_wide_window_decimates_but_preserves_peak(qapp) -> None:
     from ads1292_studio.ui_qt.main_window import MAX_PLOT_POINTS
 

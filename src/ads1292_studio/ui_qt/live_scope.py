@@ -82,6 +82,18 @@ class LiveScope(QWidget):
         if self._autoscale_enabled or not self._resp_range_initialized:
             self._resp_range_initialized = self._autoscale_y(self.p_resp, ry)
 
+    def reset_view_state(self) -> None:
+        """Clear old trace data and let the next frame initialize Y ranges.
+
+        This matters when switching from 16-bit live-count monitoring to
+        24-bit RAW acquisition with fixed scaling: the old small Y range would
+        otherwise hide the first RAW frame outside the visible plot area.
+        """
+        self._ecg_curve.setData([], [])
+        self._resp_curve.setData([], [])
+        self._ecg_range_initialized = False
+        self._resp_range_initialized = False
+
     @staticmethod
     def _autoscale_y(plot, ys: np.ndarray) -> bool:
         if ys.size == 0:

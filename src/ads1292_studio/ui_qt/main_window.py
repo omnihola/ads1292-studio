@@ -425,6 +425,7 @@ class MainWindow(QMainWindow):
         self._ch2.clear()
         self._sample_count = 0
         self._lead_off_active = None
+        self._reset_live_scope_for_new_acquisition()
         self._rec_start_monotonic = time.monotonic() if recording else None
         self.controller.start(
             self.port_combo.currentText().strip(),
@@ -438,6 +439,11 @@ class MainWindow(QMainWindow):
         )
         self._set_timer_active(True)
         self._refresh_state()
+
+    def _reset_live_scope_for_new_acquisition(self) -> None:
+        reset = getattr(self.live_panel, "reset_view_state", None)
+        if callable(reset):
+            reset()
 
     def _confirm_disk_space(self) -> bool:
         """Warn (and let the user cancel) if free disk space is low before a
