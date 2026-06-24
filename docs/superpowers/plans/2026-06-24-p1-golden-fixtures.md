@@ -1022,18 +1022,21 @@ git commit -m "feat: P-1 spectrum golden fixtures"
 
 ---
 
-### Task 9: File-format fixtures (live/raw CSV, HDF5, bundle, hashes)
+### Task 9: File-format fixtures (live/raw CSV, HDF5, **minimal XLSX semantic**, hashes)
 
 **Files:**
+- Create: `scripts/_xlsx_read.py` (minimal unzip+regex XLSX semantic reader — openpyxl is NOT in the env)
 - Create: `scripts/gen_file_fixtures.py`
-- Create (generated): `tests/fixtures/golden/files/*` (`.csv`, `.h5`, `*_sidecar.json`)
+- Create (generated): `tests/fixtures/golden/files/*` (`.csv`, `.h5`, `.xlsx`, `*_sidecar.json`)
 - Test: `tests/test_gen_file_fixtures.py`
 
 **Interfaces:**
 - Consumes: `scripts._fixture_signals`, `scripts.fixture_io`.
-- Produces: `generate(root: Path) -> list[Path]`.
+- Produces:
+  - `scripts._xlsx_read.read_xlsx_semantic(path: Path) -> dict` — `{"sheet_names": [...], "sheets": {name: [[cell,...], ...]}}`; used by BOTH the generator (to freeze) and the validator (to re-check). Sheets are mapped to `sheet1.xml`/`sheet2.xml` by their order in `xl/workbook.xml`.
+  - `scripts.gen_file_fixtures.generate(root: Path) -> list[Path]`.
 
-**Oracle:** `csv_io.write_recording_csv` / `read_recording_csv` (live), `csv_io.write_raw_recording_csv` / `read_raw_recording_csv` (raw), `h5_io.write_recording_h5` / `read_recording_h5` / `verify_recording_h5`, `recording_bundle.build_recording_bundle` / `read_recording_bundle`, `hashing.sha256_file`. **Live CSV** freezes the exact header + first rows (text-level). **HDF5** freezes a JSON sidecar: dataset names+shapes+dtypes, attribute keys+values, and `sha256_array` per sample array — **not** file bytes. **Bundle** freezes the 7-part semantic structure (metadata/events/calibration/acquisition/protocol/quality_gate/processing).
+**Oracle:** `csv_io.write_recording_csv` (live), `h5_io.write_recording_h5` / `verify_recording_h5`, `xlsx_io.write_recording_xlsx(csv_path, *, events, sample_rate_hz)`, `hashing.sha256_file`. **Live CSV** freezes the exact header + first rows (text-level). **HDF5** freezes a JSON sidecar: dataset names+shapes+dtypes, attribute keys+values, and `sha256_array` per sample array — **not** file bytes. **XLSX** is a **minimal semantic** fixture only: sheet names, Events header, Data header, ≥1 point-event row, ≥1 interval-event row, first/last data row — **no** style, column width, formula, or zip-entry equality. `EventMarker(timestamp_seconds, label, notes, duration_seconds)`: `duration_seconds == 0` → point event, `> 0` → interval event. Events sheet rows end in a type column literally `"point"`/`"interval"`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1044,12 +1047,14 @@ from scripts.fixture_io import load_fixture
 from scripts.gen_file_fixtures import generate
 
 
-def test_freezes_csv_text_and_h5_sidecar(tmp_path: Path):
+def test_freezes_csv_text_h5_sidecar_and_xlsx_semantic(tmp_path: Path):
     paths = generate(tmp_path)
     files_dir = tmp_path / "files"
     assert (files_dir / "live_recording.csv").exists()
     assert (files_dir / "live_recording_sidecar.json").exists()
     assert (files_dir / "recording.h5").exists()
+    assert (files_dir / "recording.xlsx").exists()
+    assert (files_dir / "recording_xlsx_sidecar.json").exists()
 
     live = load_fixture(files_dir / "live_recording_sidecar.json")
     assert live["csv_header"][0] == "timestamp"
@@ -1059,6 +1064,15 @@ def test_freezes_csv_text_and_h5_sidecar(tmp_path: Path):
     assert "datasets" in h5 and "attrs" in h5
     assert all("sha256" in d for d in h5["datasets"].values())
     assert h5["verify_ok"] is True
+
+    xlsx = load_fixture(files_dir / "recording_xlsx_sidecar.json")
+    assert len(xlsx["sheet_names"]) == 2
+    assert xlsx["events_header"]            # exact header row, frozen
+    assert xlsx["data_header"][0] == "timestamp"
+    assert xlsx["point_event_row"][-3] == "point"     # type column
+    assert xlsx["interval_event_row"][-3] == "interval"
+    assert xlsx["data_first_row"] and xlsx["data_last_row"]
+    assert xlsx["tolerance"]["kind"] == "semantic"
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1066,7 +1080,49 @@ def test_freezes_csv_text_and_h5_sidecar(tmp_path: Path):
 Run: `PYTHONPATH=src QT_QPA_PLATFORM=offscreen conda run -n sensor python -m pytest tests/test_gen_file_fixtures.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'scripts.gen_file_fixtures'`
 
-- [ ] **Step 3: Write the implementation**
+- [ ] **Step 3: Write the minimal XLSX semantic reader**
+
+```python
+# scripts/_xlsx_read.py
+from __future__ import annotations
+
+import re
+import zipfile
+from html import unescape
+from pathlib import Path
+
+_SHEET_NAME_RE = re.compile(r'<sheet [^>]*name="([^"]*)"')
+_ROW_RE = re.compile(r"<row\b[^>]*>(.*?)</row>", re.DOTALL)
+# Each cell carries exactly one of <v>..</v> (number) or <t>..</t> (inline string).
+_CELL_VALUE_RE = re.compile(r"<v>(.*?)</v>|<t>(.*?)</t>", re.DOTALL)
+
+
+def read_xlsx_semantic(path: Path) -> dict:
+    """Semantic-only XLSX read: sheet names (workbook.xml order) + cell text per row.
+
+    Deliberately ignores styles, column widths, formulas, and zip internals.
+    sheet1.xml / sheet2.xml are matched to sheet names by their workbook order.
+    """
+    path = Path(path)
+    with zipfile.ZipFile(path) as zf:
+        workbook = zf.read("xl/workbook.xml").decode("utf-8")
+        sheet_names = _SHEET_NAME_RE.findall(workbook)
+        sheets: dict[str, list[list[str]]] = {}
+        for order, name in enumerate(sheet_names, start=1):
+            xml = zf.read(f"xl/worksheets/sheet{order}.xml").decode("utf-8")
+            sheets[name] = _rows(xml)
+    return {"sheet_names": sheet_names, "sheets": sheets}
+
+
+def _rows(xml: str) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for row_xml in _ROW_RE.findall(xml):
+        cells = [unescape(v if v else t) for v, t in _CELL_VALUE_RE.findall(row_xml)]
+        rows.append(cells)
+    return rows
+```
+
+- [ ] **Step 4: Write the file-format generator**
 
 ```python
 # scripts/gen_file_fixtures.py
@@ -1080,9 +1136,12 @@ import numpy as np
 
 from ads1292_studio.csv_io import write_recording_csv
 from ads1292_studio.h5_io import write_recording_h5, verify_recording_h5
+from ads1292_studio.events import EventMarker
+from ads1292_studio.xlsx_io import write_recording_xlsx
 from ads1292_studio.models import StreamSample
 from scripts._fixture_signals import synthetic_ecg
 from scripts.fixture_io import dump_fixture, sha256_array
+from scripts._xlsx_read import read_xlsx_semantic
 
 SR = 500.0
 
@@ -1141,6 +1200,7 @@ def generate(root: Path) -> list[Path]:
     dump_fixture({
         "schema_version": 1, "category": "file_hdf5", "name": "recording_h5",
         "oracle": {"function": "ads1292_studio.h5_io.write_recording_h5"},
+        "artifact": "recording.h5",
         "datasets": datasets,
         "attrs": attrs,
         "verify_ok": bool(getattr(verification, "ok", verification)),
@@ -1148,22 +1208,52 @@ def generate(root: Path) -> list[Path]:
         "notes": "HDF5 schema + datasets + attrs + per-array sha256; byte-identity NOT required",
     }, h5_sidecar)
     written += [h5_path, h5_sidecar]
+
+    # --- minimal XLSX semantic fixture: sheets + headers + event rows + data rows ---
+    point_event = EventMarker(timestamp_seconds=0.020, label="touch", notes="point note", duration_seconds=0.0)
+    interval_event = EventMarker(timestamp_seconds=0.040, label="motion", notes="range note", duration_seconds=0.030)
+    xlsx_path = write_recording_xlsx(csv_path, events=(point_event, interval_event), sample_rate_hz=SR)
+    if xlsx_path != out / "recording.xlsx":
+        xlsx_path = xlsx_path.rename(out / "recording.xlsx")
+    semantic = read_xlsx_semantic(xlsx_path)
+    events_name, data_name = semantic["sheet_names"][0], semantic["sheet_names"][1]
+    events_rows = semantic["sheets"][events_name]
+    data_rows = semantic["sheets"][data_name]
+    point_rows = [r for r in events_rows[1:] if r and r[-3] == "point"]
+    interval_rows = [r for r in events_rows[1:] if r and r[-3] == "interval"]
+    assert point_rows and interval_rows, "expected one point and one interval event row"
+    xlsx_sidecar = out / "recording_xlsx_sidecar.json"
+    dump_fixture({
+        "schema_version": 1, "category": "file_xlsx", "name": "recording_xlsx",
+        "oracle": {"function": "ads1292_studio.xlsx_io.write_recording_xlsx"},
+        "artifact": "recording.xlsx",
+        "sheet_names": semantic["sheet_names"],
+        "events_header": events_rows[0],
+        "point_event_row": point_rows[0],
+        "interval_event_row": interval_rows[0],
+        "data_header": data_rows[0],
+        "data_first_row": data_rows[1],
+        "data_last_row": data_rows[-1],
+        "tolerance": {"kind": "semantic"},
+        "notes": "XLSX semantic ONLY: sheet names + headers + 1 point + 1 interval event + first/last data row. No style/zip/byte equality.",
+    }, xlsx_sidecar)
+    written += [xlsx_path, xlsx_sidecar]
     return written
 ```
 
-> Note: confirm the `H5Verification` attribute name (`.ok`) when implementing — `verify_recording_h5` returns an `H5Verification` dataclass (see `src/ads1292_studio/h5_io.py:149`). Adjust `getattr(verification, "ok", ...)` to the real field if it differs. Raw-CSV and XLSX/bundle sidecars follow the same shape and are added in the same task if time allows; if deferred, log the gap in `findings.md` rather than dropping silently.
+> Note: confirm the `H5Verification` attribute name (`.ok`) when implementing — `verify_recording_h5` returns an `H5Verification` dataclass (see `src/ads1292_studio/h5_io.py:149`). Adjust `getattr(verification, "ok", ...)` to the real field if it differs. **XLSX semantic fixture is now mandatory P-1 scope** (see above). Raw-CSV and recording-bundle sidecars are the only optional add-ons here: they follow the same sidecar shape; if deferred, log the gap in `findings.md` (P2 scope) rather than dropping silently.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `PYTHONPATH=src QT_QPA_PLATFORM=offscreen conda run -n sensor python -m pytest tests/test_gen_file_fixtures.py -v`
 Expected: PASS (1 passed)
 
-- [ ] **Step 5: Generate and commit**
+- [ ] **Step 6: Generate and commit**
 
 ```bash
 PYTHONPATH=src QT_QPA_PLATFORM=offscreen conda run -n sensor python -c "from pathlib import Path; from scripts.gen_file_fixtures import generate; generate(Path('tests/fixtures/golden'))"
-git add scripts/gen_file_fixtures.py tests/test_gen_file_fixtures.py tests/fixtures/golden/files
-git commit -m "feat: P-1 file-format golden fixtures (CSV text + HDF5 sidecar)"
+git add scripts/_xlsx_read.py scripts/gen_file_fixtures.py tests/test_gen_file_fixtures.py tests/fixtures/golden/files
+git commit -m "feat: P-1 file-format golden fixtures (CSV text + HDF5 sidecar + minimal XLSX semantic)"
 ```
 
 ---
@@ -1266,8 +1356,19 @@ import sys
 from pathlib import Path
 
 from scripts.fixture_provenance import REQUIRED_PROVENANCE_KEYS
+from scripts._xlsx_read import read_xlsx_semantic
 
-REQUIRED_ENVELOPE_KEYS = ("schema_version", "category", "name", "oracle", "input", "output")
+# Two fixture shapes exist:
+#  - "envelope" fixtures (device/dsp/rpeak/review/spectrum): need input + output.
+#  - "file_*" sidecars (file_csv_live/file_hdf5/file_xlsx): flat, category-specific.
+COMMON_KEYS = ("schema_version", "category", "name", "oracle")
+ENVELOPE_KEYS = ("input", "output")
+FILE_SIDECAR_KEYS = {
+    "file_csv_live": ("csv_header", "csv_first_rows"),
+    "file_hdf5": ("artifact", "datasets", "attrs"),
+    "file_xlsx": ("artifact", "sheet_names", "events_header", "point_event_row",
+                  "interval_event_row", "data_header", "data_first_row", "data_last_row"),
+}
 
 
 def validate_root(root: Path) -> list[str]:
@@ -1288,13 +1389,48 @@ def validate_root(root: Path) -> list[str]:
             continue
         obj = json.loads(path.read_text())
         rel = path.relative_to(root)
-        for key in REQUIRED_ENVELOPE_KEYS:
+        category = obj.get("category", "")
+
+        for key in COMMON_KEYS:
             if key not in obj:
                 errors.append(f"{rel}: missing envelope key '{key}'")
-        has_tol = "tolerance" in obj or "output_tolerances" in obj
-        if not has_tol:
+        if not ("tolerance" in obj or "output_tolerances" in obj):
             errors.append(f"{rel}: missing tolerance / output_tolerances")
+
+        if category in FILE_SIDECAR_KEYS:
+            for key in FILE_SIDECAR_KEYS[category]:
+                if key not in obj:
+                    errors.append(f"{rel}: file sidecar missing '{key}'")
+            if category == "file_xlsx":
+                errors.extend(_validate_xlsx(path, obj, rel))
+        else:
+            for key in ENVELOPE_KEYS:
+                if key not in obj:
+                    errors.append(f"{rel}: missing envelope key '{key}'")
     return errors
+
+
+def _validate_xlsx(sidecar_path: Path, obj: dict, rel: Path) -> list[str]:
+    """Re-open the committed workbook and confirm the frozen semantics still hold."""
+    artifact = sidecar_path.parent / obj["artifact"]
+    if not artifact.exists():
+        return [f"{rel}: xlsx artifact not found: {obj['artifact']}"]
+    actual = read_xlsx_semantic(artifact)
+    problems: list[str] = []
+    if actual["sheet_names"] != obj["sheet_names"]:
+        problems.append(f"{rel}: xlsx sheet names drifted")
+    events_name, data_name = actual["sheet_names"][0], actual["sheet_names"][1]
+    events_rows = actual["sheets"][events_name]
+    data_rows = actual["sheets"][data_name]
+    if events_rows[0] != obj["events_header"]:
+        problems.append(f"{rel}: xlsx events header drifted")
+    if data_rows[0] != obj["data_header"]:
+        problems.append(f"{rel}: xlsx data header drifted")
+    if data_rows[1] != obj["data_first_row"] or data_rows[-1] != obj["data_last_row"]:
+        problems.append(f"{rel}: xlsx data first/last row drifted")
+    if obj["point_event_row"] not in events_rows or obj["interval_event_row"] not in events_rows:
+        problems.append(f"{rel}: xlsx event rows drifted")
+    return problems
 
 
 if __name__ == "__main__":
@@ -1388,6 +1524,8 @@ PYTHONPATH=src QT_QPA_PLATFORM=offscreen conda run -n sensor python -m scripts.v
 ```
 Expected: `all golden fixtures valid`
 
+> **XLSX acceptance is semantic only:** the validator re-opens `recording.xlsx` and checks sheet names + Events/Data headers + one point-event row + one interval-event row + first/last data row. It asserts **no binary equality, no style equality, no zip-entry equality**. Full XLSX writer parity and styling are P2/P7 scope (recorded in `findings.md`).
+
 - [ ] **Step 3: Run the complete P-1 test set**
 
 Run: `PYTHONPATH=src QT_QPA_PLATFORM=offscreen conda run -n sensor python -m pytest tests/test_fixture_provenance.py tests/test_fixture_io.py tests/test_gen_device_fixtures.py tests/test_gen_dsp_fixtures.py tests/test_gen_rpeak_fixtures.py tests/test_gen_review_fixtures.py tests/test_gen_spectrum_fixtures.py tests/test_gen_file_fixtures.py tests/test_validate_golden_fixtures.py tests/test_golden_fixtures.py -v`
@@ -1413,9 +1551,9 @@ git commit -m "docs: record P-1 golden fixture acceptance and frozen oracle comm
 
 **1. Spec coverage** (against the master spec's §6.1 P-1 asset list):
 - stream/raw frame parser fixtures → Task 4 ✓
-- live/raw CSV fixtures → Task 9 (raw CSV noted as same-shape add / deferred-with-log) ✓
+- live CSV fixture → Task 9 ✓ (raw CSV = optional same-shape add, log to findings if deferred)
 - HDF5 fixture → Task 9 ✓
-- XLSX semantic fixture → Task 9 note (deferred-with-log if not reached) — **flagged**: if XLSX parity is required in P-1, add an explicit XLSX sidecar step mirroring HDF5.
+- XLSX semantic fixture → Task 9 ✓ **mandatory, semantic-only** (sheet names + headers + 1 point + 1 interval event + first/last data row; re-opened and checked by the validator). No style/zip/byte equality; full XLSX writer parity is P2/P7.
 - ECG review fixture → Task 7 ✓
 - R peak / HR / SNR / spectrum golden → Tasks 6, 7, 8 ✓
 - bad frames / timeout / bad trailer → Task 4 ✓
@@ -1430,4 +1568,4 @@ git commit -m "docs: record P-1 golden fixture acceptance and frozen oracle comm
 
 **Known follow-ups for the executor:**
 - Verify `H5Verification` field name against `h5_io.py:149` (Task 9 note).
-- If raw-CSV / XLSX / bundle sidecars are required for P-1 sign-off (not just HDF5), extend Task 9 with the same sidecar pattern before Task 11 acceptance, and update the §6.1 XLSX line.
+- Raw-CSV and recording-bundle sidecars are optional in P-1 (same sidecar pattern as HDF5). XLSX is **not** optional — it is mandatory semantic-only and is re-validated by the validator. If raw-CSV/bundle are deferred, record them in `findings.md` as P2 scope (Task 11 Step 5).
