@@ -15,7 +15,7 @@
 - **Every fixture batch carries an `oracle.json` provenance manifest** with: `oracle_repo_commit`, `python_version`, `numpy_version`, `scipy_version`, `h5py_version`, `sample_rate_hz`, `fixture_generation_command`, `platform`. A fixture without provenance must fail validation.
 - **Frozen inputs, not seeds.** Any synthetic signal is generated once and stored verbatim in the fixture as a numeric array. The C++ side will consume the stored input; it must never regenerate from a seed (cross-language RNG differs).
 - **Tolerances are explicit per fixture.** Coefficients: abs `1e-12`. filtfilt/filter outputs: abs `1e-6`. FFT power: rel `1e-9`. R-peak indices: exact integer equality. HR/float summaries: abs `1e-9`.
-- **Determinism.** Running the generator twice on the same oracle commit must produce byte-identical JSON fixtures (sorted keys, fixed float formatting via Python `repr`). HDF5/XLSX binary artifacts may differ byte-wise; their JSON sidecars (schema/attrs/cells/hashes-of-arrays) must be byte-identical.
+- **Determinism.** Running the generator twice back-to-back must produce byte-identical fixture JSON (sorted keys, fixed float formatting via Python `repr`). **Exclusions, by design:** `oracle.json` embeds the commit hash + env versions and is expected to vary across commits — it is a provenance stamp, not a fixture, and is excluded from the byte-identical guarantee. HDF5/XLSX binary artifacts may differ byte-wise. Their JSON sidecars must be byte-identical given the same deterministic input; if `write_recording_h5` stamps a wall-clock/time-varying attribute, the sidecar generator must drop that specific attribute value (record the key, not the volatile value) so the sidecar stays deterministic.
 - **Fixture root:** `tests/fixtures/golden/`. **Generator:** `scripts/generate_golden_fixtures.py`. **Validator:** `scripts/validate_golden_fixtures.py`. **Pytest:** `tests/test_golden_fixtures.py`.
 - **Compatibility contract levels** (from the master spec) govern which fields a fixture must capture: CSV text-level; HDF5 schema+datasets+attrs+per-array-hash; XLSX sheet-names+cell-values; DSP numeric tolerance; reports out of P-1 scope.
 
@@ -1513,9 +1513,9 @@ git commit -m "feat: P-1 golden fixture aggregator, validator, and drift-guard t
 
 ```bash
 PYTHONPATH=src QT_QPA_PLATFORM=offscreen conda run -n sensor python -m scripts.generate_golden_fixtures
-git status --porcelain tests/fixtures/golden
+git status --porcelain tests/fixtures/golden | grep -v 'oracle.json' | grep -v '\.h5$' | grep -v '\.xlsx$'
 ```
-Expected: **no JSON changes** under `tests/fixtures/golden` (the `.h5` binary may differ — that is allowed; its sidecar must not). If any `*.json` shows as modified, the generator is non-deterministic — fix float formatting / key ordering before proceeding.
+Expected: **no output** (no fixture JSON or sidecar changed). By design, `oracle.json` (commit/env stamp) and the `.h5`/`.xlsx` binary artifacts are excluded — they may differ and are filtered above. If any `*.json` sidecar or fixture shows as modified, the generator is non-deterministic — fix float formatting / key ordering / a time-varying attribute leaking into a sidecar before proceeding.
 
 - [ ] **Step 2: Run the full validator over the committed tree**
 
