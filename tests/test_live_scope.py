@@ -31,6 +31,12 @@ def test_update_traces_sets_data(qapp) -> None:
     assert list(scope.ecg_x()) == [0.0, 1.0, 2.0]
 
 
+def test_pyqtgraph_curves_are_attached_to_viewbox_child_group(qapp) -> None:
+    scope = _scope(qapp)
+    assert scope._ecg_curve.parentItem() is scope.p_ecg.vb.childGroup
+    assert scope._resp_curve.parentItem() is scope.p_resp.vb.childGroup
+
+
 def test_calibration_scales_and_relabels(qapp) -> None:
     scope = _scope(qapp)
     scope.set_calibration(2.0)

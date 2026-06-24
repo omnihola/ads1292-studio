@@ -37,6 +37,8 @@ class LivePanel(FigureCanvasQTAgg):
         self._event_artists: list = []
         self._uv_per_count: float | None = None
         self._autoscale_enabled = True
+        self._ecg_range_initialized = False
+        self._resp_range_initialized = False
         self.show_empty("Connect, then Start for CH2 ECG")
 
     def set_autoscale(self, enabled: bool) -> None:
@@ -56,6 +58,8 @@ class LivePanel(FigureCanvasQTAgg):
         """Render an empty-state placeholder message on the ECG axis."""
         self._ecg_line.set_data([], [])
         self._resp_line.set_data([], [])
+        self._ecg_range_initialized = False
+        self._resp_range_initialized = False
         if self._empty_text is not None:
             self._empty_text.remove()
         self._empty_text = self.ax_ecg.text(
@@ -87,6 +91,8 @@ class LivePanel(FigureCanvasQTAgg):
     def set_calibration(self, uv_per_count: float | None) -> None:
         """Switch Y-axis display between raw counts and calibrated µV."""
         self._uv_per_count = uv_per_count
+        self._ecg_range_initialized = False
+        self._resp_range_initialized = False
         if uv_per_count is not None:
             self.ax_ecg.set_ylabel("Amplitude (µV)", fontsize=8)
             self.ax_resp.set_ylabel("Impedance (µV)", fontsize=8)
@@ -123,9 +129,10 @@ class LivePanel(FigureCanvasQTAgg):
         # X always follows the time window; Y autoscales only when enabled.
         self._set_xwindow(self.ax_ecg, ecg_x)
         self._set_xwindow(self.ax_resp, resp_x)
-        if self._autoscale_enabled:
-            self._autoscale_y(self.ax_ecg, ecg_y)
-            self._autoscale_y(self.ax_resp, resp_y)
+        if self._autoscale_enabled or not self._ecg_range_initialized:
+            self._ecg_range_initialized = self._autoscale_y(self.ax_ecg, ecg_y)
+        if self._autoscale_enabled or not self._resp_range_initialized:
+            self._resp_range_initialized = self._autoscale_y(self.ax_resp, resp_y)
         self.draw_idle()
 
     def render_recording(self, samples, sample_rate_hz: float, ecg_source: str | None = None) -> None:
@@ -177,11 +184,12 @@ class LivePanel(FigureCanvasQTAgg):
         ax.set_xlim(xs[0], xs[-1] if xs[-1] > xs[0] else xs[0] + 1.0)
 
     @staticmethod
-    def _autoscale_y(ax, ys: Sequence[float]) -> None:
+    def _autoscale_y(ax, ys: Sequence[float]) -> bool:
         if not ys:
-            return
+            return False
         lo, hi = min(ys), max(ys)
         if hi <= lo:
             hi, lo = lo + 1.0, lo - 1.0
         pad = (hi - lo) * 0.12
         ax.set_ylim(lo - pad, hi + pad)
+        return True
