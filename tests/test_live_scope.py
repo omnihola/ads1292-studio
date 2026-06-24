@@ -60,6 +60,20 @@ def test_autoscale_uses_explicit_ranges_not_pyqtgraph_autorange(qapp) -> None:
     assert scope.p_resp.vb.state["autoRange"][1] is False
 
 
+def test_autoscale_off_first_data_frame_initializes_visible_y_range(qapp) -> None:
+    scope = _scope(qapp)
+    scope.set_autoscale(False)
+
+    scope.update_traces([0.0, 1.0], [779750.0, 780240.0], [0.0, 1.0], [8388588.0, 8388611.0])
+
+    ecg_ymin, ecg_ymax = scope.p_ecg.vb.viewRange()[1]
+    resp_ymin, resp_ymax = scope.p_resp.vb.viewRange()[1]
+    assert ecg_ymin < 779750.0 < ecg_ymax
+    assert ecg_ymin < 780240.0 < ecg_ymax
+    assert resp_ymin < 8388588.0 < resp_ymax
+    assert resp_ymin < 8388611.0 < resp_ymax
+
+
 def test_event_markers_and_pending_are_added_and_cleared(qapp) -> None:
     from ads1292_studio.events import EventMarker, event_from_interval
 

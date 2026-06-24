@@ -47,6 +47,8 @@ class LiveScope(QWidget):
 
         self._uv_per_count: float | None = None
         self._autoscale_enabled = True
+        self._ecg_range_initialized = False
+        self._resp_range_initialized = False
         self._event_items: list = []
         # Drive ranges explicitly (NOT pyqtgraph autoRange): autoRange is
         # poisoned by the vertical event-marker InfiniteLines (infinite Y extent
@@ -75,22 +77,24 @@ class LiveScope(QWidget):
             self.p_ecg.setXRange(float(ex[0]), right, padding=0)
         # Y is computed explicitly from the data (only when autoscale is on),
         # so event-marker InfiniteLines never poison the range.
-        if self._autoscale_enabled:
-            self._autoscale_y(self.p_ecg, ey)
-            self._autoscale_y(self.p_resp, ry)
+        if self._autoscale_enabled or not self._ecg_range_initialized:
+            self._ecg_range_initialized = self._autoscale_y(self.p_ecg, ey)
+        if self._autoscale_enabled or not self._resp_range_initialized:
+            self._resp_range_initialized = self._autoscale_y(self.p_resp, ry)
 
     @staticmethod
-    def _autoscale_y(plot, ys: np.ndarray) -> None:
+    def _autoscale_y(plot, ys: np.ndarray) -> bool:
         if ys.size == 0:
-            return
+            return False
         lo = float(np.min(ys))
         hi = float(np.max(ys))
         if not (np.isfinite(lo) and np.isfinite(hi)):
-            return
+            return False
         if hi <= lo:
             hi, lo = lo + 1.0, lo - 1.0
         pad = (hi - lo) * 0.12
         plot.setYRange(lo - pad, hi + pad, padding=0)
+        return True
 
     def set_autoscale(self, enabled: bool) -> None:
         self._autoscale_enabled = bool(enabled)
@@ -99,6 +103,8 @@ class LiveScope(QWidget):
 
     def set_calibration(self, uv_per_count: float | None) -> None:
         self._uv_per_count = uv_per_count
+        self._ecg_range_initialized = False
+        self._resp_range_initialized = False
         if uv_per_count is not None:
             self.p_ecg.setLabel("left", "Amplitude (µV)")
             self.p_resp.setLabel("left", "Impedance (µV)")

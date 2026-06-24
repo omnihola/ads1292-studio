@@ -1250,6 +1250,27 @@ def test_window_limits_visible_samples(qapp) -> None:
         win.deleteLater()
 
 
+def test_live_redraw_visible_when_autoscale_off_before_first_samples(qapp) -> None:
+    win = _make_window(qapp)
+    try:
+        win._auto_btn.setChecked(False)
+        win._ch2.extend(780000.0 + ((i % 50) - 25) * 10.0 for i in range(8000))
+        win._ch1.extend(8388600.0 + ((i % 20) - 10) for i in range(8000))
+        win._sample_count = 8000
+        win._redraw_live()
+
+        ecg_y = list(win.live_panel.ecg_y())
+        resp_y = list(win.live_panel._resp_curve.getData()[1])
+        ecg_ymin, ecg_ymax = win.live_panel.p_ecg.vb.viewRange()[1]
+        resp_ymin, resp_ymax = win.live_panel.p_resp.vb.viewRange()[1]
+        assert ecg_ymin < min(ecg_y) < ecg_ymax
+        assert ecg_ymin < max(ecg_y) < ecg_ymax
+        assert resp_ymin < min(resp_y) < resp_ymax
+        assert resp_ymin < max(resp_y) < resp_ymax
+    finally:
+        win.deleteLater()
+
+
 def test_wide_window_decimates_but_preserves_peak(qapp) -> None:
     from ads1292_studio.ui_qt.main_window import MAX_PLOT_POINTS
 
