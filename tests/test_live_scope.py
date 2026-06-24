@@ -51,6 +51,15 @@ def test_autoscale_toggle_tracks_flag(qapp) -> None:
     assert scope._autoscale_enabled is True
 
 
+def test_autoscale_uses_explicit_ranges_not_pyqtgraph_autorange(qapp) -> None:
+    scope = _scope(qapp)
+    scope.set_autoscale(False)
+    scope.set_autoscale(True)
+
+    assert scope.p_ecg.vb.state["autoRange"][1] is False
+    assert scope.p_resp.vb.state["autoRange"][1] is False
+
+
 def test_event_markers_and_pending_are_added_and_cleared(qapp) -> None:
     from ads1292_studio.events import EventMarker, event_from_interval
 

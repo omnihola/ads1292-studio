@@ -9,9 +9,11 @@ matplotlib.use("QtAgg")
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
 
+from ads1292_studio.plots import decimate_extrema_for_plot
 from ads1292_studio.ui_qt.tokens import design_tokens
 
 _T = design_tokens()
+MAX_REVIEW_POINTS = 4000
 
 
 class LivePanel(FigureCanvasQTAgg):
@@ -131,11 +133,12 @@ class LivePanel(FigureCanvasQTAgg):
         if not samples:
             self.show_empty("No samples in recording")
             return
-        step = max(1, len(samples) // 4000)
-        xs = [s.timestamp for s in samples[::step]]
-        ecg = [float(s.ch2) for s in samples[::step]]
-        resp = [float(s.ch1) for s in samples[::step]]
-        self.update_traces(xs, ecg, xs, resp)
+        xs = [s.timestamp for s in samples]
+        ecg = [float(s.ch2) for s in samples]
+        resp = [float(s.ch1) for s in samples]
+        ecg_x, ecg_y = decimate_extrema_for_plot(xs, ecg, MAX_REVIEW_POINTS)
+        resp_x, resp_y = decimate_extrema_for_plot(xs, resp, MAX_REVIEW_POINTS)
+        self.update_traces(ecg_x.tolist(), ecg_y.tolist(), resp_x.tolist(), resp_y.tolist())
 
     def set_event_markers(self, markers, pending_range_start: float | None = None) -> None:
         """Overlay event markers on the ECG axis.

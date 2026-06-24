@@ -49,10 +49,10 @@ class PqrstPanel(FigureCanvasQTAgg):
         self.ax.set_ylabel("Filtered counts", fontsize=8)
         _empty(self.ax, self, "Load a CSV to view the PQRST average beat")
 
-    def show_recording(self, samples, sample_rate_hz: float) -> None:
+    def show_recording(self, samples, sample_rate_hz: float, source: str = "Auto") -> None:
         ch1 = np.asarray([s.ch1 for s in samples], dtype=float)
         ch2 = np.asarray([s.ch2 for s in samples], dtype=float)
-        review = review_channels(ch1, ch2, sample_rate_hz=sample_rate_hz, source="Auto")
+        review = review_channels(ch1, ch2, sample_rate_hz=sample_rate_hz, source=source)
         ecg = ch2 if review.source.channel == "CH2" else ch1
         pq = pqrst_review(ecg, review.peaks, sample_rate_hz)
         self.ax.clear()
@@ -63,7 +63,7 @@ class PqrstPanel(FigureCanvasQTAgg):
 
     def render_recording(self, samples, sample_rate_hz: float, ecg_source: str | None = None) -> None:
         """Uniform renderer interface (RecordingRenderer)."""
-        self.show_recording(samples, sample_rate_hz)
+        self.show_recording(samples, sample_rate_hz, ecg_source or "Auto")
 
     def _draw_beat(self, pq, source_channel: str) -> None:
         if pq.average_beat:

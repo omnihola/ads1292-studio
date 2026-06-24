@@ -95,10 +95,7 @@ class LiveScope(QWidget):
     def set_autoscale(self, enabled: bool) -> None:
         self._autoscale_enabled = bool(enabled)
         for plot in (self.p_ecg, self.p_resp):
-            if self._autoscale_enabled:
-                plot.enableAutoRange(axis="y")
-            else:
-                plot.disableAutoRange(axis="y")  # freeze current Y range
+            plot.disableAutoRange(axis="y")
 
     def set_calibration(self, uv_per_count: float | None) -> None:
         self._uv_per_count = uv_per_count

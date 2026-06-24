@@ -36,6 +36,7 @@ from ads1292_studio.ui_qt.analysis_panels import EventLogPanel, PqrstPanel, Reco
 from ads1292_studio.ui_qt.controller import AcquisitionController
 from ads1292_studio.ui_qt.event_console import EventConsole
 from ads1292_studio.ui_qt.live_panel import LivePanel
+from ads1292_studio.ui_qt.live_scope import LiveScope
 from ads1292_studio.ui_qt.preferences import Preferences
 from ads1292_studio.ui_qt.sidebar_forms import SidebarForms
 from ads1292_studio.ui_qt.status_panel import StatusPanel
@@ -318,7 +319,7 @@ class MainWindow(QMainWindow):
         live_lay = QVBoxLayout(live_tab)
         live_lay.setContentsMargins(0, 8, 0, 0)
         live_lay.setSpacing(10)
-        self.live_panel = LivePanel()  # proven matplotlib live plot
+        self.live_panel = LiveScope()
         live_lay.addWidget(self.live_panel, 1)
         self.event_console = EventConsole(
             on_add_point=self._on_add_point,
@@ -618,13 +619,17 @@ class MainWindow(QMainWindow):
     def _event_notes(self) -> str:
         return self.event_console.notes_edit.text().strip()
 
-    def _can_annotate(self) -> bool:
-        # Only annotate when there is a timeline: an active stream or a loaded
-        # recording. A stray annotation while idle has no valid time base.
+    def _can_quick_annotate(self) -> bool:
+        # Point and Start/End range actions use the live sample clock. A loaded
+        # recording has no cursor/time selection, so requiring manual seconds
+        # avoids silently writing bogus 0 s annotations.
+        return self.controller.is_streaming
+
+    def _can_manual_annotate(self) -> bool:
         return self.controller.is_streaming or self.controller.has_data
 
     def _on_add_point(self) -> None:
-        if not self._can_annotate():
+        if not self._can_quick_annotate():
             return
         marker = EventMarker(
             timestamp_seconds=self._now_seconds(), label=self._event_label(), notes=self._event_notes()
@@ -634,13 +639,13 @@ class MainWindow(QMainWindow):
         self._refresh_events()
 
     def _on_start_range(self) -> None:
-        if not self._can_annotate():
+        if not self._can_quick_annotate():
             return
         self._range_start_s = self._now_seconds()
         self._refresh_events()
 
     def _on_end_range(self) -> None:
-        if not self._can_annotate():
+        if not self._can_quick_annotate():
             return
         if self._range_start_s is not None:
             marker = event_from_interval(
@@ -655,7 +660,7 @@ class MainWindow(QMainWindow):
         self._refresh_events()
 
     def _on_add_manual_range(self) -> None:
-        if not self._can_annotate():
+        if not self._can_manual_annotate():
             return
         try:
             start = float(self.event_console.manual_start_edit.text())
@@ -686,6 +691,7 @@ class MainWindow(QMainWindow):
         markers = self.controller.event_markers
         self.event_console.set_event_status(len(markers), self._range_start_s)
         self.live_panel.set_event_markers(markers, pending_range_start=self._range_start_s)
+        self.review_panel.set_event_markers(markers, pending_range_start=self._range_start_s)
 
     # ---------- tick ----------
     def _set_timer_active(self, active: bool) -> None:
@@ -782,7 +788,8 @@ class MainWindow(QMainWindow):
         # refresh the overlay to reflect the loaded recording's own events.
         self._sample_count = 0
         self._range_start_s = None
-        self._refresh_events()
+        self.controller.has_data = True
+        self.controller.loaded_samples = tuple(samples)
         fs = recording.sample_rate_hz or SAMPLE_RATE_HZ
         try:
             metrics = self._update_quality(samples, fs)
@@ -798,6 +805,7 @@ class MainWindow(QMainWindow):
                 panel.render_recording(samples, fs, metrics.ecg_source)
             except Exception as exc:  # noqa: BLE001 - per-panel render is best-effort
                 self.event_log_panel.append_line(f"{type(panel).__name__} render failed: {exc}")
+        self._refresh_events()
         self.tabs.setCurrentWidget(self.tabs.widget(1))  # Review CSV
 
     def _update_quality(self, samples, sample_rate_hz: float):

@@ -47,6 +47,16 @@ def test_window_constructs_with_expected_widgets(qapp) -> None:
         win.deleteLater()
 
 
+def test_main_window_uses_pyqtgraph_livescope_for_live_plot(qapp) -> None:
+    from ads1292_studio.ui_qt.live_scope import LiveScope
+
+    win = _make_window(qapp)
+    try:
+        assert isinstance(win.live_panel, LiveScope)
+    finally:
+        win.deleteLater()
+
+
 def test_initial_state_disables_start_and_stop(qapp) -> None:
     win = _make_window(qapp)
     try:
@@ -1049,6 +1059,68 @@ def test_loading_canonical_h5_surfaces_its_own_events(qapp, tmp_path) -> None:
     assert [m.label for m in ctrl.event_markers] == ["motion"]
 
 
+def test_loaded_recording_quick_events_do_not_create_zero_second_markers(qapp) -> None:
+    from ads1292_studio.models import Recording
+
+    samples = tuple(
+        StreamSample(
+            timestamp=i / 500.0,
+            ch1=i % 20,
+            ch2=(i % 50) - 25,
+            board_heart_rate=60,
+            board_respiration_rate=15,
+            status_byte=0,
+            sample_index=i,
+        )
+        for i in range(1200)
+    )
+    win = _make_window(qapp)
+    try:
+        win._show_recording(Recording(path=None, samples=samples, sample_rate_hz=500.0))
+        assert win.controller.has_data is True
+
+        win.event_console.label_edit.setText("loaded-review")
+        win._on_add_point()
+        assert win.controller.event_markers == [], "point events need a live stream clock or explicit manual time"
+        win._on_start_range()
+        assert win._range_start_s is None, "range start needs a live stream clock or explicit manual time"
+
+        win.event_console.manual_start_edit.setText("0.20")
+        win.event_console.manual_end_edit.setText("0.45")
+        win._on_add_manual_range()
+        assert len(win.controller.event_markers) == 1
+        marker = win.controller.event_markers[0]
+        assert marker.timestamp_seconds == pytest.approx(0.20)
+        assert marker.duration_seconds == pytest.approx(0.25)
+    finally:
+        win.deleteLater()
+
+
+def test_loaded_recording_events_are_overlaid_on_review_panel(qapp) -> None:
+    from ads1292_studio.events import EventMarker
+    from ads1292_studio.models import Recording
+
+    samples = tuple(
+        StreamSample(
+            timestamp=i / 500.0,
+            ch1=i % 30,
+            ch2=100 if i == 500 else 0,
+            board_heart_rate=60,
+            board_respiration_rate=15,
+            status_byte=0,
+            sample_index=i,
+        )
+        for i in range(1200)
+    )
+    win = _make_window(qapp)
+    try:
+        win.controller.event_markers = [EventMarker(timestamp_seconds=0.5, label="motion")]
+        win._show_recording(Recording(path=None, samples=samples, sample_rate_hz=500.0))
+        assert len(win.review_panel._event_artists) == 1
+    finally:
+        win.deleteLater()
+
+
 def test_pending_range_start_draws_distinct_vertical_line(qapp) -> None:
     from ads1292_studio.ui_qt.live_panel import LivePanel
     from ads1292_studio.ui_qt.tokens import design_tokens
@@ -1091,6 +1163,30 @@ def test_autoscale_off_freezes_y_but_x_still_scrolls(qapp) -> None:
         panel.set_autoscale(True)
         panel.update_traces([4.0, 5.0], [0.0, 1000.0], [4.0, 5.0], [0.0, 500.0])
         assert panel.ax_ecg.get_ylim()[1] > y_before[1]
+    finally:
+        panel.deleteLater()
+
+
+def test_review_rendering_uses_peak_preserving_decimation(qapp) -> None:
+    from ads1292_studio.ui_qt.live_panel import LivePanel
+
+    panel = LivePanel()
+    try:
+        samples = tuple(
+            StreamSample(
+                timestamp=i / 500.0,
+                ch1=0,
+                ch2=9999 if i == 4001 else 0,
+                board_heart_rate=60,
+                board_respiration_rate=15,
+                status_byte=0,
+                sample_index=i,
+            )
+            for i in range(8000)
+        )
+        panel.render_recording(samples, 500.0)
+        assert max(panel.ecg_y()) == pytest.approx(9999.0)
+        assert len(panel.ecg_y()) <= 4000
     finally:
         panel.deleteLater()
 
@@ -1225,6 +1321,55 @@ def test_invert_ecg_button_flips_live_traces(qapp) -> None:
         assert "inv" in win._filter_hint.text()
     finally:
         win.deleteLater()
+
+
+def test_pqrst_panel_uses_passed_ecg_source(qapp, monkeypatch) -> None:
+    import ads1292_studio.ui_qt.analysis_panels as panels
+    from ads1292_studio.models import ChannelChoice, HeartRateSummary, PqrstReview, ReviewResult
+
+    captured: list[str] = []
+
+    def fake_review_channels(ch1, ch2, sample_rate_hz=500.0, source="Auto"):
+        captured.append(source)
+        return ReviewResult(
+            source=ChannelChoice(str(source), score_ch1=1.0, score_ch2=2.0, confidence=2.0),
+            peaks=(50,),
+            heart_rate=HeartRateSummary(60.0, 60.0, 60.0, 1),
+            pqrst=PqrstReview(False, False, False, 0, tuple(), tuple()),
+        )
+
+    def fake_pqrst_review(values, peaks, sample_rate_hz=500.0):
+        return PqrstReview(
+            qrs_clear=True,
+            p_tentative=False,
+            t_tentative=False,
+            beats_used=1,
+            average_beat=(0.0, 1.0, 0.0),
+            time_ms=(-2.0, 0.0, 2.0),
+        )
+
+    monkeypatch.setattr(panels, "review_channels", fake_review_channels)
+    monkeypatch.setattr(panels, "pqrst_review", fake_pqrst_review)
+
+    panel = panels.PqrstPanel()
+    try:
+        samples = tuple(
+            StreamSample(
+                timestamp=i / 500.0,
+                ch1=i,
+                ch2=-i,
+                board_heart_rate=60,
+                board_respiration_rate=15,
+                status_byte=0,
+                sample_index=i,
+            )
+            for i in range(100)
+        )
+        panel.render_recording(samples, 500.0, ecg_source="CH2")
+        assert captured == ["CH2"]
+        assert "source CH2" in panel.ax.get_title(loc="left")
+    finally:
+        panel.deleteLater()
 
 
 def test_main_window_calibration_syncs_to_live_panel(qapp) -> None:
