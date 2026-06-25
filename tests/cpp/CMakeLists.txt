@@ -31,7 +31,8 @@ add_executable(ads1292_tests
   test_find_peaks.cpp
   test_detect_r_peaks.cpp
   test_hr_pqrst.cpp
-  test_quality_snr.cpp)
+  test_quality_snr.cpp
+  test_channel_select.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 
