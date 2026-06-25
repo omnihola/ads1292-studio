@@ -27,7 +27,8 @@ add_executable(ads1292_tests
   test_gui_smoke.cpp
   test_iir_coeffs.cpp
   test_lfilter.cpp
-  test_filtfilt.cpp)
+  test_filtfilt.cpp
+  test_find_peaks.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 
