@@ -122,9 +122,9 @@ MainWindow::MainWindow(QWidget* parent)
         auto mode = (modeCombo->currentIndex() == 0)
                     ? ads1292::acq::AcquisitionMode::Live
                     : ads1292::acq::AcquisitionMode::Raw;
-        // Use simulator (no real port in this build)
-        static ads1292::acq::SimulatorDeviceSource sim(200, 0);
-        worker_.start(&sim, mode, "");
+        // Create a fresh simulator per button press (not static)
+        activeSource_ = std::make_unique<ads1292::acq::SimulatorDeviceSource>(200, 0);
+        worker_.start(activeSource_.get(), mode, "");
     });
 
     connect(stopBtn, &QPushButton::clicked, this, [this, startBtn, stopBtn]() {
