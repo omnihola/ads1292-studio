@@ -5,6 +5,7 @@ add_library(ads1292_core STATIC
   src/model/Calibration.cpp
   src/model/SessionMetadata.cpp
   src/model/RecordingProcessingSettings.cpp
+  src/model/TestProtocol.cpp
   src/device/AdsParser.cpp
   src/crypto/Sha1.cpp
   src/crypto/Sha256.cpp
