@@ -71,3 +71,12 @@ TEST_CASE("EventConsole adds a point event at the live clock", "[gui]") {
   REQUIRE(console.log().events().size() == 1);
   REQUIRE(console.log().events()[0].timestamp_seconds == Approx(2.5));
 }
+
+#include "ads1292/gui/MainWindow.h"
+
+TEST_CASE("MainWindow drives the simulator into the scope headlessly", "[gui]") {
+  ensureApp();
+  ads1292::gui::MainWindow win;
+  int shown = win.runSimulatorToCompletion(/*streamBatches=*/4);
+  REQUIRE(shown == 56);    // 4 * 14 samples drained into the scope
+}

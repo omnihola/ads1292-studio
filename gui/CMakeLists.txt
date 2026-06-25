@@ -8,7 +8,6 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 # ---------------------------------------------------------------------------
 add_library(ads1292_gui_lib STATIC
   src/MainWindow.cpp
-  src/MainWindow.h
   src/QCustomPlotWaveform.cpp
   src/LiveScope.cpp
   src/StatusPanel.cpp
@@ -20,13 +19,12 @@ set_target_properties(ads1292_gui_lib PROPERTIES
   AUTORCC ON)
 
 # PUBLIC so that consumers (exe + tests) inherit the include paths.
-# Expose both the installed public headers (include/) and the src/ directory
-# so that MainWindow.h (a private-but-linkable header) is also visible.
+# MainWindow.h is now in include/ads1292/gui/ (public header location).
 target_include_directories(ads1292_gui_lib PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(ads1292_gui_lib PUBLIC
+  ads1292_qt_runtime
   ads1292_io
   ads1292_core
   qcustomplot

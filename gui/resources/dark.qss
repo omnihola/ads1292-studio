@@ -2,3 +2,103 @@
 QWidget { background-color: #0d0d0f; color: #e6e6e6; font-size: 13px; }
 QMainWindow { background-color: #0d0d0f; }
 QLabel#TitleLabel { color: #e6e6e6; font-size: 20px; font-weight: 600; }
+
+/* Toolbar */
+QToolBar {
+    background-color: #1a1a1f;
+    border-bottom: 1px solid #2a2a32;
+    spacing: 4px;
+    padding: 2px 4px;
+}
+QToolBar QLabel {
+    color: #a0a0b0;
+    font-size: 12px;
+}
+
+/* Buttons */
+QPushButton {
+    background-color: #2a2a35;
+    color: #e6e6e6;
+    border: 1px solid #3a3a45;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 13px;
+}
+QPushButton:hover {
+    background-color: #363645;
+    border-color: #5555aa;
+}
+QPushButton:pressed {
+    background-color: #1e1e2a;
+}
+QPushButton:disabled {
+    color: #555566;
+    border-color: #2a2a35;
+}
+
+/* ComboBox */
+QComboBox {
+    background-color: #2a2a35;
+    color: #e6e6e6;
+    border: 1px solid #3a3a45;
+    border-radius: 4px;
+    padding: 2px 8px;
+    min-width: 80px;
+}
+QComboBox::drop-down {
+    border: none;
+    width: 18px;
+}
+QComboBox QAbstractItemView {
+    background-color: #1a1a1f;
+    color: #e6e6e6;
+    selection-background-color: #3a3a55;
+}
+
+/* CheckBox */
+QCheckBox {
+    color: #c0c0d0;
+    spacing: 5px;
+}
+QCheckBox::indicator {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #3a3a45;
+    border-radius: 3px;
+    background-color: #2a2a35;
+}
+QCheckBox::indicator:checked {
+    background-color: #5555aa;
+    border-color: #7777cc;
+}
+QCheckBox:disabled {
+    color: #444455;
+}
+
+/* Splitter */
+QSplitter::handle {
+    background-color: #2a2a32;
+}
+QSplitter::handle:horizontal { width: 2px; }
+QSplitter::handle:vertical   { height: 2px; }
+
+/* Status/card panels */
+QFrame[frameShape="4"],
+QFrame[frameShape="5"] {
+    border: 1px solid #2a2a32;
+    border-radius: 4px;
+    background-color: #111118;
+}
+
+/* Scroll bars */
+QScrollBar:vertical {
+    background: #111118;
+    width: 8px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical {
+    background: #3a3a55;
+    border-radius: 4px;
+    min-height: 20px;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
