@@ -6,6 +6,8 @@ add_library(ads1292_core STATIC
   src/device/AdsParser.cpp
   src/crypto/Sha1.cpp
   src/crypto/Sha256.cpp
-  src/event/EventId.cpp)
+  src/event/EventId.cpp
+  src/acq/SimulatorByteTransport.cpp
+  src/acq/AdsFraming.cpp)
 target_include_directories(ads1292_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ads1292_core PUBLIC picosha2)
