@@ -36,3 +36,17 @@ TEST_CASE("run_qc on a too-short recording fails (exit 2)", "[cli]") {
   REQUIRE(out.str().find("quality_gate=Fail") != std::string::npos);
   REQUIRE(out.str().find("failure=") != std::string::npos);
 }
+TEST_CASE("run_report prints the metric summary (exit 0)", "[cli]") {
+  ads1292::cli::ReportOptions opt; opt.csv_path = write_clean("p7a_report.csv");
+  std::ostringstream out;
+  REQUIRE(ads1292::cli::run_report(out, opt) == 0);
+  REQUIRE(out.str().find("ecg_source=") != std::string::npos);
+  REQUIRE(out.str().find("hr_median_bpm=") != std::string::npos);
+  REQUIRE(out.str().find("quality=") != std::string::npos);
+}
+TEST_CASE("run_verify on the golden HDF5 recording is ok (exit 0)", "[cli]") {
+  ads1292::cli::VerifyOptions opt; opt.h5_path = std::string(FIXTURE_DIR) + "/files/recording.h5";
+  std::ostringstream out;
+  REQUIRE(ads1292::cli::run_verify(out, opt) == 0);
+  REQUIRE(out.str().find("ok=true") != std::string::npos);
+}
