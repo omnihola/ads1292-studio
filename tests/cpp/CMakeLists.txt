@@ -12,6 +12,7 @@ add_executable(ads1292_tests
   test_csv_live.cpp
   test_csv_raw.cpp
   test_sha1.cpp
+  test_sha256.cpp
   test_event_id.cpp
   test_bundle_events.cpp
   test_bundle_sections.cpp
