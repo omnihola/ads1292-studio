@@ -2,10 +2,8 @@
 // Pure C++17 — no Qt, no nlohmann.
 #include "ads1292/index/BatchRow.h"
 
-#include <algorithm>
 #include <cmath>
 #include <map>
-#include <set>
 #include <string>
 #include <vector>
 

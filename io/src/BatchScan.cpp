@@ -23,9 +23,7 @@ namespace {
 ads1292::SessionMetadata _metadata_for(const fs::path& csv_path) {
     fs::path sidecar = fs::path(csv_path).replace_extension(".json");
     if (fs::exists(sidecar)) {
-        try {
-            return read_metadata_json(sidecar.string());
-        } catch (...) {}
+        return read_metadata_json(sidecar.string());  // propagate on corrupt sidecar
     }
     ads1292::SessionMetadata m;
     m.session_id = csv_path.stem().string();
