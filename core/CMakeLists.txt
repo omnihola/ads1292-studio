@@ -19,6 +19,7 @@ add_library(ads1292_core STATIC
   src/dsp/EcgReview.cpp
   src/dsp/Stats.cpp
   src/dsp/Quality.cpp
-  src/dsp/ChannelSelect.cpp)
+  src/dsp/ChannelSelect.cpp
+  src/dsp/QualityMetrics.cpp)
 target_include_directories(ads1292_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ads1292_core PUBLIC picosha2)
