@@ -24,7 +24,7 @@ def generate(root: Path) -> list[Path]:
     for name, (b, a) in coeff_specs:
         written.append(_write(out / f"{name}.json", {
             "schema_version": 1, "category": "dsp_coefficients", "name": name,
-            "oracle": {"function": f"ads1292_studio.signal_processing.{name.split('_')[1]}_coefficients"},
+            "oracle": {"function": f"ads1292_studio.signal_processing._{name.split('_')[1]}_coefficients"},
             "input": {"sample_rate_hz": SR},
             "output": {"b": floats(b), "a": floats(a)},
             "tolerance": {"kind": "abs", "value": COEF_TOL},
@@ -44,13 +44,18 @@ def generate(root: Path) -> list[Path]:
         ("filtfilt_lowpass_long", "lowpass", long_signal, sp.lowpass(long_signal, SR)),
     ]
     for name, kind, sig, filtered in filt_specs:
+        # Determine note based on signal length: < 16 uses median fallback, >= 16 uses filtfilt
+        if len(sig) < 16:
+            notes = f"size<16 fallback: arr - np.median(arr); no filtfilt applied; frozen input stored verbatim"
+        else:
+            notes = f"{kind} via scipy.signal.filtfilt; frozen input stored verbatim"
         written.append(_write(out / f"{name}.json", {
             "schema_version": 1, "category": "dsp_filter_output", "name": name,
             "oracle": {"function": f"ads1292_studio.signal_processing.{kind}"},
             "input": {"signal": floats(sig), "sample_rate_hz": SR},
             "output": {"filtered": floats(filtered)},
             "tolerance": {"kind": "abs", "value": ABS_TOL},
-            "notes": f"{kind} via scipy.signal.filtfilt; frozen input stored verbatim",
+            "notes": notes,
         }))
     return written
 

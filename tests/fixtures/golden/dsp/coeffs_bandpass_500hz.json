@@ -6,7 +6,7 @@
   "name": "coeffs_bandpass_500hz",
   "notes": "scipy butter(2)/iirnotch transfer-function coefficients",
   "oracle": {
-    "function": "ads1292_studio.signal_processing.bandpass_coefficients"
+    "function": "ads1292_studio.signal_processing._bandpass_coefficients"
   },
   "output": {
     "a": [

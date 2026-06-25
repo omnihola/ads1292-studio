@@ -6,10 +6,18 @@ from scripts.gen_dsp_fixtures import generate
 def test_generates_coeffs_and_filter_outputs(tmp_path: Path):
     paths = generate(tmp_path)
     names = {p.stem for p in paths}
+    # Assert all 4 coefficient fixtures
     assert "coeffs_bandpass_500hz" in names
+    assert "coeffs_highpass_500hz" in names
+    assert "coeffs_lowpass_500hz" in names
     assert "coeffs_notch_60hz_500hz" in names
+    # Assert all 6 filter output fixtures
     assert "filtfilt_bandpass_long" in names
     assert "filtfilt_bandpass_short_window" in names
+    assert "filtfilt_bandpass_tiny_fallback" in names
+    assert "filtfilt_notch_long" in names
+    assert "filtfilt_highpass_long" in names
+    assert "filtfilt_lowpass_long" in names
 
     coeffs = load_fixture(tmp_path / "dsp" / "coeffs_bandpass_500hz.json")
     assert len(coeffs["output"]["b"]) == 5  # butter order 2 band -> 5 taps

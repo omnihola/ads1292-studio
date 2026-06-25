@@ -6,7 +6,7 @@
   "name": "coeffs_highpass_500hz",
   "notes": "scipy butter(2)/iirnotch transfer-function coefficients",
   "oracle": {
-    "function": "ads1292_studio.signal_processing.highpass_coefficients"
+    "function": "ads1292_studio.signal_processing._highpass_coefficients"
   },
   "output": {
     "a": [

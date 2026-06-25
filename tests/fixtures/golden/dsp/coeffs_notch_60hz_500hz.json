@@ -6,7 +6,7 @@
   "name": "coeffs_notch_60hz_500hz",
   "notes": "scipy butter(2)/iirnotch transfer-function coefficients",
   "oracle": {
-    "function": "ads1292_studio.signal_processing.notch_coefficients"
+    "function": "ads1292_studio.signal_processing._notch_coefficients"
   },
   "output": {
     "a": [

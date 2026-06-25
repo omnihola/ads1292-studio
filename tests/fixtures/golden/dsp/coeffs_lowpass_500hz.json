@@ -6,7 +6,7 @@
   "name": "coeffs_lowpass_500hz",
   "notes": "scipy butter(2)/iirnotch transfer-function coefficients",
   "oracle": {
-    "function": "ads1292_studio.signal_processing.lowpass_coefficients"
+    "function": "ads1292_studio.signal_processing._lowpass_coefficients"
   },
   "output": {
     "a": [

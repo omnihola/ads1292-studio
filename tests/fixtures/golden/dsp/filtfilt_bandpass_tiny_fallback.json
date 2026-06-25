@@ -14,7 +14,7 @@
     ]
   },
   "name": "filtfilt_bandpass_tiny_fallback",
-  "notes": "bandpass via scipy.signal.filtfilt; frozen input stored verbatim",
+  "notes": "size<16 fallback: arr - np.median(arr); no filtfilt applied; frozen input stored verbatim",
   "oracle": {
     "function": "ads1292_studio.signal_processing.bandpass"
   },
