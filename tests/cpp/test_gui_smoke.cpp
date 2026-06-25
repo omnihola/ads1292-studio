@@ -7,6 +7,17 @@
 #include <QApplication>
 #include <vector>
 
+// Guard: ensures a single QApplication exists for the process lifetime.
+// New test cases must call ensureApp() instead of constructing their own QApplication.
+static QApplication* ensureApp() {
+    static int   argc   = 0;
+    static char* argv[] = {nullptr};
+    if (!qApp) {
+        static QApplication app(argc, argv);
+    }
+    return qApp;
+}
+
 TEST_CASE("QCustomPlotWaveform accepts data without crashing", "[gui]") {
     int argc = 0;
     char** argv = nullptr;
@@ -36,4 +47,27 @@ TEST_CASE("LiveScope ingests stream samples and refreshes without crashing", "[g
   scope.setAutoscale(true);
   scope.clear();
   REQUIRE(true);   // no crash offscreen
+}
+
+#include "ads1292/gui/StatusPanel.h"
+#include "ads1292/gui/EventConsole.h"
+
+TEST_CASE("StatusPanel updates from state without crashing", "[gui]") {
+  ensureApp();
+  ads1292::gui::StatusPanel panel;
+  ads1292::gui::GuiState st;
+  st.connection     = "Connected";
+  st.recordingState = "streaming";
+  st.eventCount     = 3;
+  panel.updateFromState(st);
+  REQUIRE(true);
+}
+
+TEST_CASE("EventConsole adds a point event at the live clock", "[gui]") {
+  ensureApp();
+  ads1292::gui::EventConsole console;
+  console.setSampleClock(2.5);
+  console.addPointEventForTest("touch", "n");
+  REQUIRE(console.log().events().size() == 1);
+  REQUIRE(console.log().events()[0].timestamp_seconds == Approx(2.5));
 }

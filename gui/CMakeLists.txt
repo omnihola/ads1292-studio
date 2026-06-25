@@ -11,6 +11,8 @@ add_library(ads1292_gui_lib STATIC
   src/MainWindow.h
   src/QCustomPlotWaveform.cpp
   src/LiveScope.cpp
+  src/StatusPanel.cpp
+  src/EventConsole.cpp
   resources/resources.qrc)
 
 set_target_properties(ads1292_gui_lib PROPERTIES
