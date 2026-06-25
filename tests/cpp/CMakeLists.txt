@@ -4,6 +4,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 add_executable(ads1292_tests
   test_main.cpp
   test_smoke.cpp
+  test_review_html.cpp
   test_event_marker.cpp
   test_byte_decode.cpp
   FixtureLoader.cpp
