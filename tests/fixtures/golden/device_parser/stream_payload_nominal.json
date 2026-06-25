@@ -1,0 +1,162 @@
+{
+  "category": "device_parser",
+  "input": {
+    "payload_hex": "481205640038ff650039ff66003aff67003bff68003cff69003dff6a003eff6b003fff6c0040ff6d0041ff6e0042ff6f0043ff700044ff710045ff0303",
+    "sample_rate_hz": 500.0,
+    "start_index": 0,
+    "start_timestamp": 0.0
+  },
+  "name": "stream_payload_nominal",
+  "notes": "14 stream samples, int16 LE ch1/ch2, lead_off_bits from status low nibble",
+  "oracle": {
+    "function": "ads1292_studio.device.parse_stream_payload"
+  },
+  "output": {
+    "samples": [
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 100,
+        "ch2": -200,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.0
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 101,
+        "ch2": -199,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.002
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 102,
+        "ch2": -198,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.004
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 103,
+        "ch2": -197,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.006
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 104,
+        "ch2": -196,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.008
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 105,
+        "ch2": -195,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.01
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 106,
+        "ch2": -194,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.012
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 107,
+        "ch2": -193,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.014
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 108,
+        "ch2": -192,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.016
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 109,
+        "ch2": -191,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.018
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 110,
+        "ch2": -190,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.02
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 111,
+        "ch2": -189,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.022
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 112,
+        "ch2": -188,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.024
+      },
+      {
+        "board_heart_rate": 72,
+        "board_respiration_rate": 18,
+        "ch1": 113,
+        "ch2": -187,
+        "lead_off_bits": 5,
+        "sample_index": null,
+        "status_byte": 5,
+        "timestamp": 0.026
+      }
+    ]
+  },
+  "schema_version": 1,
+  "tolerance": {
+    "kind": "exact"
+  }
+}

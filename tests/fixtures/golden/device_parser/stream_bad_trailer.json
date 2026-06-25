@@ -1,0 +1,22 @@
+{
+  "category": "device_parser",
+  "input": {
+    "payload_hex": "481205640038ff650039ff66003aff67003bff68003cff69003dff6a003eff6b003fff6c0040ff6d0041ff6e0042ff6f0043ff700044ff710045ff0000",
+    "sample_rate_hz": 500.0,
+    "start_index": 0,
+    "start_timestamp": 0.0
+  },
+  "name": "stream_bad_trailer",
+  "notes": "error oracle: malformed payload must raise ValueError",
+  "oracle": {
+    "function": "ads1292_studio.device.parse_stream_payload"
+  },
+  "output": {
+    "message_contains": "trailer",
+    "raises": "ValueError"
+  },
+  "schema_version": 1,
+  "tolerance": {
+    "kind": "exact"
+  }
+}
