@@ -19,3 +19,6 @@ artifacts/
 
 # clangd compile DB symlink (points into gitignored build/)
 /compile_commands.json
+
+# clangd index cache
+.cache/
