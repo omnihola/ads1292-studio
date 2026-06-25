@@ -30,3 +30,17 @@ def test_freezes_csv_text_h5_sidecar_and_xlsx_semantic(tmp_path: Path):
     assert xlsx["interval_event_row"][-3] == "interval"
     assert xlsx["data_first_row"] and xlsx["data_last_row"]
     assert xlsx["tolerance"]["kind"] == "semantic"
+
+
+def test_freezes_raw_csv_semantic(tmp_path: Path):
+    generate(tmp_path)
+    files_dir = tmp_path / "files"
+    assert (files_dir / "raw_recording.csv").exists()
+    raw = load_fixture(files_dir / "raw_recording_sidecar.json")
+    assert raw["category"] == "file_csv_raw"
+    assert raw["csv_header"][0] == "timestamp"
+    assert "ch1_raw24" in raw["csv_header"]
+    assert raw["csv_header"][-1] == "acquisition_mode"
+    assert raw["row_count"] == 50
+    # the calibration-derived columns are constant per row
+    assert raw["csv_first_rows"][0][-1] == "raw_adc_24bit"

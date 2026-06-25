@@ -14,6 +14,7 @@ COMMON_KEYS = ("schema_version", "category", "name", "oracle")
 ENVELOPE_KEYS = ("input", "output")
 FILE_SIDECAR_KEYS = {
     "file_csv_live": ("csv_header", "csv_first_rows"),
+    "file_csv_raw": ("csv_header", "csv_first_rows"),
     "file_hdf5": ("artifact", "datasets", "attrs"),
     "file_xlsx": ("artifact", "sheet_names", "events_header", "point_event_row",
                   "interval_event_row", "data_header", "data_first_row", "data_last_row"),

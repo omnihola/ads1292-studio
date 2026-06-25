@@ -22,6 +22,9 @@ from ads1292_studio.recording_bundle import AcquisitionProvenance, RecordingProc
 from scripts._fixture_signals import synthetic_ecg
 from scripts.fixture_io import dump_fixture, sha256_array
 from scripts._xlsx_read import read_xlsx_semantic
+import csv as _csv
+from ads1292_studio.csv_io import write_raw_recording_csv
+from ads1292_studio.models import RawSample
 
 SR = 500.0
 
@@ -136,4 +139,32 @@ def generate(root: Path) -> list[Path]:
         "notes": "XLSX semantic ONLY: sheet names + headers + 1 point + 1 interval event + first/last data row. No style/zip/byte equality.",
     }, xlsx_sidecar)
     written += [xlsx_path, xlsx_sidecar]
+
+    # --- raw CSV: freeze header + first/last rows (text level), default calibration ---
+    raw_samples = tuple(
+        RawSample(
+            timestamp=round(i / SR, 6),
+            sample_index=i,
+            ch1_raw24=int(round(signal[i])) * 10,
+            ch2_raw24=-int(round(signal[i])) * 5,
+            status_byte=(i % 16),
+        )
+        for i in range(50)
+    )
+    raw_csv_path = out / "raw_recording.csv"
+    write_raw_recording_csv(raw_csv_path, raw_samples, calibration=Calibration())
+    with raw_csv_path.open() as fh:
+        raw_rows = list(_csv.reader(fh))
+    raw_sidecar = out / "raw_recording_sidecar.json"
+    dump_fixture({
+        "schema_version": 1, "category": "file_csv_raw", "name": "raw_recording",
+        "oracle": {"function": "ads1292_studio.csv_io.write_raw_recording_csv"},
+        "csv_header": raw_rows[0],
+        "csv_first_rows": raw_rows[1:6],
+        "csv_last_row": raw_rows[-1],
+        "row_count": len(raw_rows) - 1,
+        "tolerance": {"kind": "text"},
+        "notes": "raw CSV header + value formatting (CRLF, %.17g uv, %g vref/pga, %.9f lsb) frozen at text level; default Calibration",
+    }, raw_sidecar)
+    written += [raw_csv_path, raw_sidecar]
     return written
