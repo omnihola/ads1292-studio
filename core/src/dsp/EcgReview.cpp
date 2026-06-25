@@ -47,7 +47,8 @@ double std_pop(const std::vector<double>& v) {
 
 // ─── detect_r_peaks ──────────────────────────────────────────────────────────
 std::vector<int> detect_r_peaks(const std::vector<double>& values,
-                                 double sample_rate_hz) {
+                                 double sample_rate_hz,
+                                 bool prefiltered) {
     // Early returns
     if (!std::isfinite(sample_rate_hz) || sample_rate_hz <= 0.0) {
         return {};
@@ -58,7 +59,8 @@ std::vector<int> detect_r_peaks(const std::vector<double>& values,
     }
 
     // Step 1: bandpass filter (defaults 0.7–35 Hz, matches signal_processing.py)
-    const std::vector<double> filtered = bandpass(values, sample_rate_hz);
+    // If prefiltered=true, skip bandpass — signal already filtered by display chain.
+    const std::vector<double> filtered = prefiltered ? values : bandpass(values, sample_rate_hz);
 
     // Step 2: center around median
     const double med = median(filtered);

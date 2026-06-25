@@ -14,8 +14,11 @@ namespace ads1292::dsp {
 ///   - sample_rate_hz is not finite or <= 0
 ///   - values.size() < (size_t)(int)sample_rate_hz
 ///
+/// @param prefiltered  If true, skip the bandpass step (signal already filtered).
+///                     Default false — keeps all existing callers working unchanged.
+///
 /// Algorithm:
-///   1. filtered  = bandpass(values, sr)
+///   1. filtered  = prefiltered ? values : bandpass(values, sr)
 ///   2. centered  = filtered - median(filtered)
 ///   3. scale     = population std of centered (ddof=0)
 ///   4. prominence = max(20.0, scale * 0.45)
@@ -24,7 +27,8 @@ namespace ads1292::dsp {
 ///   6. peaks = find_peaks(peak_signal, distance=(int)(0.35*sr), prominence)
 ///   7. return peaks (ascending int indices)
 std::vector<int> detect_r_peaks(const std::vector<double>& values,
-                                 double sample_rate_hz);
+                                 double sample_rate_hz,
+                                 bool prefiltered = false);
 
 /// Heart rate statistics computed from R-peak indices.
 /// All values are in double precision. Matches signal_processing.py
