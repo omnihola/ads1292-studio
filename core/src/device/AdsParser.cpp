@@ -49,12 +49,33 @@ std::vector<StreamSample> parse_stream_payload(const std::vector<uint8_t>& paylo
   return samples;
 }
 
-std::vector<RawSample> parse_acquire_payload(const std::vector<uint8_t>& /*payload*/,
-                                             double /*start_timestamp*/,
-                                             double /*sample_rate_hz*/,
-                                             int /*start_index*/) {
-  // Implemented in Task 7.
-  throw AdsParseError("parse_acquire_payload not implemented");
+std::vector<RawSample> parse_acquire_payload(const std::vector<uint8_t>& payload,
+                                             double start_timestamp,
+                                             double sample_rate_hz,
+                                             int start_index) {
+  if (payload.size() < 51) {
+    throw AdsParseError("acquire payload too short: " + std::to_string(payload.size()) +
+                        " bytes");
+  }
+  if (payload.back() != kEnd) {
+    throw AdsParseError("bad acquire trailer");
+  }
+  const int status_byte = (static_cast<int>(payload[0]) << 8) | static_cast<int>(payload[1]);
+
+  std::vector<RawSample> samples;
+  samples.reserve(8);
+  for (int i = 0; i < 8; ++i) {
+    const int sample_index = start_index + i;
+    const size_t base = 2 + static_cast<size_t>(i) * 6;
+    RawSample s;
+    s.timestamp = round6(start_timestamp + static_cast<double>(sample_index) / sample_rate_hz);
+    s.sample_index = sample_index;
+    s.ch1_raw24 = int24_be(payload[base], payload[base + 1], payload[base + 2]);
+    s.ch2_raw24 = int24_be(payload[base + 3], payload[base + 4], payload[base + 5]);
+    s.status_byte = status_byte;
+    samples.push_back(s);
+  }
+  return samples;
 }
 
 }  // namespace ads1292
