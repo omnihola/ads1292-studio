@@ -50,7 +50,8 @@ add_executable(ads1292_tests
   test_acquisition_io.cpp
   test_session_index.cpp
   test_batch.cpp
-  test_ads_ports.cpp)
+  test_ads_ports.cpp
+  test_query_firmware.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 

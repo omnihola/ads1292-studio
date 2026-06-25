@@ -67,4 +67,29 @@ std::vector<ads1292::RawSample> AdsProtocolDevice::acquire_raw(int count) {
   return result;
 }
 
+std::string AdsProtocolDevice::query_firmware(int max_frames) {
+  t_.write(build_cmd(0x99, 0, 0));
+  std::string last_frame_detail;
+  for (int i = 0; i < max_frames; ++i) {
+    Frame f = read_frame(t_);
+    if (!f.ok) {
+      break;  // end of input or short read — no more frames
+    }
+    if (f.type == 0x99 && f.payload.size() >= 2) {
+      return std::to_string(static_cast<unsigned>(f.payload[0])) + "." +
+             std::to_string(static_cast<unsigned>(f.payload[1]));
+    }
+    // Non-0x99 frame — record for the fallback message and keep looping
+    last_frame_detail = "0x" + [&] {
+      char buf[3];
+      std::snprintf(buf, sizeof(buf), "%02X", static_cast<unsigned>(f.type));
+      return std::string(buf);
+    }();
+  }
+  if (last_frame_detail.empty()) {
+    return "no firmware response";
+  }
+  return "no firmware response; last frame " + last_frame_detail;
+}
+
 }}  // namespace ads1292::acq
