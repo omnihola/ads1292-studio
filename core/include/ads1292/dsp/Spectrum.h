@@ -11,10 +11,12 @@
 
 namespace ads1292::dsp {
 
-/// KissFFT real-FFT wrapper (kiss_fftr, double precision).
-/// Returns n/2+1 complex bins for a real input of length n.
-/// Input must have n >= 1. For odd n, kiss_fftr is called on even(n)?
-/// The fixture is N=2048 (even); even input is required.
+/// KissFFT FFT wrapper (double precision), matching numpy's np.fft.rfft.
+/// Returns n/2+1 complex bins for a real input of length n (any n >= 1).
+/// Even n: uses kiss_fftr (real FFT fast path).
+/// Odd  n: uses kiss_fft (complex FFT, zero-imaginary input); returns first
+///          n/2+1 bins — the non-redundant half of the full DFT, which is
+///          exactly what numpy's rfft returns for odd-length inputs.
 std::vector<std::complex<double>> rfft(const std::vector<double>& x);
 
 /// Result of build_spectrum_analysis.

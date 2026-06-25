@@ -6,6 +6,8 @@
 #include "ads1292/dsp/Spectrum.h"
 #include "ads1292/model/StreamSample.h"
 #include "nlohmann/json.hpp"
+#include <complex>
+#include <cmath>
 #include <fstream>
 using nlohmann::json;
 using namespace ads1292::dsp;
@@ -18,6 +20,23 @@ json sp(const std::string& n) {
     return j;
 }
 } // namespace
+
+TEST_CASE("rfft matches the DFT definition for odd length", "[spectrum]") {
+    std::vector<double> x = {1.0, -2.0, 3.5, 0.5, -1.0, 2.0, 4.0};  // n=7 (odd)
+    auto got = ads1292::dsp::rfft(x);
+    const int n = (int)x.size();
+    REQUIRE((int)got.size() == n/2 + 1);                 // 4 bins
+    const double PI = std::acos(-1.0);
+    for (int k = 0; k < n/2 + 1; ++k) {
+        std::complex<double> acc(0.0, 0.0);
+        for (int j = 0; j < n; ++j) {
+            double ang = -2.0 * PI * k * j / n;
+            acc += std::complex<double>(x[j], 0.0) * std::complex<double>(std::cos(ang), std::sin(ang));
+        }
+        REQUIRE(got[k].real() == Approx(acc.real()).margin(1e-9));
+        REQUIRE(got[k].imag() == Approx(acc.imag()).margin(1e-9));
+    }
+}
 
 TEST_CASE("build_spectrum_analysis matches the golden", "[spectrum]") {
     auto f = sp("spectrum_clean_72bpm_ch2");

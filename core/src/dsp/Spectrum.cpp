@@ -5,7 +5,8 @@
 #include "ads1292/dsp/Spectrum.h"
 #include "ads1292/dsp/Stats.h"
 
-// KissFFT real FFT (compiled with kiss_fft_scalar=double)
+// KissFFT real FFT and complex FFT (compiled with kiss_fft_scalar=double)
+#include "kiss_fft.h"
 #include "kiss_fftr.h"
 
 #include <algorithm>
@@ -18,29 +19,61 @@
 namespace ads1292::dsp {
 
 // ----------------------------------------------------------------------------
-// rfft: KissFFT real-FFT wrapper
-// Returns n/2+1 complex bins for real input of length n (n must be even for
-// kiss_fftr; the fixture uses n=2048 which is even).
+// rfft: KissFFT FFT wrapper — matches numpy's np.fft.rfft for any n.
+// Returns n/2+1 complex bins for real input of length n.
+//   Even n: uses kiss_fftr (real FFT, fast path).
+//   Odd  n: uses kiss_fft (complex FFT on zero-imaginary input); returns the
+//            first n/2+1 bins, which are exactly numpy's rfft output because
+//            rfft is defined as the non-redundant half of the full DFT.
 // ----------------------------------------------------------------------------
 std::vector<std::complex<double>> rfft(const std::vector<double>& x) {
     const int n = static_cast<int>(x.size());
-    if (n <= 0) return {};
+    if (n < 1) return {};
 
     const int n_out = n / 2 + 1;
-    std::vector<kiss_fft_cpx> raw_out(static_cast<std::size_t>(n_out));
 
-    // kiss_fft_scalar is double (compiled with -Dkiss_fft_scalar=double)
-    kiss_fftr_cfg cfg = kiss_fftr_alloc(n, 0, nullptr, nullptr);
-    kiss_fftr(cfg, x.data(), raw_out.data());
-    kiss_fftr_free(cfg);
+    if (n % 2 == 0) {
+        // --- Even path: use kiss_fftr ---
+        std::vector<kiss_fft_cpx> raw_out(static_cast<std::size_t>(n_out));
+        // kiss_fft_scalar is double (compiled with -Dkiss_fft_scalar=double)
+        kiss_fftr_cfg cfg = kiss_fftr_alloc(n, 0, nullptr, nullptr);
+        if (!cfg) return {};  // defensive: alloc failed
+        kiss_fftr(cfg, x.data(), raw_out.data());
+        kiss_fftr_free(cfg);
 
-    std::vector<std::complex<double>> out(static_cast<std::size_t>(n_out));
-    for (int i = 0; i < n_out; ++i) {
-        out[static_cast<std::size_t>(i)] =
-            std::complex<double>(raw_out[static_cast<std::size_t>(i)].r,
-                                 raw_out[static_cast<std::size_t>(i)].i);
+        std::vector<std::complex<double>> out(static_cast<std::size_t>(n_out));
+        for (int i = 0; i < n_out; ++i) {
+            out[static_cast<std::size_t>(i)] =
+                std::complex<double>(raw_out[static_cast<std::size_t>(i)].r,
+                                     raw_out[static_cast<std::size_t>(i)].i);
+        }
+        return out;
+    } else {
+        // --- Odd path: use complex kiss_fft on zero-imaginary input ---
+        // Build complex input with .i = 0
+        std::vector<kiss_fft_cpx> in_buf(static_cast<std::size_t>(n));
+        for (int i = 0; i < n; ++i) {
+            in_buf[static_cast<std::size_t>(i)].r =
+                static_cast<kiss_fft_scalar>(x[static_cast<std::size_t>(i)]);
+            in_buf[static_cast<std::size_t>(i)].i = static_cast<kiss_fft_scalar>(0.0);
+        }
+        std::vector<kiss_fft_cpx> out_buf(static_cast<std::size_t>(n));
+
+        kiss_fft_cfg cfg = kiss_fft_alloc(n, 0, nullptr, nullptr);
+        if (!cfg) return {};  // defensive: alloc failed
+        kiss_fft(cfg, in_buf.data(), out_buf.data());
+        kiss_fft_free(cfg);
+
+        // Take the first n/2+1 bins (the non-redundant half)
+        std::vector<std::complex<double>> out(static_cast<std::size_t>(n_out));
+        for (int i = 0; i < n_out; ++i) {
+            out[static_cast<std::size_t>(i)] =
+                std::complex<double>(
+                    static_cast<double>(out_buf[static_cast<std::size_t>(i)].r),
+                    static_cast<double>(out_buf[static_cast<std::size_t>(i)].i));
+        }
+        return out;
     }
-    return out;
 }
 
 // ----------------------------------------------------------------------------
