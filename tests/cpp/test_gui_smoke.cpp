@@ -110,3 +110,23 @@ TEST_CASE("QCustomPlotXY line + bars render offscreen", "[gui]") {
   plot.setTitle("test"); plot.setAutoscale(true); plot.replotNow();
   REQUIRE(plot.widget() != nullptr);
 }
+
+#include "ads1292/gui/PqrstPanel.h"
+#include "ads1292/gui/SpectrumPanel.h"
+#include "ads1292/gui/QualityInfoPanel.h"
+#include "ads1292/gui/ReviewEventLogPanel.h"
+#include "ads1292/view/ReviewRender.h"
+#include "ads1292/dsp/Spectrum.h"
+
+TEST_CASE("review panels render a frame offscreen", "[gui]") {
+  ensureApp();
+  std::vector<ads1292::StreamSample> samples;
+  for (int i=0;i<3000;++i){ ads1292::StreamSample s; s.ch2=(i%417<5)?300:0; s.ch1=0; s.status_byte=0; samples.push_back(s); }
+  auto f = ads1292::view::build_review_render_frame(samples, {}, {}, "Auto", 500.0, 5, 5000, false, 50.0, 50.0);
+  auto spec = ads1292::dsp::build_spectrum_analysis(samples, "CH2", 500.0, 60.0, 48);
+  ads1292::gui::PqrstPanel pq; pq.showFrame(f);
+  ads1292::gui::SpectrumPanel sp; sp.showSpectrum(spec);
+  ads1292::gui::QualityInfoPanel qi; qi.showMetrics(f.metrics);
+  ads1292::gui::ReviewEventLogPanel ev; ev.appendLine("loaded");
+  REQUIRE(pq.isWidgetType()); REQUIRE(sp.isWidgetType()); REQUIRE(qi.isWidgetType()); REQUIRE(ev.isWidgetType());
+}

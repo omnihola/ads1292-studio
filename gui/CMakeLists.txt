@@ -13,6 +13,10 @@ add_library(ads1292_gui_lib STATIC
   src/LiveScope.cpp
   src/StatusPanel.cpp
   src/EventConsole.cpp
+  src/PqrstPanel.cpp
+  src/SpectrumPanel.cpp
+  src/QualityInfoPanel.cpp
+  src/ReviewEventLogPanel.cpp
   resources/resources.qrc)
 
 set_target_properties(ads1292_gui_lib PROPERTIES
