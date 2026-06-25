@@ -146,7 +146,7 @@ static std::string normalized_mode(const std::string& value) {
     if (text.size() > prefix.size() && text.substr(0, prefix.size()) == prefix) {
         text = text.substr(prefix.size());
     }
-    if (!text.empty() && text[0] == 'r') {
+    if (text.rfind("raw", 0) == 0) {
         return "raw_adc_24bit";
     }
     return "live_stream";
