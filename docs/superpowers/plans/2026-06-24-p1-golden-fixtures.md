@@ -1139,6 +1139,13 @@ from ads1292_studio.h5_io import write_recording_h5, verify_recording_h5
 from ads1292_studio.events import EventMarker
 from ads1292_studio.xlsx_io import write_recording_xlsx
 from ads1292_studio.models import StreamSample
+# write_recording_h5 needs the full recording bundle — all six dataclasses have
+# zero-arg defaults (canonical construction copied from tests/test_h5_io.py).
+from ads1292_studio.calibration import Calibration
+from ads1292_studio.metadata import SessionMetadata
+from ads1292_studio.protocol import TestProtocol
+from ads1292_studio.quality_gate import QualityGate
+from ads1292_studio.recording_bundle import AcquisitionProvenance, RecordingProcessingSettings
 from scripts._fixture_signals import synthetic_ecg
 from scripts.fixture_io import dump_fixture, sha256_array
 from scripts._xlsx_read import read_xlsx_semantic
@@ -1179,8 +1186,26 @@ def generate(root: Path) -> list[Path]:
     written += [csv_path, sidecar]
 
     # --- HDF5: freeze sidecar (datasets/attrs/per-array sha256), NOT bytes ---
+    # write_recording_h5's first positional arg is the CSV path; it derives the
+    # .h5 path via recording_h5_path(csv_path) and returns it. samples + the six
+    # bundle objects are required keyword args. created_at="" keeps it
+    # deterministic (no wall-clock stamp). Canonical construction per tests/test_h5_io.py.
+    produced_h5 = write_recording_h5(
+        csv_path,
+        samples=samples,
+        sample_rate_hz=SR,
+        metadata=SessionMetadata(operator="fixture", subject_id="p1"),
+        events=(),
+        calibration=Calibration(),
+        acquisition=AcquisitionProvenance(),
+        protocol=TestProtocol(),
+        quality_gate=QualityGate(),
+        processing=RecordingProcessingSettings(),
+        created_at="",
+    )
     h5_path = out / "recording.h5"
-    write_recording_h5(h5_path, samples, sample_rate_hz=SR)
+    if produced_h5 != h5_path:
+        produced_h5 = produced_h5.rename(h5_path)
     datasets: dict[str, dict] = {}
     attrs: dict[str, str] = {}
     with h5py.File(h5_path, "r") as fh:
