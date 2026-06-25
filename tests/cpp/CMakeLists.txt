@@ -39,7 +39,8 @@ add_executable(ads1292_tests
   test_plot_decimate.cpp
   test_live_render.cpp
   test_review_render.cpp
-  test_quality_gate.cpp)
+  test_quality_gate.cpp
+  test_cli.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 
@@ -51,6 +52,7 @@ target_link_libraries(ads1292_tests PRIVATE
   ads1292_gui_lib
   ads1292_core
   ads1292_io
+  ads1292_cli_lib
   ads1292_qt_runtime
   catch2
   nlohmann_json

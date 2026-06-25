@@ -16,6 +16,7 @@ option(ADS1292_BUILD_HDF5 "Build the HDF5 I/O module" ON)
 add_subdirectory(third_party)
 add_subdirectory(core)
 add_subdirectory(io)
+add_subdirectory(cli)
 add_subdirectory(qt_runtime)
 
 if(ADS1292_BUILD_GUI)
