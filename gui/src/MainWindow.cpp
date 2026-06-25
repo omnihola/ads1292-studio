@@ -1,7 +1,12 @@
 // gui/src/MainWindow.cpp
 #include "ads1292/gui/MainWindow.h"
+#include "ads1292/gui/QCustomPlotWaveform.h"   // concrete review waveform backend
 #include "ads1292/acq/SimulatorDeviceSource.h"
 #include "ads1292/acq/IDeviceSource.h"
+#include "ads1292/io/CsvIo.h"
+#include "ads1292/view/ReviewRender.h"
+#include "ads1292/dsp/Spectrum.h"
+
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
@@ -10,6 +15,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QSplitter>
+#include <QTabWidget>
 #include <QToolBar>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -24,7 +30,7 @@ MainWindow::MainWindow(QWidget* parent)
     setWindowTitle("ADS1292 Studio");
     resize(1200, 750);
 
-    // --- Toolbar ---
+    // ── Toolbar ───────────────────────────────────────────────────────────────
     auto* toolbar = addToolBar("Main");
     toolbar->setObjectName("MainToolBar");
     toolbar->setMovable(false);
@@ -103,30 +109,73 @@ MainWindow::MainWindow(QWidget* parent)
         scope_->setFilterSettings(filter_);
     });
 
-    // --- Central widget: horizontal splitter (scope | status) ---
-    auto* centralSplitter = new QSplitter(Qt::Horizontal, this);
+    // ── Central tab widget ────────────────────────────────────────────────────
+    tabs_ = new QTabWidget(this);
+    setCentralWidget(tabs_);
 
-    // Vertical splitter: scope top, console bottom
-    auto* leftSplitter = new QSplitter(Qt::Vertical, centralSplitter);
+    // ── Tab 0: Live ECG ───────────────────────────────────────────────────────
+    {
+        auto* liveWidget  = new QWidget(tabs_);
+        auto* liveLayout  = new QHBoxLayout(liveWidget);
+        liveLayout->setContentsMargins(0, 0, 0, 0);
 
-    scope_        = new LiveScope(leftSplitter);
-    eventConsole_ = new EventConsole(leftSplitter);
+        // Left side: scope (top) + event console (bottom) in vertical splitter
+        auto* leftSplitter = new QSplitter(Qt::Vertical, liveWidget);
+        scope_        = new LiveScope(leftSplitter);
+        eventConsole_ = new EventConsole(leftSplitter);
+        leftSplitter->addWidget(scope_);
+        leftSplitter->addWidget(eventConsole_);
+        leftSplitter->setStretchFactor(0, 4);
+        leftSplitter->setStretchFactor(1, 1);
 
-    leftSplitter->addWidget(scope_);
-    leftSplitter->addWidget(eventConsole_);
-    leftSplitter->setStretchFactor(0, 4);
-    leftSplitter->setStretchFactor(1, 1);
+        // Right side: status panel
+        statusPanel_ = new StatusPanel(liveWidget);
 
-    statusPanel_ = new StatusPanel(centralSplitter);
+        // Combine via horizontal splitter to preserve P4/P5d proportions
+        auto* centralSplitter = new QSplitter(Qt::Horizontal, liveWidget);
+        centralSplitter->addWidget(leftSplitter);
+        centralSplitter->addWidget(statusPanel_);
+        centralSplitter->setStretchFactor(0, 4);
+        centralSplitter->setStretchFactor(1, 1);
 
-    centralSplitter->addWidget(leftSplitter);
-    centralSplitter->addWidget(statusPanel_);
-    centralSplitter->setStretchFactor(0, 4);
-    centralSplitter->setStretchFactor(1, 1);
+        liveLayout->addWidget(centralSplitter);
+        tabs_->addTab(liveWidget, "Live ECG");
+    }
 
-    setCentralWidget(centralSplitter);
+    // ── Tab 1: Review waveform ────────────────────────────────────────────────
+    {
+        auto* reviewWaveformImpl = new QCustomPlotWaveform();
+        reviewWaveform_.reset(reviewWaveformImpl);
+        // The QCustomPlotWaveform manages its own QWidget lifetime via Qt parent.
+        // We embed the widget directly into the tab (no extra container needed).
+        tabs_->addTab(reviewWaveform_->widget(), "Review");
+    }
 
-    // --- Wire toolbar actions ---
+    // ── Tab 2: PQRST ──────────────────────────────────────────────────────────
+    {
+        pqrstPanel_ = new PqrstPanel(tabs_);
+        tabs_->addTab(pqrstPanel_, "PQRST");
+    }
+
+    // ── Tab 3: Spectrum ───────────────────────────────────────────────────────
+    {
+        spectrumPanel_ = new SpectrumPanel(tabs_);
+        tabs_->addTab(spectrumPanel_, "Spectrum");
+    }
+
+    // ── Tab 4: Event Log ──────────────────────────────────────────────────────
+    {
+        reviewEventLogPanel_ = new ReviewEventLogPanel(tabs_);
+        tabs_->addTab(reviewEventLogPanel_, "Event Log");
+    }
+
+    // ── Tab 5: Info ───────────────────────────────────────────────────────────
+    {
+        qualityInfoPanel_ = new QualityInfoPanel(tabs_);
+        tabs_->addTab(qualityInfoPanel_, "Info");
+    }
+
+    // ── Wire toolbar actions ──────────────────────────────────────────────────
     connect(winCombo, &QComboBox::currentIndexChanged, this, [this, winCombo](int) {
         QString text = winCombo->currentText();
         double secs = text.split(' ').first().toDouble();
@@ -143,7 +192,6 @@ MainWindow::MainWindow(QWidget* parent)
         auto mode = (modeCombo->currentIndex() == 0)
                     ? ads1292::acq::AcquisitionMode::Live
                     : ads1292::acq::AcquisitionMode::Raw;
-        // Create a fresh simulator per button press (not static)
         activeSource_ = std::make_unique<ads1292::acq::SimulatorDeviceSource>(200, 0);
         worker_.start(activeSource_.get(), mode, "");
     });
@@ -154,7 +202,7 @@ MainWindow::MainWindow(QWidget* parent)
         stopBtn->setEnabled(false);
     });
 
-    // --- Tick timer ---
+    // ── Tick timer (live tab only) ────────────────────────────────────────────
     connect(&timer_, &QTimer::timeout, this, [this]() { onTick(); });
     timer_.start(30);
 
@@ -216,6 +264,49 @@ int MainWindow::runSimulatorToCompletion(int streamBatches) {
     }
     scope_->refresh();
     return count;
+}
+
+void MainWindow::loadRecordingForTest(const std::string& csvPath) {
+    auto samples = ads1292::io::read_recording_csv(csvPath);
+    if (samples.empty()) {
+        review_loaded_ = false;
+        return;
+    }
+
+    // Build the review render frame
+    auto frame = ads1292::view::build_review_render_frame(
+        samples,
+        ads1292::dsp::EcgDisplaySettings{},
+        ads1292::dsp::SoftwareFilterSettings{},
+        "Auto",
+        500.0,
+        /*smoothing_window=*/5,
+        /*max_points=*/5000,
+        /*ecg_inverted=*/false,
+        /*min_ecg_span_counts=*/50.0,
+        /*min_resp_span_counts=*/50.0);
+
+    // Build the spectrum analysis
+    auto spec = ads1292::dsp::build_spectrum_analysis(
+        samples,
+        "CH2",
+        500.0,
+        60.0,
+        48);
+
+    // Populate the review waveform (ECG = graph 0, resp = graph 1, R-peak markers)
+    reviewWaveform_->setData(0, frame.plot_ecg_x, frame.plot_ecg);
+    reviewWaveform_->setMarkers(0, frame.peak_x, frame.peak_y);
+    reviewWaveform_->setData(1, frame.plot_resp_x, frame.plot_resp);
+    reviewWaveform_->replotNow();
+
+    // Populate the review panels
+    pqrstPanel_->showFrame(frame);
+    spectrumPanel_->showSpectrum(spec);
+    qualityInfoPanel_->showMetrics(frame.metrics);
+    reviewEventLogPanel_->appendLine("Loaded " + csvPath);
+
+    review_loaded_ = true;
 }
 
 } // namespace ads1292::gui

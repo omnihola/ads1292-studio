@@ -130,3 +130,21 @@ TEST_CASE("review panels render a frame offscreen", "[gui]") {
   ads1292::gui::ReviewEventLogPanel ev; ev.appendLine("loaded");
   REQUIRE(pq.isWidgetType()); REQUIRE(sp.isWidgetType()); REQUIRE(qi.isWidgetType()); REQUIRE(ev.isWidgetType());
 }
+
+#include "ads1292/io/CsvIo.h"
+#include <filesystem>
+
+TEST_CASE("MainWindow loads a recording into the review panels", "[gui]") {
+  ensureApp();
+  // Author a small recording via the io writer
+  std::string path = (std::filesystem::temp_directory_path() / "p6_review.csv").string();
+  std::vector<ads1292::StreamSample> rec;
+  for (int i=0;i<1500;++i){ ads1292::StreamSample s; double t=i/500.0, v=0.0;
+    for(double bt=0.2; bt<3.0; bt+=60.0/72.0){ double d=t-bt; v+=200.0*std::exp(-(d*d)/(2*0.01*0.01)); }
+    s.ch2=(int)v; s.ch1=0; s.status_byte=0; rec.push_back(s); }
+  ads1292::io::write_recording_csv(path, rec);
+  ads1292::gui::MainWindow win;
+  REQUIRE(win.runSimulatorToCompletion(4) == 56);   // P4/P5d regression intact
+  win.loadRecordingForTest(path);
+  REQUIRE(win.reviewLoadedForTest());
+}
