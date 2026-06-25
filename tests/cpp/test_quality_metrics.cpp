@@ -57,4 +57,5 @@ TEST_CASE("compute_quality_metrics matches the golden", "[review]") {
     REQUIRE(m.baseline_drift_counts == Approx(o.at("baseline_drift_counts").get<double>()).margin(1e-9));
     REQUIRE(m.noise_rms_counts    == Approx(o.at("noise_rms_counts").get<double>()).margin(1e-9));
     REQUIRE(m.peak_to_peak_counts == Approx(o.at("peak_to_peak_counts").get<double>()).margin(1e-9));
+    REQUIRE(m.duration_seconds == Approx(o.at("duration_seconds").get<double>()).margin(1e-9));
 }
