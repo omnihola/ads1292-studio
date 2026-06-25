@@ -203,4 +203,33 @@
 - The GUI now implements that combination as a synchronized three-panel view rather than a mathematical sum or channel selector.
 
 ---
+
+## P-1 Golden Fixture Acceptance (2026-06-24)
+
+### Frozen Categories
+- **device**: stream/raw-frame parser, acquire, error frames (Task 4)
+- **dsp**: filter coefficients (butter, iirnotch) + filtfilt/lfilter outputs incl. short-window edge case (Task 5)
+- **rpeak**: Pan-Tompkins R-peak chain intermediates — squared, integrated, adaptive threshold, peaks, HR, RR (Task 6)
+- **review**: HR median, PQRST beat average, signal quality, SNR (Task 7)
+- **spectrum**: Welch PSD, HR histogram (Task 8)
+- **files**: live CSV text, HDF5 + sidecar, XLSX semantic-only (sheet names, Events/Data headers, one point event, one interval event, first/last data row) (Task 9)
+
+### Deferred to P2
+- **raw-CSV sidecar** (recording bundle format, same sidecar pattern as HDF5) — schema frozen but roundtrip test deferred
+- **recording-bundle 7-part roundtrip** (full write→read→compare for the 7-file bundle manifest) — deferred as P2 scope
+
+### Pinned Oracle Commit
+`3ee90bcb3563164d7e0c3a4d9431632778907aee`
+
+### Acceptance Test Results
+- **P-1 test set** (18 tests — `test_fixture_provenance`, `test_fixture_io`, `test_gen_*`, `test_validate_golden_fixtures`, `test_golden_fixtures`): **18 passed**
+- **Full suite** (prior ≈697 + new P-1 tests): **712 passed, 3 skipped**
+
+### Determinism
+Generator re-run produced no changes to any JSON fixture or sidecar (oracle.json and binary `.h5`/`.xlsx` artifacts excluded by design — restored via `git checkout`).
+
+### Validator
+`scripts.validate_golden_fixtures` printed `all golden fixtures valid` over the committed fixture tree.
+
+---
 *Update this file after every 2 view/browser/search operations.*
