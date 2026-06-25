@@ -90,3 +90,12 @@ TEST_CASE("LiveScope renders a filtered frame with R-peak markers", "[gui]") {
   scope.refresh();
   REQUIRE(scope.lastFrame().valid);
 }
+
+TEST_CASE("MainWindow filter toggles + SNR strip update without crash", "[gui]") {
+  ensureApp();
+  ads1292::gui::MainWindow win;
+  int shown = win.runSimulatorToCompletion(8);   // P4 helper
+  REQUIRE(shown == 112);                          // 8*14 regression (P4 path intact)
+  win.setDisplayFilterForTest(/*qrs=*/true);
+  REQUIRE(win.liveSnrDbForTest() == win.liveSnrDbForTest());  // not NaN (self-equal)
+}

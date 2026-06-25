@@ -72,15 +72,36 @@ MainWindow::MainWindow(QWidget* parent)
     autoscaleBox->setChecked(true);
     toolbar->addWidget(autoscaleBox);
 
-    // P5 placeholder filter checkboxes (disabled)
+    // Display filter checkboxes: HP / Notch / LP / QRS (bandpass)
     toolbar->addSeparator();
-    toolbar->addWidget(new QLabel("Filters (P5):", toolbar));
-    for (const char* name : {"HP", "Notch", "LP", "QRS"}) {
-        auto* cb = new QCheckBox(name, toolbar);
-        cb->setEnabled(false);
-        cb->setToolTip("Display filter — available in P5");
-        toolbar->addWidget(cb);
-    }
+    toolbar->addWidget(new QLabel("Filters:", toolbar));
+
+    auto* hpBox    = new QCheckBox("HP",    toolbar);
+    auto* notchBox = new QCheckBox("Notch", toolbar);
+    auto* lpBox    = new QCheckBox("LP",    toolbar);
+    auto* qrsBox   = new QCheckBox("QRS",   toolbar);
+
+    toolbar->addWidget(hpBox);
+    toolbar->addWidget(notchBox);
+    toolbar->addWidget(lpBox);
+    toolbar->addWidget(qrsBox);
+
+    connect(hpBox, &QCheckBox::toggled, this, [this](bool checked) {
+        filter_.highpass_enabled = checked;
+        scope_->setFilterSettings(filter_);
+    });
+    connect(notchBox, &QCheckBox::toggled, this, [this](bool checked) {
+        filter_.notch_enabled = checked;
+        scope_->setFilterSettings(filter_);
+    });
+    connect(lpBox, &QCheckBox::toggled, this, [this](bool checked) {
+        filter_.lowpass_enabled = checked;
+        scope_->setFilterSettings(filter_);
+    });
+    connect(qrsBox, &QCheckBox::toggled, this, [this](bool checked) {
+        filter_.bandpass_enabled = checked;
+        scope_->setFilterSettings(filter_);
+    });
 
     // --- Central widget: horizontal splitter (scope | status) ---
     auto* centralSplitter = new QSplitter(Qt::Horizontal, this);
@@ -153,9 +174,32 @@ void MainWindow::onTick() {
         ++lastCount_;
     }
     scope_->refresh();
+    updateLiveReadout();
 
     state_.eventCount = static_cast<int>(eventConsole_->log().events().size());
     statusPanel_->updateFromState(state_);
+}
+
+void MainWindow::updateLiveReadout() {
+    const auto& frame = scope_->lastFrame();
+    if (frame.valid) {
+        statusPanel_->updateLive(
+            frame.snr.snr_db,
+            frame.snr.valid,
+            frame.heart_rate.median_bpm);
+    }
+}
+
+void MainWindow::setDisplayFilterForTest(bool qrs) {
+    filter_.bandpass_enabled = qrs;
+    scope_->setFilterSettings(filter_);
+    scope_->refresh();
+    updateLiveReadout();
+}
+
+double MainWindow::liveSnrDbForTest() const {
+    const auto& frame = scope_->lastFrame();
+    return frame.valid ? frame.snr.snr_db : 0.0;
 }
 
 int MainWindow::runSimulatorToCompletion(int streamBatches) {

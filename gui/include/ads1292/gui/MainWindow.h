@@ -9,6 +9,7 @@
 #include "ads1292/gui/GuiState.h"
 #include "ads1292/qt/AcquisitionWorker.h"
 #include "ads1292/acq/IDeviceSource.h"
+#include "ads1292/dsp/Display.h"
 
 namespace ads1292::gui {
 
@@ -21,8 +22,15 @@ public:
     /// drain the live queue into the scope, return the count drained.
     int runSimulatorToCompletion(int streamBatches);
 
+    /// Test hook: toggle the QRS (bandpass) filter + refresh + update SNR/HR labels.
+    void setDisplayFilterForTest(bool qrs);
+
+    /// Test hook: return the last SNR dB from the live frame (0.0 when invalid).
+    double liveSnrDbForTest() const;
+
 private:
     void onTick();
+    void updateLiveReadout();
 
     // Widgets
     LiveScope*    scope_        = nullptr;
@@ -41,6 +49,9 @@ private:
     // State
     GuiState state_;
     int      lastCount_ = 0;
+
+    // Display filter settings (live — driven by toolbar checkboxes)
+    ads1292::dsp::SoftwareFilterSettings filter_;
 };
 
 } // namespace ads1292::gui
