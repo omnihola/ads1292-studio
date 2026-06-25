@@ -1,0 +1,34 @@
+{
+  "schema": "ads1292-event-annotations-v1",
+  "timestamp_reference": "relative_seconds_from_recording_start",
+  "sample_rate_hz": 500.0,
+  "sample_index_reference": "zero_based_sample_index_at_recording_sample_rate",
+  "events": [
+    {
+      "event_id": "evt-0002500-0004000-motion-990607fe",
+      "timestamp_seconds": 5.0,
+      "start_seconds": 5.0,
+      "end_seconds": 8.0,
+      "duration_seconds": 3.0,
+      "start_sample_index": 2500,
+      "end_sample_index": 4000,
+      "duration_samples": 1500,
+      "event_type": "interval",
+      "label": "motion",
+      "notes": "subject moved arm"
+    },
+    {
+      "event_id": "evt-0010000-0012500-deep-breath-79059f80",
+      "timestamp_seconds": 20.0,
+      "start_seconds": 20.0,
+      "end_seconds": 25.0,
+      "duration_seconds": 5.0,
+      "start_sample_index": 10000,
+      "end_sample_index": 12500,
+      "duration_samples": 2500,
+      "event_type": "interval",
+      "label": "deep breath",
+      "notes": "respiration challenge"
+    }
+  ]
+}

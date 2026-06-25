@@ -1,0 +1,9 @@
+{
+  "session_id": "YYYYMMDD-run-001",
+  "subject_id": "anonymous",
+  "electrode": "commercial Ag/AgCl control or MOTAC gel + Ag/AgCl",
+  "montage": "RA/LA/RL torso",
+  "operator": "unspecified operator",
+  "notes": "posture, movement condition, skin prep, gel formulation, electrode placement",
+  "acquisition_mode": "live_stream"
+}

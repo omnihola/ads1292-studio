@@ -1,0 +1,6 @@
+{
+  "vref_mv": 2420.0,
+  "pga_gain": 6.0,
+  "adc_bits": 24,
+  "label": "ADS1292 default"
+}
