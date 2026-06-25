@@ -208,5 +208,27 @@ nlohmann::json acquisition_payload(const AcquisitionProvenance& prov, double sam
   };
 }
 
+// ── build_recording_bundle ────────────────────────────────────────────
+
+nlohmann::json build_recording_bundle(
+    const std::string& csv_name, const SessionMetadata& metadata,
+    const std::vector<EventMarker>& events, const Calibration& calibration,
+    const AcquisitionProvenance& acquisition, const TestProtocol& protocol,
+    const QualityGate& quality_gate, const RecordingProcessingSettings& processing,
+    double sample_rate_hz, const std::string& created_at) {
+  nlohmann::json bundle;
+  bundle["schema"] = "ads1292-recording-bundle-v1";
+  bundle["created_at"] = created_at;
+  bundle["csv_name"] = csv_name;
+  bundle["metadata"] = metadata_payload(metadata);
+  bundle["calibration"] = calibration_payload(calibration);
+  bundle["events"] = events_payload(events, sample_rate_hz);
+  bundle["acquisition"] = acquisition_payload(acquisition, sample_rate_hz);
+  bundle["protocol"] = protocol_payload(protocol);
+  bundle["quality_gate"] = quality_gate_payload(quality_gate);
+  bundle["processing"] = processing_payload(processing);
+  return bundle;
+}
+
 }  // namespace io
 }  // namespace ads1292

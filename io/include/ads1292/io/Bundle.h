@@ -86,5 +86,13 @@ nlohmann::json processing_payload(const RecordingProcessingSettings& ps);
 nlohmann::json protocol_payload(const TestProtocol& proto);
 nlohmann::json acquisition_payload(const AcquisitionProvenance& prov, double sample_rate_hz);
 
+// ── bundle assembly ────────────────────────────────────────────────────────
+nlohmann::json build_recording_bundle(
+    const std::string& csv_name, const SessionMetadata& metadata,
+    const std::vector<EventMarker>& events, const Calibration& calibration,
+    const AcquisitionProvenance& acquisition, const TestProtocol& protocol,
+    const QualityGate& quality_gate, const RecordingProcessingSettings& processing,
+    double sample_rate_hz, const std::string& created_at);
+
 }  // namespace io
 }  // namespace ads1292
