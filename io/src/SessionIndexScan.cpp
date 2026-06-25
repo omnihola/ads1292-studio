@@ -7,6 +7,7 @@
 #include "ads1292/dsp/QualityMetrics.h"
 #include "ads1292/model/SessionMetadata.h"
 #include "ads1292/model/EventMarker.h"
+#include "ads1292/event/EventId.h"
 
 #include <nlohmann/json.hpp>
 
@@ -132,9 +133,9 @@ EventAnnotationSummary _summarize_events(
         if (marker.duration_seconds > 0.0) {
             ++interval_count;
             total_annotated_seconds += marker.duration_seconds;
-            // duration_samples = round(duration * sr)
-            int dur_samples = static_cast<int>(std::round(marker.duration_seconds * sample_rate_hz));
-            total_annotated_samples += dur_samples;
+            // duration_samples via event_sample_indices (matches Python oracle exactly)
+            auto indices = ads1292::event_sample_indices(marker, sample_rate_hz);
+            total_annotated_samples += indices.duration_samples;
         }
     }
     // labels: sorted by label, "label:count;..."
@@ -163,6 +164,11 @@ EventAnnotationSummary _event_summary_for(const fs::path& csv_path, double sampl
             return _summarize_events(evs, sample_rate_hz);
         } catch (...) {}
     }
+    // DEFERRED (P7b backlog): the Python oracle falls back to <csv>.events.csv when
+    // <csv>.events.json is absent; read_events_csv (the events-CSV reader) is not
+    // ported yet, so a .events.csv-only recording gets an empty event summary here.
+    // The common case (.events.json, written by the GUI/CLI) is handled. The
+    // sidecar-status check still counts .events.csv as a present "events" sidecar.
     return EventAnnotationSummary{};
 }
 

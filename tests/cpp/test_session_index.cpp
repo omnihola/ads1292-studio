@@ -32,6 +32,9 @@ TEST_CASE("scan_recording_directory builds rows + summary", "[index]") {
   // sidecar_status: only metadata present -> missing the others
   REQUIRE(rows[0].sidecar_status == "missing");
   REQUIRE(rows[0].missing_sidecars.find("calibration") != std::string::npos);
+  // derived fields for missing-sidecar case
+  REQUIRE(rows[0].package_ready_status == "incomplete_record");
+  REQUIRE(rows[0].next_action == "complete_sidecars");
   // manifest absent -> "missing"
   REQUIRE(rows[0].recording_manifest_status == "missing");
   auto sum = index::summarize_rows(rows);
