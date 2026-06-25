@@ -13,6 +13,7 @@ add_library(ads1292_core STATIC
   src/acq/SimulatorDeviceSource.cpp
   src/view/RollingTrace.cpp
   src/view/EventLog.cpp
-  src/dsp/Iir.cpp)
+  src/dsp/Iir.cpp
+  src/dsp/Filtfilt.cpp)
 target_include_directories(ads1292_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ads1292_core PUBLIC picosha2)
