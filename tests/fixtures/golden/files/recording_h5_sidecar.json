@@ -1,0 +1,70 @@
+{
+  "artifact": "recording.h5",
+  "attrs": {
+    "created_at": "",
+    "csv_name": "live_recording.csv",
+    "sample_count": "50",
+    "sample_rate_hz": "500.0",
+    "schema": "ads1292-h5/1"
+  },
+  "category": "file_hdf5",
+  "datasets": {
+    "bundle_json": {
+      "dtype": "object",
+      "sha256": "non-numeric",
+      "shape": []
+    },
+    "samples/board_heart_rate": {
+      "dtype": "int16",
+      "sha256": "d696b5725985cf4a26b878287ff5f3bacf1ca8581adecd07068529365f888246",
+      "shape": [
+        50
+      ]
+    },
+    "samples/board_respiration_rate": {
+      "dtype": "int16",
+      "sha256": "835aa09f56c37d5848b58d421432b9a11dd5c3db8f22ec0ded20421253372a9b",
+      "shape": [
+        50
+      ]
+    },
+    "samples/ch1": {
+      "dtype": "int32",
+      "sha256": "2ec1aff51c3e9f6de5683a169c899ed236eedec83683ac0ddda41eec11e576f6",
+      "shape": [
+        50
+      ]
+    },
+    "samples/ch2": {
+      "dtype": "int32",
+      "sha256": "f906762abcf9faeb8dbd30f7f4b3379e62f7f1e40b3aea1ece88343aabe86db5",
+      "shape": [
+        50
+      ]
+    },
+    "samples/status_byte": {
+      "dtype": "uint16",
+      "sha256": "88bfc76279a262f8fe0fdcccba09ed626240a5d6f9c084be591d34e5affffd6f",
+      "shape": [
+        50
+      ]
+    },
+    "samples/timestamp": {
+      "dtype": "float64",
+      "sha256": "5160f583a3ffd2d5471bf9b532d792e78885a478b79007b3b36c48249771b2a2",
+      "shape": [
+        50
+      ]
+    }
+  },
+  "name": "recording_h5",
+  "notes": "HDF5 schema + datasets + attrs + per-array sha256; byte-identity NOT required",
+  "oracle": {
+    "function": "ads1292_studio.h5_io.write_recording_h5"
+  },
+  "schema_version": 1,
+  "tolerance": {
+    "kind": "structure"
+  },
+  "verify_ok": true
+}

@@ -1,0 +1,75 @@
+{
+  "category": "file_csv_live",
+  "csv_first_rows": [
+    [
+      "0.000000",
+      "0",
+      "10",
+      "7",
+      "72",
+      "18",
+      "0",
+      "0"
+    ],
+    [
+      "0.002000",
+      "1",
+      "11",
+      "-6",
+      "72",
+      "18",
+      "1",
+      "1"
+    ],
+    [
+      "0.004000",
+      "2",
+      "12",
+      "-7",
+      "72",
+      "18",
+      "2",
+      "2"
+    ],
+    [
+      "0.006000",
+      "3",
+      "13",
+      "4",
+      "72",
+      "18",
+      "3",
+      "3"
+    ],
+    [
+      "0.008000",
+      "4",
+      "14",
+      "-5",
+      "72",
+      "18",
+      "4",
+      "4"
+    ]
+  ],
+  "csv_header": [
+    "timestamp",
+    "sample_index",
+    "ch1_counts",
+    "ch2_counts",
+    "board_heart_rate",
+    "board_respiration_rate",
+    "status_byte",
+    "lead_off_bits"
+  ],
+  "name": "live_recording",
+  "notes": "live CSV column order + names + value formatting frozen at text level",
+  "oracle": {
+    "function": "ads1292_studio.csv_io.write_recording_csv"
+  },
+  "row_count": 50,
+  "schema_version": 1,
+  "tolerance": {
+    "kind": "text"
+  }
+}

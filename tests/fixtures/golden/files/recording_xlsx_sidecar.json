@@ -1,0 +1,83 @@
+{
+  "artifact": "recording.xlsx",
+  "category": "file_xlsx",
+  "data_first_row": [
+    "0.000000",
+    "0",
+    "10",
+    "7",
+    "72",
+    "18",
+    "0",
+    "0"
+  ],
+  "data_header": [
+    "timestamp",
+    "sample_index",
+    "ch1_counts",
+    "ch2_counts",
+    "board_heart_rate",
+    "board_respiration_rate",
+    "status_byte",
+    "lead_off_bits"
+  ],
+  "data_last_row": [
+    "0.098000",
+    "49",
+    "59",
+    "7",
+    "72",
+    "18",
+    "1",
+    "1"
+  ],
+  "events_header": [
+    "event_id",
+    "start_seconds",
+    "end_seconds",
+    "duration_seconds",
+    "start_sample_index",
+    "end_sample_index",
+    "duration_samples",
+    "event_type",
+    "label",
+    "notes"
+  ],
+  "interval_event_row": [
+    "evt-0000020-0000035-motion-8e70d045",
+    "0.040000",
+    "0.070000",
+    "0.030000",
+    "20",
+    "35",
+    "15",
+    "interval",
+    "motion",
+    "range note"
+  ],
+  "name": "recording_xlsx",
+  "notes": "XLSX semantic ONLY: sheet names + headers + 1 point + 1 interval event + first/last data row. No style/zip/byte equality.",
+  "oracle": {
+    "function": "ads1292_studio.xlsx_io.write_recording_xlsx"
+  },
+  "point_event_row": [
+    "evt-0000010-0000010-touch-20185b8c",
+    "0.020000",
+    "0.020000",
+    "0.000000",
+    "10",
+    "10",
+    "0",
+    "point",
+    "touch",
+    "point note"
+  ],
+  "schema_version": 1,
+  "sheet_names": [
+    "Events",
+    "Data"
+  ],
+  "tolerance": {
+    "kind": "semantic"
+  }
+}
