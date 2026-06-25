@@ -59,10 +59,16 @@ def generate(root: Path) -> list[Path]:
     written.append(_write(out / "quality_metrics_clean_72bpm.json", {
         "schema_version": 1, "category": "quality_metrics", "name": "quality_metrics_clean_72bpm",
         "oracle": {"function": "ads1292_studio.quality.compute_quality_metrics"},
-        "input": {"ch2": floats(signal), "sample_rate_hz": SR, "source": "Auto"},
+        "input": {
+            "ch2": [int(round(v)) for v in signal],
+            "ch1": 0,
+            "status_byte": 0,
+            "sample_rate_hz": SR,
+            "source": "Auto"
+        },
         "output": asdict(metrics),
         "tolerance": FLOAT_TOL,
-        "notes": "full quality metrics incl. contact %, drift, noise RMS, peak-to-peak",
+        "notes": "input rebuilds StreamSample(ch1=0, ch2=ch2[i], status_byte=0) per sample; ch2 is the integer-rounded ECG actually consumed by the oracle",
     }))
 
     snr = q.estimate_realtime_snr(np.asarray(signal, dtype=float), sample_rate_hz=SR)

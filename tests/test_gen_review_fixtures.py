@@ -15,5 +15,9 @@ def test_freezes_hr_pqrst_quality_snr(tmp_path: Path):
     assert "peaks" in hr["input"]          # upstream frozen peaks
     assert "median_bpm" in hr["output"]
 
+    pqrst = load_fixture(tmp_path / "review" / "pqrst_clean_72bpm.json")
+    assert "peaks" in pqrst["input"]
+
     snr = load_fixture(tmp_path / "review" / "realtime_snr_clean_72bpm.json")
     assert "snr_db" in snr["output"] and "noise_rms_counts" in snr["output"]
+    assert "signal_rms_counts" in snr["output"]
