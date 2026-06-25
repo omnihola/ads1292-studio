@@ -35,6 +35,10 @@ Coeffs butter_highpass(double sample_rate_hz, double cutoff_hz);
 /// Normalises: cut = min(cutoff/(sr/2), 0.99)
 Coeffs butter_lowpass(double sample_rate_hz, double cutoff_hz);
 
+/// IIR notch filter.
+/// Normalises: w0 = min(notch_hz/(sr/2), 0.99)
+Coeffs iirnotch(double sample_rate_hz, double notch_hz, double q);
+
 // ── Internal pipeline (exposed for testing) ─────────────────────────────────
 
 /// Butterworth analog prototype of order N.

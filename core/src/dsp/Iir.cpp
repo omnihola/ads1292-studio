@@ -251,4 +251,23 @@ Coeffs butter_lowpass(double sample_rate_hz, double cutoff_hz) {
     return butter_lowpass_impl(2, cut);
 }
 
+Coeffs iirnotch(double sample_rate_hz, double notch_hz, double q) {
+    double nyq = sample_rate_hz / 2.0;
+    double w0 = std::min(notch_hz / nyq, 0.99);
+
+    // Closed-form notch filter coefficients (scipy.signal.iirnotch)
+    double bw = w0 / q;
+    double gb = 1.0 / std::sqrt(2.0);  // -3 dB
+    double beta = (std::sqrt(1.0 - gb * gb) / gb) * std::tan(PI * bw / 2.0);
+    double gain = 1.0 / (1.0 + beta);
+
+    double cos_w0 = std::cos(PI * w0);
+
+    Coeffs c;
+    c.b = {gain, -2.0 * gain * cos_w0, gain};
+    c.a = {1.0, -2.0 * gain * cos_w0, 2.0 * gain - 1.0};
+
+    return c;
+}
+
 } // namespace ads1292::dsp

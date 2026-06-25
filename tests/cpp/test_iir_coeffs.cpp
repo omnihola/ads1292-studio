@@ -42,3 +42,7 @@ TEST_CASE("butter highpass matches", "[dsp]") {
 TEST_CASE("butter lowpass matches", "[dsp]") {
     check(butter_lowpass(500.0, 40.0), fx("coeffs_lowpass_500hz"));
 }
+
+TEST_CASE("iirnotch matches the golden coefficients", "[dsp]") {
+    check(iirnotch(500.0, 60.0, 30.0), fx("coeffs_notch_60hz_500hz"));
+}
