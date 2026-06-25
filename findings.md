@@ -233,3 +233,13 @@ Generator re-run produced no changes to any JSON fixture or sidecar (oracle.json
 
 ---
 *Update this file after every 2 view/browser/search operations.*
+
+## P-2 Cleanup Backlog (deferred Minors from P-1 final review, 2026-06-24)
+Final whole-branch review verdict: READY TO MERGE. None of these block merge.
+- [rpeak] add `distance`/`polarity` to `output_tolerances` as `{kind: exact}` (strongest candidate to fix early).
+- [rpeak] document in `rpeak_chain_short_below_sr` notes that `filtered`/`centered` are computed independently while the oracle early-returns.
+- [rpeak] extend `test_gen_rpeak_fixtures.py` to assert the `fast_110bpm` and `short_below_sr` fixtures too.
+- [validator] `_validate_xlsx`: early-return after a sheet-name mismatch to avoid `IndexError` on a <2-sheet workbook.
+- [tests] remove unused `import pytest` in `tests/test_golden_fixtures.py`.
+- [gen_device] `_sample_dict` uses a hard-coded key list; add a comment that new dataclass fields must be added here.
+- [_xlsx_read] add a comment documenting the coupling to `xlsx_io`'s inline-string (`inlineStr`) output format.
