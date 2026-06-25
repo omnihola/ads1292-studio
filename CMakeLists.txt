@@ -14,6 +14,7 @@ option(ADS1292_BUILD_TESTS "Build C++ tests" ON)
 
 add_subdirectory(third_party)
 add_subdirectory(core)
+add_subdirectory(io)
 
 if(ADS1292_BUILD_GUI)
   add_subdirectory(gui)
