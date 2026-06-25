@@ -22,9 +22,22 @@ struct H5Recording {
   H5Attrs attrs;
 };
 
+struct H5Verification {
+  bool ok;
+  int checked;
+  std::vector<std::string> failures;
+};
+
 H5Recording read_recording_h5(const std::string& path);
 
 std::string dataset_float64_sha256(const std::vector<double>& values);
+
+void write_recording_h5(const std::string& path,
+                        const std::vector<StreamSample>& samples,
+                        const std::string& bundle_json,
+                        const H5Attrs& attrs);
+
+H5Verification verify_recording_h5(const std::string& path);
 
 }  // namespace io
 }  // namespace ads1292
