@@ -11,6 +11,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(ADS1292_BUILD_GUI "Build the Qt GUI" ON)
 option(ADS1292_BUILD_TESTS "Build C++ tests" ON)
+option(ADS1292_BUILD_HDF5 "Build the HDF5 I/O module" ON)
 
 add_subdirectory(third_party)
 add_subdirectory(core)
