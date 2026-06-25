@@ -26,6 +26,7 @@ add_library(ads1292_core STATIC
   src/dsp/Quality.cpp
   src/dsp/ChannelSelect.cpp
   src/dsp/QualityMetrics.cpp
-  src/dsp/Spectrum.cpp)
+  src/dsp/Spectrum.cpp
+  src/dsp/QualityGate.cpp)
 target_include_directories(ads1292_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ads1292_core PUBLIC picosha2 kissfft)
