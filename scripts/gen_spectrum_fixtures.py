@@ -24,10 +24,12 @@ def generate(root: Path) -> list[Path]:
     analysis = build_spectrum_analysis(_samples(signal), source="CH2",
                                        sample_rate_hz=SR, max_frequency_hz=60.0, histogram_bins=48)
     path = out / "spectrum_clean_72bpm_ch2.json"
+    # Store the exact integer-rounded ch2 values consumed by the oracle
+    ch2_rounded = [int(round(v)) for v in signal]
     dump_fixture({
         "schema_version": 1, "category": "spectrum", "name": "spectrum_clean_72bpm_ch2",
         "oracle": {"function": "ads1292_studio.spectrum.build_spectrum_analysis"},
-        "input": {"ch2": floats(signal), "source": "CH2", "sample_rate_hz": SR,
+        "input": {"ch2": ch2_rounded, "source": "CH2", "sample_rate_hz": SR,
                   "max_frequency_hz": 60.0, "histogram_bins": 48},
         "output": {
             "ecg_frequency_hz": floats(analysis.ecg_frequency_hz),
@@ -41,6 +43,6 @@ def generate(root: Path) -> list[Path]:
             "histogram_counts": {"kind": "exact"},
             "histogram_bin_edges": {"kind": "abs", "value": 1e-9},
         },
-        "notes": "Hann-windowed rfft power + amplitude histogram",
+        "notes": "Hann-windowed rfft power + amplitude histogram. ch2 is the integer-rounded ECG signal consumed by the oracle (samples: StreamSample(ch1=0, ch2=ch2[i], status_byte=0)).",
     }, path)
     return [path]
