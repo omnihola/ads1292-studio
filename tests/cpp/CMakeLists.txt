@@ -42,7 +42,8 @@ add_executable(ads1292_tests
   test_quality_gate.cpp
   test_cli.cpp
   test_metadata_io.cpp
-  test_calibration_io.cpp)
+  test_calibration_io.cpp
+  test_events_io.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 
