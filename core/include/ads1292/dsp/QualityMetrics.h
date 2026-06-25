@@ -37,6 +37,15 @@ struct QualityMetrics {
     double peak_to_peak_counts;    ///< max(ecg) - min(ecg)
 };
 
+/// Returns a human-readable quality label for a QualityMetrics summary.
+///
+/// Algorithm (quality.py):
+///   if contact_ok_percent < 95 || !qrs_clear  → "Needs review"
+///   if r_peaks < 5 || hr_median_bpm <= 0       → "Insufficient ECG"
+///   if contact_ok_percent >= 99 && qrs_clear   → "Good ECG/QRS"
+///   else                                        → "Usable ECG/QRS"
+std::string quality_label(const QualityMetrics& m);
+
 /// Computes a full quality summary from a vector of StreamSamples.
 ///
 /// Algorithm (per quality.py):

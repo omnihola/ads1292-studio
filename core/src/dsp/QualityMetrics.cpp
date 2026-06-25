@@ -1,6 +1,6 @@
 // core/src/dsp/QualityMetrics.cpp
-// Implementation of compute_quality_metrics.
-// Ported from quality.py :: compute_quality_metrics.
+// Implementation of compute_quality_metrics and quality_label.
+// Ported from quality.py.
 // Pure C++17, no Qt, no OS. All computations in double.
 
 #include "ads1292/dsp/QualityMetrics.h"
@@ -11,6 +11,25 @@
 #include <cstddef>
 
 namespace ads1292::dsp {
+
+// ─── quality_label ───────────────────────────────────────────────────────────
+std::string quality_label(const QualityMetrics& m)
+{
+    // Priority order matching quality.py:
+    // 1. Bad contact or QRS not clear
+    if (m.contact_ok_percent < 95.0 || !m.qrs_clear) {
+        return "Needs review";
+    }
+    // 2. Too few beats or invalid HR
+    if (m.r_peaks < 5 || m.hr_median_bpm <= 0.0) {
+        return "Insufficient ECG";
+    }
+    // 3. Excellent contact + clear QRS
+    if (m.contact_ok_percent >= 99.0 && m.qrs_clear) {
+        return "Good ECG/QRS";
+    }
+    return "Usable ECG/QRS";
+}
 
 QualityMetrics compute_quality_metrics(
     const std::vector<ads1292::StreamSample>& samples,

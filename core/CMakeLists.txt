@@ -15,6 +15,8 @@ add_library(ads1292_core STATIC
   src/view/EventLog.cpp
   src/view/PlotDecimate.cpp
   src/view/LiveRender.cpp
+  src/view/PlotStats.cpp
+  src/view/ReviewRender.cpp
   src/dsp/Iir.cpp
   src/dsp/Display.cpp
   src/dsp/Filtfilt.cpp
