@@ -1,0 +1,30 @@
+{
+  "category": "hr_summary",
+  "input": {
+    "peaks": [
+      200,
+      617,
+      1033,
+      1450,
+      1867,
+      2283
+    ],
+    "sample_rate_hz": 500.0
+  },
+  "name": "hr_summary_clean_72bpm",
+  "notes": "HR summary from frozen upstream peaks",
+  "oracle": {
+    "function": "ads1292_studio.signal_processing.heart_rate_summary"
+  },
+  "output": {
+    "max_bpm": 72.11538461538461,
+    "median_bpm": 71.94244604316548,
+    "min_bpm": 71.94244604316548,
+    "valid_rr_count": 5
+  },
+  "schema_version": 1,
+  "tolerance": {
+    "kind": "abs",
+    "value": 1e-09
+  }
+}
