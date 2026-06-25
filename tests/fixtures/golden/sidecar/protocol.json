@@ -1,0 +1,26 @@
+{
+  "name": "MOTAC ECG validation",
+  "objective": "Compare MOTAC gel electrode performance against a commercial Ag/AgCl control.",
+  "operator_instructions": "Use battery power, verify RA/LA/RL contact, and record protocol events.",
+  "steps": [
+    {
+      "start_seconds": 0.0,
+      "duration_seconds": 30.0,
+      "label": "baseline",
+      "instruction": "Subject seated and still; verify stable ECG and contact."
+    },
+    {
+      "start_seconds": 30.0,
+      "duration_seconds": 15.0,
+      "label": "motion",
+      "instruction": "Ask subject to move arm or torso gently to challenge adhesion."
+    },
+    {
+      "start_seconds": 45.0,
+      "duration_seconds": 30.0,
+      "label": "recovery",
+      "instruction": "Subject returns to still posture; confirm QRS recovery."
+    }
+  ],
+  "acceptance_notes": "Quality gate should pass; QRS should remain visible before, during, and after motion."
+}

@@ -1,0 +1,21 @@
+{
+  "schema": "ads1292-processing-settings-v1",
+  "display": {
+    "time_window_seconds": 8.0,
+    "gain": 1.0,
+    "sweep_speed_mm_s": 25
+  },
+  "software_filters": {
+    "highpass_enabled": false,
+    "notch_enabled": false,
+    "lowpass_enabled": false,
+    "bandpass_enabled": false,
+    "highpass_hz": 0.5,
+    "notch_hz": 60.0,
+    "lowpass_hz": 40.0
+  },
+  "sample_rate_hz": 500.0,
+  "ecg_inverted": false,
+  "smoothing_window": 11,
+  "processing_notes": "display settings only; raw CSV samples are unchanged"
+}
