@@ -24,8 +24,7 @@ add_executable(ads1292_tests
   test_acq_worker_smoke.cpp
   test_rolling_trace.cpp
   test_event_log.cpp
-  test_gui_smoke.cpp
-  ${CMAKE_SOURCE_DIR}/gui/src/QCustomPlotWaveform.cpp)
+  test_gui_smoke.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 
@@ -33,10 +32,8 @@ if(ADS1292_BUILD_HDF5)
   target_sources(ads1292_tests PRIVATE test_h5_io.cpp test_h5_read.cpp test_h5_write.cpp)
 endif()
 
-target_include_directories(ads1292_tests PRIVATE
-  ${CMAKE_SOURCE_DIR}/gui/include)
-
 target_link_libraries(ads1292_tests PRIVATE
+  ads1292_gui_lib
   ads1292_core
   ads1292_io
   ads1292_qt_runtime

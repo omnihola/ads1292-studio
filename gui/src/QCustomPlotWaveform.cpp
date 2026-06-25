@@ -20,8 +20,11 @@ QCustomPlotWaveform::QCustomPlotWaveform()
 
 QCustomPlotWaveform::~QCustomPlotWaveform()
 {
-    // m_plot has no parent, so we must delete it manually.
-    delete m_plot;
+    // If widget() was added to a layout, Qt reparented m_plot and owns it now —
+    // deleting here would double-free. Only delete while it is still parentless.
+    if (m_plot && m_plot->parent() == nullptr) {
+        delete m_plot;
+    }
 }
 
 void QCustomPlotWaveform::setData(int graphIndex,
