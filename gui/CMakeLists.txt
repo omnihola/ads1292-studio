@@ -9,6 +9,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 add_library(ads1292_gui_lib STATIC
   src/MainWindow.cpp
   src/QCustomPlotWaveform.cpp
+  src/QCustomPlotXY.cpp
   src/LiveScope.cpp
   src/StatusPanel.cpp
   src/EventConsole.cpp

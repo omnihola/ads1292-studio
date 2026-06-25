@@ -99,3 +99,14 @@ TEST_CASE("MainWindow filter toggles + SNR strip update without crash", "[gui]")
   win.setDisplayFilterForTest(/*qrs=*/true);
   REQUIRE(win.liveSnrDbForTest() == win.liveSnrDbForTest());  // not NaN (self-equal)
 }
+
+#include "ads1292/gui/QCustomPlotXY.h"
+
+TEST_CASE("QCustomPlotXY line + bars render offscreen", "[gui]") {
+  ensureApp();
+  ads1292::gui::QCustomPlotXY plot;
+  plot.setLine({0,1,2,3}, {0,1,4,9});
+  plot.setBars({0.5,1.5,2.5}, {2,5,3}, 1.0);
+  plot.setTitle("test"); plot.setAutoscale(true); plot.replotNow();
+  REQUIRE(plot.widget() != nullptr);
+}
