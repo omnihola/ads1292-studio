@@ -19,7 +19,8 @@ add_executable(ads1292_tests
   test_bundle_assembly.cpp
   test_ads_protocol.cpp
   test_acquisition_engine.cpp
-  test_acq_worker_smoke.cpp)
+  test_acq_worker_smoke.cpp
+  test_rolling_trace.cpp)
 
 if(ADS1292_BUILD_HDF5)
   target_sources(ads1292_tests PRIVATE test_h5_io.cpp test_h5_read.cpp test_h5_write.cpp)
