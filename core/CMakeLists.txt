@@ -3,6 +3,7 @@ add_library(ads1292_core STATIC
   src/core_version.cpp
   src/model/EventMarker.cpp
   src/model/Calibration.cpp
+  src/model/SessionMetadata.cpp
   src/device/AdsParser.cpp
   src/crypto/Sha1.cpp
   src/crypto/Sha256.cpp
