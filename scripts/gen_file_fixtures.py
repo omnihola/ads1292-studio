@@ -18,7 +18,7 @@ from ads1292_studio.calibration import Calibration
 from ads1292_studio.metadata import SessionMetadata
 from ads1292_studio.protocol import TestProtocol
 from ads1292_studio.quality_gate import QualityGate
-from ads1292_studio.recording_bundle import AcquisitionProvenance, RecordingProcessingSettings
+from ads1292_studio.recording_bundle import AcquisitionProvenance, RecordingProcessingSettings, build_recording_bundle
 from scripts._fixture_signals import synthetic_ecg
 from scripts.fixture_io import dump_fixture, sha256_array
 from scripts._xlsx_read import read_xlsx_semantic
@@ -167,4 +167,31 @@ def generate(root: Path) -> list[Path]:
         "notes": "raw CSV header + value formatting (CRLF, %.17g uv, %g vref/pga, %.9f lsb) frozen at text level; default Calibration",
     }, raw_sidecar)
     written += [raw_csv_path, raw_sidecar]
+
+    # --- recording bundle: freeze the full default bundle JSON (the C++ parity target) ---
+    bundle = build_recording_bundle(
+        csv_path="rec.csv",
+        metadata=SessionMetadata(operator="fixture", subject_id="p1"),
+        events=(EventMarker(0.02, "touch", "n1", 0.0), EventMarker(0.04, "motion", "n2", 0.03)),
+        calibration=Calibration(),
+        acquisition=AcquisitionProvenance(),
+        protocol=TestProtocol(),
+        quality_gate=QualityGate(),
+        processing=RecordingProcessingSettings(),
+        sample_rate_hz=500.0,
+        created_at="",
+    )
+    bundle_path = out / "recording_bundle.json"
+    dump_fixture(bundle, bundle_path)
+    bundle_sidecar = out / "recording_bundle_sidecar.json"
+    dump_fixture({
+        "schema_version": 1, "category": "file_bundle", "name": "recording_bundle",
+        "oracle": {"function": "ads1292_studio.recording_bundle.build_recording_bundle"},
+        "artifact": "recording_bundle.json",
+        "top_keys": sorted(bundle.keys()),
+        "tolerance": {"kind": "structure"},
+        "notes": "full default recording bundle; C++ build_recording_bundle must reproduce key-for-key",
+    }, bundle_sidecar)
+    written += [bundle_path, bundle_sidecar]
+
     return written

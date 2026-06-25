@@ -1,0 +1,162 @@
+{
+  "acquisition": {
+    "acquisition_mode": "live_stream",
+    "channel_map": {
+      "ch1_counts": "CH1 respiration/raw impedance",
+      "ch2_counts": "CH2 ECG Lead I (LA-RA)",
+      "lead_off_bits": "lead-off/contact status low nibble",
+      "status_byte": "ADS1x9x status byte"
+    },
+    "completion": {
+      "ended_at": "",
+      "finalized_at": "",
+      "first_timestamp_seconds": 0.0,
+      "last_timestamp_seconds": 0.0,
+      "sample_count": 0,
+      "sample_span_seconds": 0.0,
+      "status": "open"
+    },
+    "csv_columns": [
+      {
+        "description": "Relative seconds from recording start.",
+        "name": "timestamp",
+        "unit": "s"
+      },
+      {
+        "description": "Zero-based sample index.",
+        "name": "sample_index",
+        "unit": "sample"
+      },
+      {
+        "description": "CH1 respiration/raw impedance",
+        "name": "ch1_counts",
+        "unit": "live_stream_count"
+      },
+      {
+        "description": "CH2 ECG Lead I (LA-RA)",
+        "name": "ch2_counts",
+        "unit": "live_stream_count"
+      },
+      {
+        "description": "Heart rate reported by ADS1x9x ECG-FE firmware.",
+        "name": "board_heart_rate",
+        "unit": "bpm"
+      },
+      {
+        "description": "Respiration rate reported by ADS1x9x ECG-FE firmware.",
+        "name": "board_respiration_rate",
+        "unit": "breaths/min"
+      },
+      {
+        "description": "ADS1x9x status byte from the USB stream.",
+        "name": "status_byte",
+        "unit": "bitfield"
+      },
+      {
+        "description": "Low-nibble lead-off/contact status bits.",
+        "name": "lead_off_bits",
+        "unit": "bitfield"
+      }
+    ],
+    "csv_name": "",
+    "csv_schema": "ads1292-studio-live-stream-v1",
+    "live_calibration": {},
+    "port": "",
+    "raw_adc": {},
+    "sample_rate_hz": 500.0,
+    "schema": "ads1292-acquisition-provenance-v1",
+    "started_at": "",
+    "timestamp_reference": "relative_seconds_from_recording_start"
+  },
+  "calibration": {
+    "adc_bits": 24,
+    "label": "ADS1292 default",
+    "pga_gain": 6.0,
+    "vref_mv": 2420.0
+  },
+  "created_at": "",
+  "csv_name": "rec.csv",
+  "events": {
+    "events": [
+      {
+        "duration_samples": 0,
+        "duration_seconds": 0.0,
+        "end_sample_index": 10,
+        "end_seconds": 0.02,
+        "event_id": "evt-0000010-0000010-touch-c545bb80",
+        "event_type": "point",
+        "label": "touch",
+        "notes": "n1",
+        "start_sample_index": 10,
+        "start_seconds": 0.02,
+        "timestamp_seconds": 0.02
+      },
+      {
+        "duration_samples": 15,
+        "duration_seconds": 0.03,
+        "end_sample_index": 35,
+        "end_seconds": 0.07,
+        "event_id": "evt-0000020-0000035-motion-b06d78b7",
+        "event_type": "interval",
+        "label": "motion",
+        "notes": "n2",
+        "start_sample_index": 20,
+        "start_seconds": 0.04,
+        "timestamp_seconds": 0.04
+      }
+    ],
+    "sample_index_reference": "zero_based_sample_index_at_recording_sample_rate",
+    "sample_rate_hz": 500.0,
+    "schema": "ads1292-event-annotations-v1",
+    "timestamp_reference": "relative_seconds_from_recording_start"
+  },
+  "metadata": {
+    "acquisition_mode": "live_stream",
+    "electrode": "unspecified electrode",
+    "montage": "RA/LA/RL torso",
+    "notes": "",
+    "operator": "fixture",
+    "session_id": "untitled-session",
+    "subject_id": "p1"
+  },
+  "processing": {
+    "display": {
+      "gain": 1.0,
+      "sweep_speed_mm_s": 25,
+      "time_window_seconds": 8.0
+    },
+    "ecg_inverted": false,
+    "processing_notes": "display settings only; raw CSV samples are unchanged",
+    "sample_rate_hz": 500.0,
+    "schema": "ads1292-processing-settings-v1",
+    "smoothing_window": 11,
+    "software_filters": {
+      "bandpass_enabled": false,
+      "highpass_enabled": false,
+      "highpass_hz": 0.5,
+      "lowpass_enabled": false,
+      "lowpass_hz": 40.0,
+      "notch_enabled": false,
+      "notch_hz": 60.0
+    }
+  },
+  "protocol": {
+    "acceptance_notes": "Review quality gate and artifacts before accepting the run.",
+    "name": "ADS1292 validation protocol",
+    "objective": "",
+    "operator_instructions": "Follow the listed protocol steps.",
+    "steps": []
+  },
+  "quality_gate": {
+    "max_baseline_drift_counts": null,
+    "max_hr_bpm": 180.0,
+    "max_noise_rms_counts": null,
+    "max_peak_to_peak_counts": null,
+    "min_contact_ok_percent": 95.0,
+    "min_duration_seconds": 8.0,
+    "min_hr_bpm": 35.0,
+    "min_r_peaks": 5,
+    "require_qrs_clear": true
+  },
+  "schema": "ads1292-recording-bundle-v1"
+}

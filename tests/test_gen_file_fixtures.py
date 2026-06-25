@@ -44,3 +44,17 @@ def test_freezes_raw_csv_semantic(tmp_path: Path):
     assert raw["row_count"] == 50
     # the calibration-derived columns are constant per row
     assert raw["csv_first_rows"][0][-1] == "raw_adc_24bit"
+
+
+def test_freezes_recording_bundle(tmp_path: Path):
+    generate(tmp_path)
+    files_dir = tmp_path / "files"
+    assert (files_dir / "recording_bundle.json").exists()
+    sc = load_fixture(files_dir / "recording_bundle_sidecar.json")
+    assert sc["category"] == "file_bundle"
+    bundle = load_fixture(files_dir / "recording_bundle.json")
+    assert set(bundle.keys()) >= {
+        "acquisition", "calibration", "created_at", "csv_name",
+        "events", "metadata", "processing", "protocol", "quality_gate", "schema"}
+    assert bundle["events"]["events"][0]["event_id"].endswith("c545bb80")
+    assert bundle["events"]["events"][1]["event_id"].endswith("b06d78b7")

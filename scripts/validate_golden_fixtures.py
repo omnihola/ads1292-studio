@@ -18,6 +18,7 @@ FILE_SIDECAR_KEYS = {
     "file_hdf5": ("artifact", "datasets", "attrs"),
     "file_xlsx": ("artifact", "sheet_names", "events_header", "point_event_row",
                   "interval_event_row", "data_header", "data_first_row", "data_last_row"),
+    "file_bundle": ("artifact", "top_keys"),
 }
 
 
@@ -34,8 +35,19 @@ def validate_root(root: Path) -> list[str]:
             if key not in manifest:
                 errors.append(f"oracle.json missing key: {key}")
 
+    # Collect all sidecar artifacts (file paths that are referenced as artifacts)
+    artifacts_to_skip = set()
+    for path in sorted(root.rglob("*_sidecar.json")):
+        try:
+            obj = json.loads(path.read_text())
+            if "artifact" in obj:
+                artifact_path = path.parent / obj["artifact"]
+                artifacts_to_skip.add(artifact_path)
+        except Exception:
+            pass
+
     for path in sorted(root.rglob("*.json")):
-        if path.name == "oracle.json":
+        if path.name == "oracle.json" or path in artifacts_to_skip:
             continue
         obj = json.loads(path.read_text())
         rel = path.relative_to(root)

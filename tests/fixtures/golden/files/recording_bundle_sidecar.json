@@ -1,0 +1,25 @@
+{
+  "artifact": "recording_bundle.json",
+  "category": "file_bundle",
+  "name": "recording_bundle",
+  "notes": "full default recording bundle; C++ build_recording_bundle must reproduce key-for-key",
+  "oracle": {
+    "function": "ads1292_studio.recording_bundle.build_recording_bundle"
+  },
+  "schema_version": 1,
+  "tolerance": {
+    "kind": "structure"
+  },
+  "top_keys": [
+    "acquisition",
+    "calibration",
+    "created_at",
+    "csv_name",
+    "events",
+    "metadata",
+    "processing",
+    "protocol",
+    "quality_gate",
+    "schema"
+  ]
+}
