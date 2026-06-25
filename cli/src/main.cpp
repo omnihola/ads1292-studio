@@ -18,7 +18,10 @@ static void print_usage(const char* prog) {
               << "  report <csv> [--source CH1|CH2|Auto]\n"
               << "      Print textual quality/HR summary. Exit 0 = ok, 1 = error.\n"
               << "  verify <h5>\n"
-              << "      Verify HDF5 recording integrity. Exit 0 = ok, 2 = fail, 1 = error.\n";
+              << "      Verify HDF5 recording integrity. Exit 0 = ok, 2 = fail, 1 = error.\n"
+              << "  index <root> [--out <dir>]\n"
+              << "      Scan a recording directory and write index.json. Exit 0 always.\n"
+              << "      Default --out: <root>/index-out\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -86,6 +89,31 @@ int main(int argc, char* argv[]) {
         opt.h5_path = argv[2];
 
         return ads1292::cli::run_verify(std::cout, opt);
+    }
+
+    if (subcmd == "index") {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " index <root> [--out <dir>]\n";
+            return 1;
+        }
+
+        ads1292::cli::IndexOptions opt;
+        opt.root = argv[2];
+        // Default out_dir: <root>/index-out
+        opt.out_dir = opt.root + "/index-out";
+
+        for (int i = 3; i < argc; ++i) {
+            const std::string_view flag{argv[i]};
+            if (flag == "--out" && i + 1 < argc) {
+                opt.out_dir = argv[++i];
+            } else {
+                std::cerr << "Unknown option: " << flag << "\n";
+                std::cerr << "Usage: " << argv[0] << " index <root> [--out <dir>]\n";
+                return 1;
+            }
+        }
+
+        return ads1292::cli::run_index(std::cout, opt);
     }
 
     // Unknown subcommand

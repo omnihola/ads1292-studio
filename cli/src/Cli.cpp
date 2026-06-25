@@ -4,11 +4,16 @@
 #include "ads1292/cli/Cli.h"
 #include "ads1292/io/CsvIo.h"
 #include "ads1292/io/H5Io.h"
+#include "ads1292/io/SessionIndexScan.h"
+#include "ads1292/index/SessionIndexRow.h"
 #include "ads1292/dsp/QualityMetrics.h"
 #include "ads1292/dsp/QualityGate.h"
 
+#include <filesystem>
 #include <iomanip>
 #include <stdexcept>
+
+namespace fs = std::filesystem;
 
 namespace ads1292::cli {
 
@@ -105,6 +110,46 @@ int run_verify(std::ostream& out, const VerifyOptions& opt) {
     }
 
     return v.ok ? 0 : 2;
+}
+
+int run_index(std::ostream& out, const IndexOptions& opt) {
+    // --- diagnostics (non-fatal: proceed with empty scan if triggered) ---
+    if (!fs::is_directory(opt.root)) {
+        out << "index expects a directory; '" << opt.root << "' is not a directory\n";
+        // fall through: scan produces empty rows
+    } else if (ads1292::io::discover_recording_csvs(opt.root).empty()) {
+        out << "no recording CSVs found under " << opt.root << "\n";
+    }
+
+    // --- scan ---
+    std::vector<ads1292::index::SessionIndexRow> rows;
+    try {
+        rows = ads1292::io::scan_recording_directory(opt.root);
+    } catch (...) {
+        rows.clear(); // treat any exception as empty
+    }
+
+    // --- summarize ---
+    auto summary = ads1292::index::summarize_rows(rows);
+
+    // --- write JSON index ---
+    fs::create_directories(opt.out_dir);
+    auto json_path = (fs::path(opt.out_dir) / "index.json").string();
+    ads1292::io::write_session_index_json(json_path, rows, summary);
+
+    // --- print deterministic counter lines ---
+    // Note: Python csv=/html=/sidecar_plan_*/manifest_*/template lines are
+    // intentionally omitted — that rendering/repair tooling is deferred.
+    out << "index_json=" << json_path << "\n";
+    out << "rows=" << rows.size() << "\n";
+    out << "package_ready=" << summary.package_ready << "\n";
+    out << "incomplete_records=" << summary.incomplete_records << "\n";
+    out << "needs_signal_review=" << summary.needs_signal_review << "\n";
+    out << "action_package_record=" << summary.action_package_record << "\n";
+    out << "action_complete_sidecars=" << summary.action_complete_sidecars << "\n";
+    out << "action_review_signal=" << summary.action_review_signal << "\n";
+
+    return 0;
 }
 
 } // namespace ads1292::cli

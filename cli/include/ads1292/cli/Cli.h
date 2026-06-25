@@ -73,4 +73,32 @@ struct VerifyOptions {
 ///   2  — verification failed
 int run_verify(std::ostream& out, const VerifyOptions& opt);
 
+/// Options for the `index` subcommand.
+struct IndexOptions {
+    std::string root;     ///< Directory to scan for recording CSVs.
+    std::string out_dir;  ///< Output directory for index.json (created if absent).
+};
+
+/// Scan a recording directory and write a JSON session index.
+///
+/// Behaviour (mirrors cli.py cmd_index):
+///   - If opt.root is not a directory, prints the diagnostic and proceeds with
+///     an empty scan (returns 0).
+///   - If no recording CSVs are found, prints the diagnostic and proceeds.
+///   - Always writes <out_dir>/index.json and prints (in order):
+///       index_json=<path>
+///       rows=<N>
+///       package_ready=<N>
+///       incomplete_records=<N>
+///       needs_signal_review=<N>
+///       action_package_record=<N>
+///       action_complete_sidecars=<N>
+///       action_review_signal=<N>
+///
+/// Note: the Python csv=/html=/sidecar_plan_*/manifest_*/template lines are
+/// intentionally NOT emitted — that rendering/repair tooling is deferred.
+///
+/// Returns 0 always.
+int run_index(std::ostream& out, const IndexOptions& opt);
+
 } // namespace ads1292::cli
