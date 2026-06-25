@@ -35,3 +35,31 @@ TEST_CASE("read_frame extracts a stream frame after START", "[acq]") {
   REQUIRE(samples.size() == 14);
   REQUIRE(samples[0].ch1 == 100);
 }
+
+// ---- device-level tests (Task 2) ----
+#include "ads1292/acq/AdsProtocolDevice.h"
+#include "ads1292/acq/SimulatorDeviceSource.h"
+
+TEST_CASE("AdsProtocolDevice reads a stream batch from a transport", "[acq]") {
+  std::vector<uint8_t> bytes = {0x02, 0x93};
+  // reuse the helper stream_payload() from earlier in this file
+  auto pl = stream_payload();
+  bytes.insert(bytes.end(), pl.begin(), pl.end());
+  SimulatorByteTransport t(bytes);
+  AdsProtocolDevice dev(t, 500.0);
+  dev.start_stream();
+  auto batch = dev.read_stream_batch();
+  REQUIRE(batch.size() == 14);
+  REQUIRE(batch[0].ch1 == 100);
+  // start_stream wrote the streaming command
+  REQUIRE(t.last_written() == build_cmd(0x93, 0, 0));
+}
+
+TEST_CASE("SimulatorDeviceSource yields deterministic batches", "[acq]") {
+  SimulatorDeviceSource sim(/*stream_batches=*/3, /*raw_count=*/16);
+  int total = 0;
+  for (int i = 0; i < 3; ++i) total += static_cast<int>(sim.read_stream_batch().size());
+  REQUIRE(total == 42);                 // 3 * 14
+  REQUIRE(sim.read_stream_batch().empty());  // exhausted
+  REQUIRE(sim.acquire_raw(16).size() == 16);
+}
