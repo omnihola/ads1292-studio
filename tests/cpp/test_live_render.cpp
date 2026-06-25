@@ -34,3 +34,16 @@ TEST_CASE("build_live_render_frame: bad sr returns invalid", "[live]") {
   auto f = build_live_render_frame(idx,c,c,st,EcgDisplaySettings{},SoftwareFilterSettings{},"CH2",0.0,5,2000,false);
   REQUIRE_FALSE(f.valid);
 }
+TEST_CASE("build_live_render_frame: gain scales ECG but not respiration", "[live]") {
+  std::vector<int> idx, st; std::vector<double> ch1, ch2; make_window(idx,ch1,ch2,st);
+  for (size_t i = 0; i < ch1.size(); ++i) ch1[i] = 5.0 * std::sin(0.05 * (double)i);
+  EcgDisplaySettings g1; g1.gain = 1.0;
+  EcgDisplaySettings g3; g3.gain = 3.0;
+  SoftwareFilterSettings fs;
+  auto f1 = build_live_render_frame(idx, ch1, ch2, st, g1, fs, "CH2", 500.0, 5, 2000, false);
+  auto f3 = build_live_render_frame(idx, ch1, ch2, st, g3, fs, "CH2", 500.0, 5, 2000, false);
+  REQUIRE(f1.valid); REQUIRE(f3.valid);
+  // resp identical across gains (unity), ECG scaled ~3x:
+  REQUIRE(f3.visible_resp_plot == f1.visible_resp_plot);
+  REQUIRE(f3.visible_ecg[100] == Approx(3.0 * f1.visible_ecg[100]).margin(1e-9));
+}

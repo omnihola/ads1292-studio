@@ -125,7 +125,7 @@ LiveRenderFrame build_live_render_frame(
         ecg_raw, sample_rate_hz, filter_settings, ecg_inverted, display_settings.gain);
 
     const std::vector<double> visible_resp = display_signal_values(
-        resp_raw, sample_rate_hz, filter_settings, /*invert=*/false, display_settings.gain);
+        resp_raw, sample_rate_hz, filter_settings, /*invert=*/false, /*gain=*/1.0);
 
     // ── Smoothing ─────────────────────────────────────────────────────────────
     frame.visible_ecg_plot  = smooth_for_plot(frame.visible_ecg, smoothing_window);
