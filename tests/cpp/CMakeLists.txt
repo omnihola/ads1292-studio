@@ -46,7 +46,8 @@ add_executable(ads1292_tests
   test_events_io.cpp
   test_processing_io.cpp
   test_protocol_io.cpp
-  test_acquisition_io.cpp)
+  test_acquisition_io.cpp
+  test_session_index.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 
