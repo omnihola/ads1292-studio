@@ -80,3 +80,13 @@ TEST_CASE("MainWindow drives the simulator into the scope headlessly", "[gui]") 
   int shown = win.runSimulatorToCompletion(/*streamBatches=*/4);
   REQUIRE(shown == 56);    // 4 * 14 samples drained into the scope
 }
+
+TEST_CASE("LiveScope renders a filtered frame with R-peak markers", "[gui]") {
+  ensureApp();
+  ads1292::gui::LiveScope scope;
+  for (int i=0;i<3000;++i){ ads1292::StreamSample s; s.ch2=(i%417<5)?300:0; s.ch1=0; s.status_byte=0; scope.pushStreamSample(s); }
+  ads1292::dsp::SoftwareFilterSettings fs; fs.bandpass_enabled=true;
+  scope.setFilterSettings(fs);
+  scope.refresh();
+  REQUIRE(scope.lastFrame().valid);
+}

@@ -2,6 +2,8 @@
 
 #include "ads1292/gui/IWaveformPlot.h"
 
+#include <unordered_map>
+
 // Forward-declare QCustomPlot so consumers never need qcustomplot.h.
 class QCustomPlot;
 
@@ -25,9 +27,22 @@ public:
     void replotNow() override;
     QWidget* widget() override;
 
+    /// Overlay scatter markers (e.g. R-peak dots) on the graph at \p graphIndex.
+    /// Each logical graphIndex gets its own dedicated scatter graph (no line,
+    /// ssCircle style). Created lazily on first call; cleared when x/y are empty.
+    /// Only QCustomPlotWaveform.cpp includes qcustomplot.h — GPL isolation preserved.
+    void setMarkers(int graphIndex,
+                    const std::vector<double>& x,
+                    const std::vector<double>& y) override;
+
 private:
     QCustomPlot* m_plot{nullptr};
     bool m_autoscale{false};
+
+    // Maps logical graphIndex → the QCustomPlot graph() index of the marker
+    // scatter graph. Stored as plain int (no QCustomPlot types in the header).
+    // Created lazily in setMarkers(); -1 means not yet created.
+    std::unordered_map<int, int> m_markerGraphIndex;
 };
 
 } // namespace ads1292::gui

@@ -29,6 +29,13 @@ public:
 
     /// Return the underlying QWidget for embedding in a layout.
     virtual QWidget* widget() = 0;
+
+    /// Overlay scatter markers (e.g. R-peak dots) on the graph at \p graphIndex.
+    /// The markers are rendered as scatter points with no connecting line.
+    /// Calling with empty \p x / \p y clears any existing markers.
+    virtual void setMarkers(int graphIndex,
+                            const std::vector<double>& x,
+                            const std::vector<double>& y) = 0;
 };
 
 } // namespace ads1292::gui

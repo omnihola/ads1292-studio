@@ -64,4 +64,33 @@ QWidget* QCustomPlotWaveform::widget()
     return m_plot;
 }
 
+void QCustomPlotWaveform::setMarkers(int graphIndex,
+                                      const std::vector<double>& x,
+                                      const std::vector<double>& y)
+{
+    // Look up (or create) the dedicated marker scatter graph for this graphIndex.
+    auto it = m_markerGraphIndex.find(graphIndex);
+    if (it == m_markerGraphIndex.end()) {
+        // Lazily create a new scatter graph for this logical channel.
+        QCPGraph* markerGraph = m_plot->addGraph();
+        // Scatter-only: no connecting line.
+        markerGraph->setLineStyle(QCPGraph::lsNone);
+        markerGraph->setScatterStyle(
+            QCPScatterStyle(QCPScatterStyle::ssCircle, Qt::red, Qt::red, 8));
+
+        int idx = m_plot->graphCount() - 1; // index of the graph just added
+        m_markerGraphIndex[graphIndex] = idx;
+        it = m_markerGraphIndex.find(graphIndex);
+    }
+
+    QCPGraph* markerGraph = m_plot->graph(it->second);
+    if (!markerGraph) {
+        return; // safety guard — graph was somehow removed
+    }
+
+    QVector<double> qx(x.begin(), x.end());
+    QVector<double> qy(y.begin(), y.end());
+    markerGraph->setData(qx, qy);
+}
+
 } // namespace ads1292::gui
