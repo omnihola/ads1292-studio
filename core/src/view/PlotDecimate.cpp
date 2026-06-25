@@ -25,11 +25,6 @@ std::vector<double> smooth_for_plot(const std::vector<double>& values, int windo
         ++window;
     }
 
-    // If forcing odd made window larger than size, return unchanged.
-    if (size < window) {
-        return values;
-    }
-
     const int pad = window / 2;
 
     // Build edge-padded array: [first]*pad + values + [last]*pad
@@ -80,6 +75,12 @@ std::vector<int> endpoint_indices(int size, int max_points)
     }
 
     const int count = (max_points > 1) ? max_points : 1;
+
+    // Special case: numpy linspace(0, size-1, 1, dtype=int) returns [0] with no division
+    if (count == 1) {
+        return std::vector<int>{0};
+    }
+
     std::vector<int> idx(count);
     for (int i = 0; i < count; ++i) {
         // Matches numpy linspace(0, size-1, count, dtype=int): truncate toward zero.

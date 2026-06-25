@@ -23,3 +23,16 @@ TEST_CASE("decimate_for_plot returns input when small", "[live]") {
   std::vector<double> x={0,1,2}, y={3,4,5}, ox, oy; decimate_for_plot(x,y,10,ox,oy);
   REQUIRE(ox==x); REQUIRE(oy==y);
 }
+TEST_CASE("endpoint_indices max_points=1 returns {0} (no div-by-zero)", "[live]") {
+  REQUIRE(endpoint_indices(100, 1) == std::vector<int>{0});
+}
+TEST_CASE("decimate_for_plot max_points=1 does not crash", "[live]") {
+  std::vector<double> x(100), y(100); for (int i=0;i<100;++i){x[i]=i; y[i]=i*2.0;}
+  std::vector<double> ox, oy; decimate_for_plot(x, y, 1, ox, oy);
+  REQUIRE(ox.size() == 1); REQUIRE(ox[0] == 0.0); REQUIRE(oy[0] == 0.0);
+}
+TEST_CASE("smooth_for_plot even window == size still smooths (matches numpy)", "[live]") {
+  std::vector<double> v = {0.0, 0.0, 12.0, 0.0};   // size=4
+  auto s = smooth_for_plot(v, 4);    // even -> 5, pad=2
+  REQUIRE(s.size() == v.size());                    // not returned unchanged
+}
