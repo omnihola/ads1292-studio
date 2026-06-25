@@ -25,7 +25,8 @@ add_executable(ads1292_tests
   test_rolling_trace.cpp
   test_event_log.cpp
   test_gui_smoke.cpp
-  test_iir_coeffs.cpp)
+  test_iir_coeffs.cpp
+  test_lfilter.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 

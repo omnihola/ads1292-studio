@@ -39,6 +39,20 @@ Coeffs butter_lowpass(double sample_rate_hz, double cutoff_hz);
 /// Normalises: w0 = min(notch_hz/(sr/2), 0.99)
 Coeffs iirnotch(double sample_rate_hz, double notch_hz, double q);
 
+// ── IIR filtering ───────────────────────────────────────────────────────────
+
+/// Transposed direct-form II IIR filter.
+/// If zi is empty, the initial state is all zeros.
+/// zi must have length max(len(b), len(a)) - 1 if non-empty.
+std::vector<double> lfilter(const Coeffs& c,
+                            const std::vector<double>& x,
+                            const std::vector<double>& zi);
+
+/// SciPy-equivalent steady-state initial conditions for lfilter.
+/// Returns a vector of length max(len(b), len(a)) - 1 such that filtering a
+/// unit step with initial state zi*1.0 produces no startup transient.
+std::vector<double> lfilter_zi(const Coeffs& c);
+
 // ── Internal pipeline (exposed for testing) ─────────────────────────────────
 
 /// Butterworth analog prototype of order N.

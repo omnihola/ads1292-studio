@@ -270,4 +270,118 @@ Coeffs iirnotch(double sample_rate_hz, double notch_hz, double q) {
     return c;
 }
 
+// ── lfilter ───────────────────────────────────────────────────────────────────
+
+std::vector<double> lfilter(const Coeffs& c,
+                             const std::vector<double>& x,
+                             const std::vector<double>& zi) {
+    // Normalize b and a by a[0], then zero-pad both to length n.
+    const std::size_t nb = c.b.size();
+    const std::size_t na = c.a.size();
+    const std::size_t n  = std::max(nb, na);
+
+    const double a0 = (na > 0) ? c.a[0] : 1.0;
+
+    // Padded, normalized coefficient arrays (length n)
+    std::vector<double> b(n, 0.0);
+    std::vector<double> a(n, 0.0);
+    for (std::size_t i = 0; i < nb; ++i) b[i] = c.b[i] / a0;
+    for (std::size_t i = 0; i < na; ++i) a[i] = c.a[i] / a0;
+
+    // State vector of length n-1
+    std::vector<double> z(n - 1, 0.0);
+    if (!zi.empty()) {
+        for (std::size_t i = 0; i < zi.size() && i < z.size(); ++i) {
+            z[i] = zi[i];
+        }
+    }
+
+    std::vector<double> y(x.size());
+    if (n <= 1) {
+        // Degenerate case: no state, pure gain b[0]/a[0]
+        for (std::size_t m = 0; m < x.size(); ++m) {
+            y[m] = b[0] * x[m];
+        }
+        return y;
+    }
+
+    for (std::size_t m = 0; m < x.size(); ++m) {
+        // Transposed direct-form II
+        double xm = x[m];
+        double ym = b[0] * xm + z[0];
+        y[m] = ym;
+        // Update state (shift)
+        for (std::size_t i = 0; i < n - 1; ++i) {
+            double z_next = (i + 1 < n - 1) ? z[i + 1] : 0.0;
+            z[i] = b[i + 1] * xm + z_next - a[i + 1] * ym;
+        }
+    }
+    return y;
+}
+
+// ── lfilter_zi ────────────────────────────────────────────────────────────────
+
+std::vector<double> lfilter_zi(const Coeffs& c) {
+    // Replicate scipy.signal.lfilter_zi exactly.
+    //
+    // n = max(len(b), len(a))
+    // Pad b and a to length n, normalize by a[0].
+    // B[k] = b[k+1] - a[k+1]*b[0],  for k = 0..n-2
+    //
+    // SciPy uses the cumulative recurrence:
+    //   zi[0] = sum(B) / (1 + sum(a[1:]))     [unit-step steady state]
+    //   for k = 1..n-2:
+    //     asum += a[k]; csum += b[k] - a[k]*b[0]
+    //     zi[k] = asum*zi[0] - csum
+
+    const std::size_t nb = c.b.size();
+    const std::size_t na = c.a.size();
+    const std::size_t n  = std::max(nb, na);
+
+    if (n <= 1) {
+        // No state needed for a static gain filter
+        return {};
+    }
+
+    const double a0 = (na > 0) ? c.a[0] : 1.0;
+
+    // Padded, normalized coefficient arrays (length n)
+    std::vector<double> b(n, 0.0);
+    std::vector<double> a(n, 0.0);
+    for (std::size_t i = 0; i < nb; ++i) b[i] = c.b[i] / a0;
+    for (std::size_t i = 0; i < na; ++i) a[i] = c.a[i] / a0;
+    // a[0] == 1.0 after normalization
+
+    // B[k] = b[k+1] - a[k+1]*b[0],  k = 0..n-2
+    std::vector<double> B(n - 1);
+    for (std::size_t k = 0; k < n - 1; ++k) {
+        B[k] = b[k + 1] - a[k + 1] * b[0];
+    }
+
+    // zi[0] = sum(B) / (1 + a[1] + a[2] + ... + a[n-1])
+    //       = sum(B) / (1 + sum(a[1:]))
+    // This comes from the steady-state condition for a unit step:
+    //   the output must equal 1 = (b[0]+b[1]+...+b[n-1]) / (a[0]+a[1]+...+a[n-1])
+    //   and from that we derive zi[0].
+    double sum_B = 0.0;
+    for (double v : B) sum_B += v;
+    double sum_a = 1.0; // a[0] = 1
+    for (std::size_t k = 1; k < n; ++k) sum_a += a[k];
+    const double zi0 = sum_B / sum_a;
+
+    std::vector<double> zi(n - 1);
+    zi[0] = zi0;
+
+    // Propagate remaining state values using the cumulative recurrence
+    double asum = 1.0; // accumulates a[0] + a[1] + ... + a[k]
+    double csum = 0.0; // accumulates b[1] - a[1]*b[0] + ... + b[k] - a[k]*b[0]
+    for (std::size_t k = 1; k < n - 1; ++k) {
+        asum += a[k];
+        csum += b[k] - a[k] * b[0];
+        zi[k] = asum * zi0 - csum;
+    }
+
+    return zi;
+}
+
 } // namespace ads1292::dsp
