@@ -1,0 +1,4 @@
+/* gui/resources/dark.qss */
+QWidget { background-color: #0d0d0f; color: #e6e6e6; font-size: 13px; }
+QMainWindow { background-color: #0d0d0f; }
+QLabel#TitleLabel { color: #e6e6e6; font-size: 20px; font-weight: 600; }
