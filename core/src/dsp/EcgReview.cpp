@@ -92,4 +92,47 @@ std::vector<int> detect_r_peaks(const std::vector<double>& values,
     return find_peaks(peak_signal, distance, prominence);
 }
 
+// ─── heart_rate_summary ──────────────────────────────────────────────────────
+HeartRateSummary heart_rate_summary(const std::vector<int>& peaks,
+                                     double sample_rate_hz) {
+    // Early returns: invalid sample rate or too few peaks
+    if (!std::isfinite(sample_rate_hz) || sample_rate_hz <= 0.0) {
+        return {0.0, 0.0, 0.0, 0};
+    }
+    if (peaks.size() < 2) {
+        return {0.0, 0.0, 0.0, 0};
+    }
+
+    // Compute R-R intervals and corresponding BPM
+    std::vector<double> bpm;
+    bpm.reserve(peaks.size() - 1);
+    for (std::size_t i = 0; i + 1 < peaks.size(); ++i) {
+        const double rr = static_cast<double>(peaks[i + 1] - peaks[i]) / sample_rate_hz;
+        if (rr > 0.0) {  // Sanity check: R-R should be positive
+            bpm.push_back(60.0 / rr);
+        }
+    }
+
+    // Filter BPM values to valid range [40, 180]
+    std::vector<double> valid;
+    valid.reserve(bpm.size());
+    for (double b : bpm) {
+        if (b >= 40.0 && b <= 180.0) {
+            valid.push_back(b);
+        }
+    }
+
+    // Return zeros if no valid BPM values
+    if (valid.empty()) {
+        return {0.0, 0.0, 0.0, 0};
+    }
+
+    // Compute median, min, max of valid BPM
+    double median_val = median(valid);
+    double min_val = *std::min_element(valid.begin(), valid.end());
+    double max_val = *std::max_element(valid.begin(), valid.end());
+
+    return {median_val, min_val, max_val, static_cast<int>(valid.size())};
+}
+
 } // namespace ads1292::dsp

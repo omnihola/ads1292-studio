@@ -26,4 +26,30 @@ namespace ads1292::dsp {
 std::vector<int> detect_r_peaks(const std::vector<double>& values,
                                  double sample_rate_hz);
 
+/// Heart rate statistics computed from R-peak indices.
+/// All values are in double precision. Matches signal_processing.py
+/// heart_rate_summary().
+struct HeartRateSummary {
+    double median_bpm;     ///< Median beat-rate in BPM (or 0.0 if invalid)
+    double min_bpm;        ///< Minimum beat-rate in BPM (or 0.0 if invalid)
+    double max_bpm;        ///< Maximum beat-rate in BPM (or 0.0 if invalid)
+    int valid_rr_count;    ///< Number of valid R-R intervals (or 0 if invalid)
+};
+
+/// Computes heart-rate summary statistics from R-peak indices.
+/// Returns {0.0, 0.0, 0.0, 0} if:
+///   - peaks.size() < 2
+///   - sample_rate_hz is not finite or <= 0
+///   - no valid R-R intervals (all BPM values outside 40..180 range)
+///
+/// Algorithm:
+///   1. rr[i] = (peaks[i+1] - peaks[i]) / sr for i in 0..size-2
+///   2. bpm[i] = 60.0 / rr[i]
+///   3. valid = bpm values with 40 <= bpm <= 180
+///   4. if valid.empty(): return {0, 0, 0, 0}
+///   5. else: return {median(valid), min(valid), max(valid), valid.size()}
+///   (median = numpy semantics: avg of two middles for even length)
+HeartRateSummary heart_rate_summary(const std::vector<int>& peaks,
+                                     double sample_rate_hz);
+
 } // namespace ads1292::dsp
