@@ -34,7 +34,9 @@ add_executable(ads1292_tests
   test_quality_snr.cpp
   test_channel_select.cpp
   test_quality_metrics.cpp
-  test_spectrum.cpp)
+  test_spectrum.cpp
+  test_display_filters.cpp
+  test_plot_decimate.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 

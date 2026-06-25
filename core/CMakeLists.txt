@@ -13,7 +13,9 @@ add_library(ads1292_core STATIC
   src/acq/SimulatorDeviceSource.cpp
   src/view/RollingTrace.cpp
   src/view/EventLog.cpp
+  src/view/PlotDecimate.cpp
   src/dsp/Iir.cpp
+  src/dsp/Display.cpp
   src/dsp/Filtfilt.cpp
   src/dsp/Peaks.cpp
   src/dsp/EcgReview.cpp
