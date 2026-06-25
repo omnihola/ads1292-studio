@@ -1,0 +1,28 @@
+{
+  "category": "dsp_coefficients",
+  "input": {
+    "sample_rate_hz": 500.0
+  },
+  "name": "coeffs_notch_60hz_500hz",
+  "notes": "scipy butter(2)/iirnotch transfer-function coefficients",
+  "oracle": {
+    "function": "ads1292_studio.signal_processing.notch_coefficients"
+  },
+  "output": {
+    "a": [
+      1.0,
+      -1.4398427053125467,
+      0.9751778761806493
+    ],
+    "b": [
+      0.9875889380903247,
+      -1.4398427053125467,
+      0.9875889380903247
+    ]
+  },
+  "schema_version": 1,
+  "tolerance": {
+    "kind": "abs",
+    "value": 1e-12
+  }
+}

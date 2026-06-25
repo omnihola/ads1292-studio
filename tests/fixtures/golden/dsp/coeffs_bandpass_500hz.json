@@ -1,0 +1,32 @@
+{
+  "category": "dsp_coefficients",
+  "input": {
+    "sample_rate_hz": 500.0
+  },
+  "name": "coeffs_bandpass_500hz",
+  "notes": "scipy butter(2)/iirnotch transfer-function coefficients",
+  "oracle": {
+    "function": "ads1292_studio.signal_processing.bandpass_coefficients"
+  },
+  "output": {
+    "a": [
+      1.0,
+      -3.3959948273203824,
+      4.337679697819303,
+      -2.4855602670882986,
+      0.5438867661052419
+    ],
+    "b": [
+      0.0353019945279248,
+      0.0,
+      -0.0706039890558496,
+      0.0,
+      0.0353019945279248
+    ]
+  },
+  "schema_version": 1,
+  "tolerance": {
+    "kind": "abs",
+    "value": 1e-12
+  }
+}

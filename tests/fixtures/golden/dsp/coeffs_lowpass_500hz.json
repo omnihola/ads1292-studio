@@ -1,0 +1,28 @@
+{
+  "category": "dsp_coefficients",
+  "input": {
+    "sample_rate_hz": 500.0
+  },
+  "name": "coeffs_lowpass_500hz",
+  "notes": "scipy butter(2)/iirnotch transfer-function coefficients",
+  "oracle": {
+    "function": "ads1292_studio.signal_processing.lowpass_coefficients"
+  },
+  "output": {
+    "a": [
+      1.0,
+      -1.3072850288493236,
+      0.4918122372225753
+    ],
+    "b": [
+      0.046131802093312926,
+      0.09226360418662585,
+      0.046131802093312926
+    ]
+  },
+  "schema_version": 1,
+  "tolerance": {
+    "kind": "abs",
+    "value": 1e-12
+  }
+}

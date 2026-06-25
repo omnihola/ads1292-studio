@@ -1,0 +1,38 @@
+{
+  "category": "dsp_filter_output",
+  "input": {
+    "sample_rate_hz": 500.0,
+    "signal": [
+      6.595481321798587,
+      -6.391835512841038,
+      -6.94592809339764,
+      3.7245894272596636,
+      -4.890674084491149,
+      2.3527613918626127,
+      -0.2170423492130421,
+      -10.36053218027457
+    ]
+  },
+  "name": "filtfilt_bandpass_tiny_fallback",
+  "notes": "bandpass via scipy.signal.filtfilt; frozen input stored verbatim",
+  "oracle": {
+    "function": "ads1292_studio.signal_processing.bandpass"
+  },
+  "output": {
+    "filtered": [
+      9.149339538650683,
+      -3.837977295988942,
+      -4.392069876545545,
+      6.278447644111759,
+      -2.3368158676390536,
+      4.906619608714708,
+      2.336815867639053,
+      -7.806673963422474
+    ]
+  },
+  "schema_version": 1,
+  "tolerance": {
+    "kind": "abs",
+    "value": 1e-06
+  }
+}
