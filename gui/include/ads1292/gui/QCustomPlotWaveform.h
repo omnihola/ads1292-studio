@@ -35,6 +35,12 @@ public:
                     const std::vector<double>& x,
                     const std::vector<double>& y) override;
 
+    /// Render the current plot to a PNG file at \p path (offscreen-safe).
+    /// Calls replot() first so the latest data is captured.
+    bool savePng(const std::string& path,
+                 int width = 1000,
+                 int height = 360) override;
+
 private:
     QCustomPlot* m_plot{nullptr};
     bool m_autoscale{false};

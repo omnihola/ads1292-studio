@@ -133,6 +133,7 @@ TEST_CASE("review panels render a frame offscreen", "[gui]") {
 
 #include "ads1292/io/CsvIo.h"
 #include <filesystem>
+#include <memory>
 
 TEST_CASE("MainWindow loads a recording into the review panels", "[gui]") {
   ensureApp();
@@ -147,4 +148,18 @@ TEST_CASE("MainWindow loads a recording into the review panels", "[gui]") {
   REQUIRE(win.runSimulatorToCompletion(4) == 56);   // P4/P5d regression intact
   win.loadRecordingForTest(path);
   REQUIRE(win.reviewLoadedForTest());
+}
+
+TEST_CASE("QCustomPlotWaveform + QCustomPlotXY savePng write files offscreen", "[gui]") {
+  ensureApp();
+  auto wf = std::make_unique<ads1292::gui::QCustomPlotWaveform>();
+  wf->setData(0, {0,1,2,3}, {0,1,4,9}); wf->setAutoscale(true);
+  auto wpath = (std::filesystem::temp_directory_path()/"p7c_wave.png").string();
+  REQUIRE(wf->savePng(wpath, 800, 300));
+  REQUIRE(std::filesystem::file_size(wpath) > 200);
+  ads1292::gui::QCustomPlotXY xy;
+  xy.setLine({0,1,2,3},{1,2,1,2}); xy.setAutoscale(true);
+  auto xpath = (std::filesystem::temp_directory_path()/"p7c_xy.png").string();
+  REQUIRE(xy.savePng(xpath, 800, 300));
+  REQUIRE(std::filesystem::file_size(xpath) > 200);
 }

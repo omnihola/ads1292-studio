@@ -113,4 +113,10 @@ QWidget* QCustomPlotXY::widget()
     return m_plot;
 }
 
+bool QCustomPlotXY::savePng(const std::string& path, int width, int height)
+{
+    m_plot->replot();
+    return m_plot->savePng(QString::fromStdString(path), width, height);
+}
+
 } // namespace ads1292::gui

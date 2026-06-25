@@ -38,6 +38,14 @@ public:
 
     /// Return the underlying QWidget for embedding in a layout.
     virtual QWidget* widget() = 0;
+
+    /// Render the current plot contents to a PNG file at \p path.
+    /// \p width and \p height specify the output pixel dimensions (0 = use widget size).
+    /// Returns true on success.  Implemented only in the QCustomPlot backend .cpp;
+    /// no qcustomplot.h or QCP types are referenced here.
+    virtual bool savePng(const std::string& path,
+                         int width = 1000,
+                         int height = 360) = 0;
 };
 
 } // namespace ads1292::gui

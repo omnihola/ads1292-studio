@@ -93,4 +93,10 @@ void QCustomPlotWaveform::setMarkers(int graphIndex,
     markerGraph->setData(qx, qy);
 }
 
+bool QCustomPlotWaveform::savePng(const std::string& path, int width, int height)
+{
+    m_plot->replot();
+    return m_plot->savePng(QString::fromStdString(path), width, height);
+}
+
 } // namespace ads1292::gui
