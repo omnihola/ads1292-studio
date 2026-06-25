@@ -6,6 +6,12 @@
 
 namespace ads1292::view {
 
+/// Paired x (time) and y (value) vectors from trace sampling.
+struct TraceData {
+    std::vector<double> x;
+    std::vector<double> y;
+};
+
 /// Rolling waveform buffer with peak-preserving decimation.
 ///
 /// Retains the most recent `window_seconds * sample_rate_hz` samples.
@@ -34,6 +40,11 @@ public:
 
     /// Time array (relative seconds, front = 0.0) — same length as y().
     std::vector<double> x() const;
+
+    /// Compute visible (possibly decimated) x and y in a single pass.
+    /// Both vectors have the same length (≤ kMaxPoints).
+    /// Invariant: x.size() == y.size() and both ≤ kMaxPoints.
+    TraceData sampled() const;
 
 private:
     double sample_rate_hz_;

@@ -49,24 +49,31 @@ std::size_t RollingTrace::size() const {
     return samples_.size();
 }
 
-std::vector<double> RollingTrace::y() const {
+TraceData RollingTrace::sampled() const {
+    const double dt = 1.0 / sample_rate_hz_;
+
     if (samples_.size() <= kMaxPoints) {
-        return {samples_.begin(), samples_.end()};
+        // No decimation needed: emit all samples with their relative times.
+        TraceData result;
+        result.y = {samples_.begin(), samples_.end()};
+        result.x.reserve(samples_.size());
+        for (std::size_t i = 0; i < samples_.size(); ++i) {
+            result.x.push_back(static_cast<double>(i) * dt);
+        }
+        return result;
     }
-    return decimate().first;
+
+    // Decimation: compute both x and y in one pass via the existing decimate logic.
+    auto [y_vec, x_vec] = decimate();
+    return {x_vec, y_vec};
+}
+
+std::vector<double> RollingTrace::y() const {
+    return sampled().y;
 }
 
 std::vector<double> RollingTrace::x() const {
-    if (samples_.size() <= kMaxPoints) {
-        const double dt = 1.0 / sample_rate_hz_;
-        std::vector<double> times;
-        times.reserve(samples_.size());
-        for (std::size_t i = 0; i < samples_.size(); ++i) {
-            times.push_back(static_cast<double>(i) * dt);
-        }
-        return times;
-    }
-    return decimate().second;
+    return sampled().x;
 }
 
 // ---------------------------------------------------------------------------

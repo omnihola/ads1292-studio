@@ -30,3 +30,13 @@ TEST_CASE("RollingTrace x is relative seconds ending at the latest", "[trace]") 
   REQUIRE(x.front() == Approx(0.0).margin(1e-9));
   REQUIRE(x.back() == Approx((2000 - 1) / 500.0).margin(1e-6));
 }
+
+TEST_CASE("RollingTrace sampled() matches x()/y() and is single-pass", "[trace]") {
+  RollingTrace t(500.0, 60.0);
+  for (int i = 0; i < 30000; ++i) t.append(static_cast<double>(i % 100));
+  auto d = t.sampled();
+  REQUIRE(d.x.size() == d.y.size());
+  REQUIRE(d.x.size() <= 2000);
+  REQUIRE(d.x == t.x());   // delegation consistency
+  REQUIRE(d.y == t.y());
+}
