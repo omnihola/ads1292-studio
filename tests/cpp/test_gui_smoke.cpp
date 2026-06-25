@@ -19,3 +19,21 @@ TEST_CASE("QCustomPlotWaveform accepts data without crashing", "[gui]") {
     plot.replotNow();
     REQUIRE(plot.widget() != nullptr);
 }
+
+#include "ads1292/gui/LiveScope.h"
+#include "ads1292/model/StreamSample.h"
+
+TEST_CASE("LiveScope ingests stream samples and refreshes without crashing", "[gui]") {
+  int argc = 0; char** argv = nullptr;
+  QApplication app(argc, argv);
+  ads1292::gui::LiveScope scope;
+  for (int i = 0; i < 1000; ++i) {
+    ads1292::StreamSample s; s.ch1 = i % 50; s.ch2 = (i % 100) - 50; s.timestamp = i / 500.0;
+    scope.pushStreamSample(s);
+  }
+  scope.refresh();
+  scope.setWindowSeconds(8.0);
+  scope.setAutoscale(true);
+  scope.clear();
+  REQUIRE(true);   // no crash offscreen
+}
