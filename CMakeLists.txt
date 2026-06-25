@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Emit build/compile_commands.json so clangd / IDEs resolve include paths.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 option(ADS1292_BUILD_GUI "Build the Qt GUI" ON)
 option(ADS1292_BUILD_TESTS "Build C++ tests" ON)
 

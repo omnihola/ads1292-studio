@@ -16,3 +16,6 @@ reports/
 packages/
 artifacts/
 *.log
+
+# clangd compile DB symlink (points into gitignored build/)
+/compile_commands.json
