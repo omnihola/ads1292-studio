@@ -163,3 +163,19 @@ TEST_CASE("QCustomPlotWaveform + QCustomPlotXY savePng write files offscreen", "
   REQUIRE(xy.savePng(xpath, 800, 300));
   REQUIRE(std::filesystem::file_size(xpath) > 200);
 }
+
+#include "ads1292/gui/ReportExport.h"
+#include <cmath>
+
+TEST_CASE("export_review_report writes HTML + 3 PNGs offscreen", "[gui]") {
+  ensureApp();
+  std::vector<ads1292::StreamSample> rec;
+  for (int i=0;i<3000;++i){ ads1292::StreamSample s; double t=i/500.0,v=0.0; for(double bt=0.2;bt<6.0;bt+=60.0/72.0){double d=t-bt; v+=200.0*std::exp(-(d*d)/(2*0.01*0.01));} s.ch2=(int)v; s.ch1=0; s.status_byte=0; rec.push_back(s);}
+  auto out = (std::filesystem::temp_directory_path()/"p7c_report").string();
+  auto r = ads1292::gui::export_review_report(rec, out, "Smoke");
+  REQUIRE(std::filesystem::exists(r.html_path));
+  REQUIRE(std::filesystem::exists(r.ecg_png_path));
+  REQUIRE(std::filesystem::exists(r.pqrst_png_path));
+  REQUIRE(std::filesystem::exists(r.spectrum_png_path));
+  REQUIRE(std::filesystem::file_size(r.ecg_png_path) > 200);
+}
