@@ -5,7 +5,8 @@ add_library(ads1292_io STATIC
   src/AcquisitionEngine.cpp
   src/MetadataIo.cpp
   src/CalibrationIo.cpp
-  src/EventsIo.cpp)
+  src/EventsIo.cpp
+  src/ProcessingIo.cpp)
 target_include_directories(ads1292_io PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ads1292_io PUBLIC ads1292_core nlohmann_json)
 
