@@ -60,11 +60,8 @@ AcquisitionResult run_raw(acq::IDeviceSource& dev,
 
       if (static_cast<int>(all.size()) >= total_samples) break;
     }
-  }
 
-  // Truncate to exactly total_samples in case the last chunk overshoots.
-  if (static_cast<int>(all.size()) > total_samples) {
-    all.resize(static_cast<std::size_t>(total_samples));
+    if (static_cast<int>(all.size()) >= total_samples) break;
   }
 
   if (!csv_path.empty()) {
