@@ -21,7 +21,9 @@ static void print_usage(const char* prog) {
               << "      Verify HDF5 recording integrity. Exit 0 = ok, 2 = fail, 1 = error.\n"
               << "  index <root> [--out <dir>]\n"
               << "      Scan a recording directory and write index.json. Exit 0 always.\n"
-              << "      Default --out: <root>/index-out\n";
+              << "      Default --out: <root>/index-out\n"
+              << "  batch <csv-or-dir>...\n"
+              << "      Aggregate recordings and print per-electrode group summaries. Exit 0 always.\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -114,6 +116,16 @@ int main(int argc, char* argv[]) {
         }
 
         return ads1292::cli::run_index(std::cout, opt);
+    }
+
+    if (subcmd == "batch") {
+        ads1292::cli::BatchOptions opt;
+        // Collect all positional args after "batch" as inputs (variadic).
+        for (int i = 2; i < argc; ++i) {
+            opt.inputs.push_back(argv[i]);
+        }
+        // Empty inputs → run_batch prints the diagnostic and returns 0.
+        return ads1292::cli::run_batch(std::cout, opt);
     }
 
     // Unknown subcommand

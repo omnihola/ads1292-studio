@@ -2,6 +2,8 @@
 #include "catch.hpp"
 #include "ads1292/cli/Cli.h"
 #include "ads1292/io/CsvIo.h"
+#include "ads1292/io/MetadataIo.h"
+#include "ads1292/model/SessionMetadata.h"
 #include "ads1292/model/StreamSample.h"
 #include <sstream>
 #include <filesystem>
@@ -82,4 +84,32 @@ TEST_CASE("run_index on a non-directory prints the diagnostic", "[cli]") {
   REQUIRE(ads1292::cli::run_index(o, opt) == 0);
   REQUIRE(o.str().find("is not a directory") != std::string::npos);
   REQUIRE(o.str().find("rows=0") != std::string::npos);
+}
+TEST_CASE("run_batch aggregates recordings and groups by electrode", "[cli]") {
+  auto dir = std::filesystem::temp_directory_path() / "p7b4_batch";
+  std::filesystem::remove_all(dir); std::filesystem::create_directories(dir);
+  std::vector<std::string> inputs;
+  for (auto stem : {"a","b"}) {
+    auto csv = (dir / (std::string(stem)+".csv")).string();
+    write_clean_recording(csv);
+    ads1292::SessionMetadata m; m.electrode="MOTAC";
+    ads1292::io::write_metadata_json((dir/(std::string(stem)+".json")).string(), m);
+    inputs.push_back(csv);
+  }
+  ads1292::cli::BatchOptions opt; opt.inputs = inputs;
+  std::ostringstream o;
+  int code = ads1292::cli::run_batch(o, opt);
+  REQUIRE(code == 0);
+  REQUIRE(o.str().find("rows=2") != std::string::npos);
+  REQUIRE(o.str().find("groups=1") != std::string::npos);
+  REQUIRE(o.str().find("group=MOTAC") != std::string::npos);
+}
+TEST_CASE("run_batch on a directory input expands to its CSVs", "[cli]") {
+  auto dir = std::filesystem::temp_directory_path() / "p7b4_batch_dir";
+  std::filesystem::remove_all(dir); std::filesystem::create_directories(dir);
+  write_clean_recording((dir/"x.csv").string());
+  ads1292::cli::BatchOptions opt; opt.inputs = { dir.string() };   // directory input
+  std::ostringstream o;
+  REQUIRE(ads1292::cli::run_batch(o, opt) == 0);
+  REQUIRE(o.str().find("rows=1") != std::string::npos);
 }

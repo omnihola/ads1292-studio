@@ -7,6 +7,7 @@
 
 #include <ostream>
 #include <string>
+#include <vector>
 
 namespace ads1292::cli {
 
@@ -100,5 +101,28 @@ struct IndexOptions {
 ///
 /// Returns 0 always.
 int run_index(std::ostream& out, const IndexOptions& opt);
+
+/// Options for the `batch` subcommand.
+struct BatchOptions {
+    std::vector<std::string> inputs; ///< CSV paths or directories to aggregate.
+};
+
+/// Aggregate recordings and print per-electrode group summaries.
+///
+/// Behaviour (mirrors cli.py cmd_batch / _resolve_batch_inputs):
+///   - Each input that is a directory expands to its recording CSVs via
+///     discover_recording_csvs; each file passes through as-is.
+///   - If no CSVs are resolved, prints the diagnostic and proceeds.
+///   - Prints (in order):
+///       rows=<N>
+///       groups=<N>
+///       group=<electrode>\trecordings=<N>\tusable_percent=<:.2f>\tmean_hr_median_bpm=<:.2f>
+///       (one line per group)
+///
+/// Note: the Python csv=/group_csv=/html=/png= lines are intentionally NOT
+/// emitted — rendering/chart tooling is deferred.
+///
+/// Returns 0 always.
+int run_batch(std::ostream& out, const BatchOptions& opt);
 
 } // namespace ads1292::cli

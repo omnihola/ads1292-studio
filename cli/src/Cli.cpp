@@ -2,15 +2,18 @@
 // Qt-free implementation of the CLI subcommand library.
 
 #include "ads1292/cli/Cli.h"
+#include "ads1292/io/BatchScan.h"
 #include "ads1292/io/CsvIo.h"
 #include "ads1292/io/H5Io.h"
 #include "ads1292/io/SessionIndexScan.h"
+#include "ads1292/index/BatchRow.h"
 #include "ads1292/index/SessionIndexRow.h"
 #include "ads1292/dsp/QualityMetrics.h"
 #include "ads1292/dsp/QualityGate.h"
 
 #include <filesystem>
 #include <iomanip>
+#include <sstream>
 #include <stdexcept>
 
 namespace fs = std::filesystem;
@@ -148,6 +151,46 @@ int run_index(std::ostream& out, const IndexOptions& opt) {
     out << "action_package_record=" << summary.action_package_record << "\n";
     out << "action_complete_sidecars=" << summary.action_complete_sidecars << "\n";
     out << "action_review_signal=" << summary.action_review_signal << "\n";
+
+    return 0;
+}
+
+int run_batch(std::ostream& out, const BatchOptions& opt) {
+    // --- resolve inputs (mirrors _resolve_batch_inputs in cli.py) ---
+    std::vector<std::string> paths;
+    for (const auto& input : opt.inputs) {
+        if (fs::is_directory(input)) {
+            auto csvs = ads1292::io::discover_recording_csvs(input);
+            paths.insert(paths.end(), csvs.begin(), csvs.end());
+        } else {
+            paths.push_back(input);
+        }
+    }
+
+    if (paths.empty()) {
+        out << "no recording CSVs found in the given path(s)\n";
+    }
+
+    // --- aggregate + group ---
+    auto rows   = ads1292::io::aggregate_recordings(paths);
+    auto groups = ads1292::index::group_recordings_by_electrode(rows);
+
+    // --- print deterministic counter lines ---
+    // Note: Python csv=/group_csv=/html=/png= lines are intentionally omitted —
+    // rendering/chart tooling is deferred.
+    out << "rows=" << rows.size() << "\n";
+    out << "groups=" << groups.size() << "\n";
+
+    for (const auto& g : groups) {
+        std::ostringstream line;
+        line << std::fixed << std::setprecision(2);
+        line << "group=" << g.electrode
+             << "\trecordings=" << g.recordings
+             << "\tusable_percent=" << g.usable_percent
+             << "\tmean_hr_median_bpm=" << g.mean_hr_median_bpm
+             << "\n";
+        out << line.str();
+    }
 
     return 0;
 }
