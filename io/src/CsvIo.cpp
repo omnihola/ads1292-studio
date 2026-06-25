@@ -112,12 +112,71 @@ std::vector<StreamSample> read_recording_csv(const std::string& path) {
   return samples;
 }
 
-// --- raw CSV functions: implemented in Task 4 ---
-void write_raw_recording_csv(const std::string&, const std::vector<RawSample>&, const Calibration&) {
-  throw std::runtime_error("write_raw_recording_csv not implemented");
+void write_raw_recording_csv(const std::string& path, const std::vector<RawSample>& samples,
+                             const Calibration& calibration) {
+  std::ofstream out(path, std::ios::binary);
+  if (!out) throw std::runtime_error("cannot open for write: " + path);
+  for (size_t i = 0; i < RAW_HEADER.size(); ++i) {
+    out << RAW_HEADER[i];
+    if (i + 1 < RAW_HEADER.size()) out << ',';
+  }
+  out << "\r\n";
+  Calibration n = calibration.normalized();
+  double scale = n.microvolts_per_count();
+  for (const auto& s : samples) {
+    double ch1_uv = s.ch1_uv.has_value() ? s.ch1_uv.value() : s.ch1_raw24 * scale;
+    double ch2_uv = s.ch2_uv.has_value() ? s.ch2_uv.value() : s.ch2_raw24 * scale;
+    out << fmt("%.6f", s.timestamp) << ','
+        << s.sample_index << ','
+        << s.ch1_raw24 << ','
+        << s.ch2_raw24 << ','
+        << fmt("%.17g", ch1_uv) << ','
+        << fmt("%.17g", ch2_uv) << ','
+        << s.status_byte << ','
+        << s.lead_off_bits() << ','
+        << fmt("%g", n.vref_mv) << ','
+        << fmt("%g", n.pga_gain) << ','
+        << n.adc_bits << ','
+        << fmt("%.9f", n.microvolts_per_count()) << ','
+        << "raw_adc_24bit" << "\r\n";
+  }
 }
-std::vector<RawSample> read_raw_recording_csv(const std::string&) {
-  throw std::runtime_error("read_raw_recording_csv not implemented");
+
+std::vector<RawSample> read_raw_recording_csv(const std::string& path) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in) throw std::runtime_error("cannot open for read: " + path);
+  std::string line;
+  if (!std::getline(in, line)) return {};
+  std::vector<std::string> header = split_csv_line(line);
+  int ts = header_index(header, "timestamp");
+  int idx = header_index(header, "sample_index");
+  int ch1 = header_index(header, "ch1_raw24");
+  int ch2 = header_index(header, "ch2_raw24");
+  int ch1uv = header_index(header, "ch1_uv");
+  int ch2uv = header_index(header, "ch2_uv");
+  int status = header_index(header, "status_byte");
+  int lead = header_index(header, "lead_off_bits");
+
+  std::vector<RawSample> samples;
+  while (std::getline(in, line)) {
+    if (line.empty() || line == "\r") continue;
+    std::vector<std::string> row = split_csv_line(line);
+    RawSample s;
+    s.timestamp = cell(row, ts).empty() ? 0.0 : std::stod(cell(row, ts));
+    s.sample_index = cell(row, idx).empty() ? 0 : static_cast<int>(std::stod(cell(row, idx)));
+    s.ch1_raw24 = cell(row, ch1).empty() ? 0 : static_cast<int>(std::stod(cell(row, ch1)));
+    s.ch2_raw24 = cell(row, ch2).empty() ? 0 : static_cast<int>(std::stod(cell(row, ch2)));
+    if (!cell(row, ch1uv).empty()) s.ch1_uv = std::stod(cell(row, ch1uv));
+    if (!cell(row, ch2uv).empty()) s.ch2_uv = std::stod(cell(row, ch2uv));
+    int status_byte = cell(row, status).empty() ? 0 : static_cast<int>(std::stod(cell(row, status)));
+    std::string lead_cell = cell(row, lead);
+    if (!lead_cell.empty()) {
+      status_byte = (status_byte & 0xFFF0) | (static_cast<int>(std::stod(lead_cell)) & 0x0F);
+    }
+    s.status_byte = status_byte;
+    samples.push_back(s);
+  }
+  return samples;
 }
 
 }  // namespace io
