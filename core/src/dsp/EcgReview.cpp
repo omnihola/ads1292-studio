@@ -135,4 +135,106 @@ HeartRateSummary heart_rate_summary(const std::vector<int>& peaks,
     return {median_val, min_val, max_val, static_cast<int>(valid.size())};
 }
 
+// ─── pqrst_review ────────────────────────────────────────────────────────────
+PqrstReview pqrst_review(const std::vector<double>& values,
+                          const std::vector<int>& peaks,
+                          double sample_rate_hz) {
+    const double sr = sample_rate_hz;
+
+    // Step 1: bandpass with pqrst-specific cutoffs (0.15–40 Hz)
+    const std::vector<double> filtered = bandpass(values, sr, 0.15, 40.0);
+    const int n = static_cast<int>(filtered.size());
+
+    // Step 2: window parameters
+    const int pre  = static_cast<int>(0.25 * sr);
+    const int post = static_cast<int>(0.55 * sr);
+    const int win  = pre + post;
+    const int bl_end = std::max(1, static_cast<int>(0.12 * sr)); // baseline window end
+
+    // Step 3: collect baseline-corrected beats
+    std::vector<std::vector<double>> beats;
+    for (int pk : peaks) {
+        if (pk - pre < 0 || pk + post > n) continue;
+
+        // Extract beat window
+        std::vector<double> beat(filtered.begin() + (pk - pre),
+                                 filtered.begin() + (pk + post));
+
+        // Baseline = median of first bl_end samples
+        std::vector<double> bl_window(beat.begin(), beat.begin() + bl_end);
+        const double base = median(bl_window);
+
+        // Subtract baseline from every sample
+        for (double& s : beat) s -= base;
+
+        beats.push_back(std::move(beat));
+    }
+
+    // No usable beats → return empty result
+    if (beats.empty()) {
+        return {false, false, false, 0, {}, {}};
+    }
+
+    const int beats_used = static_cast<int>(beats.size());
+
+    // Step 4: per-index average across collected beats
+    std::vector<double> avg(win, 0.0);
+    for (const auto& beat : beats) {
+        for (int j = 0; j < win; ++j) {
+            avg[j] += beat[j];
+        }
+    }
+    const double n_beats = static_cast<double>(beats_used);
+    for (double& a : avg) a /= n_beats;
+
+    // Step 5: R-peak amplitude at index `pre`
+    const double r_amp = std::abs(avg[pre]);
+
+    // Step 6: half = max(1, pre/2)  (integer div)
+    const int half = std::max(1, pre / 2);
+
+    // Step 7: noise = MAD of avg[0..half) + 1e-9
+    //   noise = median( |avg[0..half) - median(avg[0..half))| ) + 1e-9
+    std::vector<double> first_half(avg.begin(), avg.begin() + half);
+    const double m_first = median(first_half);
+    std::vector<double> abs_dev(half);
+    for (int i = 0; i < half; ++i) {
+        abs_dev[i] = std::abs(avg[i] - m_first);
+    }
+    const double noise = median(abs_dev) + 1e-9;
+
+    // Step 8: PQRST window indices
+    const int p_start = pre - static_cast<int>(0.22 * sr);
+    const int p_end   = pre - static_cast<int>(0.08 * sr);
+    const int t_start = pre + static_cast<int>(0.12 * sr);
+    const int t_end   = pre + static_cast<int>(0.38 * sr);
+
+    // Step 9: ptp (max - min) over each wave window
+    auto ptp = [&](int start, int end) -> double {
+        if (end <= start) return 0.0;
+        double lo = avg[start], hi = avg[start];
+        for (int i = start + 1; i < end; ++i) {
+            if (avg[i] < lo) lo = avg[i];
+            if (avg[i] > hi) hi = avg[i];
+        }
+        return hi - lo;
+    };
+
+    const double p_range = (p_end > p_start) ? ptp(p_start, p_end) : 0.0;
+    const double t_range = (t_end > t_start) ? ptp(t_start, t_end) : 0.0;
+
+    // Step 10: boolean flags
+    const bool qrs_clear    = r_amp   > std::max(40.0, noise * 8.0);
+    const bool p_tentative  = p_range > std::max(15.0, noise * 3.0);
+    const bool t_tentative  = t_range > std::max(25.0, noise * 4.0);
+
+    // Step 11: time_ms array
+    std::vector<double> time_ms(win);
+    for (int i = 0; i < win; ++i) {
+        time_ms[i] = (static_cast<double>(i - pre) / sr) * 1000.0;
+    }
+
+    return {qrs_clear, p_tentative, t_tentative, beats_used, avg, time_ms};
+}
+
 } // namespace ads1292::dsp

@@ -1,6 +1,6 @@
 #pragma once
 // core/include/ads1292/dsp/EcgReview.h
-// ECG analysis chain: detect_r_peaks.
+// ECG analysis chain: detect_r_peaks, heart_rate_summary, pqrst_review.
 // Pure C++17, no Qt, no OS. All computations in double.
 
 #include <vector>
@@ -51,5 +51,43 @@ struct HeartRateSummary {
 ///   (median = numpy semantics: avg of two middles for even length)
 HeartRateSummary heart_rate_summary(const std::vector<int>& peaks,
                                      double sample_rate_hz);
+
+/// Average-beat morphology review computed from windowed, baseline-corrected beats.
+/// Matches signal_processing.py pqrst_review().
+struct PqrstReview {
+    bool qrs_clear;                 ///< True if QRS amplitude is clearly above noise
+    bool p_tentative;               ///< True if P-wave range is above noise threshold
+    bool t_tentative;               ///< True if T-wave range is above noise threshold
+    int beats_used;                 ///< Number of beats contributing to the average
+    std::vector<double> average_beat; ///< Per-sample average beat (length pre+post)
+    std::vector<double> time_ms;    ///< Timestamps in ms relative to R-peak (length pre+post)
+};
+
+/// Computes average-beat ECG morphology and classifies QRS/P/T visibility.
+/// Returns {false,false,false,0,{},{}} if:
+///   - No beats fall within the signal bounds.
+///
+/// Algorithm:
+///   1. filtered = bandpass(values, sr, low=0.15, high=40.0)
+///   2. pre=(int)(0.25*sr), post=(int)(0.55*sr)
+///   3. For each peak: skip if peak-pre<0 or peak+post>filtered.size();
+///      beat = filtered[peak-pre .. peak+post);
+///      baseline = median(beat[0 .. max(1,(int)(0.12*sr))]);
+///      subtract baseline from every element of beat; collect.
+///   4. avg[j] = mean over collected beats of beat[j]  (per-index average)
+///   5. r_amp = |avg[pre]|
+///   6. half = max(1, pre/2)
+///   7. noise = median(|avg[0..half) - median(avg[0..half))|) + 1e-9  (MAD of first half)
+///   8. p_start=pre-(int)(0.22*sr), p_end=pre-(int)(0.08*sr),
+///      t_start=pre+(int)(0.12*sr), t_end=pre+(int)(0.38*sr)
+///   9. p_range = ptp(avg[p_start..p_end)) if p_end>p_start else 0
+///      t_range = ptp(avg[t_start..t_end)) if t_end>t_start else 0
+///  10. qrs_clear = r_amp > max(40, noise*8)
+///      p_tentative = p_range > max(15, noise*3)
+///      t_tentative = t_range > max(25, noise*4)
+///  11. time_ms[i] = ((i-pre)/sr)*1000 for i in 0..pre+post-1
+PqrstReview pqrst_review(const std::vector<double>& values,
+                          const std::vector<int>& peaks,
+                          double sample_rate_hz);
 
 } // namespace ads1292::dsp

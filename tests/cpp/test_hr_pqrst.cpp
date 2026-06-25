@@ -28,3 +28,23 @@ TEST_CASE("heart_rate_summary matches the golden", "[review]") {
     REQUIRE(got.max_bpm == Approx(o.at("max_bpm").get<double>()).margin(1e-9));
     REQUIRE(got.valid_rr_count == o.at("valid_rr_count").get<int>());
 }
+
+TEST_CASE("pqrst_review matches the golden", "[review]") {
+    auto f = rv("pqrst_clean_72bpm");
+    auto sig = f.at("input").at("signal").get<std::vector<double>>();
+    auto peaks = f.at("input").at("peaks").get<std::vector<int>>();
+    auto got = pqrst_review(sig, peaks, 500.0);
+    auto o = f.at("output");
+    REQUIRE(got.qrs_clear == o.at("qrs_clear").get<bool>());
+    REQUIRE(got.p_tentative == o.at("p_tentative").get<bool>());
+    REQUIRE(got.t_tentative == o.at("t_tentative").get<bool>());
+    REQUIRE(got.beats_used == o.at("beats_used").get<int>());
+    auto eb = o.at("average_beat").get<std::vector<double>>();
+    REQUIRE(got.average_beat.size() == eb.size());
+    for (size_t i = 0; i < eb.size(); ++i)
+        REQUIRE(got.average_beat[i] == Approx(eb[i]).margin(1e-6));
+    auto tm = o.at("time_ms").get<std::vector<double>>();
+    REQUIRE(got.time_ms.size() == tm.size());
+    for (size_t i = 0; i < tm.size(); ++i)
+        REQUIRE(got.time_ms[i] == Approx(tm[i]).margin(1e-9));
+}
