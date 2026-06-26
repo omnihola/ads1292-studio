@@ -375,6 +375,113 @@ TEST_CASE("events injected before finalizeForTest are round-tripped through the 
   std::filesystem::remove_all(tmp);
 }
 
+// ── P11 Task 2: loadRecordingForTest populates review event panel ──────────────
+
+#include "ads1292/io/Bundle.h"
+#include "ads1292/io/ProtocolIo.h"
+#include "ads1292/io/QualityGateIo.h"
+#include "ads1292/model/Calibration.h"
+#include "ads1292/model/RecordingProcessingSettings.h"
+#include "ads1292/model/SessionMetadata.h"
+
+TEST_CASE("P11 Task 2: loadRecordingForTest reads events from bundle into review panel", "[gui][events]") {
+  // Build a recording directory with a CSV + a bundle that has 2 known events.
+  // After loadRecordingForTest, reviewEventCountForTest() must return 2.
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11_task2_load_events";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  // Author a small recording (enough samples for the review render)
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 1500; ++i) {
+    ads1292::StreamSample s;
+    double t = i / 500.0;
+    double v = 0.0;
+    for (double bt = 0.2; bt < 3.0; bt += 60.0 / 72.0) {
+      double d = t - bt;
+      v += 200.0 * std::exp(-(d * d) / (2 * 0.01 * 0.01));
+    }
+    s.ch2 = static_cast<int>(v); s.ch1 = 0; s.status_byte = 0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+
+  // Build 2 known EventMarkers
+  std::vector<ads1292::EventMarker> events;
+  {
+    ads1292::EventMarker e1;
+    e1.timestamp_seconds = 0.1;
+    e1.label = "rest";
+    e1.notes = "baseline";
+    events.push_back(e1);
+
+    ads1292::EventMarker e2;
+    e2.timestamp_seconds = 0.5;
+    e2.label = "motion";
+    e2.notes = "arm movement";
+    events.push_back(e2);
+  }
+
+  // Write the bundle sidecar alongside the CSV
+  ads1292::io::write_recording_bundle(
+    csv_path,
+    ads1292::SessionMetadata{},
+    events,
+    ads1292::Calibration{},
+    ads1292::io::AcquisitionProvenance{},
+    ads1292::io::protocol_template(),
+    ads1292::io::quality_gate_template(),
+    ads1292::RecordingProcessingSettings{},
+    500.0,
+    "");
+
+  // Load the recording via MainWindow; events should be set on the review panel
+  ads1292::gui::MainWindow win;
+  win.loadRecordingForTest(csv_path);
+
+  REQUIRE(win.reviewLoadedForTest());
+  REQUIRE(win.reviewEventCountForTest() == 2);
+
+  std::filesystem::remove_all(tmp);
+}
+
+TEST_CASE("P11 Task 2: loadRecordingForTest with no bundle returns 0 events (no regression)", "[gui][events]") {
+  // A CSV with no .json bundle sidecar must load without crash and report 0 events.
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11_task2_no_bundle";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-130000-ads1292-studio.csv").string();
+
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 1500; ++i) {
+    ads1292::StreamSample s;
+    double t = i / 500.0;
+    double v = 0.0;
+    for (double bt = 0.2; bt < 3.0; bt += 60.0 / 72.0) {
+      double d = t - bt;
+      v += 200.0 * std::exp(-(d * d) / (2 * 0.01 * 0.01));
+    }
+    s.ch2 = static_cast<int>(v); s.ch1 = 0; s.status_byte = 0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+
+  // Confirm no bundle sidecar exists
+  REQUIRE_FALSE(ads1292::io::is_recording_bundle_path(
+    ads1292::io::recording_bundle_path(csv_path)));
+
+  ads1292::gui::MainWindow win;
+  win.loadRecordingForTest(csv_path);
+
+  REQUIRE(win.reviewLoadedForTest());
+  REQUIRE(win.reviewEventCountForTest() == 0);
+
+  std::filesystem::remove_all(tmp);
+}
+
 // ── P11 Task 3: save-format checkboxes + recording-state surfacing ─────────────
 
 TEST_CASE("MainWindow save-format checkboxes: default state and H5 opt propagation", "[gui][recording]") {

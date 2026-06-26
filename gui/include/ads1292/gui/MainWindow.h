@@ -47,10 +47,16 @@ public:
 
     /// Load a CSV recording into the review panels. Safe to call from tests.
     /// Guards against empty/invalid files. Sets reviewLoaded_ = true on success.
+    /// Also reads events from the recording bundle (if present) and populates
+    /// the review event log panel.
     void loadRecordingForTest(const std::string& csvPath);
 
     /// Returns true if a recording has been successfully loaded into the review panels.
     bool reviewLoadedForTest() const { return review_loaded_; }
+
+    /// Returns the number of events loaded from the recording bundle on the last
+    /// successful loadRecordingForTest call (0 if no bundle or no events).
+    int reviewEventCountForTest() const { return static_cast<int>(loadedEvents_.size()); }
 
     // ── Save-format checkbox test seams ───────────────────────────────────────
 
@@ -126,6 +132,10 @@ private:
     GuiState state_;
     int      lastCount_    = 0;
     bool     review_loaded_ = false;
+
+    // Events loaded from the recording bundle on the last loadRecordingForTest call.
+    // Populated by loadRecordingForTest; empty when no bundle exists.
+    std::vector<ads1292::EventMarker> loadedEvents_;
 
     // Display filter settings (live — driven by toolbar checkboxes)
     ads1292::dsp::SoftwareFilterSettings filter_;

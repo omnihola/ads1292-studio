@@ -8,6 +8,7 @@
 #include "ads1292/io/LiveRecordingFinalize.h"
 #include "ads1292/io/ProtocolIo.h"
 #include "ads1292/io/QualityGateIo.h"
+#include "ads1292/io/RecordingBundle.h"
 #include "ads1292/view/ReviewRender.h"
 #include "ads1292/dsp/Spectrum.h"
 #include "ads1292/model/SessionMetadata.h"
@@ -444,11 +445,20 @@ void MainWindow::loadRecordingForTest(const std::string& csvPath) {
     reviewWaveform_->setData(1, frame.plot_resp_x, frame.plot_resp);
     reviewWaveform_->replotNow();
 
+    // Read events from the recording bundle (if one exists alongside the CSV).
+    // If no bundle is present, events stays empty → setEvents({}) → no regression.
+    std::vector<ads1292::EventMarker> events;
+    auto bp = ads1292::io::recording_bundle_path(csvPath);
+    if (ads1292::io::is_recording_bundle_path(bp)) {
+        events = ads1292::io::events_from_bundle(ads1292::io::read_recording_bundle(bp));
+    }
+    loadedEvents_ = events;
+
     // Populate the review panels
     pqrstPanel_->showFrame(frame);
     spectrumPanel_->showSpectrum(spec);
     qualityInfoPanel_->showMetrics(frame.metrics);
-    reviewEventLogPanel_->appendLine("Loaded " + csvPath);
+    reviewEventLogPanel_->setEvents(events);
 
     review_loaded_ = true;
 }
