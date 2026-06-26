@@ -30,7 +30,10 @@ int run_stream(std::ostream& out, ads1292::acq::IDeviceSource& dev, const Stream
     try {
         while (true) {
             auto batch = dev.read_stream_batch();
-            if (batch.empty()) break;
+            if (batch.empty()) {
+                if (dev.stream_done()) break;   // finite source exhausted (simulator) -> stop
+                continue;                        // real-hardware inter-frame gap -> keep collecting toward max_samples
+            }
             samples.insert(samples.end(), batch.begin(), batch.end());
             if (opt.max_samples > 0 && static_cast<int>(samples.size()) >= opt.max_samples) break;
         }
