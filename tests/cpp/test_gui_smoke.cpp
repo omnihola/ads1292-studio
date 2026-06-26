@@ -771,6 +771,62 @@ TEST_CASE("P11P3 Task 1: unedited SessionPanel defaults match SessionMetadata{}"
 
 // ── P11 Phase 3 Task 2: SessionPanel metadata wired into the recording bundle ──
 
+// ── P11 Phase 5 Task 1: SessionPanel Validation + Protocol tabs ──────────────
+
+TEST_CASE("P11P5 Task 1: qualityGate() returns QualityGate{} defaults on unedited panel", "[gui][session][qgate]") {
+  ensureApp();
+  ads1292::gui::SessionPanel sp;
+
+  auto qg = sp.qualityGate();
+  REQUIRE(qg.min_duration_seconds   == Approx(8.0));
+  REQUIRE(qg.min_contact_ok_percent == Approx(95.0));
+  REQUIRE(qg.min_r_peaks            == 5);
+  REQUIRE(qg.min_hr_bpm             == Approx(35.0));
+  REQUIRE(qg.max_hr_bpm             == Approx(180.0));
+  REQUIRE(qg.require_qrs_clear      == true);
+  REQUIRE_FALSE(qg.max_baseline_drift_counts.has_value());
+  REQUIRE_FALSE(qg.max_noise_rms_counts.has_value());
+  REQUIRE_FALSE(qg.max_peak_to_peak_counts.has_value());
+}
+
+TEST_CASE("P11P5 Task 1: protocol() returns TestProtocol{} defaults on unedited panel", "[gui][session][protocol]") {
+  ensureApp();
+  ads1292::gui::SessionPanel sp;
+
+  auto p = sp.protocol();
+  REQUIRE(p.name                  == "ADS1292 validation protocol");
+  REQUIRE(p.objective             == "");
+  REQUIRE(p.operator_instructions == "Follow the listed protocol steps.");
+  REQUIRE(p.acceptance_notes      == "Review quality gate and artifacts before accepting the run.");
+  REQUIRE(p.steps.empty());
+}
+
+TEST_CASE("P11P5 Task 1: metadata() still works after tab restructure", "[gui][session]") {
+  ensureApp();
+  ads1292::gui::SessionPanel sp;
+
+  ads1292::SessionMetadata m;
+  m.session_id = "S";
+  m.subject_id = "test-subject";
+  sp.setMetadata(m);
+
+  REQUIRE(sp.metadata().session_id == "S");
+  REQUIRE(sp.metadata().subject_id == "test-subject");
+}
+
+TEST_CASE("P11P5 Task 1: test seams allow value change and round-trip", "[gui][session]") {
+  ensureApp();
+  ads1292::gui::SessionPanel sp;
+
+  // Change protocol name via seam and verify round-trip
+  sp.setProtocolNameForTest("X");
+  REQUIRE(sp.protocol().name == "X");
+
+  // Change min duration via seam and verify round-trip
+  sp.setMinDurationForTest(15.0);
+  REQUIRE(sp.qualityGate().min_duration_seconds == Approx(15.0));
+}
+
 TEST_CASE("P11P3 Task 2: sessionPanelForTest metadata is written into the bundle", "[gui][session]") {
   // Strategy: construct MainWindow, set session metadata on the panel, run the
   // synchronous finalize seam, read the produced bundle, verify metadata fields.
