@@ -207,6 +207,9 @@ MainWindow::MainWindow(QWidget* parent)
         const std::string modeStr =
             (mode == ads1292::acq::AcquisitionMode::Live) ? "live" : "raw";
 
+        // Store the recording mode for use in onWorkerFinished/buildFinalizeOptions.
+        recordingMode_ = modeStr;
+
         // Generate a timestamped CSV path and create its parent directory.
         recordingCsvPath_ = ads1292::gui::timestamped_recording_csv_path(
             modeStr, recordingsDir_);
@@ -251,6 +254,15 @@ MainWindow::MainWindow(QWidget* parent)
     statusPanel_->updateFromState(state_);
 }
 
+MainWindow::~MainWindow() {
+    // Join finalize thread (if any) before QObject base is torn down.
+    // This prevents the in-flight finalize thread from calling QMetaObject::invokeMethod
+    // on a destroyed object (UAF fix).
+    if (finalizeThread_.joinable()) {
+        finalizeThread_.join();
+    }
+}
+
 void MainWindow::onTick() {
     ads1292::StreamSample s;
     while (worker_.live_queue().try_pop(s)) {
@@ -286,6 +298,8 @@ ads1292::io::FinalizeOptions MainWindow::buildFinalizeOptions() const {
     opt.quality_gate    = ads1292::io::quality_gate_template();
     opt.started_at      = recordingStartedAt_;
     opt.sample_rate_hz  = 500.0;
+    // Set acquisition_mode based on the actual mode at Start time.
+    opt.acquisition_mode = (recordingMode_ == "raw") ? "raw_adc_24bit" : "live_stream";
     // Task 3 will wire saveH5Check_; for now nullptr → write_h5 = true.
     opt.write_h5        = (saveH5Check_ ? saveH5Check_->isChecked() : true);
     return opt;
@@ -301,6 +315,12 @@ void MainWindow::onWorkerFinished(int sampleCount) {
         return;
     }
 
+    // Join any previously-spawned finalize thread before starting a new one.
+    // This guards against double-fire of finished(int) and ensures orderly cleanup.
+    if (finalizeThread_.joinable()) {
+        finalizeThread_.join();
+    }
+
     // Snapshot all finalize inputs on the GUI thread before spawning the thread.
     const ads1292::io::FinalizeOptions opt = buildFinalizeOptions();
     const std::string csv = recordingCsvPath_;
@@ -310,10 +330,9 @@ void MainWindow::onWorkerFinished(int sampleCount) {
 
     // Spawn background thread: only calls the Qt-free io function.
     // Results are posted back to the GUI thread via invokeMethod (QueuedConnection).
-    // Captures csv + opt by value; this by pointer (QObject lifetime handled by Qt:
-    // QObject::~QObject calls removePostedEvents, so the lambda is never delivered
-    // to a destroyed object).
-    std::thread t([this, csv, opt]() {
+    // Captures csv + opt by value; this by pointer (QObject lifetime handled by storing
+    // the thread and joining in the destructor before QObject base is torn down).
+    finalizeThread_ = std::thread([this, csv, opt]() {
         auto r = ads1292::io::finalize_live_recording(csv, opt);
         QString line = r.wrote
             ? QString("Saved: %1").arg(QString::fromStdString(r.bundle_path))
@@ -324,7 +343,6 @@ void MainWindow::onWorkerFinished(int sampleCount) {
             emit finalizeLogged(line);
         }, Qt::QueuedConnection);
     });
-    t.detach();
 }
 
 ads1292::io::FinalizeResult MainWindow::finalizeForTest() {

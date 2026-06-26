@@ -5,6 +5,7 @@
 #include <QString>
 #include <memory>
 #include <string>
+#include <thread>
 
 #include "ads1292/gui/LiveScope.h"
 #include "ads1292/gui/StatusPanel.h"
@@ -32,7 +33,7 @@ class MainWindow : public QMainWindow {
 
 public:
     explicit MainWindow(QWidget* parent = nullptr);
-    ~MainWindow() override = default;
+    ~MainWindow() override;
 
     /// Synchronous smoke/test helper: run simulator for streamBatches batches,
     /// drain the live queue into the scope, return the count drained.
@@ -116,6 +117,10 @@ private:
     std::string recordingCsvPath_;     ///< path generated at Start; passed to worker
     std::string recordingStartedAt_;   ///< ISO-8601 start time set at Start
     std::string recordingsDir_;        ///< base directory override (empty = default)
+    std::string recordingMode_;        ///< acquisition mode at Start: "live" or "raw"
+
+    // ── Finalize thread ───────────────────────────────────────────────────────
+    std::thread finalizeThread_;       ///< detached → stored, joined in dtor & before respawn
 
     /// Task 3 adds these checkboxes to the toolbar; for Task 2 they are nullptr.
     /// onWorkerFinished treats nullptr saveH5Check_ as write_h5=true.
