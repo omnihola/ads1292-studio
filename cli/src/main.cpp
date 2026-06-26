@@ -32,6 +32,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    try {
+
     const std::string_view subcmd{argv[1]};
 
     if (subcmd == "qc") {
@@ -46,7 +48,11 @@ int main(int argc, char* argv[]) {
         // Parse optional flags
         for (int i = 3; i < argc; ++i) {
             const std::string_view flag{argv[i]};
-            if (flag == "--source" && i + 1 < argc) {
+            if (flag == "--source") {
+                if (i + 1 >= argc) {
+                    std::cerr << "--source requires an argument\n";
+                    return 1;
+                }
                 opt.source = argv[++i];
             } else {
                 std::cerr << "Unknown option: " << flag << "\n";
@@ -69,7 +75,11 @@ int main(int argc, char* argv[]) {
 
         for (int i = 3; i < argc; ++i) {
             const std::string_view flag{argv[i]};
-            if (flag == "--source" && i + 1 < argc) {
+            if (flag == "--source") {
+                if (i + 1 >= argc) {
+                    std::cerr << "--source requires an argument\n";
+                    return 1;
+                }
                 opt.source = argv[++i];
             } else {
                 std::cerr << "Unknown option: " << flag << "\n";
@@ -106,7 +116,11 @@ int main(int argc, char* argv[]) {
 
         for (int i = 3; i < argc; ++i) {
             const std::string_view flag{argv[i]};
-            if (flag == "--out" && i + 1 < argc) {
+            if (flag == "--out") {
+                if (i + 1 >= argc) {
+                    std::cerr << "--out requires an argument\n";
+                    return 1;
+                }
                 opt.out_dir = argv[++i];
             } else {
                 std::cerr << "Unknown option: " << flag << "\n";
@@ -132,4 +146,9 @@ int main(int argc, char* argv[]) {
     std::cerr << "Unknown subcommand: " << subcmd << "\n";
     print_usage(argv[0]);
     return 1;
+
+    } catch (const std::exception& e) {
+        std::cerr << "error: " << e.what() << "\n";
+        return 1;
+    }
 }

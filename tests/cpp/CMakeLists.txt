@@ -75,5 +75,7 @@ target_link_libraries(ads1292_tests PRIVATE
   Qt6::Widgets)
 target_compile_definitions(ads1292_tests PRIVATE
   FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/golden"
-  SCRATCH_OR_TMP="${CMAKE_BINARY_DIR}/test_scratch")
+  SCRATCH_OR_TMP="${CMAKE_BINARY_DIR}/test_scratch"
+  CLI_BINARY="$<TARGET_FILE:ads1292_cli>"
+  DEVCLI_BINARY="$<TARGET_FILE:ads1292_devcli>")
 add_test(NAME ads1292_tests COMMAND ads1292_tests)

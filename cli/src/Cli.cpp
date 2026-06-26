@@ -14,6 +14,7 @@
 
 #include <filesystem>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 
@@ -27,11 +28,11 @@ int run_qc(std::ostream& out, const QcOptions& opt) {
     try {
         samples = ads1292::io::read_recording_csv(opt.csv_path);
     } catch (const std::exception& e) {
-        out << "error=" << e.what() << "\n";
+        std::cerr << e.what() << "\n";
         return 1;
     }
     if (samples.empty()) {
-        out << "error=recording is empty\n";
+        std::cerr << "recording is empty\n";
         return 1;
     }
 
@@ -63,11 +64,11 @@ int run_report(std::ostream& out, const ReportOptions& opt) {
     try {
         samples = ads1292::io::read_recording_csv(opt.csv_path);
     } catch (const std::exception& e) {
-        out << "error=" << e.what() << "\n";
+        std::cerr << e.what() << "\n";
         return 1;
     }
     if (samples.empty()) {
-        out << "error=recording is empty\n";
+        std::cerr << "recording is empty\n";
         return 1;
     }
 

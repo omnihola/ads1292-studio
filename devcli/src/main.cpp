@@ -75,7 +75,14 @@ int main(int argc, char** argv) {
         for (int i = 2; i + 1 < argc; ++i) {
             const std::string arg = argv[i];
             if (arg == "--port")    { port = argv[i + 1]; }
-            else if (arg == "--seconds") { seconds = std::stod(argv[i + 1]); }
+            else if (arg == "--seconds") {
+                try {
+                    seconds = std::stod(argv[i + 1]);
+                } catch (const std::exception&) {
+                    std::cerr << "invalid --seconds value: " << argv[i + 1] << "\n";
+                    return 1;
+                }
+            }
             else if (arg == "--csv")     { csv_path = argv[i + 1]; }
         }
         if (port.empty()) {

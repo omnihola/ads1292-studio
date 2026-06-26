@@ -25,7 +25,11 @@ int main(int argc, char** argv) {
     QString arg = QString::fromLocal8Bit(argv[i]);
     if (arg == QStringLiteral("--smoke")) {
       smoke = true;
-    } else if (arg == QStringLiteral("--export-report") && i + 2 < argc) {
+    } else if (arg == QStringLiteral("--export-report")) {
+      if (i + 2 >= argc) {
+        fprintf(stderr, "--export-report requires <csv> <outdir>\n");
+        return 1;
+      }
       export_csv    = argv[i + 1];
       export_outdir = argv[i + 2];
       i += 2;

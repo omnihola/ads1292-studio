@@ -7,8 +7,31 @@
 #include "ads1292/model/StreamSample.h"
 #include <sstream>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <cmath>
+#include <cstdio>
+#include <string>
+#include <sys/wait.h>
 using namespace ads1292;
+
+// ---------------------------------------------------------------------------
+// Subprocess helper: runs cmd (shell string), merges stderr into stdout,
+// returns {exit_code, combined_output}.
+// ---------------------------------------------------------------------------
+namespace {
+std::pair<int, std::string> run_cmd(const std::string& cmd) {
+    std::string full = cmd + " 2>&1";
+    FILE* pipe = popen(full.c_str(), "r");
+    if (!pipe) return {-1, ""};
+    std::string out;
+    char buf[256];
+    while (fgets(buf, sizeof(buf), pipe)) out += buf;
+    int status = pclose(pipe);
+    int code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+    return {code, out};
+}
+}
 namespace {
 std::string write_clean(const std::string& name) {
   std::vector<StreamSample> rec;
@@ -113,3 +136,74 @@ TEST_CASE("run_batch on a directory input expands to its CSVs", "[cli]") {
   REQUIRE(ads1292::cli::run_batch(o, opt) == 0);
   REQUIRE(o.str().find("rows=1") != std::string::npos);
 }
+
+// ---------------------------------------------------------------------------
+// C7 regression: run_qc/run_report errors must go to stderr, NOT stdout.
+// Oracle: cli.py errors (from _require_recording_csv / SystemExit) → stderr.
+// ---------------------------------------------------------------------------
+TEST_CASE("run_qc error goes to stderr not stdout (C7)", "[cli]") {
+  ads1292::cli::QcOptions opt;
+  opt.csv_path = "/tmp/p9_c7_does_not_exist_qc.csv";
+  std::ostringstream stdout_buf;
+  std::ostringstream stderr_buf;
+  // Redirect cerr so we can inspect it.
+  auto* old_cerr = std::cerr.rdbuf(stderr_buf.rdbuf());
+  int code = ads1292::cli::run_qc(stdout_buf, opt);
+  std::cerr.rdbuf(old_cerr);
+  REQUIRE(code == 1);
+  // Error must NOT appear in stdout.
+  REQUIRE(stdout_buf.str().find("error") == std::string::npos);
+  // Error must appear in stderr.
+  REQUIRE(!stderr_buf.str().empty());
+}
+
+TEST_CASE("run_report error goes to stderr not stdout (C7)", "[cli]") {
+  ads1292::cli::ReportOptions opt;
+  opt.csv_path = "/tmp/p9_c7_does_not_exist_report.csv";
+  std::ostringstream stdout_buf;
+  std::ostringstream stderr_buf;
+  auto* old_cerr = std::cerr.rdbuf(stderr_buf.rdbuf());
+  int code = ads1292::cli::run_report(stdout_buf, opt);
+  std::cerr.rdbuf(old_cerr);
+  REQUIRE(code == 1);
+  REQUIRE(stdout_buf.str().find("error") == std::string::npos);
+  REQUIRE(!stderr_buf.str().empty());
+}
+
+// ---------------------------------------------------------------------------
+// C6 regression (subprocess): --source without a value must print
+// "--source requires an argument" and exit 1, not "Unknown option: --source".
+// Oracle: argparse type=float rejects bad args cleanly; known flags get clear
+// messages.
+// ---------------------------------------------------------------------------
+#ifdef CLI_BINARY
+TEST_CASE("cli qc --source missing value exits 1 with clear message (C6)", "[cli][subprocess]") {
+  auto [code, out] = run_cmd(std::string(CLI_BINARY) + " qc /tmp/no_such.csv --source");
+  REQUIRE(code == 1);
+  REQUIRE(out.find("--source requires an argument") != std::string::npos);
+  REQUIRE(out.find("Unknown option") == std::string::npos);
+}
+
+TEST_CASE("cli index --out missing value exits 1 with clear message (C6)", "[cli][subprocess]") {
+  auto [code, out] = run_cmd(std::string(CLI_BINARY) + " index /tmp --out");
+  REQUIRE(code == 1);
+  REQUIRE(out.find("--out requires an argument") != std::string::npos);
+  REQUIRE(out.find("Unknown option") == std::string::npos);
+}
+
+// ---------------------------------------------------------------------------
+// B8 regression (subprocess): filesystem exception from run_index must
+// produce a clean "error: ..." message on stderr and exit 1, not abort.
+// Oracle: cli.py main wraps dispatch in except OSError → SystemExit("error: ...")
+// We force a filesystem_error by pointing --out at an existing regular file.
+// ---------------------------------------------------------------------------
+TEST_CASE("cli index with unwritable --out exits 1 with error message (B8)", "[cli][subprocess]") {
+  // Create a regular file at the --out path so create_directories throws.
+  auto blocker = std::filesystem::temp_directory_path() / "p9_b8_blocker_file";
+  { std::ofstream f(blocker.string()); f << "blocker\n"; }
+  auto [code, out] = run_cmd(std::string(CLI_BINARY) + " index /tmp --out " + blocker.string());
+  std::filesystem::remove(blocker);
+  REQUIRE(code == 1);
+  REQUIRE(out.find("error:") != std::string::npos);
+}
+#endif  // CLI_BINARY

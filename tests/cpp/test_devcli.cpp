@@ -6,7 +6,26 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <cstdio>
+#include <sys/wait.h>
 using namespace ads1292;
+
+// ---------------------------------------------------------------------------
+// Subprocess helper shared with test_cli.cpp.
+// ---------------------------------------------------------------------------
+namespace {
+std::pair<int, std::string> run_devcli_cmd(const std::string& cmd) {
+    std::string full = cmd + " 2>&1";
+    FILE* pipe = popen(full.c_str(), "r");
+    if (!pipe) return {-1, ""};
+    std::string out;
+    char buf[256];
+    while (fgets(buf, sizeof(buf), pipe)) out += buf;
+    int status = pclose(pipe);
+    int code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+    return {code, out};
+}
+}
 
 TEST_CASE("run_stream collects samples from the simulator into a count", "[device]") {
   acq::SimulatorDeviceSource sim(/*stream_batches*/ 10, /*raw_count*/ 0);  // 10*14 = 140 samples
@@ -64,3 +83,23 @@ TEST_CASE("run_ports prints a diagnostic when no board attached", "[device]") {
   REQUIRE((code == 0 || code == 1));
   REQUIRE(!out.str().empty());
 }
+
+// ---------------------------------------------------------------------------
+// B7 regression (subprocess): --seconds with a non-numeric value must print
+// "invalid --seconds value: <val>" to stderr and exit 1.
+// Oracle: argparse type=float rejects bad --seconds cleanly; Python raises
+// SystemExit with a type-error message.
+// With OLD code: std::stod outside try/catch → std::terminate (abort).
+// With NEW code: try/catch → clean exit 1.
+// ---------------------------------------------------------------------------
+#ifdef DEVCLI_BINARY
+TEST_CASE("devcli stream --seconds with invalid value exits 1 (B7)", "[device][subprocess]") {
+  // QT_QPA_PLATFORM=offscreen to suppress any Qt platform warnings.
+  std::string cmd = "QT_QPA_PLATFORM=offscreen "
+                    + std::string(DEVCLI_BINARY)
+                    + " stream --seconds abc";
+  auto [code, out] = run_devcli_cmd(cmd);
+  REQUIRE(code == 1);
+  REQUIRE(out.find("invalid --seconds value") != std::string::npos);
+}
+#endif  // DEVCLI_BINARY
