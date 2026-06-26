@@ -5,6 +5,7 @@
 #include "catch.hpp"
 #include "ads1292/gui/QCustomPlotWaveform.h"
 #include <QApplication>
+#include <fstream>
 #include <vector>
 
 // Guard: ensures a single QApplication exists for the process lifetime.
@@ -178,4 +179,52 @@ TEST_CASE("export_review_report writes HTML + 3 PNGs offscreen", "[gui]") {
   REQUIRE(std::filesystem::exists(r.pqrst_png_path));
   REQUIRE(std::filesystem::exists(r.spectrum_png_path));
   REQUIRE(std::filesystem::file_size(r.ecg_png_path) > 200);
+}
+
+TEST_CASE("export_review_report throws when out_dir cannot be created (B5 regression)", "[gui]") {
+  // B5: before the fix, failures were silently swallowed; after the fix each failure throws.
+  // Strategy: block directory creation by placing a regular file where the dir would be.
+  ensureApp();
+
+  // Create a regular file to occupy the slot where we want a directory
+  auto block_path = std::filesystem::temp_directory_path() / "b5_block_file";
+  { std::ofstream f(block_path.string()); f << "x"; }
+
+  // Trying to use block_path/subdir as out_dir causes create_directories to throw
+  // (or the savePng to fail) — either way export_review_report must propagate
+  std::string bad_dir = (block_path / "subdir").string();
+
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 10; ++i) {
+      ads1292::StreamSample s; s.ch1 = i; s.ch2 = 0; s.timestamp = i / 500.0;
+      samples.push_back(s);
+  }
+
+  REQUIRE_THROWS(ads1292::gui::export_review_report(samples, bad_dir, "b5test"));
+
+  std::filesystem::remove(block_path);
+}
+
+TEST_CASE("export_review_report throws when PNG path is a directory (B5 savePng check)", "[gui]") {
+  // Force savePng failure: create the out_dir, then create a DIRECTORY where
+  // the first PNG would go (slug "b5slug" → "b5slug-ecg.png").
+  // After B5 fix, the bool check throws instead of silently returning.
+  ensureApp();
+
+  auto out_dir = std::filesystem::temp_directory_path() / "b5_png_dir_test";
+  std::filesystem::create_directories(out_dir);
+
+  // Pre-create the ECG png slot as a directory so savePng cannot write a file there
+  auto ecg_blocker = out_dir / "b5slug-ecg.png";
+  std::filesystem::create_directories(ecg_blocker);
+
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 100; ++i) {
+      ads1292::StreamSample s; s.ch2 = (i % 50 < 5) ? 300 : 0; s.ch1 = 0; s.timestamp = i / 500.0;
+      samples.push_back(s);
+  }
+
+  REQUIRE_THROWS(ads1292::gui::export_review_report(samples, out_dir.string(), "B5Slug"));
+
+  std::filesystem::remove_all(out_dir);
 }

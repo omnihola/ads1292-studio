@@ -9,7 +9,7 @@
 namespace ads1292::dsp {
 
 /// Zero-phase IIR filter using SciPy's filtfilt algorithm:
-///   - Odd-extension padding of length padlen = 3*(ntaps-1) on each end.
+///   - Odd-extension padding of length padlen = 3*ntaps on each end.
 ///   - Forward lfilter with zi = lfilter_zi(c) * ext[0].
 ///   - Backward lfilter with zi = lfilter_zi(c) * y_reversed[0].
 ///   - Result is the de-padded output, same length as x.

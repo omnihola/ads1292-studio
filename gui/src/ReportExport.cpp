@@ -109,7 +109,8 @@ ReportExportResult export_review_report(
         wf.setMarkers(0, frame.peak_x, frame.peak_y);
         wf.setData(1, frame.plot_resp_x, frame.plot_resp);
         wf.setAutoscale(true);
-        wf.savePng(ecg_png_path, 1000, 360);
+        if (!wf.savePng(ecg_png_path, 1000, 360))
+            throw std::runtime_error("failed to write " + ecg_png_path);
     }
 
     // ── PQRST PNG ─────────────────────────────────────────────────────────────
@@ -120,7 +121,8 @@ ReportExportResult export_review_report(
         xy.setLine(frame.pqrst.time_ms, frame.pqrst.average_beat);
         xy.setTitle("PQRST average beat");
         xy.setAutoscale(true);
-        xy.savePng(pqrst_png_path, 1000, 360);
+        if (!xy.savePng(pqrst_png_path, 1000, 360))
+            throw std::runtime_error("failed to write " + pqrst_png_path);
     }
 
     // ── Spectrum PNG ──────────────────────────────────────────────────────────
@@ -137,8 +139,10 @@ ReportExportResult export_review_report(
         // FFT line
         xy.setLine(spec.ecg_frequency_hz, spec.ecg_power);
 
-        // Histogram bars (guard: need at least 2 edges → 1 bin)
-        if (spec.histogram_bin_edges.size() >= 2) {
+        // Histogram bars (guard: must have exactly counts+1 edges and at least 1 bin,
+        // matching SpectrumPanel.cpp — prevents OOB on edges[i+1])
+        if (spec.histogram_bin_edges.size() == spec.histogram_counts.size() + 1 &&
+            !spec.histogram_counts.empty()) {
             const std::size_t n = spec.histogram_counts.size();
             std::vector<double> centers(n);
             std::vector<double> heights(n);
@@ -153,7 +157,8 @@ ReportExportResult export_review_report(
         }
 
         xy.setAutoscale(true);
-        xy.savePng(spectrum_png_path, 1000, 360);
+        if (!xy.savePng(spectrum_png_path, 1000, 360))
+            throw std::runtime_error("failed to write " + spectrum_png_path);
     }
 
     // ── HTML ──────────────────────────────────────────────────────────────────
@@ -170,7 +175,11 @@ ReportExportResult export_review_report(
 
     {
         std::ofstream ofs(html_path, std::ios::out | std::ios::trunc);
+        if (!ofs.is_open())
+            throw std::runtime_error("failed to write " + html_path);
         ofs << ads1292::io::build_review_html(in);
+        if (!ofs.good())
+            throw std::runtime_error("failed to write " + html_path);
     }
 
     return {html_path, ecg_png_path, pqrst_png_path, spectrum_png_path};

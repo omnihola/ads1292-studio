@@ -13,6 +13,7 @@
 namespace ads1292::dsp {
 
 double percentile(const std::vector<double>& x, double q) {
+    if (x.empty()) return 0.0;
     std::vector<double> xs(x);
     std::sort(xs.begin(), xs.end());
 

@@ -43,6 +43,17 @@ int header_index(const std::vector<std::string>& header, const std::string& name
   return -1;
 }
 
+// Returns the index of the first name present in the header (in priority order),
+// or -1 if none are present.  Matches csv_io.py's _resolve_column_indices logic.
+int first_header_index(const std::vector<std::string>& header,
+                       std::initializer_list<const char*> names) {
+  for (const char* name : names) {
+    int idx = header_index(header, name);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
 std::string cell(const std::vector<std::string>& row, int idx) {
   return (idx >= 0 && idx < static_cast<int>(row.size())) ? row[idx] : std::string();
 }
@@ -78,14 +89,15 @@ std::vector<StreamSample> read_recording_csv(const std::string& path) {
   std::string line;
   if (!std::getline(in, line)) return {};
   std::vector<std::string> header = split_csv_line(line);
-  int ts = header_index(header, "timestamp");
-  int idx = header_index(header, "sample_index");
-  int ch1 = header_index(header, "ch1_counts");
-  int ch2 = header_index(header, "ch2_counts");
-  int hr = header_index(header, "board_heart_rate");
-  int rr = header_index(header, "board_respiration_rate");
-  int status = header_index(header, "status_byte");
-  int lead = header_index(header, "lead_off_bits");
+  int ts     = header_index(header, "timestamp");
+  // Fallback column resolution matches csv_io.py's _resolve_column_indices:
+  int idx    = first_header_index(header, {"sample_index", "index"});
+  int ch1    = first_header_index(header, {"ch1_counts", "ecg_counts", "ch1_raw24"});
+  int ch2    = first_header_index(header, {"ch2_counts", "resp_counts", "ch2_raw24"});
+  int hr     = first_header_index(header, {"board_heart_rate", "heart_rate"});
+  int rr     = first_header_index(header, {"board_respiration_rate", "respiration_rate"});
+  int status = first_header_index(header, {"status_byte", "lead_off"});
+  int lead   = header_index(header, "lead_off_bits");
 
   std::vector<StreamSample> samples;
   int row_index = 0;

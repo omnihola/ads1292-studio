@@ -195,12 +195,14 @@ H5Recording read_recording_h5(const std::string& path) {
 
   rec.samples.resize(n);
   for (hsize_t i = 0; i < n; ++i) {
-    rec.samples[i].timestamp             = timestamp[i];
-    rec.samples[i].ch1                   = ch1[i];
-    rec.samples[i].ch2                   = ch2[i];
-    rec.samples[i].status_byte           = static_cast<int>(status_byte[i]);
-    rec.samples[i].board_heart_rate      = static_cast<int>(board_heart_rate[i]);
+    rec.samples[i].timestamp              = timestamp[i];
+    rec.samples[i].ch1                    = ch1[i];
+    rec.samples[i].ch2                    = ch2[i];
+    rec.samples[i].status_byte            = static_cast<int>(status_byte[i]);
+    rec.samples[i].board_heart_rate       = static_cast<int>(board_heart_rate[i]);
     rec.samples[i].board_respiration_rate = static_cast<int>(board_respiration_rate[i]);
+    // Match h5_io.py: reconstruct sets sample_index=i (0-based enumerate index)
+    rec.samples[i].sample_index           = static_cast<int>(i);
   }
 
   // ── bundle_json ──────────────────────────────────────────────────────────
@@ -230,14 +232,30 @@ static void write_str_attr_value(hid_t obj, const char* name, const std::string&
   write_str_attr(obj, name, value);
 }
 
-// Write a 1-D typed dataset into a group.
+// Write a 1-D typed dataset into a group with gzip+shuffle compression,
+// matching h5py's compression="gzip", shuffle=True (gzip level 4).
 template <typename T>
 static void write_typed_dataset(hid_t group, const char* name, hid_t h5type,
                                 const std::vector<T>& data) {
   hsize_t dims[1] = {data.size()};
   Hid space(H5Screate_simple(1, dims, nullptr), H5Sclose);
+
+  // Build dataset-creation property list: chunk + shuffle + gzip(4)
+  // (mirrors h5py: group.create_dataset(..., compression="gzip", shuffle=True))
+  hid_t dcpl_raw = H5Pcreate(H5P_DATASET_CREATE);
+  if (dcpl_raw < 0) throw std::runtime_error(std::string("H5Pcreate failed for: ") + name);
+  Hid dcpl(dcpl_raw, H5Pclose);
+
+  if (!data.empty()) {
+    // Chunk at most 1024 elements at a time (h5py uses a similar heuristic)
+    hsize_t chunk[1] = {data.size() < 1024 ? data.size() : hsize_t{1024}};
+    H5Pset_chunk(dcpl.get(), 1, chunk);
+    H5Pset_shuffle(dcpl.get());
+    H5Pset_deflate(dcpl.get(), 4);
+  }
+
   Hid dset(H5Dcreate2(group, name, h5type, space.get(),
-                      H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT), H5Dclose);
+                      H5P_DEFAULT, dcpl.get(), H5P_DEFAULT), H5Dclose);
 
   // Determine the native memory type for T
   hid_t memtype = H5T_NATIVE_DOUBLE;
