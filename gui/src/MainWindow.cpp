@@ -1,6 +1,7 @@
 // gui/src/MainWindow.cpp
 #include "ads1292/gui/MainWindow.h"
 #include "ads1292/gui/QCustomPlotWaveform.h"   // concrete review waveform backend
+#include "ads1292/gui/ReportExport.h"
 #include "ads1292/gui/RecordingPaths.h"
 #include "ads1292/qt/AdsPorts.h"
 #include "ads1292/qt/QSerialByteTransport.h"
@@ -206,6 +207,28 @@ MainWindow::MainWindow(QWidget* parent)
                 onCalibrateResult(false, ads1292::LiveStreamCalibration{}, detail);
             }, Qt::QueuedConnection);
         });
+    });
+
+    // Export Report button: assembles an HTML+PNG report from the loaded recording.
+    // Requires a recording to be loaded (review_loaded_ = true); disabled while streaming.
+    toolbar->addSeparator();
+    exportReportBtn_ = new QPushButton("Export Report", toolbar);
+    exportReportBtn_->setToolTip(
+        "Export an HTML + PNG report from the currently loaded recording.\n"
+        "Load a recording first using the Load button.");
+    toolbar->addWidget(exportReportBtn_);
+
+    connect(exportReportBtn_, &QPushButton::clicked, this, [this]() {
+        if (!review_loaded_ || loadedSamples_.empty()) {
+            if (reviewEventLogPanel_) {
+                reviewEventLogPanel_->appendLine("export report: load a recording first");
+            }
+            return;
+        }
+        QString dir = QFileDialog::getExistingDirectory(
+            this, "Export report to folder");
+        if (dir.isEmpty()) return;
+        exportReportTo(dir.toStdString());
     });
 
     // ── Session metadata panel (left pane) ───────────────────────────────────
@@ -520,6 +543,8 @@ void MainWindow::refreshControls() {
     // (hardware-only measurement path; disabled while streaming, connecting, or calibrating)
     if (calibrateBtn_) calibrateBtn_->setEnabled(
         !streaming_ && !connecting_ && !calibrating_ && !connectedPort_.empty());
+    // Export Report button: enabled only when a recording is loaded and the system is idle.
+    if (exportReportBtn_) exportReportBtn_->setEnabled(review_loaded_ && !streaming_);
 }
 
 void MainWindow::onTick() {
@@ -667,6 +692,7 @@ bool MainWindow::loadRecording(const std::string& path) {
 
     std::vector<ads1292::StreamSample> samples;
     std::vector<ads1292::EventMarker>  events;
+    ads1292::SessionMetadata           meta;
 
 #ifdef ADS1292_HAVE_HDF5
     if (ext == ".h5") {
@@ -677,15 +703,18 @@ bool MainWindow::loadRecording(const std::string& path) {
             if (!j.is_discarded() &&
                 j.value("schema", std::string()) == "ads1292-recording-bundle-v1") {
                 events = ads1292::io::events_from_bundle(j);
+                meta   = ads1292::io::metadata_from_bundle(j);
             }
         }
     } else {
 #endif
-        // CSV branch: read samples + sidecar bundle events
+        // CSV branch: read samples + sidecar bundle events + metadata
         samples = ads1292::io::read_recording_csv(path);
         auto bp = ads1292::io::recording_bundle_path(path);
         if (ads1292::io::is_recording_bundle_path(bp)) {
-            events = ads1292::io::events_from_bundle(ads1292::io::read_recording_bundle(bp));
+            auto bundle = ads1292::io::read_recording_bundle(bp);
+            events = ads1292::io::events_from_bundle(bundle);
+            meta   = ads1292::io::metadata_from_bundle(bundle);
         }
 #ifdef ADS1292_HAVE_HDF5
     }
@@ -695,6 +724,10 @@ bool MainWindow::loadRecording(const std::string& path) {
         review_loaded_ = false;
         return false;
     }
+
+    // Store samples and metadata for later use by exportReportTo().
+    loadedSamples_ = samples;
+    loadedMetadata_ = meta;
 
     // Build the review render frame
     auto frame = ads1292::view::build_review_render_frame(
@@ -731,6 +764,7 @@ bool MainWindow::loadRecording(const std::string& path) {
     loadedEvents_ = events;
 
     review_loaded_ = true;
+    refreshControls();  // update Export Report button enabled state
     return true;
 }
 
@@ -745,6 +779,23 @@ void MainWindow::loadAndShowReview(const std::string& path) {
     if (loadRecording(path)) {
         tabs_->setCurrentWidget(reviewWaveform_->widget());
     }
+}
+
+// ── Export Report seam (P11 Phase 10 Task 1) ─────────────────────────────────
+
+ReportExportResult MainWindow::exportReportTo(const std::string& outDir) {
+    // Testable seam: produces a full HTML+PNG report from the loaded recording.
+    // Called by the Export Report button lambda after the QFileDialog returns a path.
+    // Calling this directly in tests avoids driving the modal QFileDialog.
+    return ads1292::gui::export_review_report(
+        loadedSamples_,
+        outDir,
+        "ADS1292 Studio Review",
+        500.0,
+        "Auto",
+        loadedMetadata_,      // implicitly wraps into std::optional<SessionMetadata>
+        loadedEvents_,
+        ads1292::Calibration{});
 }
 
 } // namespace ads1292::gui

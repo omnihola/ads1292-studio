@@ -23,6 +23,7 @@
 #include "ads1292/dsp/Display.h"
 #include "ads1292/io/LiveRecordingFinalize.h"
 #include "ads1292/dsp/LiveCalibration.h"
+#include "ads1292/gui/ReportExport.h"
 
 // Forward-declare IWaveformPlot so we don't pull in the backend header here.
 namespace ads1292::gui { class IWaveformPlot; }
@@ -180,6 +181,16 @@ public:
     /// True iff calibrateBtn_ was created (i.e., the button is present in the toolbar).
     bool calibrateButtonPresentForTest() const { return calibrateBtn_ != nullptr; }
 
+    // ── Export Report test seams (P11 Phase 10 Task 1) ───────────────────────
+
+    /// True iff exportReportBtn_ was created (i.e., the button is present in the toolbar).
+    bool exportReportButtonPresentForTest() const { return exportReportBtn_ != nullptr; }
+
+    /// Testable seam: produce a report from the loaded recording to outDir.
+    /// Called by the Export Report button lambda after the QFileDialog returns a path.
+    /// Calling this directly in tests avoids driving the modal dialog.
+    ReportExportResult exportReportTo(const std::string& outDir);
+
     /// Inject a successful calibration result directly into onCalibrateResult (GUI thread).
     /// Bypasses the hardware-only device measurement thread — lets tests exercise the
     /// result-state machine without physical hardware.
@@ -308,6 +319,18 @@ private:
 
     // ── Calibrate Live (P11 Phase 9 Task 2) ──────────────────────────────────
     QPushButton* calibrateBtn_ = nullptr; ///< "Calibrate Live" toolbar button
+
+    // ── Export Report (P11 Phase 10 Task 1) ──────────────────────────────────
+    QPushButton* exportReportBtn_ = nullptr; ///< "Export Report" toolbar button
+
+    // ── Loaded recording storage (P11 Phase 10 Task 1) ───────────────────────
+    /// Samples loaded by the last successful loadRecording() call.
+    /// Stored so exportReportTo() can produce the report without re-reading the file.
+    std::vector<ads1292::StreamSample> loadedSamples_;
+
+    /// Session metadata loaded from the bundle sidecar (or H5 embedded bundle)
+    /// on the last successful loadRecording() call. Default SessionMetadata{} when absent.
+    ads1292::SessionMetadata loadedMetadata_;
 
     /// Stored result of the most recent successful calibration.
     /// Flows into the bundle's acquisition.live_calibration via buildFinalizeOptions().

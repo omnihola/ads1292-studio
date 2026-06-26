@@ -1138,3 +1138,58 @@ TEST_CASE("P11P3 Task 2: sessionPanelForTest metadata is written into the bundle
 
   std::filesystem::remove_all(tmp);
 }
+
+// ── P11 Phase 10 Task 1: Export Report button + exportReportTo seam ───────────
+
+TEST_CASE("P11.10 Task 1: Export Report button is present after construction", "[gui][report]") {
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+  REQUIRE(mw.exportReportButtonPresentForTest());
+}
+
+TEST_CASE("P11.10 Task 1: exportReportTo produces HTML + ECG PNG from loaded recording", "[gui][report]") {
+  // Strategy: author a recording CSV, load it via loadRecording, call the
+  // exportReportTo seam directly (bypasses the modal QFileDialog), and assert
+  // that the HTML and ECG PNG files exist at the returned paths.
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11_t1_load_csv_report";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  // Author a synthetic ECG recording (3000 samples — enough for render + spectrum).
+  std::vector<ads1292::StreamSample> rec;
+  for (int i = 0; i < 3000; ++i) {
+    ads1292::StreamSample s;
+    double t = i / 500.0;
+    double v = 0.0;
+    for (double bt = 0.2; bt < 6.0; bt += 60.0 / 72.0) {
+      double d = t - bt;
+      v += 200.0 * std::exp(-(d * d) / (2 * 0.01 * 0.01));
+    }
+    s.ch2 = static_cast<int>(v);
+    s.ch1 = 0;
+    s.status_byte = 0;
+    s.timestamp = t;
+    rec.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, rec);
+
+  ads1292::gui::MainWindow mw;
+
+  // Load the recording — this stores loadedSamples_ for the report seam.
+  REQUIRE(mw.loadRecording(csv_path));
+  REQUIRE(mw.reviewLoadedForTest());
+
+  // Export the report to a temp directory via the testable seam (no modal dialog).
+  auto out_dir = (std::filesystem::temp_directory_path() / "p11_report").string();
+  std::filesystem::create_directories(out_dir);
+  auto r = mw.exportReportTo(out_dir);
+
+  // The HTML and at least the ECG PNG must exist.
+  REQUIRE(std::filesystem::exists(r.html_path));
+  REQUIRE(std::filesystem::exists(r.ecg_png_path));
+
+  std::filesystem::remove_all(tmp);
+  std::filesystem::remove_all(out_dir);
+}
