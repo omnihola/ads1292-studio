@@ -740,3 +740,31 @@ TEST_CASE("MainWindow save-format checkboxes: default state and H5 opt propagati
 
   std::filesystem::remove_all(tmp);
 }
+
+// ── P11 Phase 3 Task 1: SessionPanel widget ───────────────────────────────────
+
+#include "ads1292/gui/SessionPanel.h"
+
+TEST_CASE("P11P3 Task 1: SessionPanel setMetadata round-trips through metadata()", "[gui][session]") {
+  ensureApp();
+  ads1292::gui::SessionPanel sp;
+
+  ads1292::SessionMetadata m;
+  m.session_id = "S-42";
+  m.subject_id = "subjX";
+  m.electrode  = "MOTAC";
+  sp.setMetadata(m);
+
+  REQUIRE(sp.metadata().session_id == "S-42");
+  REQUIRE(sp.metadata().subject_id == "subjX");
+  REQUIRE(sp.metadata().electrode  == "MOTAC");
+}
+
+TEST_CASE("P11P3 Task 1: unedited SessionPanel defaults match SessionMetadata{}", "[gui][session]") {
+  ensureApp();
+  ads1292::gui::SessionPanel sp2;
+
+  REQUIRE(sp2.metadata().subject_id  == "anonymous");
+  REQUIRE(sp2.metadata().montage     == "RA/LA/RL torso");
+  REQUIRE(sp2.metadata().session_id.empty());
+}

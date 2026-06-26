@@ -15,6 +15,7 @@ add_library(ads1292_gui_lib STATIC
   src/QCustomPlotWaveform.cpp
   src/QCustomPlotXY.cpp
   src/LiveScope.cpp
+  src/SessionPanel.cpp
   src/StatusPanel.cpp
   src/EventConsole.cpp
   src/PqrstPanel.cpp
