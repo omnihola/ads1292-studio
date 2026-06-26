@@ -1193,3 +1193,72 @@ TEST_CASE("P11.10 Task 1: exportReportTo produces HTML + ECG PNG from loaded rec
   std::filesystem::remove_all(tmp);
   std::filesystem::remove_all(out_dir);
 }
+
+// ── P11 Phase 10 Task 2: Session Index button + sessionIndexFor seam ──────────
+
+#include "ads1292/io/SessionIndexScan.h"
+#include <nlohmann/json.hpp>
+
+TEST_CASE("P11.10 Task 2: Session Index button is present after construction", "[gui][index]") {
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+  REQUIRE(mw.sessionIndexButtonPresentForTest());
+}
+
+TEST_CASE("P11.10 Task 2: sessionIndexFor writes index.json with >= 1 row", "[gui][index]") {
+  // Strategy: build a temp dir with a recording CSV; call sessionIndexFor (the testable
+  // seam — bypasses the modal QFileDialog); verify index.json is written and contains
+  // a "rows" array with at least one entry whose relative_path includes the CSV name.
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11_t2_session_index";
+  std::filesystem::remove_all(tmp);
+  std::filesystem::create_directories(tmp);
+
+  // Author a synthetic ECG recording (5000 samples — same as SessionIndexScan test).
+  auto csv_path = (tmp / "rec.csv").string();
+  {
+    std::vector<ads1292::StreamSample> rec;
+    for (int i = 0; i < 5000; ++i) {
+      ads1292::StreamSample s;
+      double t = i / 500.0;
+      double v = 0.0;
+      for (double bt = 0.2; bt < 10.0; bt += 60.0 / 72.0) {
+        double d = t - bt;
+        v += 300.0 * std::exp(-(d * d) / (2 * 0.01 * 0.01));
+      }
+      s.ch2 = static_cast<int>(v); s.ch1 = 0; s.status_byte = 0;
+      rec.push_back(s);
+    }
+    ads1292::io::write_recording_csv(csv_path, rec);
+  }
+
+  ads1292::gui::MainWindow mw;
+
+  // Call the seam directly — no modal dialog needed.
+  auto idx = mw.sessionIndexFor(tmp.string());
+
+  // index.json must exist at the returned path.
+  REQUIRE(std::filesystem::exists(idx));
+  REQUIRE(idx == (tmp / "index.json").string());
+
+  // Parse the JSON and verify the "rows" array has >= 1 entry for rec.csv.
+  std::ifstream f(idx);
+  auto j = nlohmann::json::parse(f);
+  REQUIRE(j.contains("rows"));
+  REQUIRE(j["rows"].is_array());
+  REQUIRE(j["rows"].size() >= 1);
+
+  // At least one row must reference rec.csv.
+  bool found_rec = false;
+  for (const auto& row : j["rows"]) {
+    if (row.contains("relative_path") &&
+        row["relative_path"].get<std::string>().find("rec.csv") != std::string::npos) {
+      found_rec = true;
+      break;
+    }
+  }
+  REQUIRE(found_rec);
+
+  std::filesystem::remove_all(tmp);
+}

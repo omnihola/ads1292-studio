@@ -191,6 +191,16 @@ public:
     /// Calling this directly in tests avoids driving the modal dialog.
     ReportExportResult exportReportTo(const std::string& outDir);
 
+    // ── Session Index test seams (P11 Phase 10 Task 2) ───────────────────────
+
+    /// True iff sessionIndexBtn_ was created (i.e., the button is present in the toolbar).
+    bool sessionIndexButtonPresentForTest() const { return sessionIndexBtn_ != nullptr; }
+
+    /// Testable seam: scan dir and write index.json; returns the index.json path.
+    /// Called by the Session Index button lambda after the QFileDialog returns a path.
+    /// Calling this directly in tests avoids driving the modal dialog.
+    std::string sessionIndexFor(const std::string& dir);
+
     /// Inject a successful calibration result directly into onCalibrateResult (GUI thread).
     /// Bypasses the hardware-only device measurement thread — lets tests exercise the
     /// result-state machine without physical hardware.
@@ -322,6 +332,9 @@ private:
 
     // ── Export Report (P11 Phase 10 Task 1) ──────────────────────────────────
     QPushButton* exportReportBtn_ = nullptr; ///< "Export Report" toolbar button
+
+    // ── Session Index (P11 Phase 10 Task 2) ──────────────────────────────────
+    QPushButton* sessionIndexBtn_ = nullptr; ///< "Session Index" toolbar button
 
     // ── Loaded recording storage (P11 Phase 10 Task 1) ───────────────────────
     /// Samples loaded by the last successful loadRecording() call.

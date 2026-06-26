@@ -10,9 +10,9 @@
 #include "ads1292/acq/IDeviceSource.h"
 #include "ads1292/io/CsvIo.h"
 #include "ads1292/io/LiveRecordingFinalize.h"
-#include "ads1292/io/ProtocolIo.h"
-#include "ads1292/io/QualityGateIo.h"
 #include "ads1292/io/RecordingBundle.h"
+#include "ads1292/io/SessionIndexScan.h"
+#include "ads1292/index/SessionIndexRow.h"
 #ifdef ADS1292_HAVE_HDF5
 #include "ads1292/io/H5Io.h"
 #include <nlohmann/json.hpp>
@@ -229,6 +229,21 @@ MainWindow::MainWindow(QWidget* parent)
             this, "Export report to folder");
         if (dir.isEmpty()) return;
         exportReportTo(dir.toStdString());
+    });
+
+    // Session Index button: scans a recordings directory and writes index.json.
+    toolbar->addSeparator();
+    sessionIndexBtn_ = new QPushButton("Session Index", toolbar);
+    sessionIndexBtn_->setToolTip(
+        "Scan a recordings directory and write index.json.\n"
+        "Choose the root directory that contains your CSV recordings.");
+    toolbar->addWidget(sessionIndexBtn_);
+
+    connect(sessionIndexBtn_, &QPushButton::clicked, this, [this]() {
+        QString dir = QFileDialog::getExistingDirectory(
+            this, "Scan recordings directory");
+        if (dir.isEmpty()) return;
+        sessionIndexFor(dir.toStdString());
     });
 
     // ── Session metadata panel (left pane) ───────────────────────────────────
@@ -796,6 +811,21 @@ ReportExportResult MainWindow::exportReportTo(const std::string& outDir) {
         loadedMetadata_,      // implicitly wraps into std::optional<SessionMetadata>
         loadedEvents_,
         ads1292::Calibration{});
+}
+
+// ── Session Index seam (P11 Phase 10 Task 2) ─────────────────────────────────
+
+std::string MainWindow::sessionIndexFor(const std::string& dir) {
+    auto rows    = ads1292::io::scan_recording_directory(dir);
+    auto summary = ads1292::index::summarize_rows(rows);
+    auto out     = (std::filesystem::path(dir) / "index.json").string();
+    ads1292::io::write_session_index_json(out, rows, summary);
+    if (reviewEventLogPanel_) {
+        reviewEventLogPanel_->appendLine(
+            "Session index written: " + out +
+            " (" + std::to_string(static_cast<int>(rows.size())) + " rows)");
+    }
+    return out;
 }
 
 } // namespace ads1292::gui
