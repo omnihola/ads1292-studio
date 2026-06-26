@@ -15,6 +15,7 @@
 #include "ads1292/gui/SpectrumPanel.h"
 #include "ads1292/gui/QualityInfoPanel.h"
 #include "ads1292/gui/ReviewEventLogPanel.h"
+#include "ads1292/gui/SessionPanel.h"
 #include "ads1292/qt/AcquisitionWorker.h"
 #include "ads1292/qt/QSerialByteTransport.h"
 #include "ads1292/acq/IDeviceSource.h"
@@ -145,6 +146,10 @@ public:
     /// via addPointEventForTest before calling finalizeForTest.
     EventConsole* eventConsoleForTest() { return eventConsole_; }
 
+    /// Test seam: direct access to the SessionPanel so tests can set metadata
+    /// before calling finalizeForTest and verify the bundle round-trip.
+    SessionPanel* sessionPanelForTest() { return sessionPanel_; }
+
 signals:
     /// Emitted (from invokeMethod on the GUI thread) when the background finalize
     /// thread completes. Connected slot appends the line to the event log.
@@ -176,6 +181,9 @@ private:
     std::string  connectedPort_;          ///< Device path of connected port (empty = disconnected)
     bool         connecting_ = false;     ///< True while background connect thread is running
     std::thread  connectThread_;          ///< Background connect thread; joined in dtor + before respawn
+
+    // ── Session metadata panel (left pane of the central splitter) ────────────
+    SessionPanel* sessionPanel_ = nullptr;
 
     // ── Live tab widgets ───────────────────────────────────────────────────────
     LiveScope*    scope_        = nullptr;

@@ -768,3 +768,53 @@ TEST_CASE("P11P3 Task 1: unedited SessionPanel defaults match SessionMetadata{}"
   REQUIRE(sp2.metadata().montage     == "RA/LA/RL torso");
   REQUIRE(sp2.metadata().session_id.empty());
 }
+
+// ── P11 Phase 3 Task 2: SessionPanel metadata wired into the recording bundle ──
+
+TEST_CASE("P11P3 Task 2: sessionPanelForTest metadata is written into the bundle", "[gui][session]") {
+  // Strategy: construct MainWindow, set session metadata on the panel, run the
+  // synchronous finalize seam, read the produced bundle, verify metadata fields.
+  // Before the wiring, opt.metadata was SessionMetadata{} → session_id empty → fail.
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11p3_task2_meta_bundle";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  // Author a small recording
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 50; ++i) {
+    ads1292::StreamSample s;
+    s.ch2 = (i % 10 < 2) ? 300 : 0;
+    s.ch1 = 0;
+    s.timestamp = i / 500.0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+
+  ads1292::gui::MainWindow mw;
+  mw.setRecordingsDirForTest(tmp.string());
+  mw.setRecordingCsvPathForTest(csv_path);
+
+  // Verify the seam is present and returns non-null
+  REQUIRE(mw.sessionPanelForTest() != nullptr);
+
+  // Set known session metadata on the panel
+  ads1292::SessionMetadata m;
+  m.session_id = "bundle-sess";
+  m.electrode  = "MOTAC";
+  mw.sessionPanelForTest()->setMetadata(m);
+
+  // Run finalize synchronously
+  auto r = mw.finalizeForTest();
+  REQUIRE(r.wrote == true);
+  REQUIRE(std::filesystem::exists(r.bundle_path));
+
+  // Read back the bundle and verify the session metadata fields
+  auto bundle = ads1292::io::read_recording_bundle(r.bundle_path);
+  auto md = ads1292::io::metadata_from_bundle(bundle);
+  REQUIRE(md.session_id == "bundle-sess");
+  REQUIRE(md.electrode  == "MOTAC");
+
+  std::filesystem::remove_all(tmp);
+}

@@ -161,9 +161,21 @@ MainWindow::MainWindow(QWidget* parent)
         loadAndShowReview(f.toStdString());
     });
 
+    // ── Session metadata panel (left pane) ───────────────────────────────────
+    sessionPanel_ = new SessionPanel(this);
+
     // ── Central tab widget ────────────────────────────────────────────────────
     tabs_ = new QTabWidget(this);
-    setCentralWidget(tabs_);
+
+    // ── Outer horizontal splitter: [sessionPanel_ | tabs_] ───────────────────
+    // sessionPanel_ is a narrow left pane for session metadata input.
+    // tabs_ takes the remaining space (stretch 5:1 ratio).
+    auto* outerSplitter = new QSplitter(Qt::Horizontal, this);
+    outerSplitter->addWidget(sessionPanel_);
+    outerSplitter->addWidget(tabs_);
+    outerSplitter->setStretchFactor(0, 1);   // sessionPanel_: narrow
+    outerSplitter->setStretchFactor(1, 5);   // tabs_: wide
+    setCentralWidget(outerSplitter);
 
     // ── Tab 0: Live ECG ───────────────────────────────────────────────────────
     {
@@ -450,7 +462,8 @@ void MainWindow::updateLiveReadout() {
 
 ads1292::io::FinalizeOptions MainWindow::buildFinalizeOptions() const {
     ads1292::io::FinalizeOptions opt;
-    opt.metadata        = ads1292::SessionMetadata{};
+    // Read the user-entered session metadata from the panel on the GUI thread.
+    opt.metadata        = sessionPanel_->metadata();
     // Snapshot the current event log on the GUI thread (safe: called from
     // onWorkerFinished / finalizeForTest — both on the GUI thread).
     opt.events          = eventConsole_->log().events();
