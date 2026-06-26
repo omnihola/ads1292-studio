@@ -38,7 +38,26 @@ target_link_libraries(ads1292_gui_lib PUBLIC
 
 # ---------------------------------------------------------------------------
 # ads1292_gui — thin executable; all logic lives in ads1292_gui_lib.
+# On Apple, build as a MACOSX_BUNDLE (.app) with a templated Info.plist.
+# On other platforms, keep a plain executable.
 # ---------------------------------------------------------------------------
-add_executable(ads1292_gui src/main.cpp)
+if(APPLE)
+  # Make MACOSX_BUNDLE_EXECUTABLE_NAME available as a CMake variable so that
+  # the ${MACOSX_BUNDLE_EXECUTABLE_NAME} placeholder in Info.plist.in is
+  # substituted correctly during the configure/generate step.
+  set(MACOSX_BUNDLE_EXECUTABLE_NAME "ads1292_gui")
+
+  add_executable(ads1292_gui MACOSX_BUNDLE src/main.cpp)
+
+  set_target_properties(ads1292_gui PROPERTIES
+    MACOSX_BUNDLE_INFO_PLIST         "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
+    MACOSX_BUNDLE_BUNDLE_NAME        "ADS1292 Studio"
+    MACOSX_BUNDLE_GUI_IDENTIFIER     "com.ads1292studio.gui"
+    MACOSX_BUNDLE_BUNDLE_VERSION     "1.0.0"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
+    MACOSX_BUNDLE_EXECUTABLE_NAME    "ads1292_gui")
+else()
+  add_executable(ads1292_gui src/main.cpp)
+endif()
 
 target_link_libraries(ads1292_gui PRIVATE ads1292_gui_lib)
