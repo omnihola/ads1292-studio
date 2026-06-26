@@ -15,6 +15,14 @@ namespace io {
 /// Byte-identical to the object written by write_quality_gate_json.
 nlohmann::ordered_json quality_gate_to_json(const ads1292::dsp::QualityGate& gate);
 
+/// Parse a JSON object @p j into a normalized QualityGate.
+/// Uses defaults for missing/null fields; optional caps become std::nullopt when JSON null.
+ads1292::dsp::QualityGate quality_gate_from_json(const nlohmann::json& j);
+
+/// Read a quality-gate JSON file from @p path and return a normalized QualityGate.
+/// Throws std::runtime_error if the file cannot be opened or the root is not a JSON object.
+ads1292::dsp::QualityGate read_quality_gate_json(const std::string& path);
+
 /// Returns the canonical quality_gate template (all defaults: QualityGate{}).
 /// Matches Python quality_gate_template() = QualityGate().
 ads1292::dsp::QualityGate quality_gate_template();

@@ -361,19 +361,14 @@ AcquisitionProvenance AcquisitionProvenance::normalized() const {
 }
 
 // ---------------------------------------------------------------------------
-// read_acquisition_json
-// Mirrors read_acquisition_json() in acquisition.py — reads, maps allowed
-// fields, returns .normalized().
+// acquisition_from_json
+// Mirrors read_acquisition_json() in acquisition.py — maps allowed fields,
+// returns .normalized().  Factored out of read_acquisition_json for reuse
+// by RecordingBundle extractors.
 // ---------------------------------------------------------------------------
-AcquisitionProvenance read_acquisition_json(const std::string& path) {
-    std::ifstream f(path);
-    if (!f.is_open()) {
-        throw std::runtime_error("AcquisitionIo: cannot open file: " + path);
-    }
-    nlohmann::json j;
-    f >> j;
+AcquisitionProvenance acquisition_from_json(const nlohmann::json& j) {
     if (!j.is_object()) {
-        throw std::runtime_error("AcquisitionIo: root is not a JSON object in: " + path);
+        throw std::runtime_error("AcquisitionIo: root is not a JSON object");
     }
 
     AcquisitionProvenance a;
@@ -428,6 +423,22 @@ AcquisitionProvenance read_acquisition_json(const std::string& path) {
         a.completion = j["completion"];
 
     return a.normalized();
+}
+
+// ---------------------------------------------------------------------------
+// read_acquisition_json
+// ---------------------------------------------------------------------------
+AcquisitionProvenance read_acquisition_json(const std::string& path) {
+    std::ifstream f(path);
+    if (!f.is_open()) {
+        throw std::runtime_error("AcquisitionIo: cannot open file: " + path);
+    }
+    nlohmann::json j;
+    f >> j;
+    if (!j.is_object()) {
+        throw std::runtime_error("AcquisitionIo: root is not a JSON object in: " + path);
+    }
+    return acquisition_from_json(j);
 }
 
 // ---------------------------------------------------------------------------

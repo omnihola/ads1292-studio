@@ -12,6 +12,11 @@ namespace io {
 /// Byte-identical to the object written by write_calibration_json.
 nlohmann::ordered_json calibration_to_json(const ads1292::Calibration& c);
 
+/// Parse a JSON object @p j into a normalized Calibration.
+/// Unknown keys are ignored; missing keys keep struct defaults.
+/// Throws std::runtime_error if @p j is not a JSON object.
+ads1292::Calibration calibration_from_json(const nlohmann::json& j);
+
 /// Read a JSON object from @p path and return a normalized Calibration.
 /// Unknown keys are ignored; missing keys keep struct defaults.
 /// Throws std::runtime_error if the file cannot be opened or the root is not a JSON object.

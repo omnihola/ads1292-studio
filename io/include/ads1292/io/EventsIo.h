@@ -15,6 +15,12 @@ namespace io {
 nlohmann::ordered_json events_to_json(const std::vector<ads1292::EventMarker>& events,
                                       double sample_rate_hz = 500.0);
 
+/// Parse an events payload JSON value @p j into normalized EventMarkers.
+/// @p j may be an object with an "events" array (bundle/sidecar payload),
+/// or a bare array.  Each object item is parsed forgivingly.
+/// Returns an empty vector on unrecognised shapes (never throws on parse errors).
+std::vector<ads1292::EventMarker> events_from_json(const nlohmann::json& j);
+
 /// Read the events array from the JSON file at @p path.
 /// The root may be an object with an "events" array, or a bare array.
 /// Each object item is parsed forgivingly (timestamp/start/end/duration fallbacks).

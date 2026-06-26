@@ -16,6 +16,11 @@ namespace io {
 /// Byte-identical to the object written by write_protocol_json.
 nlohmann::ordered_json protocol_to_json(const ads1292::TestProtocol& p);
 
+/// Parse a JSON object @p j into a normalized TestProtocol.
+/// Unknown keys are ignored; missing keys keep struct defaults.
+/// Throws std::runtime_error if @p j is not a JSON object.
+ads1292::TestProtocol protocol_from_json(const nlohmann::json& j);
+
 /// Read a protocol JSON file from @p path and return a normalized TestProtocol.
 /// Unknown keys are ignored; missing keys keep struct defaults.
 /// Throws std::runtime_error if the file cannot be opened or the root is not a JSON object.

@@ -9,17 +9,9 @@
 namespace ads1292 {
 namespace io {
 
-ads1292::Calibration read_calibration_json(const std::string& path) {
-  std::ifstream f(path);
-  if (!f.is_open()) {
-    throw std::runtime_error("CalibrationIo: cannot open file: " + path);
-  }
-
-  nlohmann::json j;
-  f >> j;
-
+ads1292::Calibration calibration_from_json(const nlohmann::json& j) {
   if (!j.is_object()) {
-    throw std::runtime_error("CalibrationIo: root is not a JSON object in: " + path);
+    throw std::runtime_error("CalibrationIo: root is not a JSON object");
   }
 
   ads1292::Calibration c;
@@ -34,6 +26,22 @@ ads1292::Calibration read_calibration_json(const std::string& path) {
     c.label = j["label"].get<std::string>();
 
   return c.normalized();
+}
+
+ads1292::Calibration read_calibration_json(const std::string& path) {
+  std::ifstream f(path);
+  if (!f.is_open()) {
+    throw std::runtime_error("CalibrationIo: cannot open file: " + path);
+  }
+
+  nlohmann::json j;
+  f >> j;
+
+  if (!j.is_object()) {
+    throw std::runtime_error("CalibrationIo: root is not a JSON object in: " + path);
+  }
+
+  return calibration_from_json(j);
 }
 
 nlohmann::ordered_json calibration_to_json(const ads1292::Calibration& c) {

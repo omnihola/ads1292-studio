@@ -28,17 +28,9 @@ static std::string clean(const std::string& value, const std::string& fallback) 
 
 } // namespace
 
-ads1292::RecordingProcessingSettings read_processing_json(const std::string& path) {
-    std::ifstream f(path);
-    if (!f.is_open()) {
-        throw std::runtime_error("ProcessingIo: cannot open file: " + path);
-    }
-
-    nlohmann::json j;
-    f >> j;
-
+ads1292::RecordingProcessingSettings processing_from_json(const nlohmann::json& j) {
     if (!j.is_object()) {
-        throw std::runtime_error("ProcessingIo: root is not a JSON object in: " + path);
+        throw std::runtime_error("ProcessingIo: root is not a JSON object");
     }
 
     ads1292::RecordingProcessingSettings p;
@@ -86,6 +78,22 @@ ads1292::RecordingProcessingSettings read_processing_json(const std::string& pat
         p.processing_notes = j["processing_notes"].get<std::string>();
 
     return p.normalized();
+}
+
+ads1292::RecordingProcessingSettings read_processing_json(const std::string& path) {
+    std::ifstream f(path);
+    if (!f.is_open()) {
+        throw std::runtime_error("ProcessingIo: cannot open file: " + path);
+    }
+
+    nlohmann::json j;
+    f >> j;
+
+    if (!j.is_object()) {
+        throw std::runtime_error("ProcessingIo: root is not a JSON object in: " + path);
+    }
+
+    return processing_from_json(j);
 }
 
 nlohmann::ordered_json processing_to_json(const ads1292::RecordingProcessingSettings& p) {

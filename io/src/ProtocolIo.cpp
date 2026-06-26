@@ -32,17 +32,9 @@ static ads1292::ProtocolStep step_from_json(const nlohmann::json& item) {
 
 } // namespace
 
-ads1292::TestProtocol read_protocol_json(const std::string& path) {
-    std::ifstream f(path);
-    if (!f.is_open()) {
-        throw std::runtime_error("ProtocolIo: cannot open file: " + path);
-    }
-
-    nlohmann::json j;
-    f >> j;
-
+ads1292::TestProtocol protocol_from_json(const nlohmann::json& j) {
     if (!j.is_object()) {
-        throw std::runtime_error("ProtocolIo: root is not a JSON object in: " + path);
+        throw std::runtime_error("ProtocolIo: root is not a JSON object");
     }
 
     ads1292::TestProtocol p;
@@ -76,8 +68,23 @@ ads1292::TestProtocol read_protocol_json(const std::string& path) {
         }
     }
 
-    // Oracle read_protocol_json calls .normalized() on the result — match it.
     return p.normalized();
+}
+
+ads1292::TestProtocol read_protocol_json(const std::string& path) {
+    std::ifstream f(path);
+    if (!f.is_open()) {
+        throw std::runtime_error("ProtocolIo: cannot open file: " + path);
+    }
+
+    nlohmann::json j;
+    f >> j;
+
+    if (!j.is_object()) {
+        throw std::runtime_error("ProtocolIo: root is not a JSON object in: " + path);
+    }
+
+    return protocol_from_json(j);
 }
 
 nlohmann::ordered_json protocol_to_json(const ads1292::TestProtocol& p) {

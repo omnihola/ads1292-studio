@@ -24,19 +24,11 @@ double normalize_sample_rate(double sr) {
 }
 }  // namespace
 
-// ---- read_events_json ----
-std::vector<ads1292::EventMarker> read_events_json(const std::string& path) {
-  std::ifstream f(path);
-  if (!f.is_open()) {
-    throw std::runtime_error("EventsIo: cannot open file: " + path);
-  }
-
-  nlohmann::json root;
-  f >> root;
-
+// ---- events_from_json ----
+/// Parse an events payload (object with "events" array, or bare array) into EventMarkers.
+std::vector<ads1292::EventMarker> events_from_json(const nlohmann::json& root) {
   // The root may be an object with an "events" array, or a bare array.
   const nlohmann::json* arr_ptr = nullptr;
-  nlohmann::json bare;  // storage if root is already the array
 
   if (root.is_object() && root.contains("events") && root["events"].is_array()) {
     arr_ptr = &root["events"];
@@ -95,6 +87,19 @@ std::vector<ads1292::EventMarker> read_events_json(const std::string& path) {
   }
 
   return result;
+}
+
+// ---- read_events_json ----
+std::vector<ads1292::EventMarker> read_events_json(const std::string& path) {
+  std::ifstream f(path);
+  if (!f.is_open()) {
+    throw std::runtime_error("EventsIo: cannot open file: " + path);
+  }
+
+  nlohmann::json root;
+  f >> root;
+
+  return events_from_json(root);
 }
 
 // ---- events_to_json ----

@@ -2,6 +2,7 @@
 add_library(ads1292_io STATIC
   src/CsvIo.cpp
   src/Bundle.cpp
+  src/RecordingBundle.cpp
   src/ReviewHtml.cpp
   src/AcquisitionEngine.cpp
   src/MetadataIo.cpp

@@ -61,6 +61,11 @@ std::vector<CsvColumn> default_csv_columns(const std::string& mode, bool include
 /// Byte-identical to the object written by write_acquisition_json.
 nlohmann::ordered_json acquisition_to_json(const AcquisitionProvenance& a);
 
+/// Parse a JSON object @p j into a normalized AcquisitionProvenance.
+/// Unknown keys are ignored; missing keys keep struct defaults.
+/// Throws std::runtime_error if @p j is not a JSON object.
+AcquisitionProvenance acquisition_from_json(const nlohmann::json& j);
+
 /// Parse @p path, fill an AcquisitionProvenance (unknown keys ignored, missing keys keep
 /// defaults), call .normalized(), and return the result.
 /// Throws std::runtime_error if the file cannot be opened or the root is not a JSON object.

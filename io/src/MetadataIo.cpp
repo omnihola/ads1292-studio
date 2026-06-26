@@ -9,17 +9,9 @@
 namespace ads1292 {
 namespace io {
 
-ads1292::SessionMetadata read_metadata_json(const std::string& path) {
-  std::ifstream f(path);
-  if (!f.is_open()) {
-    throw std::runtime_error("MetadataIo: cannot open file: " + path);
-  }
-
-  nlohmann::json j;
-  f >> j;
-
+ads1292::SessionMetadata metadata_from_json(const nlohmann::json& j) {
   if (!j.is_object()) {
-    throw std::runtime_error("MetadataIo: root is not a JSON object in: " + path);
+    throw std::runtime_error("MetadataIo: root is not a JSON object");
   }
 
   ads1292::SessionMetadata m;
@@ -40,6 +32,22 @@ ads1292::SessionMetadata read_metadata_json(const std::string& path) {
     m.acquisition_mode = j["acquisition_mode"].get<std::string>();
 
   return m.normalized();
+}
+
+ads1292::SessionMetadata read_metadata_json(const std::string& path) {
+  std::ifstream f(path);
+  if (!f.is_open()) {
+    throw std::runtime_error("MetadataIo: cannot open file: " + path);
+  }
+
+  nlohmann::json j;
+  f >> j;
+
+  if (!j.is_object()) {
+    throw std::runtime_error("MetadataIo: root is not a JSON object in: " + path);
+  }
+
+  return metadata_from_json(j);
 }
 
 nlohmann::ordered_json metadata_to_json(const ads1292::SessionMetadata& m) {

@@ -1,6 +1,7 @@
 // io/src/QualityGateIo.cpp
-// Implements write_quality_gate_json + quality_gate_template.
-// Port of quality_gate.py: write_quality_gate_json / quality_gate_template.
+// Implements quality_gate_from_json, read_quality_gate_json,
+//   write_quality_gate_json + quality_gate_template.
+// Port of quality_gate.py.
 // No Qt; pure C++17 + nlohmann.
 #include "ads1292/io/QualityGateIo.h"
 #include <nlohmann/json.hpp>
@@ -11,6 +12,58 @@
 
 namespace ads1292 {
 namespace io {
+
+ads1292::dsp::QualityGate quality_gate_from_json(const nlohmann::json& j) {
+    // If not an object, return all-defaults (mirrors Python _mapping({}) → defaults).
+    if (!j.is_object()) {
+        return ads1292::dsp::normalized(ads1292::dsp::QualityGate{});
+    }
+
+    // Helpers mirroring Python _float_with_default and _optional_float.
+    auto float_with_default = [&](const char* key, double def) -> double {
+        if (!j.contains(key)) return def;
+        const auto& v = j[key];
+        if (v.is_null()) return def;
+        if (v.is_number()) return v.get<double>();
+        return def;
+    };
+    auto optional_float = [&](const char* key) -> std::optional<double> {
+        if (!j.contains(key)) return std::nullopt;
+        const auto& v = j[key];
+        if (v.is_null()) return std::nullopt;
+        if (v.is_number()) return v.get<double>();
+        return std::nullopt;
+    };
+
+    ads1292::dsp::QualityGate g;
+    g.min_duration_seconds    = float_with_default("min_duration_seconds",   8.0);
+    g.min_contact_ok_percent  = float_with_default("min_contact_ok_percent", 95.0);
+    g.min_r_peaks             = static_cast<int>(float_with_default("min_r_peaks", 5.0));
+    g.min_hr_bpm              = float_with_default("min_hr_bpm",  35.0);
+    g.max_hr_bpm              = float_with_default("max_hr_bpm", 180.0);
+    // require_qrs_clear: bool, default true
+    if (j.contains("require_qrs_clear") && j["require_qrs_clear"].is_boolean())
+        g.require_qrs_clear = j["require_qrs_clear"].get<bool>();
+    else
+        g.require_qrs_clear = true;
+    g.max_baseline_drift_counts = optional_float("max_baseline_drift_counts");
+    g.max_noise_rms_counts      = optional_float("max_noise_rms_counts");
+    g.max_peak_to_peak_counts   = optional_float("max_peak_to_peak_counts");
+    return ads1292::dsp::normalized(g);
+}
+
+ads1292::dsp::QualityGate read_quality_gate_json(const std::string& path) {
+    std::ifstream f(path);
+    if (!f.is_open()) {
+        throw std::runtime_error("QualityGateIo: cannot open file: " + path);
+    }
+    nlohmann::json j;
+    f >> j;
+    if (!j.is_object()) {
+        throw std::runtime_error("QualityGateIo: root is not a JSON object in: " + path);
+    }
+    return quality_gate_from_json(j);
+}
 
 ads1292::dsp::QualityGate quality_gate_template() {
     return ads1292::dsp::QualityGate{};  // all defaults match Python QualityGate()

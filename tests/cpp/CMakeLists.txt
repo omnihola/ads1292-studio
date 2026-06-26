@@ -56,7 +56,8 @@ add_executable(ads1292_tests
   test_devcli.cpp
   test_sidecar_repair.cpp
   test_stats.cpp
-  test_csv_io.cpp)
+  test_csv_io.cpp
+  test_recording_bundle.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 

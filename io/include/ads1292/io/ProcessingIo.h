@@ -16,6 +16,11 @@ namespace io {
 /// Byte-identical to the object written by write_processing_json.
 nlohmann::ordered_json processing_to_json(const ads1292::RecordingProcessingSettings& p);
 
+/// Parse a JSON object @p j into a normalized RecordingProcessingSettings.
+/// Unknown keys are ignored; missing keys keep struct defaults.
+/// Throws std::runtime_error if @p j is not a JSON object.
+ads1292::RecordingProcessingSettings processing_from_json(const nlohmann::json& j);
+
 /// Read a processing JSON file from @p path and return a normalized RecordingProcessingSettings.
 /// Unknown keys are ignored; missing keys keep struct defaults.
 /// Throws std::runtime_error if the file cannot be opened or the root is not a JSON object.
