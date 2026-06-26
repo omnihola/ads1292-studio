@@ -13,6 +13,7 @@ set -euo pipefail
 APP="${1:-build/gui/ads1292_gui.app}"
 EXE="$APP/Contents/MacOS/ads1292_gui"
 FRAMEWORKS="$APP/Contents/Frameworks"
+MACDEPLOYQT="${MACDEPLOYQT:-/opt/homebrew/opt/qt/bin/macdeployqt}"
 
 echo "==> deploy_macos.sh"
 echo "    APP: $APP"
@@ -31,7 +32,7 @@ fi
 # It does NOT handle non-Qt dylibs (e.g. HDF5).
 # ---------------------------------------------------------------------------
 echo "==> Step 1: Running macdeployqt..."
-/opt/homebrew/opt/qt/bin/macdeployqt "$APP" -verbose=1
+"$MACDEPLOYQT" "$APP" -verbose=1
 echo ""
 
 # ---------------------------------------------------------------------------
@@ -45,7 +46,6 @@ echo ""
 # always use the exact same Qt version that was used to build the app.
 # ---------------------------------------------------------------------------
 echo "==> Step 1b: Adding offscreen platform plugin (for smoke test)..."
-MACDEPLOYQT="/opt/homebrew/opt/qt/bin/macdeployqt"
 QT_PREFIX="$(dirname "$(dirname "$MACDEPLOYQT")")"   # /opt/homebrew/opt/qt
 OFFSCREEN_SRC="$QT_PREFIX/share/qt/plugins/platforms/libqoffscreen.dylib"
 
@@ -161,33 +161,26 @@ done
 # The script fails (exit 1) if any bundled binary still references
 # /opt/homebrew. Every dynamic dep must be @rpath, @executable_path,
 # @loader_path, or a system /usr/lib / /System path.
+#
+# Scans the ENTIRE .app bundle: Contents/MacOS/*, Contents/Frameworks/*.dylib,
+# and Contents/PlugIns/**/*.dylib (including platform, imageformat, etc.).
 # ---------------------------------------------------------------------------
 echo ""
 echo "==> Step 3: Self-containment check..."
-FAIL=0
-
-if otool -L "$EXE" | grep -q '/opt/homebrew'; then
-    echo "FAIL: Residual /opt/homebrew dep in executable:"
-    otool -L "$EXE" | grep '/opt/homebrew'
-    FAIL=1
-fi
-
-for dylib in "$FRAMEWORKS"/*.dylib; do
-    [[ -f "$dylib" ]] || continue
-    if otool -L "$dylib" | grep -q '/opt/homebrew'; then
-        echo "FAIL: Residual /opt/homebrew dep in $(basename "$dylib"):"
-        otool -L "$dylib" | grep '/opt/homebrew'
-        FAIL=1
+RESIDUAL=0
+while IFS= read -r bin; do
+    if otool -L "$bin" 2>/dev/null | grep -q "/opt/homebrew"; then
+        echo "FAIL: residual /opt/homebrew dep in $bin"
+        otool -L "$bin" | grep "/opt/homebrew"
+        RESIDUAL=1
     fi
-done
-
-if [[ $FAIL -ne 0 ]]; then
+done < <(find "$APP" -type f \( -name '*.dylib' -o -path '*/Contents/MacOS/*' \))
+if [ "$RESIDUAL" -ne 0 ]; then
     echo ""
-    echo "Self-containment: FAIL"
+    echo "self-containment: FAIL"
     exit 1
 fi
-
-echo "Self-containment: PASS (no /opt/homebrew references in any bundled binary)"
+echo "self-containment: PASS (no /opt/homebrew in any bundled binary)"
 
 # ---------------------------------------------------------------------------
 # Step 4: Smoke test — launch the bundled executable with --smoke flag.
@@ -196,12 +189,12 @@ echo "Self-containment: PASS (no /opt/homebrew references in any bundled binary)
 # ---------------------------------------------------------------------------
 echo ""
 echo "==> Step 4: Smoke test (offscreen)..."
+set +e
 QT_QPA_PLATFORM=offscreen "$EXE" --smoke
 smoke_exit=$?
-if [[ $smoke_exit -ne 0 ]]; then
+set -e
+if [ "$smoke_exit" -ne 0 ]; then
     echo "FAIL: smoke test exited $smoke_exit"
     exit 1
 fi
-
-echo ""
-echo "==> self-contained: PASS, smoke exit=0"
+echo "smoke: PASS (exit 0)"
