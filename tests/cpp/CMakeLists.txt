@@ -58,7 +58,8 @@ add_executable(ads1292_tests
   test_stats.cpp
   test_csv_io.cpp
   test_recording_bundle.cpp
-  test_zip_store.cpp)
+  test_zip_store.cpp
+  test_xlsx_io.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 
