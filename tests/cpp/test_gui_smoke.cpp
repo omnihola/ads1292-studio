@@ -303,3 +303,49 @@ TEST_CASE("MainWindow finalizeForTest writes bundle from pre-authored CSV (synch
 
   std::filesystem::remove_all(tmp);
 }
+
+// ── P11 Task 3: save-format checkboxes + recording-state surfacing ─────────────
+
+TEST_CASE("MainWindow save-format checkboxes: default state and H5 opt propagation", "[gui][recording]") {
+  ensureApp();
+  ads1292::gui::MainWindow win;
+
+  // Both checkboxes must be wired (Task 3)
+  REQUIRE(win.saveCheckboxesPresentForTest());
+
+  // HDF5 is checked by default; CSV is present (always-on / informational)
+  REQUIRE(win.saveH5EnabledForTest());
+
+  // Verify H5 opt propagation via the synchronous finalize seam:
+  // pre-author a small CSV, inject it, and check that toggling H5 off
+  // causes finalize to return an empty h5_path.
+  auto tmp = std::filesystem::temp_directory_path() / "p11_t3_h5check";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 20; ++i) {
+    ads1292::StreamSample s; s.ch2 = 100; s.ch1 = 0; s.timestamp = i / 500.0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+  win.setRecordingCsvPathForTest(csv_path);
+
+  // With H5 on (default) the bundle must exist
+  auto r_on = win.finalizeForTest();
+  REQUIRE(r_on.wrote);
+  REQUIRE(std::filesystem::exists(r_on.bundle_path));
+
+  // Toggle H5 off: h5_path must be empty (write_h5=false → no HDF5 written)
+  win.setSaveH5ForTest(false);
+  REQUIRE_FALSE(win.saveH5EnabledForTest());
+  auto r_off = win.finalizeForTest();
+  REQUIRE(r_off.wrote);
+  REQUIRE(r_off.h5_path.empty());
+
+  // Restore default and verify
+  win.setSaveH5ForTest(true);
+  REQUIRE(win.saveH5EnabledForTest());
+
+  std::filesystem::remove_all(tmp);
+}

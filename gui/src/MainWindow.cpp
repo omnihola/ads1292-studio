@@ -119,6 +119,21 @@ MainWindow::MainWindow(QWidget* parent)
         scope_->setFilterSettings(filter_);
     });
 
+    // Save-format checkboxes
+    toolbar->addSeparator();
+    toolbar->addWidget(new QLabel("Save:", toolbar));
+
+    saveCsvCheck_ = new QCheckBox("CSV", toolbar);
+    saveCsvCheck_->setChecked(true);
+    saveCsvCheck_->setEnabled(false);   // CSV is always written; informational only
+    saveCsvCheck_->setToolTip("CSV is always written by the acquisition engine");
+    toolbar->addWidget(saveCsvCheck_);
+
+    saveH5Check_ = new QCheckBox("HDF5", toolbar);
+    saveH5Check_->setChecked(true);
+    saveH5Check_->setToolTip("Write HDF5 bundle alongside the CSV on Stop");
+    toolbar->addWidget(saveH5Check_);
+
     // ── Central tab widget ────────────────────────────────────────────────────
     tabs_ = new QTabWidget(this);
     setCentralWidget(tabs_);
@@ -224,6 +239,10 @@ MainWindow::MainWindow(QWidget* parent)
 
         state_.recordingState = "recording";
         statusPanel_->updateFromState(state_);
+
+        // Disable save-format checkboxes while recording is in progress
+        // so the user cannot toggle them mid-acquisition.
+        if (saveH5Check_) saveH5Check_->setEnabled(false);
     });
 
     connect(stopBtn, &QPushButton::clicked, this, [this, startBtn, stopBtn]() {
@@ -240,6 +259,8 @@ MainWindow::MainWindow(QWidget* parent)
     connect(this, &MainWindow::finalizeLogged, this, [this](QString l) {
         reviewEventLogPanel_->appendLine(l.toStdString());
         statusPanel_->updateFromState(state_);
+        // Re-enable save-format checkboxes now that we are idle.
+        if (saveH5Check_) saveH5Check_->setEnabled(true);
     });
 
     // ── Tick timer (live tab only) ────────────────────────────────────────────
@@ -312,6 +333,8 @@ void MainWindow::onWorkerFinished(int sampleCount) {
         reviewEventLogPanel_->appendLine("empty capture — nothing saved");
         state_.recordingState = "idle";
         statusPanel_->updateFromState(state_);
+        // Re-enable save-format checkboxes: nothing was recorded, back to idle.
+        if (saveH5Check_) saveH5Check_->setEnabled(true);
         return;
     }
 

@@ -23,7 +23,7 @@
 // Forward-declare IWaveformPlot so we don't pull in the backend header here.
 namespace ads1292::gui { class IWaveformPlot; }
 
-class QCheckBox;
+#include <QCheckBox>
 class QTabWidget;
 
 namespace ads1292::gui {
@@ -51,6 +51,19 @@ public:
 
     /// Returns true if a recording has been successfully loaded into the review panels.
     bool reviewLoadedForTest() const { return review_loaded_; }
+
+    // ── Save-format checkbox test seams ───────────────────────────────────────
+
+    /// True iff the HDF5 save checkbox is present and checked (default: true).
+    bool saveH5EnabledForTest() const { return saveH5Check_ && saveH5Check_->isChecked(); }
+
+    /// True iff both save-format checkboxes were wired (Task 3).
+    bool saveCheckboxesPresentForTest() const {
+        return saveH5Check_ != nullptr && saveCsvCheck_ != nullptr;
+    }
+
+    /// Set the HDF5 save checkbox state; propagates into the next buildFinalizeOptions call.
+    void setSaveH5ForTest(bool on) { if (saveH5Check_) saveH5Check_->setChecked(on); }
 
     // ── Recording persistence test seams ──────────────────────────────────────
 
