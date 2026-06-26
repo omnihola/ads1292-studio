@@ -1,6 +1,7 @@
 // gui/src/MainWindow.cpp
 #include "ads1292/gui/MainWindow.h"
 #include "ads1292/gui/QCustomPlotWaveform.h"   // concrete review waveform backend
+#include "ads1292/gui/Preferences.h"
 #include "ads1292/gui/ReportExport.h"
 #include "ads1292/gui/RecordingPaths.h"
 #include "ads1292/qt/AdsPorts.h"
@@ -24,14 +25,18 @@
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QVariant>
 #include <QDockWidget>
 #include <QFileDialog>
 #include <QHBoxLayout>
+#include <QKeySequence>
 #include <QLabel>
 #include <QMetaObject>
 #include <QPushButton>
+#include <QSettings>
+#include <QShortcut>
 #include <QSplitter>
 #include <QTabWidget>
 #include <QToolBar>
@@ -71,12 +76,12 @@ MainWindow::MainWindow(QWidget* parent)
 
     toolbar->addSeparator();
 
-    // Mode
-    auto* modeCombo = new QComboBox(toolbar);
-    modeCombo->addItem("Live");
-    modeCombo->addItem("Raw");
+    // Mode (promoted to member modeCombo_ for QSettings restore)
+    modeCombo_ = new QComboBox(toolbar);
+    modeCombo_->addItem("Live");
+    modeCombo_->addItem("Raw");
     toolbar->addWidget(new QLabel("Mode:", toolbar));
-    toolbar->addWidget(modeCombo);
+    toolbar->addWidget(modeCombo_);
 
     toolbar->addSeparator();
 
@@ -88,12 +93,12 @@ MainWindow::MainWindow(QWidget* parent)
 
     toolbar->addSeparator();
 
-    // Display controls
+    // Display controls (winCombo_ promoted to member for QSettings restore)
     toolbar->addWidget(new QLabel("Window:", toolbar));
-    auto* winCombo = new QComboBox(toolbar);
-    winCombo->addItems({"4 s", "8 s", "16 s", "30 s"});
-    winCombo->setCurrentIndex(1);  // default 8 s
-    toolbar->addWidget(winCombo);
+    winCombo_ = new QComboBox(toolbar);
+    winCombo_->addItems({"4 s", "8 s", "16 s", "30 s"});
+    winCombo_->setCurrentIndex(1);  // default 8 s
+    toolbar->addWidget(winCombo_);
 
     auto* autoscaleBox = new QCheckBox("Autoscale", toolbar);
     autoscaleBox->setChecked(true);
@@ -325,8 +330,8 @@ MainWindow::MainWindow(QWidget* parent)
     }
 
     // ── Wire toolbar actions ──────────────────────────────────────────────────
-    connect(winCombo, &QComboBox::currentIndexChanged, this, [this, winCombo](int) {
-        QString text = winCombo->currentText();
+    connect(winCombo_, &QComboBox::currentIndexChanged, this, [this](int) {
+        QString text = winCombo_->currentText();
         double secs = text.split(' ').first().toDouble();
         if (secs > 0.0) scope_->setWindowSeconds(secs);
     });
@@ -336,10 +341,10 @@ MainWindow::MainWindow(QWidget* parent)
     });
 
     connect(startBtn_, &QPushButton::clicked, this,
-            [this, modeCombo]() {
+            [this]() {
         streaming_ = true; refreshControls();
 
-        auto mode = (modeCombo->currentIndex() == 0)
+        auto mode = (modeCombo_->currentIndex() == 0)
                     ? ads1292::acq::AcquisitionMode::Live
                     : ads1292::acq::AcquisitionMode::Raw;
         const std::string modeStr =
@@ -470,6 +475,32 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Apply the initial control-gating matrix (streaming_ = false, connecting_ = false → idle).
     refreshControls();
+
+    // ── Keyboard shortcuts (P11 Phase 12 Task 2) ──────────────────────────────
+    // Space: toggle Start/Stop, respecting the gating matrix.
+    new QShortcut(QKeySequence(Qt::Key_Space), this, [this] {
+        if (streaming_) {
+            if (stopBtn_) stopBtn_->click();
+        } else if (startBtn_ && startBtn_->isEnabled()) {
+            startBtn_->click();
+        }
+    });
+    // Ctrl+R: refresh the port combo.
+    new QShortcut(QKeySequence(QStringLiteral("Ctrl+R")), this, [this] {
+        refreshPorts();
+    });
+
+    // ── QSettings restore (P11 Phase 12 Task 2) ───────────────────────────────
+    // Guard: only apply if there are saved keys (first run → keep widget defaults).
+    {
+        QSettings s(QStringLiteral("ADS1292Studio"), QStringLiteral("ads1292-studio"));
+        if (!s.allKeys().isEmpty()) {
+            std::map<std::string, std::string> m;
+            for (const auto& key : s.allKeys())
+                m[key.toStdString()] = s.value(key).toString().toStdString();
+            applyPreferences(Preferences::from_map(m));
+        }
+    }
 }
 
 MainWindow::~MainWindow() {
@@ -492,6 +523,65 @@ MainWindow::~MainWindow() {
     if (calibrateThread_.joinable()) {
         calibrateThread_.join();
     }
+}
+
+// ── QSettings save (P11 Phase 12 Task 2) ─────────────────────────────────────
+
+void MainWindow::closeEvent(QCloseEvent* event) {
+    // Save preferences when the window is actually closed by the user (or code calling close()).
+    // Putting the save here (not in the dtor) ensures test objects that are simply
+    // constructed and destroyed in unit tests do NOT write to the global QSettings store,
+    // keeping the test suite isolated from persistent app state.
+    {
+        QSettings s(QStringLiteral("ADS1292Studio"), QStringLiteral("ads1292-studio"));
+        for (const auto& [k, v] : currentPreferences().to_map())
+            s.setValue(QString::fromStdString(k), QString::fromStdString(v));
+    }
+    QMainWindow::closeEvent(event);
+}
+
+// ── Preferences seams (P11 Phase 12 Task 2) ──────────────────────────────────
+
+Preferences MainWindow::currentPreferences() const {
+    Preferences p;
+    // Port: stored as userData (raw device path). The "(no port)" item has no userData
+    // → currentData() returns an invalid QVariant → toString() returns "" → p.port = "".
+    if (portCombo_) {
+        p.port = portCombo_->currentData().toString().toStdString();
+    }
+    // Mode: the combo text is the canonical mode string ("Live" or "Raw").
+    p.mode   = modeCombo_ ? modeCombo_->currentText().toStdString() : "Live";
+    p.save_h5   = saveH5Check_   && saveH5Check_->isChecked();
+    p.save_xlsx = saveXlsxCheck_ && saveXlsxCheck_->isChecked();
+    p.save_csv  = true;  // CSV is always written; informational
+    p.window = winCombo_ ? winCombo_->currentText().toStdString() : "8 s";
+    // gain/speed: no GUI combos in this build — keep struct defaults (pass-through).
+    return p;
+}
+
+void MainWindow::applyPreferences(const Preferences& p) {
+    if (saveH5Check_)   saveH5Check_->setChecked(p.save_h5);
+    if (saveXlsxCheck_) saveXlsxCheck_->setChecked(p.save_xlsx);
+
+    if (modeCombo_) {
+        int i = modeCombo_->findText(QString::fromStdString(p.mode));
+        if (i >= 0) modeCombo_->setCurrentIndex(i);
+    }
+    if (winCombo_) {
+        int i = winCombo_->findText(QString::fromStdString(p.window));
+        if (i >= 0) winCombo_->setCurrentIndex(i);
+    }
+    if (portCombo_ && !p.port.empty()) {
+        // Try to find by userData (raw device path stored at refreshPorts time).
+        int i = portCombo_->findData(QVariant(QString::fromStdString(p.port)));
+        if (i >= 0) {
+            portCombo_->setCurrentIndex(i);
+        }
+        // If not found (port no longer present), leave the current selection as-is.
+    }
+
+    // Propagate any gating changes that result from the applied state.
+    refreshControls();
 }
 
 void MainWindow::refreshPorts() {

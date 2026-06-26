@@ -1,11 +1,14 @@
 // gui/include/ads1292/gui/MainWindow.h
 #pragma once
+#include <QCloseEvent>
 #include <QMainWindow>
 #include <QTimer>
 #include <QString>
 #include <memory>
 #include <string>
 #include <thread>
+
+#include "ads1292/gui/Preferences.h"
 
 #include "ads1292/gui/LiveScope.h"
 #include "ads1292/gui/StatusPanel.h"
@@ -43,6 +46,12 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
 
+protected:
+    /// Saves preferences to QSettings when the window is closed (real app close only;
+    /// test objects destroyed via dtor do NOT trigger this and do NOT pollute QSettings).
+    void closeEvent(QCloseEvent* event) override;
+
+public:
     /// Synchronous smoke/test helper: run simulator for streamBatches batches,
     /// drain the live queue into the scope, return the count drained.
     int runSimulatorToCompletion(int streamBatches);
@@ -71,6 +80,17 @@ public:
     /// after the QFileDialog returns a path. Calling this directly in tests avoids
     /// driving the modal QFileDialog (which cannot be driven offscreen).
     void loadAndShowReview(const std::string& path);
+
+    // ── Preferences persistence seams (P11 Phase 12 Task 2) ──────────────────
+
+    /// Read the current widget states into a Preferences struct.
+    /// Public seam: tests can call applyPreferences(p) then currentPreferences()
+    /// to round-trip widget state without touching the global QSettings store.
+    Preferences currentPreferences() const;
+
+    /// Apply a Preferences struct to the widgets (save checkboxes, mode/window
+    /// combos, port combo). Calls refreshControls() after applying.
+    void applyPreferences(const Preferences& p);
 
     /// Returns true if a recording has been successfully loaded into the review panels.
     bool reviewLoadedForTest() const { return review_loaded_; }
@@ -248,6 +268,10 @@ private:
     QComboBox*   portCombo_   = nullptr;  ///< Port selection combo
     QPushButton* refreshBtn_  = nullptr;  ///< Refresh button
     QPushButton* connectBtn_  = nullptr;  ///< Connect button
+
+    // ── Toolbar mode/window combos (P11 Phase 12 Task 2: promoted from locals) ─
+    QComboBox*   modeCombo_   = nullptr;  ///< Acquisition mode combo (Live/Raw)
+    QComboBox*   winCombo_    = nullptr;  ///< Display window combo (4 s/8 s/…)
 
     // ── Connect state (P11 Phase 4 Task 2) ────────────────────────────────────
     std::string  connectedPort_;          ///< Device path of connected port (empty = disconnected)

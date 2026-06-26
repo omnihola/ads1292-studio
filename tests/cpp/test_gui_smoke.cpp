@@ -1205,6 +1205,53 @@ TEST_CASE("P11.10 Task 2: Session Index button is present after construction", "
   REQUIRE(mw.sessionIndexButtonPresentForTest());
 }
 
+// ── P11 Phase 12 Task 2: Preferences seams + keyboard shortcuts ───────────────
+
+#include "ads1292/gui/Preferences.h"
+#include <QSettings>
+#include <QShortcut>
+
+TEST_CASE("P11.12 Task 2: applyPreferences/currentPreferences round-trip via widget seams", "[gui][prefs]") {
+  // This test exercises the seams WITHOUT touching the global QSettings store.
+  // applyPreferences sets the toolbar widgets; currentPreferences reads them back.
+  // The MainWindow dtor does NOT save to QSettings (save is in closeEvent only),
+  // so this test cannot contaminate the QSettings store for subsequent tests.
+  ensureApp();
+
+  // Guard: clear any leftover QSettings that might affect ctor restore on this machine.
+  // This ensures the test is deterministic even after accidental contamination.
+  { QSettings guard(QStringLiteral("ADS1292Studio"), QStringLiteral("ads1292-studio"));
+    guard.clear(); guard.sync(); }
+
+  ads1292::gui::MainWindow mw;
+
+  ads1292::gui::Preferences p;
+  p.save_h5   = false;   // default is true — toggle it
+  p.save_xlsx = true;    // default is false — toggle it
+  p.window    = "4 s";   // exists in the combo (default is "8 s")
+  p.mode      = "Raw";   // exists in the combo ("Live" and "Raw")
+
+  mw.applyPreferences(p);
+  auto got = mw.currentPreferences();
+
+  REQUIRE_FALSE(got.save_h5);
+  REQUIRE(got.save_xlsx);
+  REQUIRE(got.window == "4 s");
+  REQUIRE(got.mode   == "Raw");
+
+  // Post-test cleanup: clear QSettings so the non-default state (save_h5=false) set
+  // by this test cannot interfere with any other tests that check default widget state.
+  { QSettings cleanup(QStringLiteral("ADS1292Studio"), QStringLiteral("ads1292-studio"));
+    cleanup.clear(); cleanup.sync(); }
+}
+
+TEST_CASE("P11.12 Task 2: Space and Ctrl+R keyboard shortcuts are registered", "[gui][prefs]") {
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+  // Both QShortcuts (Space + Ctrl+R) must be children of the MainWindow.
+  REQUIRE(mw.findChildren<QShortcut*>().size() >= 2);
+}
+
 TEST_CASE("P11.10 Task 2: sessionIndexFor writes index.json with >= 1 row", "[gui][index]") {
   // Strategy: build a temp dir with a recording CSV; call sessionIndexFor (the testable
   // seam — bypasses the modal QFileDialog); verify index.json is written and contains
