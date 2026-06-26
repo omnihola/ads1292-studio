@@ -56,6 +56,7 @@ add_executable(ads1292_tests
   test_devcli.cpp
   test_sidecar_repair.cpp
   test_stats.cpp
+  test_live_calibration.cpp
   test_csv_io.cpp
   test_recording_bundle.cpp
   test_zip_store.cpp
