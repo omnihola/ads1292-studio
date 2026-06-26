@@ -36,15 +36,18 @@ ads1292::Calibration read_calibration_json(const std::string& path) {
   return c.normalized();
 }
 
-void write_calibration_json(const std::string& path, const ads1292::Calibration& c) {
+nlohmann::ordered_json calibration_to_json(const ads1292::Calibration& c) {
   auto n = c.normalized();
-
-  // Use ordered_json to preserve field order in output.
   nlohmann::ordered_json j;
   j["vref_mv"]  = n.vref_mv;
   j["pga_gain"] = n.pga_gain;
   j["adc_bits"] = n.adc_bits;
   j["label"]    = n.label;
+  return j;
+}
+
+void write_calibration_json(const std::string& path, const ads1292::Calibration& c) {
+  auto j = calibration_to_json(c);
 
   // Create parent directories if needed.
   auto parent = std::filesystem::path(path).parent_path();

@@ -42,10 +42,8 @@ ads1292::SessionMetadata read_metadata_json(const std::string& path) {
   return m.normalized();
 }
 
-void write_metadata_json(const std::string& path, const ads1292::SessionMetadata& m) {
+nlohmann::ordered_json metadata_to_json(const ads1292::SessionMetadata& m) {
   auto n = m.normalized();
-
-  // Use ordered_json to preserve field order in output.
   nlohmann::ordered_json j;
   j["session_id"]       = n.session_id;
   j["subject_id"]       = n.subject_id;
@@ -54,6 +52,11 @@ void write_metadata_json(const std::string& path, const ads1292::SessionMetadata
   j["operator"]         = n.operator_;  // field operator_ → JSON key "operator"
   j["notes"]            = n.notes;
   j["acquisition_mode"] = n.acquisition_mode;
+  return j;
+}
+
+void write_metadata_json(const std::string& path, const ads1292::SessionMetadata& m) {
+  auto j = metadata_to_json(m);
 
   // Create parent directories if needed.
   auto parent = std::filesystem::path(path).parent_path();

@@ -97,10 +97,9 @@ std::vector<ads1292::EventMarker> read_events_json(const std::string& path) {
   return result;
 }
 
-// ---- write_events_json ----
-void write_events_json(const std::string& path,
-                       const std::vector<ads1292::EventMarker>& events,
-                       double sample_rate_hz) {
+// ---- events_to_json ----
+nlohmann::ordered_json events_to_json(const std::vector<ads1292::EventMarker>& events,
+                                      double sample_rate_hz) {
   double sr = normalize_sample_rate(sample_rate_hz);
 
   // Build the events array.
@@ -132,6 +131,14 @@ void write_events_json(const std::string& path,
   payload["sample_rate_hz"]         = sr;
   payload["sample_index_reference"] = EVENT_SAMPLE_INDEX_REFERENCE;
   payload["events"]                 = std::move(events_arr);
+  return payload;
+}
+
+// ---- write_events_json ----
+void write_events_json(const std::string& path,
+                       const std::vector<ads1292::EventMarker>& events,
+                       double sample_rate_hz) {
+  auto payload = events_to_json(events, sample_rate_hz);
 
   // Create parent directories if needed.
   auto parent = std::filesystem::path(path).parent_path();

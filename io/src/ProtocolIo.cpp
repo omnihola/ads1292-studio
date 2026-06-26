@@ -80,14 +80,8 @@ ads1292::TestProtocol read_protocol_json(const std::string& path) {
     return p.normalized();
 }
 
-void write_protocol_json(const std::string& path, const ads1292::TestProtocol& p) {
+nlohmann::ordered_json protocol_to_json(const ads1292::TestProtocol& p) {
     const auto n = p.normalized();
-
-    // Use ordered_json to preserve field order in output.
-    nlohmann::ordered_json j;
-    j["name"]                  = n.name;
-    j["objective"]             = n.objective;
-    j["operator_instructions"] = n.operator_instructions;
 
     nlohmann::ordered_json steps = nlohmann::ordered_json::array();
     for (const auto& s : n.steps) {
@@ -98,8 +92,18 @@ void write_protocol_json(const std::string& path, const ads1292::TestProtocol& p
         step["instruction"]      = s.instruction;
         steps.push_back(step);
     }
-    j["steps"]            = steps;
-    j["acceptance_notes"] = n.acceptance_notes;
+
+    nlohmann::ordered_json j;
+    j["name"]                  = n.name;
+    j["objective"]             = n.objective;
+    j["operator_instructions"] = n.operator_instructions;
+    j["steps"]                 = steps;
+    j["acceptance_notes"]      = n.acceptance_notes;
+    return j;
+}
+
+void write_protocol_json(const std::string& path, const ads1292::TestProtocol& p) {
+    auto j = protocol_to_json(p);
 
     // Create parent directories if needed.
     const auto parent = std::filesystem::path(path).parent_path();

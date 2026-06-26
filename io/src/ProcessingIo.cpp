@@ -88,10 +88,9 @@ ads1292::RecordingProcessingSettings read_processing_json(const std::string& pat
     return p.normalized();
 }
 
-void write_processing_json(const std::string& path, const ads1292::RecordingProcessingSettings& p) {
+nlohmann::ordered_json processing_to_json(const ads1292::RecordingProcessingSettings& p) {
     const auto n = p.normalized();
 
-    // Use ordered_json to preserve field order in output.
     nlohmann::ordered_json j;
     j["schema"] = n.schema;
 
@@ -113,10 +112,15 @@ void write_processing_json(const std::string& path, const ads1292::RecordingProc
     sf["lowpass_hz"]        = n.software_filters.lowpass_hz;
     j["software_filters"] = sf;
 
-    j["sample_rate_hz"]     = n.sample_rate_hz;
-    j["ecg_inverted"]       = n.ecg_inverted;
-    j["smoothing_window"]   = n.smoothing_window;
-    j["processing_notes"]   = n.processing_notes;
+    j["sample_rate_hz"]   = n.sample_rate_hz;
+    j["ecg_inverted"]     = n.ecg_inverted;
+    j["smoothing_window"] = n.smoothing_window;
+    j["processing_notes"] = n.processing_notes;
+    return j;
+}
+
+void write_processing_json(const std::string& path, const ads1292::RecordingProcessingSettings& p) {
+    auto j = processing_to_json(p);
 
     // Create parent directories if needed.
     const auto parent = std::filesystem::path(path).parent_path();

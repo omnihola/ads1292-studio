@@ -431,11 +431,11 @@ AcquisitionProvenance read_acquisition_json(const std::string& path) {
 }
 
 // ---------------------------------------------------------------------------
-// write_acquisition_json
-// Writes a.normalized() with the 14 keys in field order (mirrors asdict order
+// acquisition_to_json
+// Serialises a.normalized() with keys in field order (mirrors asdict order
 // from acquisition.py).
 // ---------------------------------------------------------------------------
-void write_acquisition_json(const std::string& path, const AcquisitionProvenance& a) {
+nlohmann::ordered_json acquisition_to_json(const AcquisitionProvenance& a) {
     const AcquisitionProvenance n = a.normalized();
 
     nlohmann::ordered_json j;
@@ -448,7 +448,7 @@ void write_acquisition_json(const std::string& path, const AcquisitionProvenance
     j["started_at"]          = n.started_at;
     j["timestamp_reference"] = n.timestamp_reference;
 
-    // channel_map: object
+    // channel_map: object (std::map iterates in key-sorted order)
     nlohmann::ordered_json ch_map = nlohmann::ordered_json::object();
     for (const auto& kv : n.channel_map) {
         ch_map[kv.first] = kv.second;
@@ -468,6 +468,14 @@ void write_acquisition_json(const std::string& path, const AcquisitionProvenance
     j["raw_adc"]          = n.raw_adc;
     j["live_calibration"] = n.live_calibration;
     j["completion"]       = n.completion;
+    return j;
+}
+
+// ---------------------------------------------------------------------------
+// write_acquisition_json
+// ---------------------------------------------------------------------------
+void write_acquisition_json(const std::string& path, const AcquisitionProvenance& a) {
+    auto j = acquisition_to_json(a);
 
     // Create parent directories if needed.
     const auto parent = std::filesystem::path(path).parent_path();

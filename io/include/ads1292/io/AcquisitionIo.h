@@ -54,6 +54,13 @@ std::map<std::string, std::string> default_channel_map();
 /// Mirrors default_csv_columns(acquisition_mode, include_live_calibration) in acquisition.py.
 std::vector<CsvColumn> default_csv_columns(const std::string& mode, bool include_live_calibration = false);
 
+/// Return the ordered JSON provenance object for @p a (after normalizing).
+/// Keys in order: schema, csv_name, csv_schema, acquisition_mode, port, sample_rate_hz,
+/// started_at, timestamp_reference, channel_map, csv_columns, raw_adc,
+/// live_calibration, completion.
+/// Byte-identical to the object written by write_acquisition_json.
+nlohmann::ordered_json acquisition_to_json(const AcquisitionProvenance& a);
+
 /// Parse @p path, fill an AcquisitionProvenance (unknown keys ignored, missing keys keep
 /// defaults), call .normalized(), and return the result.
 /// Throws std::runtime_error if the file cannot be opened or the root is not a JSON object.

@@ -16,11 +16,10 @@ ads1292::dsp::QualityGate quality_gate_template() {
     return ads1292::dsp::QualityGate{};  // all defaults match Python QualityGate()
 }
 
-void write_quality_gate_json(const std::string& path, const ads1292::dsp::QualityGate& gate) {
+nlohmann::ordered_json quality_gate_to_json(const ads1292::dsp::QualityGate& gate) {
     // Normalize first, matching Python gate.normalized() call in write_quality_gate_json.
     const auto n = ads1292::dsp::normalized(gate);
 
-    // Use ordered_json to preserve key order as specified.
     nlohmann::ordered_json j;
     j["min_duration_seconds"]   = n.min_duration_seconds;
     j["min_contact_ok_percent"] = n.min_contact_ok_percent;
@@ -30,7 +29,6 @@ void write_quality_gate_json(const std::string& path, const ads1292::dsp::Qualit
     j["require_qrs_clear"]      = n.require_qrs_clear;
 
     // Optional caps: JSON null when unset (std::nullopt), else the numeric value.
-    // Matches Python asdict() of None fields → null.
     if (n.max_baseline_drift_counts.has_value())
         j["max_baseline_drift_counts"] = n.max_baseline_drift_counts.value();
     else
@@ -45,6 +43,12 @@ void write_quality_gate_json(const std::string& path, const ads1292::dsp::Qualit
         j["max_peak_to_peak_counts"] = n.max_peak_to_peak_counts.value();
     else
         j["max_peak_to_peak_counts"] = nullptr;
+
+    return j;
+}
+
+void write_quality_gate_json(const std::string& path, const ads1292::dsp::QualityGate& gate) {
+    auto j = quality_gate_to_json(gate);
 
     // Create parent directories if needed.
     const auto parent = std::filesystem::path(path).parent_path();

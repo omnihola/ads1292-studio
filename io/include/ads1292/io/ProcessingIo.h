@@ -1,13 +1,20 @@
 #pragma once
 // io/include/ads1292/io/ProcessingIo.h
 // JSON read/write/build for RecordingProcessingSettings.
-// No Qt. Uses nlohmann/json internally (not exposed in this header).
+// No Qt.
 
 #include <string>
+#include <nlohmann/json.hpp>
 #include "ads1292/model/RecordingProcessingSettings.h"
 
 namespace ads1292 {
 namespace io {
+
+/// Return the ordered JSON object for @p p (after normalizing).
+/// Top-level keys: schema, display, software_filters, sample_rate_hz,
+/// ecg_inverted, smoothing_window, processing_notes.
+/// Byte-identical to the object written by write_processing_json.
+nlohmann::ordered_json processing_to_json(const ads1292::RecordingProcessingSettings& p);
 
 /// Read a processing JSON file from @p path and return a normalized RecordingProcessingSettings.
 /// Unknown keys are ignored; missing keys keep struct defaults.
