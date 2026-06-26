@@ -22,6 +22,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDockWidget>
+#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMetaObject>
@@ -140,6 +141,22 @@ MainWindow::MainWindow(QWidget* parent)
     saveH5Check_->setChecked(true);
     saveH5Check_->setToolTip("Write HDF5 bundle alongside the CSV on Stop");
     toolbar->addWidget(saveH5Check_);
+
+    // Load button: opens a file dialog and loads the selected recording
+    toolbar->addSeparator();
+    loadBtn_ = new QPushButton("Load", toolbar);
+    loadBtn_->setToolTip("Open a recording file (CSV or H5) and switch to the Review tab");
+    toolbar->addWidget(loadBtn_);
+
+    connect(loadBtn_, &QPushButton::clicked, this, [this]() {
+        QString f = QFileDialog::getOpenFileName(
+            this,
+            "Open recording",
+            QString(),
+            "Recordings (*.h5 *.csv);;All files (*)");
+        if (f.isEmpty()) return;
+        loadAndShowReview(f.toStdString());
+    });
 
     // ── Central tab widget ────────────────────────────────────────────────────
     tabs_ = new QTabWidget(this);
@@ -494,6 +511,15 @@ bool MainWindow::loadRecording(const std::string& path) {
 
 void MainWindow::loadRecordingForTest(const std::string& csvPath) {
     loadRecording(csvPath);
+}
+
+void MainWindow::loadAndShowReview(const std::string& path) {
+    // Testable seam: called by the Load button lambda after the dialog returns
+    // a path, and directly by tests (bypassing the modal QFileDialog).
+    // Switches to the Review tab only on successful load.
+    if (loadRecording(path)) {
+        tabs_->setCurrentWidget(reviewWaveform_->widget());
+    }
 }
 
 } // namespace ads1292::gui

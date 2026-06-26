@@ -594,6 +594,60 @@ TEST_CASE("P11 Phase 6 Task 1: loadRecording CSV path still works (regression)",
   std::filesystem::remove_all(tmp);
 }
 
+// ── P11 Phase 6 Task 2: Load button + loadAndShowReview seam ─────────────────
+
+TEST_CASE("P11 Phase 6 Task 2: Load button is present after construction", "[gui][load]") {
+  // Verify the Load button was created in the ctor. Uses the test accessor
+  // rather than traversing the widget tree, so it remains valid even if the
+  // toolbar layout changes.
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+  REQUIRE(mw.loadButtonPresentForTest());
+}
+
+TEST_CASE("P11 Phase 6 Task 2: loadAndShowReview loads CSV and switches to Review tab", "[gui][load]") {
+  // The Load button's clicked lambda calls QFileDialog (modal, cannot be driven
+  // offscreen) and then delegates to loadAndShowReview. This test exercises that
+  // seam directly: load a CSV and verify that (a) the data is loaded and (b) the
+  // current tab switches to the Review waveform tab.
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11_t2_load_tab";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  // Author a small synthetic ECG recording (1500 samples).
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 1500; ++i) {
+    ads1292::StreamSample s;
+    double t = i / 500.0;
+    double v = 0.0;
+    for (double bt = 0.2; bt < 3.0; bt += 60.0 / 72.0) {
+      double d = t - bt;
+      v += 200.0 * std::exp(-(d * d) / (2 * 0.01 * 0.01));
+    }
+    s.ch2 = static_cast<int>(v); s.ch1 = 0; s.status_byte = 0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+
+  ads1292::gui::MainWindow mw;
+
+  // Before loading, the current tab should NOT be the Review tab (starts on Live ECG).
+  REQUIRE_FALSE(mw.currentTabIsReviewForTest());
+
+  // Exercise the seam: load the CSV and switch to the Review tab.
+  mw.loadAndShowReview(csv_path);
+
+  // Recording must be loaded successfully.
+  REQUIRE(mw.reviewLoadedForTest());
+
+  // The current tab must now be the Review waveform tab.
+  REQUIRE(mw.currentTabIsReviewForTest());
+
+  std::filesystem::remove_all(tmp);
+}
+
 TEST_CASE("MainWindow save-format checkboxes: default state and H5 opt propagation", "[gui][recording]") {
   ensureApp();
   ads1292::gui::MainWindow win;

@@ -25,6 +25,7 @@ namespace ads1292::gui { class IWaveformPlot; }
 
 #include <QCheckBox>
 class QTabWidget;
+class QPushButton;
 
 namespace ads1292::gui {
 
@@ -58,12 +59,27 @@ public:
     /// Thin wrapper around loadRecording(csvPath).
     void loadRecordingForTest(const std::string& csvPath);
 
+    /// Load a recording and switch to the Review tab on success.
+    /// This is the testable seam that the Load button's clicked lambda calls
+    /// after the QFileDialog returns a path. Calling this directly in tests avoids
+    /// driving the modal QFileDialog (which cannot be driven offscreen).
+    void loadAndShowReview(const std::string& path);
+
     /// Returns true if a recording has been successfully loaded into the review panels.
     bool reviewLoadedForTest() const { return review_loaded_; }
 
     /// Returns the number of events loaded from the recording bundle on the last
     /// successful loadRecordingForTest call (0 if no bundle or no events).
     int reviewEventCountForTest() const { return static_cast<int>(loadedEvents_.size()); }
+
+    /// Returns true if the Load button member is non-null (i.e., button was created).
+    bool loadButtonPresentForTest() const { return loadBtn_ != nullptr; }
+
+    /// Returns true if the currently visible tab is the Review waveform tab.
+    bool currentTabIsReviewForTest() const {
+        return tabs_ && reviewWaveform_ &&
+               tabs_->currentWidget() == reviewWaveform_->widget();
+    }
 
     // ── Save-format checkbox test seams ───────────────────────────────────────
 
@@ -160,6 +176,9 @@ private:
     /// onWorkerFinished treats nullptr saveH5Check_ as write_h5=true.
     QCheckBox* saveCsvCheck_ = nullptr;
     QCheckBox* saveH5Check_  = nullptr;
+
+    /// Load button in the toolbar (added in Task 2). Non-null after construction.
+    QPushButton* loadBtn_ = nullptr;
 };
 
 } // namespace ads1292::gui
