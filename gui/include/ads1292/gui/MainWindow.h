@@ -92,6 +92,19 @@ public:
     /// Calls refreshPorts() — exercise the enumeration from a test without clicking the button.
     void refreshPortsForTest() { refreshPorts(); }
 
+    // ── Connect state test seams (P11 Phase 4 Task 2) ────────────────────────
+
+    /// Injects a connect result directly into onConnectResult (GUI thread).
+    /// Bypasses the background thread + serial open — lets tests exercise the
+    /// connect-state machine without hardware.
+    void injectConnectResultForTest(bool ok, const std::string& port,
+                                    const std::string& detail) {
+        onConnectResult(ok, port, detail);
+    }
+
+    /// Returns the raw device path of the currently connected port (empty = disconnected).
+    std::string connectedPortForTest() const { return connectedPort_; }
+
     // ── Save-format checkbox test seams ───────────────────────────────────────
 
     /// True iff the HDF5 save checkbox is present and checked (default: true).
@@ -132,6 +145,10 @@ private slots:
     /// Runs on the GUI thread via QueuedConnection from worker_.finished(int).
     void onWorkerFinished(int sampleCount);
 
+    /// Runs on the GUI thread (posted via QMetaObject::invokeMethod from the
+    /// background connect thread). Updates connection state and re-enables the UI.
+    void onConnectResult(bool ok, const std::string& port, const std::string& detail);
+
 private:
     void onTick();
     void updateLiveReadout();
@@ -142,8 +159,14 @@ private:
     void refreshPorts();
 
     // ── Toolbar port controls (P11 Phase 4) ───────────────────────────────────
-    QComboBox*   portCombo_  = nullptr;   ///< Port selection combo
-    QPushButton* refreshBtn_ = nullptr;   ///< Refresh button
+    QComboBox*   portCombo_   = nullptr;  ///< Port selection combo
+    QPushButton* refreshBtn_  = nullptr;  ///< Refresh button
+    QPushButton* connectBtn_  = nullptr;  ///< Connect button
+
+    // ── Connect state (P11 Phase 4 Task 2) ────────────────────────────────────
+    std::string  connectedPort_;          ///< Device path of connected port (empty = disconnected)
+    bool         connecting_ = false;     ///< True while background connect thread is running
+    std::thread  connectThread_;          ///< Background connect thread; joined in dtor + before respawn
 
     // ── Live tab widgets ───────────────────────────────────────────────────────
     LiveScope*    scope_        = nullptr;

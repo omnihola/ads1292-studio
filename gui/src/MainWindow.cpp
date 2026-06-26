@@ -3,6 +3,8 @@
 #include "ads1292/gui/QCustomPlotWaveform.h"   // concrete review waveform backend
 #include "ads1292/gui/RecordingPaths.h"
 #include "ads1292/qt/AdsPorts.h"
+#include "ads1292/qt/QSerialByteTransport.h"
+#include "ads1292/acq/AdsProtocolDevice.h"
 #include "ads1292/acq/SimulatorDeviceSource.h"
 #include "ads1292/acq/IDeviceSource.h"
 #include "ads1292/io/CsvIo.h"
@@ -63,8 +65,8 @@ MainWindow::MainWindow(QWidget* parent)
     refreshBtn_ = new QPushButton("Refresh", toolbar);
     toolbar->addWidget(refreshBtn_);
 
-    auto* connectBtn = new QPushButton("Connect", toolbar);
-    toolbar->addWidget(connectBtn);
+    connectBtn_ = new QPushButton("Connect", toolbar);
+    toolbar->addWidget(connectBtn_);
 
     toolbar->addSeparator();
 
@@ -294,6 +296,49 @@ MainWindow::MainWindow(QWidget* parent)
     // ── Refresh button: enumerate ADS ports into the port combo ──────────────
     connect(refreshBtn_, &QPushButton::clicked, this, [this]{ refreshPorts(); });
 
+    // ── Connect button: query firmware on a background thread ─────────────────
+    connect(connectBtn_, &QPushButton::clicked, this, [this]() {
+        // Read the raw device path stored as userData by refreshPorts().
+        // The "(no port)" placeholder has no userData → currentData() returns an
+        // invalid QVariant → toString() returns "".
+        QString sel = portCombo_ ? portCombo_->currentData().toString() : QString();
+        if (sel.isEmpty()) {
+            // No valid port selected (either "(no port)" or combo is null). No-op.
+            return;
+        }
+
+        std::string port = sel.toStdString();
+        connecting_ = true;
+        connectBtn_->setEnabled(false);
+
+        // Join any previous connect thread before spawning a new one (no double-UAF).
+        if (connectThread_.joinable()) {
+            connectThread_.join();
+        }
+
+        // Spawn the background thread. The transport is LOCAL to the thread:
+        // opened → queried → closed when the thread ends. This is a validation
+        // connect; Start re-opens the transport for streaming.
+        // The thread body touches NO widgets — only the io/serial path.
+        // Results are posted back via queued invokeMethod (no off-GUI-thread widget access).
+        connectThread_ = std::thread([this, port]() {
+            bool ok = false;
+            std::string detail;
+            try {
+                ads1292::qt::QSerialByteTransport t(QString::fromStdString(port), 1000);
+                ads1292::acq::AdsProtocolDevice dev(t, 500.0);
+                detail = dev.query_firmware();
+                ok = (detail.rfind("no firmware response", 0) != 0);
+            } catch (const std::exception& e) {
+                ok = false;
+                detail = e.what();
+            }
+            QMetaObject::invokeMethod(this, [this, ok, port, detail]() {
+                onConnectResult(ok, port, detail);
+            }, Qt::QueuedConnection);
+        });
+    });
+
     // ── Tick timer (live tab only) ────────────────────────────────────────────
     connect(&timer_, &QTimer::timeout, this, [this]() { onTick(); });
     timer_.start(30);
@@ -310,6 +355,13 @@ MainWindow::MainWindow(QWidget* parent)
 }
 
 MainWindow::~MainWindow() {
+    // Join connect thread (if any) before QObject base is torn down.
+    // The connect thread captures `this` via its invokeMethod lambda; joining here
+    // ensures the thread is complete before the object is destroyed (UAF closed).
+    if (connectThread_.joinable()) {
+        connectThread_.join();
+    }
+
     // Join finalize thread (if any) before QObject base is torn down.
     // This prevents the in-flight finalize thread from calling QMetaObject::invokeMethod
     // on a destroyed object (UAF fix).
@@ -330,6 +382,21 @@ void MainWindow::refreshPorts() {
                 QVariant(QString::fromStdString(p.device)));  // userData = raw device path
         }
     }
+}
+
+void MainWindow::onConnectResult(bool ok, const std::string& port, const std::string& detail) {
+    // Runs on the GUI thread (posted via QMetaObject::invokeMethod by the connect thread,
+    // or called directly by injectConnectResultForTest). Safe to update UI here.
+    connecting_ = false;
+    if (ok) {
+        connectedPort_ = port;
+        state_.connection = "connected " + port + " (fw " + detail + ")";
+    } else {
+        connectedPort_.clear();
+        state_.connection = "connect failed: " + detail;
+    }
+    if (statusPanel_) statusPanel_->updateFromState(state_);
+    if (connectBtn_) connectBtn_->setEnabled(true);
 }
 
 void MainWindow::onTick() {

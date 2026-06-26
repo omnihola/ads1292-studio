@@ -659,6 +659,22 @@ TEST_CASE("P11D Task 1: refreshPorts populates the port combo (boardless -> no-p
   REQUIRE(mw.portComboCountForTest() >= 1);
 }
 
+// ── P11 Phase 4 Task 2: Connect — background firmware query + connection state ─
+
+TEST_CASE("P11D Task 2: onConnectResult sets connectedPort on success, clears on failure", "[gui][connect]") {
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+
+  // Inject a successful connect result (simulates the background thread returning ok).
+  // The real serial open needs hardware; the test drives the result-state machine only.
+  mw.injectConnectResultForTest(true, "/dev/cu.usbserial-1", "1.12");
+  REQUIRE(mw.connectedPortForTest() == "/dev/cu.usbserial-1");
+
+  // Inject a failure result — the connected port must be cleared.
+  mw.injectConnectResultForTest(false, "", "open failed");
+  REQUIRE(mw.connectedPortForTest().empty());
+}
+
 TEST_CASE("MainWindow save-format checkboxes: default state and H5 opt propagation", "[gui][recording]") {
   ensureApp();
   ads1292::gui::MainWindow win;
