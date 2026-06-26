@@ -93,3 +93,61 @@ TEST_CASE("scan_recording_directory reads bundle-backed recording correctly", "[
   REQUIRE(row.sidecar_status   == "complete");
   REQUIRE(row.missing_sidecars == "");
 }
+
+TEST_CASE("scan_recording_directory populates event + completion from bundle", "[index][bundle]") {
+  // Proves P10 bundle short-circuits for _event_summary_for and _completion_summary_for.
+  // Before the fix these fields were 0/"unknown" because the code fell through
+  // to nonexistent individual sidecar files.
+  auto dir = std::filesystem::temp_directory_path() / "p10_idx_bundle_evcomp";
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir);
+
+  auto csv_path = make_clean_recording(dir, "rec");
+
+  // Two events: one point (duration == 0) and one interval (duration > 0).
+  std::vector<EventMarker> events;
+  EventMarker e1;
+  e1.label             = "marker";
+  e1.timestamp_seconds = 0.5;
+  e1.duration_seconds  = 0.0;  // point event
+  events.push_back(e1);
+
+  EventMarker e2;
+  e2.label             = "segment";
+  e2.timestamp_seconds = 1.0;
+  e2.duration_seconds  = 2.0;  // interval event
+  events.push_back(e2);
+
+  // Acquisition with a filled completion block.
+  io::AcquisitionProvenance acq;
+  acq.completion = {
+      {"status",              "finalized"},
+      {"sample_count",        1500},
+      {"sample_span_seconds", 3.0}
+  };
+
+  SessionMetadata meta;
+  meta.session_id = "bundle-evcomp";
+
+  io::write_recording_bundle(
+      csv_path, meta, events,
+      Calibration{},
+      acq,
+      TestProtocol{},
+      dsp::QualityGate{},
+      RecordingProcessingSettings{},
+      500.0, "2024-01-01T00:00:00Z");
+
+  auto rows = io::scan_recording_directory(dir.string());
+  REQUIRE(rows.size() == 1);
+
+  const auto& row = rows[0];
+
+  // Event summary must come from the bundle (not from a nonexistent .events.json).
+  REQUIRE(row.event_count          == 2);
+  REQUIRE(row.interval_event_count == 1);
+
+  // Completion summary must come from the bundle (not from a nonexistent .acquisition.json).
+  REQUIRE(row.completion_status      == "finalized");
+  REQUIRE(row.recorded_sample_count  == 1500);
+}

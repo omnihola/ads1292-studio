@@ -173,6 +173,12 @@ EventAnnotationSummary _summarize_events(
 
 // ── _event_summary_for ────────────────────────────────────────────────────
 EventAnnotationSummary _event_summary_for(const fs::path& csv_path, double sample_rate_hz) {
+    // Bundle short-circuit: if the .json beside the csv IS a recording bundle,
+    // extract events directly from it (no separate .events.json needed).
+    auto bp = recording_bundle_path(csv_path.string());
+    if (is_recording_bundle_path(bp))
+        return _summarize_events(events_from_bundle(read_recording_bundle(bp)), sample_rate_hz);
+
     fs::path events_json = fs::path(csv_path).replace_extension(".events.json");
     if (fs::exists(events_json)) {
         try {
@@ -195,44 +201,68 @@ struct AcquisitionCompletionSummary {
     double      span_seconds  = 0.0;
 };
 
+// ── completion_summary_from_json ──────────────────────────────────────────
+// DRY helper: extract status/sample_count/span_seconds from a completion JSON
+// object (used by both the bundle and the non-bundle acquisition.json paths).
+// Mirrors Python: status ∈ {"finalized","open"} else "unknown";
+//   sample_count = max(0, int(float(...))); span_seconds rounded to 6 decimals.
+AcquisitionCompletionSummary completion_summary_from_json(const nlohmann::json& completion) {
+    std::string status = "unknown";
+    if (completion.contains("status") && !completion["status"].is_null() &&
+        completion["status"].is_string()) {
+        status = completion["status"].get<std::string>();
+        // strip leading/trailing whitespace (mirrors Python str.strip())
+        while (!status.empty() && (status.front() == ' ' || status.front() == '\t'))
+            status.erase(status.begin());
+        while (!status.empty() && (status.back() == ' ' || status.back() == '\t'))
+            status.pop_back();
+    }
+    if (status != "finalized" && status != "open") status = "unknown";
+
+    int sample_count = 0;
+    if (completion.contains("sample_count") && !completion["sample_count"].is_null()) {
+        try {
+            if (completion["sample_count"].is_number()) {
+                // int(float(...)) — truncation matches Python
+                sample_count = std::max(0, static_cast<int>(
+                    completion["sample_count"].get<double>()));
+            } else if (completion["sample_count"].is_string()) {
+                sample_count = std::max(0, static_cast<int>(
+                    std::stod(completion["sample_count"].get<std::string>())));
+            }
+        } catch (...) {}
+    }
+
+    double span_seconds = 0.0;
+    if (completion.contains("sample_span_seconds") &&
+        !completion["sample_span_seconds"].is_null()) {
+        try {
+            double v = 0.0;
+            if (completion["sample_span_seconds"].is_number())
+                v = completion["sample_span_seconds"].get<double>();
+            else if (completion["sample_span_seconds"].is_string())
+                v = std::stod(completion["sample_span_seconds"].get<std::string>());
+            span_seconds = std::round(v * 1e6) / 1e6;
+        } catch (...) {}
+    }
+    return {status, sample_count, span_seconds};
+}
+
 // ── _completion_summary_for ───────────────────────────────────────────────
-// Mirrors session_index.py _completion_summary_for (non-bundle path).
+// Mirrors session_index.py _completion_summary_for.
 AcquisitionCompletionSummary _completion_summary_for(const fs::path& csv_path) {
+    // Bundle short-circuit: if the .json beside the csv IS a recording bundle,
+    // extract completion from the bundled acquisition section.
+    auto bp = recording_bundle_path(csv_path.string());
+    if (is_recording_bundle_path(bp))
+        return completion_summary_from_json(
+            acquisition_from_bundle(read_recording_bundle(bp)).completion);
+
     fs::path acq_path = fs::path(csv_path).replace_extension(".acquisition.json");
     if (!fs::exists(acq_path)) return AcquisitionCompletionSummary{};
     try {
         auto provenance = read_acquisition_json(acq_path.string());
-        const auto& completion = provenance.completion;
-        std::string status = "unknown";
-        if (completion.contains("status") && completion["status"].is_string()) {
-            status = completion["status"].get<std::string>();
-            // strip whitespace
-            while (!status.empty() && (status.front() == ' ' || status.front() == '\t')) status.erase(status.begin());
-            while (!status.empty() && (status.back() == ' ' || status.back() == '\t')) status.pop_back();
-        }
-        if (status != "finalized" && status != "open") status = "unknown";
-        int sample_count = 0;
-        if (completion.contains("sample_count")) {
-            try {
-                if (completion["sample_count"].is_number()) {
-                    sample_count = std::max(0, completion["sample_count"].get<int>());
-                } else if (completion["sample_count"].is_string()) {
-                    sample_count = std::max(0, static_cast<int>(std::stod(completion["sample_count"].get<std::string>())));
-                }
-            } catch (...) {}
-        }
-        double span_seconds = 0.0;
-        if (completion.contains("sample_span_seconds")) {
-            try {
-                double v = 0.0;
-                if (completion["sample_span_seconds"].is_number())
-                    v = completion["sample_span_seconds"].get<double>();
-                else if (completion["sample_span_seconds"].is_string())
-                    v = std::stod(completion["sample_span_seconds"].get<std::string>());
-                span_seconds = std::round(v * 1e6) / 1e6;
-            } catch (...) {}
-        }
-        return {status, sample_count, span_seconds};
+        return completion_summary_from_json(provenance.completion);
     } catch (...) {
         return AcquisitionCompletionSummary{};
     }
