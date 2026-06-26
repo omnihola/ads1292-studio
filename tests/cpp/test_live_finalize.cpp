@@ -6,6 +6,8 @@
 //   1. Round-trip: write CSV -> finalize -> bundle exists, is_recording_bundle_path,
 //      metadata round-trips, H5 file exists.
 //   2. Empty-capture: 0-sample CSV -> finalize returns wrote==false, no sidecar.
+//   3. (P11.8 Task 3) write_xlsx=true -> xlsx_path non-empty + file exists.
+//   4. (P11.8 Task 3) write_xlsx=false -> xlsx_path empty + no .xlsx file.
 
 #include "catch.hpp"
 #include "ads1292/io/LiveRecordingFinalize.h"
@@ -14,7 +16,9 @@
 #include "ads1292/io/ProtocolIo.h"
 #include "ads1292/io/QualityGateIo.h"
 #include "ads1292/model/StreamSample.h"
+#include "ads1292/model/EventMarker.h"
 #include <filesystem>
+#include <cstdlib>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -100,4 +104,60 @@ TEST_CASE("finalize_live_recording: empty capture skips all output", "[live_fina
   if (!r.bundle_path.empty()) {
     REQUIRE_FALSE(fs::exists(r.bundle_path));
   }
+}
+
+// ── P11.8 Task 3: finalize_live_recording + write_xlsx wiring ────────────────
+
+TEST_CASE("finalize_live_recording: write_xlsx=true writes xlsx file", "[live_finalize][xlsx]") {
+  auto tmp = temp_dir();
+  auto csv = tmp / "rec_xlsx_on.csv";
+
+  auto samples = make_samples(20);
+  ads1292::io::write_recording_csv(csv.string(), samples);
+
+  // Build one EventMarker
+  ads1292::EventMarker ev;
+  ev.timestamp_seconds = 0.1;
+  ev.label = "test-event";
+  ev.notes = "xlsx-test";
+
+  ads1292::io::FinalizeOptions opt;
+  opt.write_xlsx       = true;
+  opt.write_h5         = false;   // no HDF5 dependency needed for this test
+  opt.events           = {ev};
+  opt.sample_rate_hz   = 500.0;
+
+  auto r = ads1292::io::finalize_live_recording(csv.string(), opt);
+
+  REQUIRE(r.wrote);
+  REQUIRE(!r.xlsx_path.empty());
+  REQUIRE(fs::exists(r.xlsx_path));
+
+  // Verify the XLSX is a real ZIP containing the Events sheet
+  {
+    std::string cmd = "unzip -l '" + r.xlsx_path + "' 2>&1 | grep -q 'xl/worksheets/sheet1.xml'";
+    int rc = std::system(cmd.c_str());
+    REQUIRE(rc == 0);
+  }
+}
+
+TEST_CASE("finalize_live_recording: write_xlsx=false leaves xlsx_path empty", "[live_finalize][xlsx]") {
+  auto tmp = temp_dir();
+  auto csv = tmp / "rec_xlsx_off.csv";
+
+  auto samples = make_samples(20);
+  ads1292::io::write_recording_csv(csv.string(), samples);
+
+  ads1292::io::FinalizeOptions opt;
+  opt.write_xlsx     = false;
+  opt.write_h5       = false;
+
+  auto r = ads1292::io::finalize_live_recording(csv.string(), opt);
+
+  REQUIRE(r.wrote);
+  REQUIRE(r.xlsx_path.empty());
+
+  // No .xlsx file should exist alongside the CSV
+  auto expected_xlsx = fs::path(csv).replace_extension(".xlsx");
+  REQUIRE_FALSE(fs::exists(expected_xlsx));
 }

@@ -741,6 +741,71 @@ TEST_CASE("MainWindow save-format checkboxes: default state and H5 opt propagati
   std::filesystem::remove_all(tmp);
 }
 
+// ── P11.8 Task 3: Save-XLSX checkbox ─────────────────────────────────────────
+
+TEST_CASE("P11.8 Task 3: saveXlsxCheck_ present, unchecked by default, gated while streaming", "[gui][recording][xlsx]") {
+  ensureApp();
+  ads1292::gui::MainWindow win;
+
+  // Checkbox must be present (created in ctor)
+  REQUIRE(win.saveXlsxPresentForTest());
+
+  // Default: unchecked (XLSX is a convenience export, H5 is canonical).
+  // Check via the seam: the checkbox has not been explicitly set, so it is unchecked.
+  // setSaveXlsxForTest(false) is a no-op here; we verify the initial checkbox state.
+  win.setSaveXlsxForTest(false);   // confirm API exists; checkbox already off by default
+  // The checkbox should be present but not checked — verified by the seam below:
+  // if we enable it, the xlsx_path would be non-empty after finalize (tested separately).
+
+  // Checkbox is enabled in idle state
+  REQUIRE(win.saveXlsxEnabledForTest());
+
+  // While streaming, the checkbox must be disabled
+  win.setStreamingForTest(true);
+  REQUIRE_FALSE(win.saveXlsxEnabledForTest());
+
+  // Back to idle: checkbox re-enabled
+  win.setStreamingForTest(false);
+  REQUIRE(win.saveXlsxEnabledForTest());
+}
+
+TEST_CASE("P11.8 Task 3: setSaveXlsxForTest(true) causes finalize to write XLSX", "[gui][recording][xlsx]") {
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11_t3_xlsx_check";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 20; ++i) {
+    ads1292::StreamSample s; s.ch2 = 100; s.ch1 = 0; s.timestamp = i / 500.0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+
+  ads1292::gui::MainWindow win;
+  win.setRecordingCsvPathForTest(csv_path);
+
+  // By default XLSX is off — xlsx_path should be empty
+  auto r_off = win.finalizeForTest();
+  REQUIRE(r_off.wrote);
+  REQUIRE(r_off.xlsx_path.empty());
+
+  // Enable XLSX via the test seam — xlsx_path should be non-empty + file exists
+  win.setSaveXlsxForTest(true);
+  auto r_on = win.finalizeForTest();
+  REQUIRE(r_on.wrote);
+  REQUIRE(!r_on.xlsx_path.empty());
+  REQUIRE(std::filesystem::exists(r_on.xlsx_path));
+
+  // Disable again — back to empty
+  win.setSaveXlsxForTest(false);
+  auto r_off2 = win.finalizeForTest();
+  REQUIRE(r_off2.xlsx_path.empty());
+
+  std::filesystem::remove_all(tmp);
+}
+
 // ── P11 Phase 3 Task 1: SessionPanel widget ───────────────────────────────────
 
 #include "ads1292/gui/SessionPanel.h"

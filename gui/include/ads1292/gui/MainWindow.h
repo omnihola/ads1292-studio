@@ -142,6 +142,15 @@ public:
     /// Set the HDF5 save checkbox state; propagates into the next buildFinalizeOptions call.
     void setSaveH5ForTest(bool on) { if (saveH5Check_) saveH5Check_->setChecked(on); }
 
+    /// True iff the XLSX save checkbox is present (i.e. was created in the ctor).
+    bool saveXlsxPresentForTest() const { return saveXlsxCheck_ != nullptr; }
+
+    /// True iff the XLSX save checkbox is present and enabled (i.e. not gated while streaming).
+    bool saveXlsxEnabledForTest() const { return saveXlsxCheck_ && saveXlsxCheck_->isEnabled(); }
+
+    /// Set the XLSX save checkbox state; propagates into the next buildFinalizeOptions call.
+    void setSaveXlsxForTest(bool b) { if (saveXlsxCheck_) saveXlsxCheck_->setChecked(b); }
+
     // ── Recording persistence test seams ──────────────────────────────────────
 
     /// Override the recordings directory (used by Start to generate the CSV path).
@@ -255,10 +264,13 @@ private:
     // ── Finalize thread ───────────────────────────────────────────────────────
     std::thread finalizeThread_;       ///< detached → stored, joined in dtor & before respawn
 
-    /// Task 3 adds these checkboxes to the toolbar; for Task 2 they are nullptr.
-    /// onWorkerFinished treats nullptr saveH5Check_ as write_h5=true.
-    QCheckBox* saveCsvCheck_ = nullptr;
-    QCheckBox* saveH5Check_  = nullptr;
+    /// Save-format checkboxes in the toolbar.
+    /// saveCsvCheck_: informational (CSV is always written), permanently disabled.
+    /// saveH5Check_: HDF5 bundle (on by default); gated while streaming.
+    /// saveXlsxCheck_: XLSX convenience export (off by default); gated while streaming.
+    QCheckBox* saveCsvCheck_  = nullptr;
+    QCheckBox* saveH5Check_   = nullptr;
+    QCheckBox* saveXlsxCheck_ = nullptr;
 
     /// Load button in the toolbar (added in Task 2). Non-null after construction.
     QPushButton* loadBtn_ = nullptr;

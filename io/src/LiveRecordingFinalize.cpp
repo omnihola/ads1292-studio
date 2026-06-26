@@ -8,6 +8,7 @@
 #include "ads1292/io/Bundle.h"
 #include "ads1292/io/AcquisitionIo.h"
 #include "ads1292/io/ProcessingIo.h"
+#include "ads1292/io/XlsxIo.h"
 
 #ifdef ADS1292_HAVE_HDF5
 #include "ads1292/io/H5Io.h"
@@ -28,7 +29,7 @@ FinalizeResult finalize_live_recording(const std::string& csv_path,
 
   // Empty-capture guard (mirrors Python: "0 samples -> nothing finalized").
   if (samples.empty()) {
-    return {false, 0, csv_path, "", ""};
+    return {false, 0, csv_path, "", "", ""};
   }
 
   // Step 2: Build a simplified AcquisitionProvenance.
@@ -97,7 +98,14 @@ FinalizeResult finalize_live_recording(const std::string& csv_path,
   }
 #endif
 
-  return {true, static_cast<int>(samples.size()), csv_path, bundle_path, h5_path};
+  // Step 6: Optionally write XLSX.
+  std::string xlsx_path;
+  if (opt.write_xlsx) {
+    xlsx_path = recording_xlsx_path(csv_path);
+    write_recording_xlsx(csv_path, opt.events, opt.sample_rate_hz);
+  }
+
+  return {true, static_cast<int>(samples.size()), csv_path, bundle_path, h5_path, xlsx_path};
 }
 
 }  // namespace io

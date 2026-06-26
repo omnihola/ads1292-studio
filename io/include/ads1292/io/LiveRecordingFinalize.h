@@ -39,6 +39,7 @@ struct FinalizeOptions {
   std::string started_at;          ///< ISO 8601 string, or "" if unavailable
   double sample_rate_hz = 500.0;
   bool write_h5 = true;
+  bool write_xlsx = false;         ///< Write XLSX alongside the CSV (convenience export; off by default)
   std::string created_at;          ///< ISO 8601 finalize timestamp, or ""
 };
 
@@ -49,6 +50,7 @@ struct FinalizeResult {
   std::string csv_path;
   std::string bundle_path;    ///< path to the written .json bundle (empty on skip)
   std::string h5_path;        ///< path to the written .h5 file (empty when write_h5=false or skip)
+  std::string xlsx_path;      ///< path to the written .xlsx file (empty when write_xlsx=false or skip)
 };
 
 /// Read the CSV that the acquisition engine wrote, build a simplified

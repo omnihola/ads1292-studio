@@ -144,6 +144,11 @@ MainWindow::MainWindow(QWidget* parent)
     saveH5Check_->setToolTip("Write HDF5 bundle alongside the CSV on Stop");
     toolbar->addWidget(saveH5Check_);
 
+    saveXlsxCheck_ = new QCheckBox("XLSX", toolbar);
+    saveXlsxCheck_->setChecked(false);   // off by default — XLSX is a convenience export
+    saveXlsxCheck_->setToolTip("Write XLSX spreadsheet alongside the CSV on Stop");
+    toolbar->addWidget(saveXlsxCheck_);
+
     // Load button: opens a file dialog and loads the selected recording
     toolbar->addSeparator();
     loadBtn_ = new QPushButton("Load", toolbar);
@@ -439,8 +444,9 @@ void MainWindow::refreshControls() {
     if (startBtn_)    startBtn_->setEnabled(!streaming_ && !connecting_);
     if (stopBtn_)     stopBtn_->setEnabled(streaming_);
     if (loadBtn_)     loadBtn_->setEnabled(!streaming_);
-    if (saveH5Check_) saveH5Check_->setEnabled(!streaming_);
-    if (portCombo_)   portCombo_->setEnabled(!streaming_ && !connecting_);
+    if (saveH5Check_)   saveH5Check_->setEnabled(!streaming_);
+    if (saveXlsxCheck_) saveXlsxCheck_->setEnabled(!streaming_);
+    if (portCombo_)     portCombo_->setEnabled(!streaming_ && !connecting_);
 }
 
 void MainWindow::onTick() {
@@ -486,8 +492,8 @@ ads1292::io::FinalizeOptions MainWindow::buildFinalizeOptions() const {
     // Provenance port: the connected serial port (empty for the simulator).
     // Fixes Phase-1 M2 deferral — records the real device path in the bundle.
     opt.port            = connectedPort_;
-    // Task 3 will wire saveH5Check_; for now nullptr → write_h5 = true.
-    opt.write_h5        = (saveH5Check_ ? saveH5Check_->isChecked() : true);
+    opt.write_h5        = (saveH5Check_   ? saveH5Check_->isChecked()   : true);
+    opt.write_xlsx      = (saveXlsxCheck_ ? saveXlsxCheck_->isChecked() : false);
     return opt;
 }
 
