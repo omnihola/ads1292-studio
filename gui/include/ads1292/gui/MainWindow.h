@@ -2,6 +2,7 @@
 #pragma once
 #include <QMainWindow>
 #include <QTimer>
+#include <QString>
 #include <memory>
 #include <string>
 
@@ -16,15 +17,19 @@
 #include "ads1292/qt/AcquisitionWorker.h"
 #include "ads1292/acq/IDeviceSource.h"
 #include "ads1292/dsp/Display.h"
+#include "ads1292/io/LiveRecordingFinalize.h"
 
 // Forward-declare IWaveformPlot so we don't pull in the backend header here.
 namespace ads1292::gui { class IWaveformPlot; }
 
+class QCheckBox;
 class QTabWidget;
 
 namespace ads1292::gui {
 
 class MainWindow : public QMainWindow {
+    Q_OBJECT
+
 public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override = default;
@@ -46,9 +51,33 @@ public:
     /// Returns true if a recording has been successfully loaded into the review panels.
     bool reviewLoadedForTest() const { return review_loaded_; }
 
+    // ── Recording persistence test seams ──────────────────────────────────────
+
+    /// Override the recordings directory (used by Start to generate the CSV path).
+    void setRecordingsDirForTest(const std::string& dir) { recordingsDir_ = dir; }
+
+    /// Directly set the CSV path (used by tests that pre-author a CSV and want to
+    /// invoke the finalize step without running a full acquisition).
+    void setRecordingCsvPathForTest(const std::string& path) { recordingCsvPath_ = path; }
+
+    /// Synchronous finalize seam: builds the same FinalizeOptions as onWorkerFinished
+    /// and calls finalize_live_recording synchronously, returning its result.
+    /// Used by tests to avoid driving the full async event-loop + thread path.
+    ads1292::io::FinalizeResult finalizeForTest();
+
+signals:
+    /// Emitted (from invokeMethod on the GUI thread) when the background finalize
+    /// thread completes. Connected slot appends the line to the event log.
+    void finalizeLogged(QString line);
+
+private slots:
+    /// Runs on the GUI thread via QueuedConnection from worker_.finished(int).
+    void onWorkerFinished(int sampleCount);
+
 private:
     void onTick();
     void updateLiveReadout();
+    ads1292::io::FinalizeOptions buildFinalizeOptions() const;
 
     // ── Live tab widgets ───────────────────────────────────────────────────────
     LiveScope*    scope_        = nullptr;
@@ -82,6 +111,16 @@ private:
 
     // Display filter settings (live — driven by toolbar checkboxes)
     ads1292::dsp::SoftwareFilterSettings filter_;
+
+    // ── Recording persistence ─────────────────────────────────────────────────
+    std::string recordingCsvPath_;     ///< path generated at Start; passed to worker
+    std::string recordingStartedAt_;   ///< ISO-8601 start time set at Start
+    std::string recordingsDir_;        ///< base directory override (empty = default)
+
+    /// Task 3 adds these checkboxes to the toolbar; for Task 2 they are nullptr.
+    /// onWorkerFinished treats nullptr saveH5Check_ as write_h5=true.
+    QCheckBox* saveCsvCheck_ = nullptr;
+    QCheckBox* saveH5Check_  = nullptr;
 };
 
 } // namespace ads1292::gui

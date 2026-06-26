@@ -228,3 +228,78 @@ TEST_CASE("export_review_report throws when PNG path is a directory (B5 savePng 
 
   std::filesystem::remove_all(out_dir);
 }
+
+// ── P11 Task 2: recording path helper + synchronous finalize seam ─────────────
+
+#include "ads1292/gui/RecordingPaths.h"
+#include "ads1292/io/LiveRecordingFinalize.h"
+#include "ads1292/io/RecordingBundle.h"
+
+TEST_CASE("timestamped_recording_csv_path returns path under base_dir ending in -ads1292-studio.csv", "[gui][recording]") {
+  ensureApp();
+  auto tmp = std::filesystem::temp_directory_path() / "p11_rp_test";
+  std::filesystem::create_directories(tmp);
+
+  auto path = ads1292::gui::timestamped_recording_csv_path("live", tmp.string());
+
+  // Must be rooted under tmp
+  REQUIRE(path.substr(0, tmp.string().size()) == tmp.string());
+
+  // Must end with -ads1292-studio.csv
+  const std::string suffix = "-ads1292-studio.csv";
+  REQUIRE(path.size() > suffix.size());
+  REQUIRE(path.substr(path.size() - suffix.size()) == suffix);
+
+  // The filename portion must contain a date-like prefix (YYYY-MM-DD-)
+  auto fname = std::filesystem::path(path).filename().string();
+  REQUIRE(fname.size() > 10);
+  // Check date separators at positions 4 and 7 (YYYY-MM-...)
+  REQUIRE(fname[4] == '-');
+  REQUIRE(fname[7] == '-');
+
+  std::filesystem::remove_all(tmp);
+}
+
+TEST_CASE("MainWindow finalizeForTest writes bundle from pre-authored CSV (synchronous seam)", "[gui][recording]") {
+  // Strategy: synchronous test seam to avoid event-loop + detached-thread timing.
+  // We pre-write a CSV using write_recording_csv (same as the engine would write),
+  // inject the path via setRecordingCsvPathForTest, and call finalizeForTest()
+  // which runs finalize_live_recording synchronously and returns the result.
+  // The bundle .json path is then checked for existence and validity.
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11_mw_finalize";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  // Author a small recording (50 samples)
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 50; ++i) {
+    ads1292::StreamSample s;
+    s.ch2 = (i % 10 < 2) ? 300 : 0;
+    s.ch1 = 0;
+    s.timestamp = i / 500.0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+
+  // Construct MainWindow and inject test state
+  ads1292::gui::MainWindow win;
+  win.setRecordingsDirForTest(tmp.string());
+  win.setRecordingCsvPathForTest(csv_path);
+
+  // Run finalize synchronously via the seam
+  auto r = win.finalizeForTest();
+
+  REQUIRE(r.wrote == true);
+  REQUIRE(r.sample_count == static_cast<int>(samples.size()));
+  REQUIRE(std::filesystem::exists(r.bundle_path));
+  REQUIRE(ads1292::io::is_recording_bundle_path(r.bundle_path));
+
+  // Verify the bundle round-trips the schema
+  auto bundle = ads1292::io::read_recording_bundle(r.bundle_path);
+  REQUIRE(bundle.contains("schema"));
+  REQUIRE(bundle["schema"].get<std::string>() == "ads1292-recording-bundle-v1");
+
+  std::filesystem::remove_all(tmp);
+}

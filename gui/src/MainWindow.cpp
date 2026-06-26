@@ -1,11 +1,17 @@
 // gui/src/MainWindow.cpp
 #include "ads1292/gui/MainWindow.h"
 #include "ads1292/gui/QCustomPlotWaveform.h"   // concrete review waveform backend
+#include "ads1292/gui/RecordingPaths.h"
 #include "ads1292/acq/SimulatorDeviceSource.h"
 #include "ads1292/acq/IDeviceSource.h"
 #include "ads1292/io/CsvIo.h"
+#include "ads1292/io/LiveRecordingFinalize.h"
+#include "ads1292/io/ProtocolIo.h"
+#include "ads1292/io/QualityGateIo.h"
 #include "ads1292/view/ReviewRender.h"
 #include "ads1292/dsp/Spectrum.h"
+#include "ads1292/model/SessionMetadata.h"
+#include "ads1292/model/Calibration.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -13,6 +19,7 @@
 #include <QDockWidget>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMetaObject>
 #include <QPushButton>
 #include <QSplitter>
 #include <QTabWidget>
@@ -21,6 +28,9 @@
 #include <QWidget>
 #include <QFile>
 #include <QString>
+
+#include <filesystem>
+#include <thread>
 
 namespace ads1292::gui {
 
@@ -186,20 +196,47 @@ MainWindow::MainWindow(QWidget* parent)
         scope_->setAutoscale(on);
     });
 
-    connect(startBtn, &QPushButton::clicked, this, [this, startBtn, stopBtn, modeCombo]() {
+    connect(startBtn, &QPushButton::clicked, this,
+            [this, startBtn, stopBtn, modeCombo]() {
         startBtn->setEnabled(false);
         stopBtn->setEnabled(true);
+
         auto mode = (modeCombo->currentIndex() == 0)
                     ? ads1292::acq::AcquisitionMode::Live
                     : ads1292::acq::AcquisitionMode::Raw;
+        const std::string modeStr =
+            (mode == ads1292::acq::AcquisitionMode::Live) ? "live" : "raw";
+
+        // Generate a timestamped CSV path and create its parent directory.
+        recordingCsvPath_ = ads1292::gui::timestamped_recording_csv_path(
+            modeStr, recordingsDir_);
+        std::filesystem::create_directories(
+            std::filesystem::path(recordingCsvPath_).parent_path());
+
+        // Capture ISO-8601 start time for provenance.
+        recordingStartedAt_ = ads1292::gui::current_iso8601_string();
+
         activeSource_ = std::make_unique<ads1292::acq::SimulatorDeviceSource>(200, 0);
-        worker_.start(activeSource_.get(), mode, "");
+        worker_.start(activeSource_.get(), mode, recordingCsvPath_);
+
+        state_.recordingState = "recording";
+        statusPanel_->updateFromState(state_);
     });
 
     connect(stopBtn, &QPushButton::clicked, this, [this, startBtn, stopBtn]() {
         worker_.requestStop();
         startBtn->setEnabled(true);
         stopBtn->setEnabled(false);
+    });
+
+    // ── Worker finished → onWorkerFinished (GUI thread, queued) ──────────────
+    connect(&worker_, &ads1292::qt::AcquisitionWorker::finished,
+            this, &MainWindow::onWorkerFinished, Qt::QueuedConnection);
+
+    // ── finalizeLogged signal → append to event log + reset state ─────────────
+    connect(this, &MainWindow::finalizeLogged, this, [this](QString l) {
+        reviewEventLogPanel_->appendLine(l.toStdString());
+        statusPanel_->updateFromState(state_);
     });
 
     // ── Tick timer (live tab only) ────────────────────────────────────────────
@@ -237,6 +274,67 @@ void MainWindow::updateLiveReadout() {
             frame.heart_rate.median_bpm);
     }
 }
+
+// ── Recording persistence ─────────────────────────────────────────────────────
+
+ads1292::io::FinalizeOptions MainWindow::buildFinalizeOptions() const {
+    ads1292::io::FinalizeOptions opt;
+    opt.metadata        = ads1292::SessionMetadata{};
+    opt.events          = {};
+    opt.calibration     = ads1292::Calibration{};
+    opt.protocol        = ads1292::io::protocol_template();
+    opt.quality_gate    = ads1292::io::quality_gate_template();
+    opt.started_at      = recordingStartedAt_;
+    opt.sample_rate_hz  = 500.0;
+    // Task 3 will wire saveH5Check_; for now nullptr → write_h5 = true.
+    opt.write_h5        = (saveH5Check_ ? saveH5Check_->isChecked() : true);
+    return opt;
+}
+
+void MainWindow::onWorkerFinished(int sampleCount) {
+    // Runs on the GUI thread via QueuedConnection.
+
+    if (sampleCount <= 0) {
+        reviewEventLogPanel_->appendLine("empty capture — nothing saved");
+        state_.recordingState = "idle";
+        statusPanel_->updateFromState(state_);
+        return;
+    }
+
+    // Snapshot all finalize inputs on the GUI thread before spawning the thread.
+    const ads1292::io::FinalizeOptions opt = buildFinalizeOptions();
+    const std::string csv = recordingCsvPath_;
+
+    state_.recordingState = "finalizing";
+    statusPanel_->updateFromState(state_);
+
+    // Spawn background thread: only calls the Qt-free io function.
+    // Results are posted back to the GUI thread via invokeMethod (QueuedConnection).
+    // Captures csv + opt by value; this by pointer (QObject lifetime handled by Qt:
+    // QObject::~QObject calls removePostedEvents, so the lambda is never delivered
+    // to a destroyed object).
+    std::thread t([this, csv, opt]() {
+        auto r = ads1292::io::finalize_live_recording(csv, opt);
+        QString line = r.wrote
+            ? QString("Saved: %1").arg(QString::fromStdString(r.bundle_path))
+            : QString("empty capture — nothing saved");
+        QMetaObject::invokeMethod(this, [this, line]() {
+            // Runs on GUI thread — safe to update state and emit signal.
+            state_.recordingState = "idle";
+            emit finalizeLogged(line);
+        }, Qt::QueuedConnection);
+    });
+    t.detach();
+}
+
+ads1292::io::FinalizeResult MainWindow::finalizeForTest() {
+    // Synchronous test seam: builds the same options as onWorkerFinished and
+    // calls finalize_live_recording directly, avoiding event-loop + thread timing.
+    return ads1292::io::finalize_live_recording(recordingCsvPath_,
+                                                 buildFinalizeOptions());
+}
+
+// ── Test hooks (unchanged) ────────────────────────────────────────────────────
 
 void MainWindow::setDisplayFilterForTest(bool qrs) {
     filter_.bandpass_enabled = qrs;

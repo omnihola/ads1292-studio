@@ -7,7 +7,11 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 # that widget sources are compiled exactly once.
 # ---------------------------------------------------------------------------
 add_library(ads1292_gui_lib STATIC
+  # Explicit header listing so AUTOMOC processes Q_OBJECT in the canonical
+  # include-tree header (not just the adjacent-to-src scanning heuristic).
+  include/ads1292/gui/MainWindow.h
   src/MainWindow.cpp
+  src/RecordingPaths.cpp
   src/QCustomPlotWaveform.cpp
   src/QCustomPlotXY.cpp
   src/LiveScope.cpp
