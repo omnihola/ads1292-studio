@@ -648,6 +648,17 @@ TEST_CASE("P11 Phase 6 Task 2: loadAndShowReview loads CSV and switches to Revie
   std::filesystem::remove_all(tmp);
 }
 
+// ── P11 Phase 4 Task 1: Refresh enumerates ADS ports into the combo ──────────
+
+TEST_CASE("P11D Task 1: refreshPorts populates the port combo (boardless -> no-port placeholder)", "[gui][ports]") {
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+  mw.refreshPortsForTest();
+  // On a boardless host list_ads_ports() returns empty -> combo has "(no port)".
+  // With a board attached it has real ports. Either way count >= 1 and no crash.
+  REQUIRE(mw.portComboCountForTest() >= 1);
+}
+
 TEST_CASE("MainWindow save-format checkboxes: default state and H5 opt propagation", "[gui][recording]") {
   ensureApp();
   ads1292::gui::MainWindow win;

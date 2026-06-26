@@ -2,6 +2,7 @@
 #include "ads1292/gui/MainWindow.h"
 #include "ads1292/gui/QCustomPlotWaveform.h"   // concrete review waveform backend
 #include "ads1292/gui/RecordingPaths.h"
+#include "ads1292/qt/AdsPorts.h"
 #include "ads1292/acq/SimulatorDeviceSource.h"
 #include "ads1292/acq/IDeviceSource.h"
 #include "ads1292/io/CsvIo.h"
@@ -21,6 +22,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QVariant>
 #include <QDockWidget>
 #include <QFileDialog>
 #include <QHBoxLayout>
@@ -54,13 +56,12 @@ MainWindow::MainWindow(QWidget* parent)
     toolbar->setMovable(false);
 
     // Port controls
-    auto* portCombo = new QComboBox(toolbar);
-    portCombo->addItem("(no port)");
-    portCombo->setToolTip("Serial port");
-    toolbar->addWidget(portCombo);
+    portCombo_ = new QComboBox(toolbar);
+    portCombo_->setToolTip("Serial port");
+    toolbar->addWidget(portCombo_);
 
-    auto* refreshBtn = new QPushButton("Refresh", toolbar);
-    toolbar->addWidget(refreshBtn);
+    refreshBtn_ = new QPushButton("Refresh", toolbar);
+    toolbar->addWidget(refreshBtn_);
 
     auto* connectBtn = new QPushButton("Connect", toolbar);
     toolbar->addWidget(connectBtn);
@@ -290,6 +291,9 @@ MainWindow::MainWindow(QWidget* parent)
         if (saveH5Check_) saveH5Check_->setEnabled(true);
     });
 
+    // ── Refresh button: enumerate ADS ports into the port combo ──────────────
+    connect(refreshBtn_, &QPushButton::clicked, this, [this]{ refreshPorts(); });
+
     // ── Tick timer (live tab only) ────────────────────────────────────────────
     connect(&timer_, &QTimer::timeout, this, [this]() { onTick(); });
     timer_.start(30);
@@ -300,6 +304,9 @@ MainWindow::MainWindow(QWidget* parent)
     state_.channelMap    = "CH1=RESP CH2=ECG";
     state_.recordingState = "idle";
     statusPanel_->updateFromState(state_);
+
+    // Populate port combo on startup.
+    refreshPorts();
 }
 
 MainWindow::~MainWindow() {
@@ -308,6 +315,20 @@ MainWindow::~MainWindow() {
     // on a destroyed object (UAF fix).
     if (finalizeThread_.joinable()) {
         finalizeThread_.join();
+    }
+}
+
+void MainWindow::refreshPorts() {
+    portCombo_->clear();
+    auto ports = ads1292::qt::list_ads_ports();
+    if (ports.empty()) {
+        portCombo_->addItem("(no port)");
+    } else {
+        for (const auto& p : ports) {
+            portCombo_->addItem(
+                QString::fromStdString(p.device + " — " + p.description),
+                QVariant(QString::fromStdString(p.device)));  // userData = raw device path
+        }
     }
 }
 

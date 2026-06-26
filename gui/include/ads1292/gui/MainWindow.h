@@ -24,6 +24,7 @@
 namespace ads1292::gui { class IWaveformPlot; }
 
 #include <QCheckBox>
+#include <QComboBox>
 class QTabWidget;
 class QPushButton;
 
@@ -83,6 +84,16 @@ public:
 
     // ── Save-format checkbox test seams ───────────────────────────────────────
 
+    // ── Port combo test seams (P11 Phase 4 Task 1) ───────────────────────────
+
+    /// Returns the number of items currently in the port combo (0 when nullptr).
+    int portComboCountForTest() const { return portCombo_ ? portCombo_->count() : 0; }
+
+    /// Calls refreshPorts() — exercise the enumeration from a test without clicking the button.
+    void refreshPortsForTest() { refreshPorts(); }
+
+    // ── Save-format checkbox test seams ───────────────────────────────────────
+
     /// True iff the HDF5 save checkbox is present and checked (default: true).
     bool saveH5EnabledForTest() const { return saveH5Check_ && saveH5Check_->isChecked(); }
 
@@ -125,6 +136,14 @@ private:
     void onTick();
     void updateLiveReadout();
     ads1292::io::FinalizeOptions buildFinalizeOptions() const;
+
+    /// Enumerates ADS1x9x serial ports and repopulates portCombo_.
+    /// Falls back to a single "(no port)" item when no device is detected.
+    void refreshPorts();
+
+    // ── Toolbar port controls (P11 Phase 4) ───────────────────────────────────
+    QComboBox*   portCombo_  = nullptr;   ///< Port selection combo
+    QPushButton* refreshBtn_ = nullptr;   ///< Refresh button
 
     // ── Live tab widgets ───────────────────────────────────────────────────────
     LiveScope*    scope_        = nullptr;
