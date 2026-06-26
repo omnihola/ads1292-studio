@@ -304,6 +304,77 @@ TEST_CASE("MainWindow finalizeForTest writes bundle from pre-authored CSV (synch
   std::filesystem::remove_all(tmp);
 }
 
+// ── P11 Task 1: EventConsole::clear() + events round-trip into bundle ──────────
+
+TEST_CASE("EventConsole::clear() empties the event log and resets status", "[gui][events]") {
+  ensureApp();
+  ads1292::gui::EventConsole console;
+  console.setSampleClock(1.0);
+  console.addPointEventForTest("rest", "baseline");
+  REQUIRE(console.log().events().size() == 1);
+
+  console.clear();
+
+  REQUIRE(console.log().events().empty());
+  // Pending range state should also be reset
+  REQUIRE_FALSE(console.log().pending_range_start().has_value());
+}
+
+TEST_CASE("events injected before finalizeForTest are round-tripped through the bundle", "[gui][events]") {
+  // Verify that buildFinalizeOptions snapshots eventConsole_->log().events()
+  // (not the old {}) so annotations are persisted into the recording bundle.
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11b_events_roundtrip";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  // Author a small recording
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 50; ++i) {
+    ads1292::StreamSample s;
+    s.ch2 = (i % 10 < 2) ? 300 : 0;
+    s.ch1 = 0;
+    s.timestamp = i / 500.0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+
+  // Construct MainWindow and configure
+  ads1292::gui::MainWindow win;
+  win.setRecordingsDirForTest(tmp.string());
+  win.setRecordingCsvPathForTest(csv_path);
+
+  // Inject two events via the EventConsole test seam
+  auto* ec = win.eventConsoleForTest();
+  REQUIRE(ec != nullptr);
+  ec->setSampleClock(0.1);
+  ec->addPointEventForTest("rest", "baseline");
+  ec->setSampleClock(0.2);
+  ec->addPointEventForTest("exercise", "peak effort");
+
+  REQUIRE(ec->log().events().size() == 2);
+
+  // Run finalize synchronously; events should be captured into opt.events
+  auto r = win.finalizeForTest();
+  REQUIRE(r.wrote == true);
+  REQUIRE(std::filesystem::exists(r.bundle_path));
+
+  // Read back the bundle and verify both events are present
+  auto bundle = ads1292::io::read_recording_bundle(r.bundle_path);
+  auto events = ads1292::io::events_from_bundle(bundle);
+
+  REQUIRE(events.size() == 2);
+  // Check at least one event has the expected label
+  bool found_rest = false;
+  for (const auto& ev : events) {
+    if (ev.label == "rest") { found_rest = true; }
+  }
+  REQUIRE(found_rest);
+
+  std::filesystem::remove_all(tmp);
+}
+
 // ── P11 Task 3: save-format checkboxes + recording-state surfacing ─────────────
 
 TEST_CASE("MainWindow save-format checkboxes: default state and H5 opt propagation", "[gui][recording]") {

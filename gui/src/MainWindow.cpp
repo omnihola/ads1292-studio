@@ -234,6 +234,9 @@ MainWindow::MainWindow(QWidget* parent)
         // Capture ISO-8601 start time for provenance.
         recordingStartedAt_ = ads1292::gui::current_iso8601_string();
 
+        // Clear the event log so each recording starts with a fresh annotation slate.
+        eventConsole_->clear();
+
         activeSource_ = std::make_unique<ads1292::acq::SimulatorDeviceSource>(200, 0);
         worker_.start(activeSource_.get(), mode, recordingCsvPath_);
 
@@ -313,7 +316,9 @@ void MainWindow::updateLiveReadout() {
 ads1292::io::FinalizeOptions MainWindow::buildFinalizeOptions() const {
     ads1292::io::FinalizeOptions opt;
     opt.metadata        = ads1292::SessionMetadata{};
-    opt.events          = {};
+    // Snapshot the current event log on the GUI thread (safe: called from
+    // onWorkerFinished / finalizeForTest — both on the GUI thread).
+    opt.events          = eventConsole_->log().events();
     opt.calibration     = ads1292::Calibration{};
     opt.protocol        = ads1292::io::protocol_template();
     opt.quality_gate    = ads1292::io::quality_gate_template();

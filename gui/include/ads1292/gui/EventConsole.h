@@ -24,6 +24,9 @@ public:
     /// Test hook: exercises the same add-point path as the "Add Point" button.
     void addPointEventForTest(const std::string& label, const std::string& notes);
 
+    /// Clear the owned EventLog (all events + pending range) and reset the status line.
+    void clear();
+
     /// Refresh the status line with the current event count and pending range.
     void setEventStatus(int count, std::optional<double> pendingStart);
 

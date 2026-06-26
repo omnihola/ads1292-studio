@@ -65,6 +65,11 @@ EventConsole::EventConsole(QWidget* parent)
     });
 }
 
+void EventConsole::clear() {
+    log_.clear();
+    refreshStatus();
+}
+
 void EventConsole::setSampleClock(double seconds) {
     sampleClock_ = seconds;
 }

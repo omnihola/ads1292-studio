@@ -29,6 +29,9 @@ class EventLog {
   // Remove event at the given index. Returns false if index is out of range.
   bool remove_at(std::size_t index);
 
+  // Clear all events and reset any pending range state.
+  void clear();
+
   // Access the stored events.
   const std::vector<EventMarker>& events() const;
 

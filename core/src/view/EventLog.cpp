@@ -33,6 +33,11 @@ void EventLog::add_manual_range(double start_seconds, double end_seconds,
   events_.push_back(marker.normalized());
 }
 
+void EventLog::clear() {
+  events_.clear();
+  pending_.reset();
+}
+
 bool EventLog::remove_last() {
   if (events_.empty()) {
     return false;

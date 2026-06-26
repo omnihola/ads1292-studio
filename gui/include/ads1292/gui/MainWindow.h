@@ -79,6 +79,10 @@ public:
     /// Used by tests to avoid driving the full async event-loop + thread path.
     ads1292::io::FinalizeResult finalizeForTest();
 
+    /// Test seam: direct access to the EventConsole so tests can inject events
+    /// via addPointEventForTest before calling finalizeForTest.
+    EventConsole* eventConsoleForTest() { return eventConsole_; }
+
 signals:
     /// Emitted (from invokeMethod on the GUI thread) when the background finalize
     /// thread completes. Connected slot appends the line to the event log.
