@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <nlohmann/json.hpp>
+#include "ads1292/dsp/LiveCalibration.h"
 
 namespace ads1292 {
 namespace io {
@@ -74,6 +75,12 @@ AcquisitionProvenance read_acquisition_json(const std::string& path);
 /// Write @p a (after normalizing) as pretty JSON to @p path.
 /// Parent directories are created as needed.
 void write_acquisition_json(const std::string& path, const AcquisitionProvenance& a);
+
+/// Serialize a LiveStreamCalibration to the JSON object Python writes for
+/// AcquisitionProvenance.live_calibration (mirrors _live_calibration_entry
+/// in acquisition.py). Returns an ordered_json with 6 keys in dataclass field order:
+///   {mean_uv_per_count, std_uv_per_count, cv_percent, runs, test_signal_pp_uv, scale_type}.
+nlohmann::ordered_json live_calibration_to_json(const ads1292::LiveStreamCalibration& c);
 
 }  // namespace io
 }  // namespace ads1292

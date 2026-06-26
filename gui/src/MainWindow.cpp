@@ -165,6 +165,49 @@ MainWindow::MainWindow(QWidget* parent)
         loadAndShowReview(f.toStdString());
     });
 
+    // Calibrate Live button: runs a live-stream calibration on the connected device.
+    // NOTE: the actual ADS1292 register-level measurement (run_live_stream_calibration
+    // from device.py) is HARDWARE-ONLY — the C++ device layer lacks register R/W.
+    // The button, state machine, and bundle wiring are fully implemented; the device
+    // measurement is a documented hardware-only path.
+    toolbar->addSeparator();
+    calibrateBtn_ = new QPushButton("Calibrate Live", toolbar);
+    calibrateBtn_->setToolTip(
+        "Measure live-stream calibration from device test signal.\n"
+        "Requires a connected ADS1292 device (hardware-only path).");
+    toolbar->addWidget(calibrateBtn_);
+
+    connect(calibrateBtn_, &QPushButton::clicked, this, [this]() {
+        if (connectedPort_.empty()) {
+            // No device connected — log a clear message and bail.
+            if (reviewEventLogPanel_) {
+                reviewEventLogPanel_->appendLine("calibration: connect a device first");
+            }
+            return;
+        }
+        calibrating_ = true;
+        refreshControls();  // gate the toolbar while calibrating
+        // Join any previous calibrate thread before spawning a new one (no double-UAF).
+        if (calibrateThread_.joinable()) {
+            calibrateThread_.join();
+        }
+        // Spawn the calibrate thread. It captures `this` (lifetime managed by joining
+        // in the dtor before the QObject base is torn down).
+        // Results are posted back via QueuedConnection invokeMethod (no off-GUI-thread widget access).
+        calibrateThread_ = std::thread([this]() {
+            // HARDWARE-ONLY: the ADS1292 register-level live-stream calibration
+            // (run_live_stream_calibration in device.py) requires register R/W commands
+            // that are not ported in this C++ build (AdsProtocolDevice does not expose
+            // register-level access). Report a clear, documented failure.
+            const std::string detail =
+                "live calibration requires the register-level device protocol "
+                "(hardware-only; not ported in this build)";
+            QMetaObject::invokeMethod(this, [this, detail]() {
+                onCalibrateResult(false, ads1292::LiveStreamCalibration{}, detail);
+            }, Qt::QueuedConnection);
+        });
+    });
+
     // ── Session metadata panel (left pane) ───────────────────────────────────
     sessionPanel_ = new SessionPanel(this);
 
@@ -405,6 +448,12 @@ MainWindow::~MainWindow() {
     if (finalizeThread_.joinable()) {
         finalizeThread_.join();
     }
+
+    // Join calibrate thread (if any) before QObject base is torn down.
+    // The calibrate thread captures `this`; joining here prevents UAF.
+    if (calibrateThread_.joinable()) {
+        calibrateThread_.join();
+    }
 }
 
 void MainWindow::refreshPorts() {
@@ -436,6 +485,26 @@ void MainWindow::onConnectResult(bool ok, const std::string& port, const std::st
     refreshControls();  // re-enables idle controls (connecting_ = false)
 }
 
+void MainWindow::onCalibrateResult(bool ok, const ads1292::LiveStreamCalibration& cal,
+                                    const std::string& detail) {
+    // Runs on the GUI thread (posted via QMetaObject::invokeMethod by the calibrate
+    // thread, or called directly by injectCalibrateResultForTest). Safe to update UI here.
+    calibrating_ = false;
+    if (ok) {
+        liveCalibration_ = cal.normalized();
+        state_.connection += " | cal " +
+            QString::number(liveCalibration_->mean_uv_per_count, 'g', 4).toStdString() +
+            " uV/count";
+    } else {
+        // Log the hardware-only failure message to the event log panel.
+        if (reviewEventLogPanel_) {
+            reviewEventLogPanel_->appendLine("calibration failed: " + detail);
+        }
+    }
+    if (statusPanel_) statusPanel_->updateFromState(state_);
+    refreshControls();  // re-enables idle controls (calibrating_ = false)
+}
+
 void MainWindow::refreshControls() {
     // Apply the enable/disable matrix from the current streaming_/connecting_ state.
     // saveCsvCheck_ is permanently disabled (informational) — not touched here.
@@ -447,6 +516,10 @@ void MainWindow::refreshControls() {
     if (saveH5Check_)   saveH5Check_->setEnabled(!streaming_);
     if (saveXlsxCheck_) saveXlsxCheck_->setEnabled(!streaming_);
     if (portCombo_)     portCombo_->setEnabled(!streaming_ && !connecting_);
+    // Calibrate button: enabled only when a device is connected and the system is idle.
+    // (hardware-only measurement path; disabled while streaming, connecting, or calibrating)
+    if (calibrateBtn_) calibrateBtn_->setEnabled(
+        !streaming_ && !connecting_ && !calibrating_ && !connectedPort_.empty());
 }
 
 void MainWindow::onTick() {
@@ -494,6 +567,9 @@ ads1292::io::FinalizeOptions MainWindow::buildFinalizeOptions() const {
     opt.port            = connectedPort_;
     opt.write_h5        = (saveH5Check_   ? saveH5Check_->isChecked()   : true);
     opt.write_xlsx      = (saveXlsxCheck_ ? saveXlsxCheck_->isChecked() : false);
+    // Live calibration: when present (set by injectCalibrateResultForTest or a real
+    // hardware calibration run), flows into the bundle's acquisition.live_calibration.
+    opt.live_calibration = liveCalibration_;
     return opt;
 }
 

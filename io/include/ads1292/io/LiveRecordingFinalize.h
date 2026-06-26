@@ -11,6 +11,7 @@
 // at the io layer, so this simplified provenance omits them. The acquisition
 // section written to the bundle is still valid per the schema.
 
+#include <optional>
 #include <string>
 #include <vector>
 #include "ads1292/model/SessionMetadata.h"
@@ -18,6 +19,7 @@
 #include "ads1292/model/Calibration.h"
 #include "ads1292/model/TestProtocol.h"
 #include "ads1292/dsp/QualityGate.h"
+#include "ads1292/dsp/LiveCalibration.h"
 
 namespace ads1292 {
 namespace io {
@@ -34,6 +36,9 @@ struct FinalizeOptions {
   ads1292::Calibration               calibration;
   ads1292::TestProtocol              protocol;        ///< use protocol_template() for MOTAC defaults
   ads1292::dsp::QualityGate          quality_gate;    ///< use quality_gate_template() for defaults
+  /// When set, written into the bundle's acquisition.live_calibration JSON object.
+  /// Mirrors Python build_acquisition_provenance(live_calibration=...) path.
+  std::optional<ads1292::LiveStreamCalibration> live_calibration;
   std::string acquisition_mode = "live_stream";
   std::string port;
   std::string started_at;          ///< ISO 8601 string, or "" if unavailable

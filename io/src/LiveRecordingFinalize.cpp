@@ -46,6 +46,12 @@ FinalizeResult finalize_live_recording(const std::string& csv_path,
   a.port             = opt.port;
   a.started_at       = opt.started_at;
   a.sample_rate_hz   = opt.sample_rate_hz;
+  // Wire live_calibration: when present, serialize the normalized calibration
+  // into the acquisition provenance's live_calibration JSON object.
+  // Mirrors Python build_acquisition_provenance(live_calibration=...) path.
+  if (opt.live_calibration) {
+      a.live_calibration = live_calibration_to_json(opt.live_calibration->normalized());
+  }
   a = a.normalized();
 
   // Step 3: Build processing settings (no sample_rate_hz arg — the function

@@ -11,10 +11,12 @@
 
 #include "catch.hpp"
 #include "ads1292/io/LiveRecordingFinalize.h"
+#include "ads1292/io/AcquisitionIo.h"
 #include "ads1292/io/CsvIo.h"
 #include "ads1292/io/RecordingBundle.h"
 #include "ads1292/io/ProtocolIo.h"
 #include "ads1292/io/QualityGateIo.h"
+#include "ads1292/dsp/LiveCalibration.h"
 #include "ads1292/model/StreamSample.h"
 #include "ads1292/model/EventMarker.h"
 #include <filesystem>
@@ -160,4 +162,76 @@ TEST_CASE("finalize_live_recording: write_xlsx=false leaves xlsx_path empty", "[
   // No .xlsx file should exist alongside the CSV
   auto expected_xlsx = fs::path(csv).replace_extension(".xlsx");
   REQUIRE_FALSE(fs::exists(expected_xlsx));
+}
+
+// ── P11.9 Task 2: live_calibration wired into the bundle ─────────────────────
+
+TEST_CASE("finalize_live_recording: live_calibration written into bundle acquisition section",
+          "[live_finalize][calibrate]") {
+  // Verify that FinalizeOptions.live_calibration, when set, is serialized into
+  // the bundle's acquisition.live_calibration JSON object with the 6 correct keys
+  // matching Python's _live_calibration_entry() dict.
+  auto tmp = temp_dir();
+  auto csv = tmp / "rec_live_cal.csv";
+
+  auto samples = make_samples(10);
+  ads1292::io::write_recording_csv(csv.string(), samples);
+
+  // Build a known calibration value
+  ads1292::LiveStreamCalibration cal;
+  cal.mean_uv_per_count = 0.0481;
+  cal.std_uv_per_count  = 0.001;
+  cal.cv_percent        = 2.0;
+  cal.runs              = 5;
+  cal.test_signal_pp_uv = 2016.666;
+  cal.scale_type        = "live_processed";
+
+  ads1292::io::FinalizeOptions opt;
+  opt.live_calibration = cal;
+  opt.write_h5         = false;  // no HDF5 dependency needed for this test
+
+  auto r = ads1292::io::finalize_live_recording(csv.string(), opt);
+
+  REQUIRE(r.wrote);
+  REQUIRE(fs::exists(r.bundle_path));
+
+  // Read back the bundle and extract the acquisition section
+  auto bundle = ads1292::io::read_recording_bundle(r.bundle_path);
+  auto acq    = ads1292::io::acquisition_from_bundle(bundle);
+
+  // live_calibration must be a non-empty JSON object with the expected keys
+  REQUIRE(acq.live_calibration.is_object());
+  REQUIRE_FALSE(acq.live_calibration.empty());
+  REQUIRE(acq.live_calibration.contains("mean_uv_per_count"));
+  REQUIRE(acq.live_calibration["mean_uv_per_count"].get<double>() == Approx(0.0481));
+  REQUIRE(acq.live_calibration.contains("scale_type"));
+  REQUIRE(acq.live_calibration["scale_type"].get<std::string>() == "live_processed");
+  REQUIRE(acq.live_calibration.contains("runs"));
+  REQUIRE(acq.live_calibration["runs"].get<int>() == 5);
+}
+
+TEST_CASE("finalize_live_recording: live_calibration absent when not set",
+          "[live_finalize][calibrate]") {
+  // Verify that when live_calibration is not set, the bundle's acquisition
+  // section has an empty live_calibration object (the default).
+  auto tmp = temp_dir();
+  auto csv = tmp / "rec_no_cal.csv";
+
+  auto samples = make_samples(10);
+  ads1292::io::write_recording_csv(csv.string(), samples);
+
+  ads1292::io::FinalizeOptions opt;
+  // live_calibration not set (std::nullopt)
+  opt.write_h5 = false;
+
+  auto r = ads1292::io::finalize_live_recording(csv.string(), opt);
+
+  REQUIRE(r.wrote);
+
+  auto bundle = ads1292::io::read_recording_bundle(r.bundle_path);
+  auto acq    = ads1292::io::acquisition_from_bundle(bundle);
+
+  // Default: live_calibration is an empty JSON object
+  REQUIRE(acq.live_calibration.is_object());
+  REQUIRE(acq.live_calibration.empty());
 }

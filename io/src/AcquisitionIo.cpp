@@ -501,5 +501,19 @@ void write_acquisition_json(const std::string& path, const AcquisitionProvenance
     f << j.dump(2) << "\n";
 }
 
+nlohmann::ordered_json live_calibration_to_json(const ads1292::LiveStreamCalibration& c) {
+    // Mirrors Python _live_calibration_entry() in acquisition.py.
+    // Keys in dataclass field order: {mean_uv_per_count, std_uv_per_count, cv_percent,
+    // runs, test_signal_pp_uv, scale_type}.
+    nlohmann::ordered_json j;
+    j["mean_uv_per_count"] = c.mean_uv_per_count;
+    j["std_uv_per_count"]  = c.std_uv_per_count;
+    j["cv_percent"]        = c.cv_percent;
+    j["runs"]              = c.runs;
+    j["test_signal_pp_uv"] = c.test_signal_pp_uv;
+    j["scale_type"]        = c.scale_type;
+    return j;
+}
+
 }  // namespace io
 }  // namespace ads1292

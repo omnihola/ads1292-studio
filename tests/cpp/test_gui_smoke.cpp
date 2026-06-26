@@ -806,6 +806,85 @@ TEST_CASE("P11.8 Task 3: setSaveXlsxForTest(true) causes finalize to write XLSX"
   std::filesystem::remove_all(tmp);
 }
 
+// ── P11.9 Task 2: Calibrate Live button + result state + bundle wiring ────────
+
+#include "ads1292/dsp/LiveCalibration.h"
+#include "ads1292/io/AcquisitionIo.h"
+
+TEST_CASE("P11.9 Task 2: Calibrate Live button present after construction",
+          "[gui][calibrate]") {
+  // Verify the Calibrate Live button was created in the ctor.
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+  REQUIRE(mw.calibrateButtonPresentForTest());
+}
+
+TEST_CASE("P11.9 Task 2: injectCalibrateResultForTest sets liveCalibration_",
+          "[gui][calibrate]") {
+  // Verify the seam: injecting a successful calibration result stores the value.
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+
+  REQUIRE_FALSE(mw.hasLiveCalibrationForTest());
+
+  ads1292::LiveStreamCalibration cal;
+  cal.mean_uv_per_count = 0.0481;
+  cal.runs              = 5;
+  mw.injectCalibrateResultForTest(cal);
+
+  REQUIRE(mw.hasLiveCalibrationForTest());
+}
+
+TEST_CASE("P11.9 Task 2: injected calibration flows into bundle via finalizeForTest",
+          "[gui][calibrate]") {
+  // Strategy: inject a calibration result via the seam; run the synchronous
+  // finalizeForTest seam; read the bundle; verify acquisition.live_calibration
+  // has the expected mean_uv_per_count value.
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11_9_cal_bundle";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  // Author a small recording
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 20; ++i) {
+    ads1292::StreamSample s;
+    s.ch2 = 100;
+    s.ch1 = 0;
+    s.timestamp = i / 500.0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+
+  ads1292::gui::MainWindow mw;
+  mw.setRecordingsDirForTest(tmp.string());
+  mw.setRecordingCsvPathForTest(csv_path);
+
+  // Inject calibration result via the seam
+  ads1292::LiveStreamCalibration cal;
+  cal.mean_uv_per_count = 0.0481;
+  cal.runs              = 5;
+  mw.injectCalibrateResultForTest(cal);
+  REQUIRE(mw.hasLiveCalibrationForTest());
+
+  // Run finalize synchronously
+  auto r = mw.finalizeForTest();
+  REQUIRE(r.wrote);
+  REQUIRE(std::filesystem::exists(r.bundle_path));
+
+  // Verify live_calibration in the bundle acquisition section
+  auto bundle = ads1292::io::read_recording_bundle(r.bundle_path);
+  auto acq    = ads1292::io::acquisition_from_bundle(bundle);
+
+  REQUIRE(acq.live_calibration.is_object());
+  REQUIRE_FALSE(acq.live_calibration.empty());
+  REQUIRE(acq.live_calibration.contains("mean_uv_per_count"));
+  REQUIRE(acq.live_calibration["mean_uv_per_count"].get<double>() == Approx(0.0481));
+
+  std::filesystem::remove_all(tmp);
+}
+
 // ── P11 Phase 3 Task 1: SessionPanel widget ───────────────────────────────────
 
 #include "ads1292/gui/SessionPanel.h"

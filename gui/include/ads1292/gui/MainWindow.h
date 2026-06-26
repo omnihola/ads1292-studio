@@ -22,10 +22,12 @@
 #include "ads1292/acq/AdsProtocolDevice.h"
 #include "ads1292/dsp/Display.h"
 #include "ads1292/io/LiveRecordingFinalize.h"
+#include "ads1292/dsp/LiveCalibration.h"
 
 // Forward-declare IWaveformPlot so we don't pull in the backend header here.
 namespace ads1292::gui { class IWaveformPlot; }
 
+#include <optional>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QPushButton>
@@ -173,6 +175,21 @@ public:
     /// before calling finalizeForTest and verify the bundle round-trip.
     SessionPanel* sessionPanelForTest() { return sessionPanel_; }
 
+    // ── Calibrate Live test seams (P11 Phase 9 Task 2) ───────────────────────
+
+    /// True iff calibrateBtn_ was created (i.e., the button is present in the toolbar).
+    bool calibrateButtonPresentForTest() const { return calibrateBtn_ != nullptr; }
+
+    /// Inject a successful calibration result directly into onCalibrateResult (GUI thread).
+    /// Bypasses the hardware-only device measurement thread — lets tests exercise the
+    /// result-state machine without physical hardware.
+    void injectCalibrateResultForTest(const ads1292::LiveStreamCalibration& cal) {
+        onCalibrateResult(true, cal, "");
+    }
+
+    /// Returns true iff a live calibration result has been stored (liveCalibration_ has a value).
+    bool hasLiveCalibrationForTest() const { return liveCalibration_.has_value(); }
+
 signals:
     /// Emitted (from invokeMethod on the GUI thread) when the background finalize
     /// thread completes. Connected slot appends the line to the event log.
@@ -185,6 +202,13 @@ private slots:
     /// Runs on the GUI thread (posted via QMetaObject::invokeMethod from the
     /// background connect thread). Updates connection state and re-enables the UI.
     void onConnectResult(bool ok, const std::string& port, const std::string& detail);
+
+    /// Runs on the GUI thread (posted via QMetaObject::invokeMethod from the
+    /// background calibrate thread, or called directly by injectCalibrateResultForTest).
+    /// On success: stores the normalized calibration and updates the status line.
+    /// On failure: logs the detail message to the event log.
+    void onCalibrateResult(bool ok, const ads1292::LiveStreamCalibration& cal,
+                           const std::string& detail);
 
 private:
     void onTick();
@@ -281,6 +305,21 @@ private:
 
     // ── Streaming state (P11 Phase 7 Task 1) ─────────────────────────────────
     bool streaming_ = false;  ///< True while acquisition worker is running
+
+    // ── Calibrate Live (P11 Phase 9 Task 2) ──────────────────────────────────
+    QPushButton* calibrateBtn_ = nullptr; ///< "Calibrate Live" toolbar button
+
+    /// Stored result of the most recent successful calibration.
+    /// Flows into the bundle's acquisition.live_calibration via buildFinalizeOptions().
+    std::optional<ads1292::LiveStreamCalibration> liveCalibration_;
+
+    bool calibrating_ = false; ///< True while the calibrate background thread is running
+
+    /// Background calibrate thread; joined in dtor + before respawn (UAF prevention).
+    /// Note: the actual ADS1292 register-level measurement (run_live_stream_calibration
+    /// from device.py) is HARDWARE-ONLY — not ported in this C++ build. The thread
+    /// reports this as a documented failure via onCalibrateResult(false, ...).
+    std::thread calibrateThread_;
 };
 
 } // namespace ads1292::gui
