@@ -52,7 +52,8 @@ add_executable(ads1292_tests
   test_batch.cpp
   test_ads_ports.cpp
   test_query_firmware.cpp
-  test_devcli.cpp)
+  test_devcli.cpp
+  test_sidecar_repair.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 
@@ -72,5 +73,6 @@ target_link_libraries(ads1292_tests PRIVATE
   qcustomplot
   Qt6::Widgets)
 target_compile_definitions(ads1292_tests PRIVATE
-  FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/golden")
+  FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/golden"
+  SCRATCH_OR_TMP="${CMAKE_BINARY_DIR}/test_scratch")
 add_test(NAME ads1292_tests COMMAND ads1292_tests)
