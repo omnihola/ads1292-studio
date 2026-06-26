@@ -52,6 +52,7 @@ add_executable(ads1292_tests
   test_batch.cpp
   test_ads_ports.cpp
   test_query_firmware.cpp
+  test_acquire_raw.cpp
   test_devcli.cpp
   test_sidecar_repair.cpp)
 

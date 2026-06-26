@@ -28,9 +28,12 @@ int AcquisitionWorker::run_to_completion(ads1292::acq::IDeviceSource* dev,
 
   std::thread t([&] {
     if (mode == ads1292::acq::AcquisitionMode::Live) {
+      // Also stop when dev->stream_done() is true: finite simulators signal
+      // exhaustion this way so run_live's continue-on-empty loop can terminate.
+      // Real hardware always returns stream_done()==false (default IDeviceSource).
       auto result = ads1292::io::run_live(
           *dev, live_queue_, csv_path,
-          [this] { return !stop_.load(); });
+          [this, dev] { return !stop_.load() && !dev->stream_done(); });
       sample_count = result.sample_count;
     } else {
       auto result = ads1292::io::run_raw(

@@ -12,6 +12,7 @@ class SimulatorDeviceSource : public IDeviceSource {
   void stop_stream() override;
   std::vector<ads1292::StreamSample> read_stream_batch() override;
   std::vector<ads1292::RawSample> acquire_raw(int count) override;
+  bool stream_done() const override;
 
  private:
   int stream_batches_;

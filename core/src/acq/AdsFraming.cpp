@@ -24,4 +24,18 @@ Frame read_frame(IByteTransport& transport) {
   f.ok = true;
   return f;
 }
+
+Frame read_frame_until_end(IByteTransport& transport) {
+  Frame f;
+  uint8_t byte = 0;
+  // scan to START
+  for (;;) { if (!read_one(transport, byte)) return f; if (byte == kStart) break; }
+  if (!read_one(transport, f.type)) return f;
+  // read one byte at a time until END or end of input
+  for (;;) {
+    if (!read_one(transport, byte)) return f;  // ok stays false — end of input
+    if (byte == kEnd) { f.ok = true; return f; }
+    f.payload.push_back(byte);
+  }
+}
 }}  // namespace ads1292::acq

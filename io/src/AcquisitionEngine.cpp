@@ -19,7 +19,7 @@ AcquisitionResult run_live(acq::IDeviceSource& dev,
     if (!should_continue()) break;
 
     auto batch = dev.read_stream_batch();
-    if (batch.empty()) break;
+    if (batch.empty()) continue;  // oracle: iter_stream_samples does continue on empty
 
     for (auto& s : batch) {
       s.sample_index = running_counter++;

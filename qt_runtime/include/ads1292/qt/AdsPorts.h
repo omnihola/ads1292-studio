@@ -16,6 +16,10 @@ struct AdsPort {
 /// VID 0x2047 = Texas Instruments, PID 0x0300 = ADS1x9x EVM.
 bool is_ads_candidate_port(int vid, int pid);
 
+/// Returns true when the port description contains "ADS1x9x" (case-insensitive).
+/// Oracle: _is_ads_candidate_port checks `"ADS1x9x" in description`.
+bool is_ads_description_match(const std::string& description);
+
 /// Enumerates all connected serial ports and returns those that match
 /// the ADS1x9x VID/PID filter via QSerialPortInfo.
 ///

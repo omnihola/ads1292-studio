@@ -38,6 +38,10 @@ std::vector<ads1292::StreamSample> SimulatorDeviceSource::read_stream_batch() {
   return batch;
 }
 
+bool SimulatorDeviceSource::stream_done() const {
+  return emitted_batches_ >= stream_batches_;
+}
+
 std::vector<ads1292::RawSample> SimulatorDeviceSource::acquire_raw(int count) {
   std::vector<ads1292::RawSample> result;
   result.reserve(static_cast<std::size_t>(count));

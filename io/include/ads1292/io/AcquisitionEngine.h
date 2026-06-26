@@ -15,8 +15,10 @@ struct AcquisitionResult {
 
 /// Drives a live streaming session, pushing each StreamSample to queue
 /// and (if csv_path non-empty) writing a CSV journal at stop.
-/// Loops until should_continue() returns false or the device returns an
-/// empty batch.  Assigns sequential sample_index values starting from 0.
+/// Loops until should_continue() returns false (the only stop condition).
+/// Empty batches from the device are skipped (continue), not treated as a
+/// termination signal — oracle: device.py iter_stream_samples does continue.
+/// Assigns sequential sample_index values starting from 0.
 AcquisitionResult run_live(acq::IDeviceSource& dev,
                            acq::SampleQueue<StreamSample>& queue,
                            const std::string& csv_path,

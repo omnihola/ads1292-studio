@@ -1,6 +1,7 @@
 #include "ads1292/acq/AdsProtocolDevice.h"
 #include "ads1292/acq/AdsFraming.h"
 #include "ads1292/device/AdsParser.h"
+#include <chrono>
 
 namespace ads1292 { namespace acq {
 
@@ -34,10 +35,15 @@ std::vector<ads1292::RawSample> AdsProtocolDevice::acquire_raw(int count) {
     throw AdsParseError("acquire_raw: count must be positive and a multiple of 8");
   }
 
+  // B2: capture wall-clock seconds BEFORE the command write (oracle: start_timestamp = time.time())
+  double start_ts = std::chrono::duration<double>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
+
   t_.write(build_cmd(0x94, static_cast<uint8_t>((count >> 8) & 0xFF),
                      static_cast<uint8_t>(count & 0xFF)));
 
-  Frame ack = read_frame(t_);
+  // B3: ACK is a short variable-length frame; use read_frame_until_end, not read_frame
+  Frame ack = read_frame_until_end(t_);
   if (!ack.ok || ack.type != 0x94 || ack.payload.size() < 2) {
     throw AdsParseError("acquire ACK mismatch");
   }
@@ -56,7 +62,7 @@ std::vector<ads1292::RawSample> AdsProtocolDevice::acquire_raw(int count) {
     if (f.type != 0x94) {
       continue;
     }
-    auto batch = parse_acquire_payload(f.payload, 0.0, sample_rate_hz_, collected);
+    auto batch = parse_acquire_payload(f.payload, start_ts, sample_rate_hz_, collected);
     for (auto& s : batch) {
       result.push_back(std::move(s));
     }

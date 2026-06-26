@@ -25,11 +25,18 @@ int run_firmware(std::ostream& out, ads1292::acq::AdsProtocolDevice& dev) {
 int run_stream(std::ostream& out, ads1292::acq::IDeviceSource& dev, const StreamOptions& opt) {
     std::vector<ads1292::StreamSample> samples;
     dev.start_stream();
-    while (true) {
-        auto batch = dev.read_stream_batch();
-        if (batch.empty()) break;
-        samples.insert(samples.end(), batch.begin(), batch.end());
-        if (opt.max_samples > 0 && static_cast<int>(samples.size()) >= opt.max_samples) break;
+    // B9: wrap the read loop so stop_stream() is called even on exception
+    // (oracle: cli.py cmd_stream uses try/finally: device.stop_stream())
+    try {
+        while (true) {
+            auto batch = dev.read_stream_batch();
+            if (batch.empty()) break;
+            samples.insert(samples.end(), batch.begin(), batch.end());
+            if (opt.max_samples > 0 && static_cast<int>(samples.size()) >= opt.max_samples) break;
+        }
+    } catch (...) {
+        dev.stop_stream();
+        throw;
     }
     dev.stop_stream();
     if (!opt.csv_path.empty()) {

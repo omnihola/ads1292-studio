@@ -32,8 +32,11 @@ QSerialByteTransport::~QSerialByteTransport() {
 void QSerialByteTransport::write(const std::vector<uint8_t>& bytes) {
   const QByteArray data(reinterpret_cast<const char*>(bytes.data()),
                         static_cast<qsizetype>(bytes.size()));
-  port_.write(data);
-  port_.waitForBytesWritten(timeout_ms_);
+  // B4: check write count and flush success; throw on failure (oracle: pyserial raises on write error)
+  if (port_.write(data) != static_cast<qint64>(data.size()) ||
+      !port_.waitForBytesWritten(timeout_ms_)) {
+    throw std::runtime_error("serial write failed");
+  }
 }
 
 std::vector<uint8_t> QSerialByteTransport::read(std::size_t n) {
