@@ -10,6 +10,8 @@ add_library(ads1292_gui_lib STATIC
   # Explicit header listing so AUTOMOC processes Q_OBJECT in the canonical
   # include-tree header (not just the adjacent-to-src scanning heuristic).
   include/ads1292/gui/MainWindow.h
+  include/ads1292/gui/Preferences.h
+  src/Preferences.cpp
   src/MainWindow.cpp
   src/RecordingPaths.cpp
   src/QCustomPlotWaveform.cpp
