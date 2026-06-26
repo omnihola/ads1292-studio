@@ -2,6 +2,7 @@
 #include "ads1292/io/BatchScan.h"
 #include "ads1292/io/CsvIo.h"
 #include "ads1292/io/MetadataIo.h"
+#include "ads1292/io/RecordingBundle.h"
 #include "ads1292/dsp/QualityMetrics.h"
 #include "ads1292/model/SessionMetadata.h"
 
@@ -17,10 +18,14 @@ namespace io {
 namespace {
 
 /// Mirrors batch.py _metadata_for:
-///   1. Bundle detection is not ported — no bundle check.
+///   1. Bundle short-circuit: if .json beside csv IS a recording bundle → extract metadata.
 ///   2. <stem>.json sidecar if present → read_metadata_json.
 ///   3. Otherwise → SessionMetadata{session_id=stem}.normalized().
 ads1292::SessionMetadata _metadata_for(const fs::path& csv_path) {
+    auto bundle_path = recording_bundle_path(csv_path.string());
+    if (is_recording_bundle_path(bundle_path)) {
+        return metadata_from_bundle(read_recording_bundle(bundle_path));
+    }
     fs::path sidecar = fs::path(csv_path).replace_extension(".json");
     if (fs::exists(sidecar)) {
         return read_metadata_json(sidecar.string());  // propagate on corrupt sidecar

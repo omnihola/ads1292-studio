@@ -3,7 +3,15 @@
 #include "ads1292/io/SessionIndexScan.h"
 #include "ads1292/io/CsvIo.h"
 #include "ads1292/io/MetadataIo.h"
+#include "ads1292/io/Bundle.h"
+#include "ads1292/io/AcquisitionIo.h"
 #include "ads1292/model/StreamSample.h"
+#include "ads1292/model/SessionMetadata.h"
+#include "ads1292/model/Calibration.h"
+#include "ads1292/model/EventMarker.h"
+#include "ads1292/model/TestProtocol.h"
+#include "ads1292/dsp/QualityGate.h"
+#include "ads1292/model/RecordingProcessingSettings.h"
 #include <filesystem>
 #include <cmath>
 using namespace ads1292;
@@ -44,4 +52,44 @@ TEST_CASE("scan_recording_directory builds rows + summary", "[index]") {
   auto out = (dir / "index.json").string();
   io::write_session_index_json(out, rows, sum);
   REQUIRE(std::filesystem::exists(out));
+}
+
+TEST_CASE("scan_recording_directory reads bundle-backed recording correctly", "[index][bundle]") {
+  // Step 1: Build a recording directory with rec.csv + rec.json that IS a bundle.
+  auto dir = std::filesystem::temp_directory_path() / "p10_idx_bundle";
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir);
+
+  // Write rec.csv with a few synthetic ECG samples.
+  auto csv_path = make_clean_recording(dir, "rec");
+
+  // Build a bundle with distinctive metadata: session_id="bundle-sess", electrode="MOTAC".
+  SessionMetadata meta;
+  meta.session_id = "bundle-sess";
+  meta.electrode  = "MOTAC";
+  meta.subject_id = "subj-bundle";
+
+  std::vector<EventMarker> events;  // no events
+  io::write_recording_bundle(
+      csv_path, meta, events,
+      Calibration{},
+      io::AcquisitionProvenance{},
+      TestProtocol{},
+      dsp::QualityGate{},
+      RecordingProcessingSettings{},
+      500.0, "2024-01-01T00:00:00Z");
+
+  // Step 2: Scan the directory and locate the row for rec.csv.
+  auto rows = io::scan_recording_directory(dir.string());
+  REQUIRE(rows.size() == 1);
+
+  const auto& row = rows[0];
+
+  // Bundle metadata path: must see the distinctive session_id and electrode, NOT defaults.
+  REQUIRE(row.session_id == "bundle-sess");
+  REQUIRE(row.electrode  == "MOTAC");
+
+  // Bundle sidecar_status short-circuit: the bundle carries all 7 categories.
+  REQUIRE(row.sidecar_status   == "complete");
+  REQUIRE(row.missing_sidecars == "");
 }

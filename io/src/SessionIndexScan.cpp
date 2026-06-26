@@ -4,6 +4,7 @@
 #include "ads1292/io/MetadataIo.h"
 #include "ads1292/io/EventsIo.h"
 #include "ads1292/io/AcquisitionIo.h"
+#include "ads1292/io/RecordingBundle.h"
 #include "ads1292/dsp/QualityMetrics.h"
 #include "ads1292/model/SessionMetadata.h"
 #include "ads1292/model/EventMarker.h"
@@ -61,8 +62,16 @@ bool _looks_like_recording_csv(const fs::path& path) {
 }
 
 // ── _metadata_for ─────────────────────────────────────────────────────────
-// No bundle detection ported — just check <stem>.json sidecar.
+// Mirrors session_index.py _metadata_for:
+//   1. Bundle short-circuit: if the .json beside the csv IS a recording bundle,
+//      extract metadata from it (all 7 categories bundled together).
+//   2. Else: check <stem>.json plain metadata sidecar.
+//   3. Else: default SessionMetadata with session_id=stem.
 ads1292::SessionMetadata _metadata_for(const fs::path& csv_path) {
+    auto bundle_path = recording_bundle_path(csv_path.string());
+    if (is_recording_bundle_path(bundle_path)) {
+        return metadata_from_bundle(read_recording_bundle(bundle_path));
+    }
     fs::path sidecar = fs::path(csv_path).replace_extension(".json");
     if (fs::exists(sidecar)) {
         try {
@@ -75,8 +84,15 @@ ads1292::SessionMetadata _metadata_for(const fs::path& csv_path) {
 }
 
 // ── _sidecar_status ────────────────────────────────────────────────────────
+// Mirrors session_index.py _sidecar_status:
+//   Bundle short-circuit: if the .json beside the csv IS a recording bundle,
+//   return ("complete", "") immediately — the bundle carries all 7 categories.
+//   Else: per-sidecar existence audit (unchanged original behaviour).
 // Returns ("complete","") or ("missing","name1;name2;...")
 std::pair<std::string, std::string> _sidecar_status(const fs::path& csv_path) {
+    if (is_recording_bundle_path(recording_bundle_path(csv_path.string()))) {
+        return {"complete", ""};
+    }
     struct SidecarCheck {
         std::string name;
         std::vector<fs::path> paths;
