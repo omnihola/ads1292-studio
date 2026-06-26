@@ -51,7 +51,8 @@ add_executable(ads1292_tests
   test_session_index.cpp
   test_batch.cpp
   test_ads_ports.cpp
-  test_query_firmware.cpp)
+  test_query_firmware.cpp
+  test_devcli.cpp)
 
 set_target_properties(ads1292_tests PROPERTIES AUTOMOC ON)
 
@@ -65,6 +66,7 @@ target_link_libraries(ads1292_tests PRIVATE
   ads1292_io
   ads1292_cli_lib
   ads1292_qt_runtime
+  ads1292_devcli_lib
   catch2
   nlohmann_json
   qcustomplot

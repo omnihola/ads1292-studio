@@ -18,6 +18,7 @@ add_subdirectory(core)
 add_subdirectory(io)
 add_subdirectory(cli)
 add_subdirectory(qt_runtime)
+add_subdirectory(devcli)
 
 if(ADS1292_BUILD_GUI)
   add_subdirectory(gui)
