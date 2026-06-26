@@ -1,8 +1,10 @@
 // io/include/ads1292/io/SidecarRepair.h
 // Sidecar completion plan: SidecarPlanRow, build_sidecar_completion_plan,
 // and the path helpers expected_sidecar_path / sidecar_label / template_path_for.
+// Task 2 adds: write_sidecar_template_bundle + write_sidecar_apply_script.
 // Port of session_index.py: SidecarPlanRow / build_sidecar_completion_plan /
-// _expected_sidecar_path / _sidecar_label / _template_path_for.
+// _expected_sidecar_path / _sidecar_label / _template_path_for /
+// write_sidecar_template_bundle / write_sidecar_apply_script.
 // Pure C++17, no Qt.
 #pragma once
 #include <string>
@@ -47,6 +49,26 @@ std::string template_path_for(const std::string& template_dir,
 std::vector<SidecarPlanRow> build_sidecar_completion_plan(
     const std::vector<ads1292::index::SessionIndexRow>& rows,
     const std::string& template_dir);
+
+/// Write one template sidecar per missing slot for every row.
+/// For each non-empty sidecar in row.missing_sidecars (split on ';'):
+///   - resolves the template path via template_path_for()
+///   - creates parent directories as needed
+///   - writes the template via the appropriate P7b sidecar writer
+/// Returns all written paths in order (row-major, then sidecar-order).
+/// Matches Python write_sidecar_template_bundle(template_dir, rows).
+/// NOTE: The acquisition template is a SIMPLIFIED default; see SidecarRepair.cpp.
+std::vector<std::string> write_sidecar_template_bundle(
+    const std::string& template_dir,
+    const std::vector<ads1292::index::SessionIndexRow>& rows);
+
+/// Emit a POSIX shell script that copies each template to its target location
+/// using `cp -n` (no-clobber — existing sidecars are left untouched).
+/// When plan is empty the script contains an echo instead.
+/// The script is chmod 0755.
+/// Matches Python write_sidecar_apply_script(path, rows).
+void write_sidecar_apply_script(const std::string& path,
+                                 const std::vector<SidecarPlanRow>& plan);
 
 }  // namespace io
 }  // namespace ads1292

@@ -6,6 +6,7 @@
 #include "ads1292/io/CsvIo.h"
 #include "ads1292/io/H5Io.h"
 #include "ads1292/io/SessionIndexScan.h"
+#include "ads1292/io/SidecarRepair.h"
 #include "ads1292/index/BatchRow.h"
 #include "ads1292/index/SessionIndexRow.h"
 #include "ads1292/dsp/QualityMetrics.h"
@@ -151,6 +152,15 @@ int run_index(std::ostream& out, const IndexOptions& opt) {
     out << "action_package_record=" << summary.action_package_record << "\n";
     out << "action_complete_sidecars=" << summary.action_complete_sidecars << "\n";
     out << "action_review_signal=" << summary.action_review_signal << "\n";
+
+    // --- write sidecar template bundle + apply script ---
+    auto tdir   = (fs::path(opt.out_dir) / "sidecar-templates").string();
+    auto plan   = ads1292::io::build_sidecar_completion_plan(rows, tdir);
+    ads1292::io::write_sidecar_template_bundle(tdir, rows);
+    auto script = (fs::path(opt.out_dir) / "apply-sidecars.sh").string();
+    ads1292::io::write_sidecar_apply_script(script, plan);
+    out << "sidecar_plan_rows=" << plan.size() << "\n";
+    out << "sidecar_apply_script=" << script << "\n";
 
     return 0;
 }
