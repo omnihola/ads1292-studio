@@ -901,6 +901,52 @@ TEST_CASE("P11P7 Task 1: refreshControls control-gating matrix (idle/streaming/i
   REQUIRE_FALSE(mw.stopEnabledForTest());
 }
 
+// ── P11 Phase 7 Task 2: refreshControls at every state transition ─────────────
+
+TEST_CASE("P11P7 Task 2: injectConnectResultForTest re-enables idle controls after connect", "[gui][controls]") {
+  // Verifies that onConnectResult now calls refreshControls() (not just connectBtn_->setEnabled(true))
+  // so the full idle-control set (Start, Load, etc.) is re-enabled when connect completes.
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+
+  // Successful connect result: connecting_ → false → all idle controls re-enabled.
+  mw.injectConnectResultForTest(true, "/dev/cu.x", "1.12");
+  REQUIRE(mw.connectedPortForTest() == "/dev/cu.x");
+  REQUIRE(mw.startEnabledForTest());      // Start must be re-enabled (idle)
+  REQUIRE_FALSE(mw.stopEnabledForTest()); // Stop must remain disabled (not streaming)
+  REQUIRE(mw.loadEnabledForTest());       // Load must be re-enabled (idle)
+
+  // Failed connect result: connecting_ → false → idle controls also re-enabled.
+  mw.injectConnectResultForTest(false, "", "open failed");
+  REQUIRE(mw.connectedPortForTest().empty());
+  REQUIRE(mw.startEnabledForTest());
+  REQUIRE_FALSE(mw.stopEnabledForTest());
+}
+
+TEST_CASE("P11P7 Task 2: streaming_ idle transition re-enables Start and disables Stop", "[gui][controls]") {
+  // Verifies the gating matrix is correct for the full streaming→idle cycle.
+  // Uses setStreamingForTest to simulate the streaming_=false;refreshControls() call
+  // that the finalize-completion handler now makes.
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+
+  // Initial idle
+  REQUIRE(mw.startEnabledForTest());
+  REQUIRE_FALSE(mw.stopEnabledForTest());
+
+  // Simulate Start: streaming_=true
+  mw.setStreamingForTest(true);
+  REQUIRE_FALSE(mw.startEnabledForTest());
+  REQUIRE(mw.stopEnabledForTest());
+  REQUIRE_FALSE(mw.loadEnabledForTest());
+
+  // Simulate finalize-completion: streaming_=false (as the finalize-completion callback does)
+  mw.setStreamingForTest(false);
+  REQUIRE(mw.startEnabledForTest());
+  REQUIRE_FALSE(mw.stopEnabledForTest());
+  REQUIRE(mw.loadEnabledForTest());
+}
+
 TEST_CASE("P11P3 Task 2: sessionPanelForTest metadata is written into the bundle", "[gui][session]") {
   // Strategy: construct MainWindow, set session metadata on the panel, run the
   // synchronous finalize seam, read the produced bundle, verify metadata fields.

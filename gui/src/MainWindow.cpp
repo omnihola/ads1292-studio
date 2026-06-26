@@ -251,8 +251,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     connect(startBtn_, &QPushButton::clicked, this,
             [this, modeCombo]() {
-        startBtn_->setEnabled(false);
-        stopBtn_->setEnabled(true);
+        streaming_ = true; refreshControls();
 
         auto mode = (modeCombo->currentIndex() == 0)
                     ? ads1292::acq::AcquisitionMode::Live
@@ -289,9 +288,7 @@ MainWindow::MainWindow(QWidget* parent)
                 state_.connection    = "start failed: " + std::string(e.what());
                 state_.recordingState = "idle";
                 statusPanel_->updateFromState(state_);
-                startBtn_->setEnabled(true);
-                stopBtn_->setEnabled(false);
-                if (saveH5Check_) saveH5Check_->setEnabled(true);
+                streaming_ = false; refreshControls();
                 transport_.reset();
                 realDevice_.reset();
                 return;
@@ -304,15 +301,14 @@ MainWindow::MainWindow(QWidget* parent)
         state_.recordingState = "recording";
         statusPanel_->updateFromState(state_);
 
-        // Disable save-format checkboxes while recording is in progress
-        // so the user cannot toggle them mid-acquisition.
-        if (saveH5Check_) saveH5Check_->setEnabled(false);
+        // saveH5Check_ is already disabled by refreshControls() above (streaming_ = true).
     });
 
     connect(stopBtn_, &QPushButton::clicked, this, [this]() {
         worker_.requestStop();
-        startBtn_->setEnabled(true);
-        stopBtn_->setEnabled(false);
+        // streaming_ remains true (worker is still finalizing).
+        // Disable Stop to prevent double-click; Start re-enables after finalize-completion.
+        if (stopBtn_) stopBtn_->setEnabled(false);
     });
 
     // ── Worker finished → onWorkerFinished (GUI thread, queued) ──────────────
@@ -323,8 +319,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(this, &MainWindow::finalizeLogged, this, [this](QString l) {
         reviewEventLogPanel_->appendLine(l.toStdString());
         statusPanel_->updateFromState(state_);
-        // Re-enable save-format checkboxes now that we are idle.
-        if (saveH5Check_) saveH5Check_->setEnabled(true);
+        // Controls already re-enabled by refreshControls() in the finalize-completion callback.
     });
 
     // ── Refresh button: enumerate ADS ports into the port combo ──────────────
@@ -343,7 +338,7 @@ MainWindow::MainWindow(QWidget* parent)
 
         std::string port = sel.toStdString();
         connecting_ = true;
-        connectBtn_->setEnabled(false);
+        refreshControls();  // disables Start/Refresh/Connect/portCombo while connecting
 
         // Join any previous connect thread before spawning a new one (no double-UAF).
         if (connectThread_.joinable()) {
@@ -433,7 +428,7 @@ void MainWindow::onConnectResult(bool ok, const std::string& port, const std::st
         state_.connection = "connect failed: " + detail;
     }
     if (statusPanel_) statusPanel_->updateFromState(state_);
-    if (connectBtn_) connectBtn_->setEnabled(true);
+    refreshControls();  // re-enables idle controls (connecting_ = false)
 }
 
 void MainWindow::refreshControls() {
@@ -503,8 +498,7 @@ void MainWindow::onWorkerFinished(int sampleCount) {
         reviewEventLogPanel_->appendLine("empty capture — nothing saved");
         state_.recordingState = "idle";
         statusPanel_->updateFromState(state_);
-        // Re-enable save-format checkboxes: nothing was recorded, back to idle.
-        if (saveH5Check_) saveH5Check_->setEnabled(true);
+        streaming_ = false; refreshControls();  // idle transition: re-enables Start, disables Stop
         // Worker has stopped — release the real device (safe to reset here).
         realDevice_.reset();
         transport_.reset();
@@ -540,6 +534,7 @@ void MainWindow::onWorkerFinished(int sampleCount) {
             // The worker has already stopped, so the device is no longer in use.
             realDevice_.reset();
             transport_.reset();
+            streaming_ = false; refreshControls();  // idle transition: re-enables Start, disables Stop
             emit finalizeLogged(line);
         }, Qt::QueuedConnection);
     });
