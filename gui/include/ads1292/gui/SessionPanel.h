@@ -40,7 +40,8 @@ public:
     // ── Protocol tab ─────────────────────────────────────────────────────────
 
     /// Build a TestProtocol from the Protocol tab fields.
-    /// steps is always left empty (not user-edited here).
+    /// Starts with protocol_template() and overrides only the 4 text fields;
+    /// steps and other defaults are preserved from the template.
     ads1292::TestProtocol protocol() const;
 
     // ── Test seams ───────────────────────────────────────────────────────────

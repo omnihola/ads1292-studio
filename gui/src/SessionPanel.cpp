@@ -1,5 +1,6 @@
 // gui/src/SessionPanel.cpp
 #include "ads1292/gui/SessionPanel.h"
+#include "ads1292/io/ProtocolIo.h"
 #include <QCheckBox>
 #include <QFormLayout>
 #include <QLineEdit>
@@ -76,11 +77,12 @@ SessionPanel::SessionPanel(QWidget* parent)
     protInstructions_ = new QLineEdit;
     protAccept_       = new QLineEdit;
 
-    // Pre-fill with TestProtocol{} defaults
-    protName_->setText("ADS1292 validation protocol");
-    protObjective_->setText("");  // explicit empty
-    protInstructions_->setText("Follow the listed protocol steps.");
-    protAccept_->setText("Review quality gate and artifacts before accepting the run.");
+    // Pre-fill with protocol_template() defaults (MOTAC ECG validation + 3 steps)
+    auto tmpl = ads1292::io::protocol_template();
+    protName_->setText(QString::fromStdString(tmpl.name));
+    protObjective_->setText(QString::fromStdString(tmpl.objective));
+    protInstructions_->setText(QString::fromStdString(tmpl.operator_instructions));
+    protAccept_->setText(QString::fromStdString(tmpl.acceptance_notes));
 
     auto* protocolWidget = new QWidget;
     auto* protocolForm   = new QFormLayout(protocolWidget);
@@ -181,13 +183,12 @@ ads1292::dsp::QualityGate SessionPanel::qualityGate() const {
 // ── Protocol tab ─────────────────────────────────────────────────────────────
 
 ads1292::TestProtocol SessionPanel::protocol() const {
-    ads1292::TestProtocol p;
-    p.name                 = protName_->text().toStdString();
-    p.objective            = protObjective_->text().toStdString();
+    auto p = ads1292::io::protocol_template();  // carries the 3 steps + template defaults
+    p.name                  = protName_->text().toStdString();
+    p.objective             = protObjective_->text().toStdString();
     p.operator_instructions = protInstructions_->text().toStdString();
-    p.acceptance_notes     = protAccept_->text().toStdString();
-    p.steps                = {};
-    return p;
+    p.acceptance_notes      = protAccept_->text().toStdString();
+    return p;  // steps preserved from the template
 }
 
 // ── Test seams ───────────────────────────────────────────────────────────────

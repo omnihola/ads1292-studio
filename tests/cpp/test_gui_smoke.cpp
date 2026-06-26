@@ -789,16 +789,16 @@ TEST_CASE("P11P5 Task 1: qualityGate() returns QualityGate{} defaults on unedite
   REQUIRE_FALSE(qg.max_peak_to_peak_counts.has_value());
 }
 
-TEST_CASE("P11P5 Task 1: protocol() returns TestProtocol{} defaults on unedited panel", "[gui][session][protocol]") {
+TEST_CASE("P11P5 Task 1: protocol() returns protocol_template() defaults on unedited panel", "[gui][session][protocol]") {
   ensureApp();
   ads1292::gui::SessionPanel sp;
 
   auto p = sp.protocol();
-  REQUIRE(p.name                  == "ADS1292 validation protocol");
-  REQUIRE(p.objective             == "");
-  REQUIRE(p.operator_instructions == "Follow the listed protocol steps.");
-  REQUIRE(p.acceptance_notes      == "Review quality gate and artifacts before accepting the run.");
-  REQUIRE(p.steps.empty());
+  REQUIRE(p.name                  == "MOTAC ECG validation");
+  REQUIRE(p.objective             == "Compare MOTAC gel electrode performance against a commercial Ag/AgCl control.");
+  REQUIRE(p.operator_instructions == "Use battery power, verify RA/LA/RL contact, and record protocol events.");
+  REQUIRE(p.acceptance_notes      == "Quality gate should pass; QRS should remain visible before, during, and after motion.");
+  REQUIRE_FALSE(p.steps.empty());  // template carries 3 protocol steps
 }
 
 TEST_CASE("P11P5 Task 1: metadata() still works after tab restructure", "[gui][session]") {
