@@ -675,6 +675,28 @@ TEST_CASE("P11D Task 2: onConnectResult sets connectedPort on success, clears on
   REQUIRE(mw.connectedPortForTest().empty());
 }
 
+// ── P11 Phase 4 Task 3: Start branches on real device vs simulator ────────────
+
+TEST_CASE("P11D Task 3: startUsesRealDeviceForTest reflects connectedPort (branch-selection seam)", "[gui][ports]") {
+  // The real-serial Start is hardware-only. This test exercises the SELECTION
+  // logic: with no connected port the simulator path is selected; after
+  // injectConnectResultForTest(ok=true) the real-device path is selected.
+  // No serial port is actually opened in this test.
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+
+  // No port connected yet → simulator path
+  REQUIRE_FALSE(mw.startUsesRealDeviceForTest());
+
+  // Inject a successful connect result (simulates background thread returning ok)
+  mw.injectConnectResultForTest(true, "/dev/cu.x", "1.12");
+  REQUIRE(mw.startUsesRealDeviceForTest());
+
+  // Inject a failure → disconnected → back to simulator path
+  mw.injectConnectResultForTest(false, "", "open failed");
+  REQUIRE_FALSE(mw.startUsesRealDeviceForTest());
+}
+
 TEST_CASE("MainWindow save-format checkboxes: default state and H5 opt propagation", "[gui][recording]") {
   ensureApp();
   ads1292::gui::MainWindow win;

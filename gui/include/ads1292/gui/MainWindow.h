@@ -16,7 +16,9 @@
 #include "ads1292/gui/QualityInfoPanel.h"
 #include "ads1292/gui/ReviewEventLogPanel.h"
 #include "ads1292/qt/AcquisitionWorker.h"
+#include "ads1292/qt/QSerialByteTransport.h"
 #include "ads1292/acq/IDeviceSource.h"
+#include "ads1292/acq/AdsProtocolDevice.h"
 #include "ads1292/dsp/Display.h"
 #include "ads1292/io/LiveRecordingFinalize.h"
 
@@ -105,6 +107,13 @@ public:
     /// Returns the raw device path of the currently connected port (empty = disconnected).
     std::string connectedPortForTest() const { return connectedPort_; }
 
+    // ── Start branch-selection test seam (P11 Phase 4 Task 3) ────────────────
+
+    /// Returns true iff a port is connected, meaning the Start lambda will route
+    /// acquisition to the real device. Returns false → falls back to the simulator.
+    /// The real-serial Start is hardware-only; this tests the branch-selection logic.
+    bool startUsesRealDeviceForTest() const { return !connectedPort_.empty(); }
+
     // ── Save-format checkbox test seams ───────────────────────────────────────
 
     /// True iff the HDF5 save checkbox is present and checked (default: true).
@@ -189,6 +198,12 @@ private:
     // ── Worker / acquisition ──────────────────────────────────────────────────
     ads1292::qt::AcquisitionWorker worker_;
     std::unique_ptr<ads1292::acq::IDeviceSource> activeSource_;
+
+    // ── Real-device lifetime (P11 Phase 4 Task 3) ─────────────────────────────
+    // Created at Start when connectedPort_ is non-empty; reset only after the
+    // worker has stopped + finalize has completed (transport must outlive the worker).
+    std::unique_ptr<ads1292::qt::QSerialByteTransport> transport_;
+    std::unique_ptr<ads1292::acq::AdsProtocolDevice>   realDevice_;
 
     // ── Tick timer ────────────────────────────────────────────────────────────
     QTimer timer_;

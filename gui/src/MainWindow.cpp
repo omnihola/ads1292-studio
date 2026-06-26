@@ -264,8 +264,31 @@ MainWindow::MainWindow(QWidget* parent)
         // Clear the event log so each recording starts with a fresh annotation slate.
         eventConsole_->clear();
 
-        activeSource_ = std::make_unique<ads1292::acq::SimulatorDeviceSource>(200, 0);
-        worker_.start(activeSource_.get(), mode, recordingCsvPath_);
+        // Branch: use the real device if a port was successfully connected;
+        // otherwise fall back to the simulator.
+        if (!connectedPort_.empty()) {
+            try {
+                transport_ = std::make_unique<ads1292::qt::QSerialByteTransport>(
+                    QString::fromStdString(connectedPort_), 1000);
+                realDevice_ = std::make_unique<ads1292::acq::AdsProtocolDevice>(
+                    *transport_, 500.0);
+                worker_.start(realDevice_.get(), mode, recordingCsvPath_);
+            } catch (const std::exception& e) {
+                // Serial open failed — log the error, abort Start, re-enable the UI.
+                state_.connection    = "start failed: " + std::string(e.what());
+                state_.recordingState = "idle";
+                statusPanel_->updateFromState(state_);
+                startBtn->setEnabled(true);
+                stopBtn->setEnabled(false);
+                if (saveH5Check_) saveH5Check_->setEnabled(true);
+                transport_.reset();
+                realDevice_.reset();
+                return;
+            }
+        } else {
+            activeSource_ = std::make_unique<ads1292::acq::SimulatorDeviceSource>(200, 0);
+            worker_.start(activeSource_.get(), mode, recordingCsvPath_);
+        }
 
         state_.recordingState = "recording";
         statusPanel_->updateFromState(state_);
@@ -438,6 +461,9 @@ ads1292::io::FinalizeOptions MainWindow::buildFinalizeOptions() const {
     opt.sample_rate_hz  = 500.0;
     // Set acquisition_mode based on the actual mode at Start time.
     opt.acquisition_mode = (recordingMode_ == "raw") ? "raw_adc_24bit" : "live_stream";
+    // Provenance port: the connected serial port (empty for the simulator).
+    // Fixes Phase-1 M2 deferral — records the real device path in the bundle.
+    opt.port            = connectedPort_;
     // Task 3 will wire saveH5Check_; for now nullptr → write_h5 = true.
     opt.write_h5        = (saveH5Check_ ? saveH5Check_->isChecked() : true);
     return opt;
@@ -452,6 +478,9 @@ void MainWindow::onWorkerFinished(int sampleCount) {
         statusPanel_->updateFromState(state_);
         // Re-enable save-format checkboxes: nothing was recorded, back to idle.
         if (saveH5Check_) saveH5Check_->setEnabled(true);
+        // Worker has stopped — release the real device (safe to reset here).
+        realDevice_.reset();
+        transport_.reset();
         return;
     }
 
@@ -480,6 +509,10 @@ void MainWindow::onWorkerFinished(int sampleCount) {
         QMetaObject::invokeMethod(this, [this, line]() {
             // Runs on GUI thread — safe to update state and emit signal.
             state_.recordingState = "idle";
+            // Finalize complete: release the real device + transport (serial port).
+            // The worker has already stopped, so the device is no longer in use.
+            realDevice_.reset();
+            transport_.reset();
             emit finalizeLogged(line);
         }, Qt::QueuedConnection);
     });
