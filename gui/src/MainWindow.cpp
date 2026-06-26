@@ -9,6 +9,10 @@
 #include "ads1292/io/ProtocolIo.h"
 #include "ads1292/io/QualityGateIo.h"
 #include "ads1292/io/RecordingBundle.h"
+#ifdef ADS1292_HAVE_HDF5
+#include "ads1292/io/H5Io.h"
+#include <nlohmann/json.hpp>
+#endif
 #include "ads1292/view/ReviewRender.h"
 #include "ads1292/dsp/Spectrum.h"
 #include "ads1292/model/SessionMetadata.h"
@@ -30,6 +34,8 @@
 #include <QFile>
 #include <QString>
 
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <thread>
 
@@ -411,11 +417,41 @@ int MainWindow::runSimulatorToCompletion(int streamBatches) {
     return count;
 }
 
-void MainWindow::loadRecordingForTest(const std::string& csvPath) {
-    auto samples = ads1292::io::read_recording_csv(csvPath);
+bool MainWindow::loadRecording(const std::string& path) {
+    // Detect file format by extension (case-insensitive)
+    std::string ext = std::filesystem::path(path).extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    std::vector<ads1292::StreamSample> samples;
+    std::vector<ads1292::EventMarker>  events;
+
+#ifdef ADS1292_HAVE_HDF5
+    if (ext == ".h5") {
+        auto h5 = ads1292::io::read_recording_h5(path);
+        samples = std::move(h5.samples);
+        if (!h5.bundle_json.empty()) {
+            auto j = nlohmann::json::parse(h5.bundle_json, nullptr, /*allow_exceptions=*/false);
+            if (!j.is_discarded() &&
+                j.value("schema", std::string()) == "ads1292-recording-bundle-v1") {
+                events = ads1292::io::events_from_bundle(j);
+            }
+        }
+    } else {
+#endif
+        // CSV branch: read samples + sidecar bundle events
+        samples = ads1292::io::read_recording_csv(path);
+        auto bp = ads1292::io::recording_bundle_path(path);
+        if (ads1292::io::is_recording_bundle_path(bp)) {
+            events = ads1292::io::events_from_bundle(ads1292::io::read_recording_bundle(bp));
+        }
+#ifdef ADS1292_HAVE_HDF5
+    }
+#endif
+
     if (samples.empty()) {
         review_loaded_ = false;
-        return;
+        return false;
     }
 
     // Build the review render frame
@@ -445,22 +481,19 @@ void MainWindow::loadRecordingForTest(const std::string& csvPath) {
     reviewWaveform_->setData(1, frame.plot_resp_x, frame.plot_resp);
     reviewWaveform_->replotNow();
 
-    // Read events from the recording bundle (if one exists alongside the CSV).
-    // If no bundle is present, events stays empty → setEvents({}) → no regression.
-    std::vector<ads1292::EventMarker> events;
-    auto bp = ads1292::io::recording_bundle_path(csvPath);
-    if (ads1292::io::is_recording_bundle_path(bp)) {
-        events = ads1292::io::events_from_bundle(ads1292::io::read_recording_bundle(bp));
-    }
-    loadedEvents_ = events;
-
     // Populate the review panels
     pqrstPanel_->showFrame(frame);
     spectrumPanel_->showSpectrum(spec);
     qualityInfoPanel_->showMetrics(frame.metrics);
     reviewEventLogPanel_->setEvents(events);
+    loadedEvents_ = events;
 
     review_loaded_ = true;
+    return true;
+}
+
+void MainWindow::loadRecordingForTest(const std::string& csvPath) {
+    loadRecording(csvPath);
 }
 
 } // namespace ads1292::gui

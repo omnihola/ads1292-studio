@@ -484,6 +484,116 @@ TEST_CASE("P11 Task 2: loadRecordingForTest with no bundle returns 0 events (no 
 
 // ── P11 Task 3: save-format checkboxes + recording-state surfacing ─────────────
 
+// ── P11 Phase 6 Task 1: unified loadRecording (CSV + H5) ─────────────────────
+
+#ifdef ADS1292_HAVE_HDF5
+#include "ads1292/io/H5Io.h"
+#include "ads1292/io/Bundle.h"
+#include "ads1292/io/AcquisitionIo.h"
+
+TEST_CASE("P11 Phase 6 Task 1: loadRecording loads H5 with embedded bundle events", "[gui][h5]") {
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11_t1_load_h5";
+  std::filesystem::create_directories(tmp);
+  auto h5_path = (tmp / "rec.h5").string();
+
+  // Author a small recording (1500 synthetic ECG samples)
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 1500; ++i) {
+    ads1292::StreamSample s;
+    double t = i / 500.0;
+    double v = 0.0;
+    for (double bt = 0.2; bt < 3.0; bt += 60.0 / 72.0) {
+      double d = t - bt;
+      v += 200.0 * std::exp(-(d * d) / (2 * 0.01 * 0.01));
+    }
+    s.ch2 = static_cast<int>(v);
+    s.ch1 = 0;
+    s.status_byte = 0;
+    s.timestamp = t;
+    s.sample_index = i;
+    samples.push_back(s);
+  }
+
+  // Build 2 known EventMarkers
+  std::vector<ads1292::EventMarker> events2;
+  {
+    ads1292::EventMarker e1;
+    e1.timestamp_seconds = 0.1;
+    e1.label = "rest";
+    e1.notes = "baseline";
+    events2.push_back(e1);
+
+    ads1292::EventMarker e2;
+    e2.timestamp_seconds = 0.5;
+    e2.label = "motion";
+    e2.notes = "arm movement";
+    events2.push_back(e2);
+  }
+
+  // Build bundle JSON string and write H5
+  auto bundle = ads1292::io::build_recording_bundle(
+    "rec.csv",
+    ads1292::SessionMetadata{},
+    events2,
+    ads1292::Calibration{},
+    ads1292::io::AcquisitionProvenance{},
+    ads1292::io::protocol_template(),
+    ads1292::io::quality_gate_template(),
+    ads1292::RecordingProcessingSettings{},
+    500.0,
+    "");
+  auto bundle_json = bundle.dump(2);
+
+  ads1292::io::H5Attrs attrs;
+  attrs.schema = "ads1292-h5/1";
+  attrs.csv_name = "rec.csv";
+  attrs.sample_rate_hz = "500.0";
+  attrs.sample_count = std::to_string(samples.size());
+
+  ads1292::io::write_recording_h5(h5_path, samples, bundle_json, attrs);
+
+  // Load via the unified loadRecording path
+  ads1292::gui::MainWindow mw;
+  REQUIRE(mw.loadRecording(h5_path));
+  REQUIRE(mw.reviewLoadedForTest());
+  REQUIRE(mw.reviewEventCountForTest() == 2);
+
+  std::filesystem::remove_all(tmp);
+}
+#endif  // ADS1292_HAVE_HDF5
+
+TEST_CASE("P11 Phase 6 Task 1: loadRecording CSV path still works (regression)", "[gui][recording]") {
+  // Confirm the existing CSV loadRecordingForTest path works (now routes through loadRecording)
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11_t1_load_csv";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 1500; ++i) {
+    ads1292::StreamSample s;
+    double t = i / 500.0;
+    double v = 0.0;
+    for (double bt = 0.2; bt < 3.0; bt += 60.0 / 72.0) {
+      double d = t - bt;
+      v += 200.0 * std::exp(-(d * d) / (2 * 0.01 * 0.01));
+    }
+    s.ch2 = static_cast<int>(v); s.ch1 = 0; s.status_byte = 0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+
+  ads1292::gui::MainWindow win;
+  REQUIRE(win.loadRecording(csv_path));
+  REQUIRE(win.reviewLoadedForTest());
+  REQUIRE(win.reviewEventCountForTest() == 0);  // no bundle sidecar
+
+  std::filesystem::remove_all(tmp);
+}
+
 TEST_CASE("MainWindow save-format checkboxes: default state and H5 opt propagation", "[gui][recording]") {
   ensureApp();
   ads1292::gui::MainWindow win;

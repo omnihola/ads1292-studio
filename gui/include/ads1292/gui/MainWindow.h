@@ -45,10 +45,17 @@ public:
     /// Test hook: return the last SNR dB from the live frame (0.0 when invalid).
     double liveSnrDbForTest() const;
 
+    /// Load a recording (CSV or H5) into the review panels.
+    /// Detects the format by file extension (case-insensitive: .h5 vs anything else).
+    /// Returns true on success (non-empty samples), false on failure.
+    /// H5 events are read from the embedded bundle_json; CSV events from the sidecar bundle.
+    bool loadRecording(const std::string& path);
+
     /// Load a CSV recording into the review panels. Safe to call from tests.
     /// Guards against empty/invalid files. Sets reviewLoaded_ = true on success.
     /// Also reads events from the recording bundle (if present) and populates
     /// the review event log panel.
+    /// Thin wrapper around loadRecording(csvPath).
     void loadRecordingForTest(const std::string& csvPath);
 
     /// Returns true if a recording has been successfully loaded into the review panels.
