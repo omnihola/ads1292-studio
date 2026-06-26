@@ -468,8 +468,8 @@ ads1292::io::FinalizeOptions MainWindow::buildFinalizeOptions() const {
     // onWorkerFinished / finalizeForTest — both on the GUI thread).
     opt.events          = eventConsole_->log().events();
     opt.calibration     = ads1292::Calibration{};
-    opt.protocol        = ads1292::io::protocol_template();
-    opt.quality_gate    = ads1292::io::quality_gate_template();
+    opt.protocol        = sessionPanel_->protocol();
+    opt.quality_gate    = sessionPanel_->qualityGate();
     opt.started_at      = recordingStartedAt_;
     opt.sample_rate_hz  = 500.0;
     // Set acquisition_mode based on the actual mode at Start time.

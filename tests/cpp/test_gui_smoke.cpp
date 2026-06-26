@@ -827,6 +827,56 @@ TEST_CASE("P11P5 Task 1: test seams allow value change and round-trip", "[gui][s
   REQUIRE(sp.qualityGate().min_duration_seconds == Approx(15.0));
 }
 
+// ── P11 Phase 5 Task 2: wire qualityGate + protocol into the bundle ────────────
+
+TEST_CASE("P11P5 Task 2: sessionPanel qualityGate + protocol are written into the bundle", "[gui][session][qgate][protocol]") {
+  // Strategy: construct MainWindow; via SessionPanel test seams set a distinctive
+  // protocol name and a non-default min_duration_seconds; run the synchronous
+  // finalize seam; read the bundle and verify the values round-trip.
+  // Before the wiring, opt.quality_gate/opt.protocol were the templates (defaults),
+  // so the test would fail.
+  ensureApp();
+
+  auto tmp = std::filesystem::temp_directory_path() / "p11p5_task2_qgate_proto";
+  std::filesystem::create_directories(tmp);
+  auto csv_path = (tmp / "2026-01-01-120000-ads1292-studio.csv").string();
+
+  // Author a small recording
+  std::vector<ads1292::StreamSample> samples;
+  for (int i = 0; i < 50; ++i) {
+    ads1292::StreamSample s;
+    s.ch2 = (i % 10 < 2) ? 300 : 0;
+    s.ch1 = 0;
+    s.timestamp = i / 500.0;
+    samples.push_back(s);
+  }
+  ads1292::io::write_recording_csv(csv_path, samples);
+
+  ads1292::gui::MainWindow mw;
+  mw.setRecordingsDirForTest(tmp.string());
+  mw.setRecordingCsvPathForTest(csv_path);
+
+  // Set distinctive values via the SessionPanel test seams
+  REQUIRE(mw.sessionPanelForTest() != nullptr);
+  mw.sessionPanelForTest()->setProtocolNameForTest("MOTAC protocol");
+  mw.sessionPanelForTest()->setMinDurationForTest(12.5);
+
+  // Run finalize synchronously
+  auto r = mw.finalizeForTest();
+  REQUIRE(r.wrote == true);
+  REQUIRE(std::filesystem::exists(r.bundle_path));
+
+  // Read back the bundle and verify protocol + quality_gate round-trip
+  auto bundle = ads1292::io::read_recording_bundle(r.bundle_path);
+  auto p = ads1292::io::protocol_from_bundle(bundle);
+  auto g = ads1292::io::quality_gate_from_bundle(bundle);
+
+  REQUIRE(p.name == "MOTAC protocol");
+  REQUIRE(g.min_duration_seconds == Approx(12.5));
+
+  std::filesystem::remove_all(tmp);
+}
+
 TEST_CASE("P11P3 Task 2: sessionPanelForTest metadata is written into the bundle", "[gui][session]") {
   // Strategy: construct MainWindow, set session metadata on the panel, run the
   // synchronous finalize seam, read the produced bundle, verify metadata fields.
