@@ -80,11 +80,10 @@ MainWindow::MainWindow(QWidget* parent)
     toolbar->addSeparator();
 
     // Start / Stop
-    auto* startBtn = new QPushButton("Start", toolbar);
-    auto* stopBtn  = new QPushButton("Stop", toolbar);
-    stopBtn->setEnabled(false);
-    toolbar->addWidget(startBtn);
-    toolbar->addWidget(stopBtn);
+    startBtn_ = new QPushButton("Start", toolbar);
+    stopBtn_  = new QPushButton("Stop", toolbar);
+    toolbar->addWidget(startBtn_);
+    toolbar->addWidget(stopBtn_);
 
     toolbar->addSeparator();
 
@@ -250,10 +249,10 @@ MainWindow::MainWindow(QWidget* parent)
         scope_->setAutoscale(on);
     });
 
-    connect(startBtn, &QPushButton::clicked, this,
-            [this, startBtn, stopBtn, modeCombo]() {
-        startBtn->setEnabled(false);
-        stopBtn->setEnabled(true);
+    connect(startBtn_, &QPushButton::clicked, this,
+            [this, modeCombo]() {
+        startBtn_->setEnabled(false);
+        stopBtn_->setEnabled(true);
 
         auto mode = (modeCombo->currentIndex() == 0)
                     ? ads1292::acq::AcquisitionMode::Live
@@ -290,8 +289,8 @@ MainWindow::MainWindow(QWidget* parent)
                 state_.connection    = "start failed: " + std::string(e.what());
                 state_.recordingState = "idle";
                 statusPanel_->updateFromState(state_);
-                startBtn->setEnabled(true);
-                stopBtn->setEnabled(false);
+                startBtn_->setEnabled(true);
+                stopBtn_->setEnabled(false);
                 if (saveH5Check_) saveH5Check_->setEnabled(true);
                 transport_.reset();
                 realDevice_.reset();
@@ -310,10 +309,10 @@ MainWindow::MainWindow(QWidget* parent)
         if (saveH5Check_) saveH5Check_->setEnabled(false);
     });
 
-    connect(stopBtn, &QPushButton::clicked, this, [this, startBtn, stopBtn]() {
+    connect(stopBtn_, &QPushButton::clicked, this, [this]() {
         worker_.requestStop();
-        startBtn->setEnabled(true);
-        stopBtn->setEnabled(false);
+        startBtn_->setEnabled(true);
+        stopBtn_->setEnabled(false);
     });
 
     // ── Worker finished → onWorkerFinished (GUI thread, queued) ──────────────
@@ -387,6 +386,9 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Populate port combo on startup.
     refreshPorts();
+
+    // Apply the initial control-gating matrix (streaming_ = false, connecting_ = false → idle).
+    refreshControls();
 }
 
 MainWindow::~MainWindow() {
@@ -432,6 +434,18 @@ void MainWindow::onConnectResult(bool ok, const std::string& port, const std::st
     }
     if (statusPanel_) statusPanel_->updateFromState(state_);
     if (connectBtn_) connectBtn_->setEnabled(true);
+}
+
+void MainWindow::refreshControls() {
+    // Apply the enable/disable matrix from the current streaming_/connecting_ state.
+    // saveCsvCheck_ is permanently disabled (informational) — not touched here.
+    if (refreshBtn_)  refreshBtn_->setEnabled(!streaming_ && !connecting_);
+    if (connectBtn_)  connectBtn_->setEnabled(!streaming_ && !connecting_);
+    if (startBtn_)    startBtn_->setEnabled(!streaming_ && !connecting_);
+    if (stopBtn_)     stopBtn_->setEnabled(streaming_);
+    if (loadBtn_)     loadBtn_->setEnabled(!streaming_);
+    if (saveH5Check_) saveH5Check_->setEnabled(!streaming_);
+    if (portCombo_)   portCombo_->setEnabled(!streaming_ && !connecting_);
 }
 
 void MainWindow::onTick() {

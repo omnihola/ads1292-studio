@@ -877,6 +877,30 @@ TEST_CASE("P11P5 Task 2: sessionPanel qualityGate + protocol are written into th
   std::filesystem::remove_all(tmp);
 }
 
+// ── P11 Phase 7 Task 1: control-gating matrix (refreshControls) ──────────────
+
+TEST_CASE("P11P7 Task 1: refreshControls control-gating matrix (idle/streaming/idle)", "[gui][controls]") {
+  ensureApp();
+  ads1292::gui::MainWindow mw;
+
+  // Initial idle state: streaming_ = false, connecting_ = false
+  // Start and Load must be enabled; Stop must be disabled.
+  REQUIRE(mw.startEnabledForTest());
+  REQUIRE_FALSE(mw.stopEnabledForTest());
+  REQUIRE(mw.loadEnabledForTest());
+
+  // Switch to streaming: Start/Load must become disabled, Stop enabled.
+  mw.setStreamingForTest(true);
+  REQUIRE_FALSE(mw.startEnabledForTest());
+  REQUIRE(mw.stopEnabledForTest());
+  REQUIRE_FALSE(mw.loadEnabledForTest());
+
+  // Return to idle: must match the initial idle state again.
+  mw.setStreamingForTest(false);
+  REQUIRE(mw.startEnabledForTest());
+  REQUIRE_FALSE(mw.stopEnabledForTest());
+}
+
 TEST_CASE("P11P3 Task 2: sessionPanelForTest metadata is written into the bundle", "[gui][session]") {
   // Strategy: construct MainWindow, set session metadata on the panel, run the
   // synchronous finalize seam, read the produced bundle, verify metadata fields.

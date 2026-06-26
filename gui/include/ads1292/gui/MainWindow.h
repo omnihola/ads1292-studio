@@ -28,8 +28,8 @@ namespace ads1292::gui { class IWaveformPlot; }
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QPushButton>
 class QTabWidget;
-class QPushButton;
 
 namespace ads1292::gui {
 
@@ -78,6 +78,20 @@ public:
 
     /// Returns true if the Load button member is non-null (i.e., button was created).
     bool loadButtonPresentForTest() const { return loadBtn_ != nullptr; }
+
+    // ── Control-gating test seams (P11 Phase 7 Task 1) ───────────────────────
+
+    /// True iff startBtn_ is present and enabled.
+    bool startEnabledForTest() const { return startBtn_ && startBtn_->isEnabled(); }
+
+    /// True iff stopBtn_ is present and enabled.
+    bool stopEnabledForTest() const { return stopBtn_ && stopBtn_->isEnabled(); }
+
+    /// True iff loadBtn_ is present and enabled.
+    bool loadEnabledForTest() const { return loadBtn_ && loadBtn_->isEnabled(); }
+
+    /// Set streaming_ and call refreshControls() — drives the gating matrix from a test.
+    void setStreamingForTest(bool s) { streaming_ = s; refreshControls(); }
 
     /// Returns true if the currently visible tab is the Review waveform tab.
     bool currentTabIsReviewForTest() const {
@@ -172,6 +186,10 @@ private:
     /// Falls back to a single "(no port)" item when no device is detected.
     void refreshPorts();
 
+    /// Applies the enable/disable matrix from the current streaming_/connecting_ state.
+    /// Call at every state transition and once at the end of the ctor for the idle initial state.
+    void refreshControls();
+
     // ── Toolbar port controls (P11 Phase 4) ───────────────────────────────────
     QComboBox*   portCombo_   = nullptr;  ///< Port selection combo
     QPushButton* refreshBtn_  = nullptr;  ///< Refresh button
@@ -244,6 +262,13 @@ private:
 
     /// Load button in the toolbar (added in Task 2). Non-null after construction.
     QPushButton* loadBtn_ = nullptr;
+
+    // ── Start / Stop buttons (P11 Phase 7 Task 1: promoted from ctor locals) ──
+    QPushButton* startBtn_ = nullptr;
+    QPushButton* stopBtn_  = nullptr;
+
+    // ── Streaming state (P11 Phase 7 Task 1) ─────────────────────────────────
+    bool streaming_ = false;  ///< True while acquisition worker is running
 };
 
 } // namespace ads1292::gui
