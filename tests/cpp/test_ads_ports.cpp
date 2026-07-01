@@ -26,3 +26,15 @@ TEST_CASE("is_ads_description_match: contains ADS1x9x (case-insensitive) (C8)", 
     REQUIRE_FALSE(is_ads_description_match("Some other device"));
     REQUIRE_FALSE(is_ads_description_match("ADS1292 Raw"));  // no "ADS1x9x"
 }
+
+// Fallback: a usbmodem/usbserial device path is an ADS candidate (the USB-CDC
+// dev-board case). Oracle: _is_ads_candidate_port's is_usb_serial_candidate,
+// SERIAL_CANDIDATE_MARKERS = ("usbmodem", "usbserial").
+TEST_CASE("is_usb_serial_candidate: usbmodem/usbserial device paths", "[device]") {
+    REQUIRE(is_usb_serial_candidate("/dev/cu.usbmodem310MXZJ724612"));
+    REQUIRE(is_usb_serial_candidate("/dev/cu.usbserial-1420"));
+    REQUIRE(is_usb_serial_candidate("/dev/tty.USBMODEM1234"));   // case-insensitive
+    REQUIRE_FALSE(is_usb_serial_candidate("/dev/cu.Bluetooth-Incoming-Port"));
+    REQUIRE_FALSE(is_usb_serial_candidate("/dev/cu.debug-console"));
+    REQUIRE_FALSE(is_usb_serial_candidate(""));
+}

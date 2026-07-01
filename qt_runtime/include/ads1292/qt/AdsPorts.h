@@ -20,11 +20,19 @@ bool is_ads_candidate_port(int vid, int pid);
 /// Oracle: _is_ads_candidate_port checks `"ADS1x9x" in description`.
 bool is_ads_description_match(const std::string& description);
 
-/// Enumerates all connected serial ports and returns those that match
-/// the ADS1x9x VID/PID filter via QSerialPortInfo.
-///
-/// Returns an empty vector when no ADS device is attached (expected in CI).
-/// The macOS name-based fallback (cu.usbmodem*/cu.usbserial* glob) is deferred.
+/// Returns true when the device path contains a USB-serial marker
+/// (usbmodem / usbserial), case-insensitive. Oracle: _is_ads_candidate_port's
+/// `is_usb_serial_candidate` (SERIAL_CANDIDATE_MARKERS = ("usbmodem","usbserial")).
+/// This is the macOS/generic USB-CDC fallback: most ADS1292 dev boards enumerate
+/// as /dev/cu.usbmodem*/cu.usbserial* WITHOUT the TI VID/PID or an "ADS1x9x"
+/// description, so this marker is what lets them appear in the port list.
+bool is_usb_serial_candidate(const std::string& device_path);
+
+/// Enumerates all connected serial ports and returns those that match the
+/// ADS1x9x heuristics via QSerialPortInfo: TI VID/PID, OR an "ADS1x9x"
+/// description, OR a usbmodem/usbserial device path (mirrors the Python
+/// _is_ads_candidate_port three-way OR). Returns an empty vector when no
+/// candidate is attached.
 std::vector<AdsPort> list_ads_ports();
 
 }}  // namespace ads1292::qt
