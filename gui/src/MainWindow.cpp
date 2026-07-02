@@ -429,7 +429,10 @@ MainWindow::MainWindow(QWidget* parent)
 
         std::string port = sel.toStdString();
         connecting_ = true;
-        refreshControls();  // disables Start/Refresh/Connect/portCombo while connecting
+        // Show an immediate "connecting…" state so the user sees feedback right away.
+        state_.connection = "connecting " + port + "\xE2\x80\xA6";
+        if (statusPanel_) statusPanel_->updateFromState(state_);
+        refreshControls();  // disables Start/Refresh/Connect/portCombo, sets "Connecting…" label
 
         // Join any previous connect thread before spawning a new one (no double-UAF).
         if (connectThread_.joinable()) {
@@ -637,8 +640,12 @@ void MainWindow::refreshControls() {
     // Apply the enable/disable matrix from the current streaming_/connecting_ state.
     // saveCsvCheck_ is permanently disabled (informational) — not touched here.
     if (refreshBtn_)  refreshBtn_->setEnabled(!streaming_ && !connecting_);
-    if (connectBtn_)  connectBtn_->setEnabled(!streaming_ && !connecting_);
-    if (startBtn_)    startBtn_->setEnabled(!streaming_ && !connecting_);
+    if (connectBtn_) {
+        connectBtn_->setEnabled(!streaming_ && !connecting_);
+        connectBtn_->setText(connecting_ ? "Connecting\xE2\x80\xA6" : "Connect");
+    }
+    // Start requires a SUCCESSFUL connection (connectedPort_ set by onConnectResult).
+    if (startBtn_)    startBtn_->setEnabled(!streaming_ && !connecting_ && !connectedPort_.empty());
     if (stopBtn_)     stopBtn_->setEnabled(streaming_);
     if (loadBtn_)     loadBtn_->setEnabled(!streaming_);
     if (saveH5Check_)   saveH5Check_->setEnabled(!streaming_);

@@ -41,7 +41,29 @@ StatusPanel::StatusPanel(QWidget* parent)
 
 void StatusPanel::updateFromState(const GuiState& s) {
     m_nextStep_->setText("Next step: "   + QString::fromStdString(s.nextStep));
-    m_connection_->setText("Connection: " + QString::fromStdString(s.connection));
+    // Connection card: colored + dot indicator for at-a-glance feedback.
+    // The connection string is set by MainWindow::onConnectResult / the connect handler:
+    //   "connected <port> ..." | "connect failed: ..." | "connecting <port>..." | "" (idle)
+    {
+        QString conn = QString::fromStdString(s.connection);
+        QString dot, style;
+        if (conn.startsWith("connected")) {
+            dot = QString::fromUtf8("\xF0\x9F\x9F\xA2 ");           // green circle
+            style = "QLabel{color:#127a12;font-weight:bold;}";
+        } else if (conn.startsWith("connect failed")) {
+            dot = QString::fromUtf8("\xF0\x9F\x94\xB4 ");           // red circle
+            style = "QLabel{color:#c02020;font-weight:bold;}";
+        } else if (conn.startsWith("connecting")) {
+            dot = QString::fromUtf8("\xF0\x9F\x9F\xA1 ");           // yellow circle
+            style = "QLabel{color:#b8860b;font-weight:bold;}";
+        } else {
+            if (conn.isEmpty()) conn = "not connected";
+            dot = QString::fromUtf8("\xE2\x9A\xAA ");               // white circle
+            style = "QLabel{color:#888888;}";
+        }
+        m_connection_->setText("Connection: " + dot + conn);
+        m_connection_->setStyleSheet(style);
+    }
     m_channelMap_->setText("Channel map: "+ QString::fromStdString(s.channelMap));
     m_recording_->setText("Recording: "  + QString::fromStdString(s.recordingState));
     m_eventCount_->setText("Events: "    + QString::number(s.eventCount));

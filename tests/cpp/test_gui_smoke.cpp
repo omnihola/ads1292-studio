@@ -1027,8 +1027,14 @@ TEST_CASE("P11P7 Task 1: refreshControls control-gating matrix (idle/streaming/i
   ensureApp();
   ads1292::gui::MainWindow mw;
 
-  // Initial idle state: streaming_ = false, connecting_ = false
-  // Start and Load must be enabled; Stop must be disabled.
+  // Newly constructed, no connection: Start must be DISABLED (Start now requires a
+  // successful connection). Load is available (offline review), Stop disabled.
+  REQUIRE_FALSE(mw.startEnabledForTest());
+  REQUIRE_FALSE(mw.stopEnabledForTest());
+  REQUIRE(mw.loadEnabledForTest());
+
+  // After a successful connect: idle + connected → Start and Load enabled, Stop disabled.
+  mw.injectConnectResultForTest(true, "/dev/cu.x", "1.0");
   REQUIRE(mw.startEnabledForTest());
   REQUIRE_FALSE(mw.stopEnabledForTest());
   REQUIRE(mw.loadEnabledForTest());
@@ -1060,11 +1066,13 @@ TEST_CASE("P11P7 Task 2: injectConnectResultForTest re-enables idle controls aft
   REQUIRE_FALSE(mw.stopEnabledForTest()); // Stop must remain disabled (not streaming)
   REQUIRE(mw.loadEnabledForTest());       // Load must be re-enabled (idle)
 
-  // Failed connect result: connecting_ → false → idle controls also re-enabled.
+  // Failed connect result: connecting_ → false, but connectedPort_ is now empty, so
+  // Start must be DISABLED (Start requires a successful connection). Load stays enabled.
   mw.injectConnectResultForTest(false, "", "open failed");
   REQUIRE(mw.connectedPortForTest().empty());
-  REQUIRE(mw.startEnabledForTest());
+  REQUIRE_FALSE(mw.startEnabledForTest());
   REQUIRE_FALSE(mw.stopEnabledForTest());
+  REQUIRE(mw.loadEnabledForTest());
 }
 
 TEST_CASE("P11P7 Task 2: streaming_ idle transition re-enables Start and disables Stop", "[gui][controls]") {
@@ -1073,8 +1081,9 @@ TEST_CASE("P11P7 Task 2: streaming_ idle transition re-enables Start and disable
   // that the finalize-completion handler now makes.
   ensureApp();
   ads1292::gui::MainWindow mw;
+  mw.injectConnectResultForTest(true, "/dev/cu.x", "1.0");  // Start now requires a connection
 
-  // Initial idle
+  // Initial idle (connected)
   REQUIRE(mw.startEnabledForTest());
   REQUIRE_FALSE(mw.stopEnabledForTest());
 
